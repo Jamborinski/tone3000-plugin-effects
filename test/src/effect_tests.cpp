@@ -3597,6 +3597,75 @@ TEST(PlateTest, DriverColorIsLevelDriven) {
   EXPECT_GT(hot, lin * 0.30) << "a real but warm color, not a hard-clip";
 }
 
+// ---- Room (Ticket 5): the discrete early-reflection set (4-tap TDL, Gardner
+// small) + per-tap air-absorption lowpass + the shared short mode wash. Gated
+// Early>0 || Air>0; at both 0 it is the shared plain comb bank (the anchor
+// holds).
+static std::vector<float> roomOut(const std::vector<float>& input,
+                                   double early, double air, double decayMs = 500.0) {
+  Reverb r; r.prepare(kFs);
+  Reverb::Params p;
+  p.decayMs = decayMs; p.tone = 0.3; p.size = 0.3; p.width = 0.0; p.preMs = 0.0;
+  p.mode = 3; p.early = early; p.air = air;   // arms the Room law path
+  r.setParams(p);
+  juce::AudioBuffer<float> buf(1, kBlock);
+  std::vector<float> L(input.size());
+  for (int off = 0; off + kBlock <= (int)input.size(); off += kBlock) {
+    for (int i = 0; i < kBlock; ++i) buf.setSample(0, i, input[off + i]);
+    r.process(buf);
+    for (int i = 0; i < kBlock; ++i) L[off + i] = buf.getSample(0, i);
+  }
+  return L;
+}
+
+// The Early dial adds discrete-reflection energy to the early window (0–80 ms,
+// the 4-tap set at 8/22/35/66 ms) -- more Early = a denser early field.
+TEST(RoomTest, EarlyAddsDiscreteTaps) {
+  const int n = 8 * kBlock;
+  std::vector<float> click(n, 0.0f); for (int i = 0; i < 40; ++i) click[i] = 1.0f;
+  const auto e03 = roomOut(click, 0.3, 0.0);
+  const auto e10 = roomOut(click, 1.0, 0.0);
+  auto windowPow = [](const std::vector<float>& v, int a, int b) {
+    double e = 0.0; for (int i = a; i < b && i < (int)v.size(); ++i) e += (double)v[i]*v[i];
+    return e / (b - a);
+  };
+  const int m = 80 * kFs / 1000;   // the early window (8–80 ms)
+  const double s03 = windowPow(e03, 0, m);
+  const double s10 = windowPow(e10, 0, m);
+  EXPECT_GT(s10, s03) << "more Early should add energy to the discrete early-reflection window";
+}
+
+// The Air dial darkens the early field's high end (the per-tap air-absorption
+// lowpass, Moorer's law). At high Air, the 6 kHz content of the early window is
+// darker than at low Air.
+TEST(RoomTest, AirDarkensTheEarlyFieldHighs) {
+  const int n = 12 * kBlock;
+  auto earlyWinHigh = [n](double air) {
+    const auto v = roomOut(makeSine(n, 6000.0, 0.6f), 1.0, air);
+    const int m = std::min((int)n, (int)(80.0 * kFs / 1000.0));
+    double e = 0.0;
+    for (int i = 1; i < m; ++i) { const double d = (double)v[i] - (double)v[i-1]; e += d * d; }
+    return e / (m - 1);
+  };
+  const double a03 = earlyWinHigh(0.3);
+  const double a10 = earlyWinHigh(1.0);
+  EXPECT_GT(a03, a10) << "more air should darken the early field high end (less 6 kHz content)";
+}
+
+// The Room is a live, bounded voice (the mode wash + the early field). All
+// finite, |out| <= 5, peak > 0.
+TEST(RoomTest, IsLiveAndBounded) {
+  const int n = 8 * kBlock;
+  const auto v = roomOut(makeSine(n, 440.0, 0.6f), 0.5, 0.5);
+  double pk = 0.0;
+  for (auto s : v) {
+    EXPECT_TRUE(std::isfinite((double)s)) << "room sample finite";
+    EXPECT_LE(std::abs((double)s), 5.0) << "room bounded";
+    pk = std::max(pk, std::abs((double)s));
+  }
+  EXPECT_GT(pk, 0.02) << "the room must be a live voice";
+}
+
 // TEMP probe: Opto-2A STAGE model characterization (input-driven detection kept).
 
 

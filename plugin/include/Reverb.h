@@ -94,6 +94,20 @@ class Reverb {
   static constexpr double kPlateBloomFrac    = 0.32;   // how far Bloom darkens (low lags)
   static constexpr double kPlateColorAmt     = 0.30;   // the driver FET/soft blend
 
+  // ---- Room laws (mode 3; the discrete early-reflection set + per-tap air
+  // absorption + a mode wash, per Gardner small 1992 / Moorer air law) ----
+  // The early field is a fixed 4-tap TDL (Gardner small: 8.3/22/35/66 ms, we
+  // round) with decreasing amplitudes (the farther tap is quieter). Each tap
+  // carries its own lowpass -- the Air dial scales this (more air = darker,
+  // Moorer's air-absorption law: farther reflection = darker). The Early dial
+  // scales all taps' amplitude. The base is the shared 8-comb mode wash (decay
+  // ~500 ms default = a small room). Gated Early>0 || Air>0; at both 0 it is
+  // the shared plain comb bank (the Digital anchor + kNumModes==6 hold).
+  static constexpr int kNumRoomTaps = 4;
+  static constexpr double kRoomTapDelaysMs[kNumRoomTaps] = {8.0, 22.0, 35.0, 66.0};
+  static constexpr double kRoomTapAmps[kNumRoomTaps]     = {0.25, 0.22, 0.18, 0.14};
+  static constexpr double kRoomAirFrac                   = 0.50;  // per-tap lowpass fraction
+
   // Incommensurate base delay times (ms) so the parallel combs do not cancel
   // into a single pitchy tone.
   static constexpr double kBaseMs[kNumLines] = {
@@ -221,6 +235,10 @@ class Reverb {
       const double preSamples = params_.preMs * 0.001 * sampleRate_;
       for (int i = 0; i < kNumLines; ++i)
         taps_[i] = kBaseMs[i] * 0.001 * sampleRate_ * sizeScale + preSamples;
+      // Room early-field taps (fixed ms, independent of size/pre): compute the
+      // per-tap sample offsets now (they depend on the live sample rate).
+      for (int t = 0; t < kNumRoomTaps; ++t)
+        roomTapsSamples_[t] = std::max(1.0, kRoomTapDelaysMs[t] * 0.001 * sampleRate_);
     }
     // Digital Mod (mode 0 only): a sined waver on the read tap. Gated off at
     // Mod 0 so the plain integer read stays bit-exact (the anchor). Only the
@@ -288,6 +306,14 @@ class Reverb {
         (params_.bright > 0.0 || params_.bloom > 0.0);
     if (plateOn) {
       processPlate(buffer);
+      return;
+    }
+    // Room (mode 3) is law-live when armed (Early>0 or Air>0); at both 0 it runs
+    // the shared plain path (the Digital anchor + kNumModes==6 hold).
+    const bool roomOn = (params_.mode == 3) &&
+        (params_.early > 0.0 || params_.air > 0.0);
+    if (roomOn) {
+      processRoom(buffer);
       return;
     }
     if (!densityOn && !modOn_) {
@@ -526,6 +552,54 @@ class Reverb {
     }
   }
 
+  // Room (mode 3) -- the discrete early-reflection set (a fixed 4-tap TDL, the
+  // small room's geometrically-correct early field, Gardner small 1992), with a
+  // per-tap air-absorption lowpass (Moorer: farther reflections = darker) and
+  // the shared 8-comb mode wash on top (a short RT, the small room). The Early
+  // dial scales the early taps' amplitude (more energy in the discrete early
+  // field); the Air dial scales the per-tap lowpass (darker reflections, the
+  // "air"). Bounded: reads from a bounded input, per-tap LPF alpha in [0,1),
+  // mode wash |fb| < 1.
+  void processRoom(juce::AudioBuffer<float>& buffer) {
+    const int numChannels = juce::jmin(buffer.getNumChannels(), kMaxChannels);
+    const int numSamples = buffer.getNumSamples();
+    const double decayNorm = (params_.decayMs - kMinDecayMs) / (kMaxDecayMs - kMinDecayMs);
+    const double fb = 0.30 + 0.69 * decayNorm;
+    const double norm = (1.0 - fb) / kNumLines;
+    const double dampAlpha = (1.0 - params_.tone);  // the mode wash tone
+    // Per-tap lowpass (the "air"): more Air = darker reflections.
+    const float aAlpha = static_cast<float>((1.0 - params_.tone) * (1.0 - kRoomAirFrac * params_.air));
+    float ta[kNumRoomTaps];
+    for (int t = 0; t < kNumRoomTaps; ++t)
+      ta[t] = static_cast<float>(kRoomTapAmps[t] * params_.early);
+    for (int ch = 0; ch < numChannels; ++ch) {
+      auto& lines = lines_[static_cast<size_t>(ch)];
+      float* out = buffer.getWritePointer(ch);
+      for (int i = 0; i < numSamples; ++i) {
+        const float dry = out[i];
+        float acc = 0.0f;
+        for (int ln = 0; ln < kNumLines; ++ln) {
+          auto& L = lines[ln];
+          const int d = taps_[ln];
+          const float tail = L.ring[(L.write - d) & L.mask];
+          L.lp += static_cast<float>(dampAlpha) * (tail - L.lp);
+          L.ring[L.write] = dry + static_cast<float>(fb) * L.lp;
+          L.write = (L.write + 1) & L.mask;
+          acc += L.lp;
+        }
+        acc *= static_cast<float>(norm);
+        for (int t = 0; t < kNumRoomTaps; ++t) {
+          const int ts = static_cast<int>(roomTapsSamples_[t]);
+          if (ts < 1 || i < ts) continue;
+          const float tv = out[i - ts] * ta[t];
+          roomTapsLp_[ch][t] += aAlpha * (tv - roomTapsLp_[ch][t]);
+          acc += roomTapsLp_[ch][t];
+        }
+        out[i] = acc;
+      }
+    }
+  }
+
  private:
   struct Line {
     std::vector<float> ring;
@@ -567,4 +641,10 @@ class Reverb {
   // decaying, reset in reset()). The dense wash + bloom low-pass + color are
   // stateless (they use the shared comb lines + the existing Line.lp).
   float onsetEnv_[kMaxChannels] = {};
+  // Room state: per-tap lowpass state (the "air" damping), 4 taps per channel
+  // (zero-initialized, reset in reset()). The early field + mode wash are
+  // stateless (they use the shared comb lines + existing state).
+  float roomTapsLp_[kMaxChannels][kNumRoomTaps] = {};
+  // Room early-field tap sample offsets (the 4 fixed taps, setParams time).
+  double roomTapsSamples_[kNumRoomTaps] = {};
 };

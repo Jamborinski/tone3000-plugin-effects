@@ -273,9 +273,10 @@ right of Width)" is full-tile only. Consistent across all six modes.
   bounded), `PlateTest.DriverColorIsLevelDriven` (the shared level-driven
   soft-shoulder, clean below the knee).
 - Per-mode signature pins (one per signature, upcoming) for the remaining
-  unshipped modes: e.g. `EarlyAddsDiscreteTaps` / `AirDarkensTheHighs` (Room),
-  `VolleyIsADiffuseCluster` / `ChamberBassOutlastsHf` (integrated LF/HF tail
-  ratio at Bass 1 > at 0) (Chamber), `BuildLengthensTheEarly` /
+  unshipped modes: e.g. `EarlyAddsDiscreteTaps` (built) + `AirDarkensTheHighs`
+  (built) (Room), `VolleyIsADiffuseCluster` /
+  `ChamberBassOutlastsHf` (integrated LF/HF tail ratio at Bass 1 > at 0) (Chamber),
+  `BuildLengthensTheEarly` /
   `HallSpaceWidensTheLateral` (Hall).
 - **`ReverbModeSetSurvivesSaveRestore`** — the mode + all 12 sigs round-trip
   the state save (the delay `DelayModeSetAndPunchSurviveSaveRestore` pin).
@@ -372,7 +373,20 @@ right of Width)" is full-tile only. Consistent across all six modes.
    + softShoulder(o)*c`); the same helper `springShoulder` is reused here for the
    Plate's driver warmth. Distinct from Spring's boing/drip (which is the 1-D
    metallic ring + splash) by the plate's dense 2-D wash + the bright onset.
-5. **Room** — Early (TDL) + Air (per-tap damping) laws + pins.
+5. **Room** — ✅ DONE. The Room is the discrete early-reflection set (a fixed
+   4-tap TDL, Gardner small 1992: 8/22/35/66 ms, decreasing amplitudes) + a
+   per-tap air-absorption lowpass (Moorer's air law: further reflection = darker —
+   the Air dial drives the per-tap lowpass, more Air = darker early field) + the
+   shared 8-comb mode wash on top (a short RT, the small room's decay). The Early
+   dial scales all early taps' amplitudes (more discrete-reflection energy). The
+   per-tap lowpass state (`roomTapsLp_`, 4 per ch) is reset in `reset()`. The tap
+   sample offsets (`roomTapsSamples_`, 4) are computed from the live sample rate in
+   `setParams()` (no hardcoded sample rate in the header). `process()` gains a
+   Room-law branch (mode 3, gated `Early>0 || Air>0`; at both 0 it falls through to
+   the shared plain comb bank, so the Digital anchor + `kNumModes==6` hold).
+   Pins: `RoomTest.EarlyAddsDiscreteTaps` (the early window energy scales with
+   Early), `RoomTest.AirDarkensTheEarlyFieldHighs` (the early field's high end is
+   darker at high Air), `RoomTest.IsLiveAndBounded`.
 6. **Chamber** — Volley + Bass (dual-decay) laws + pins.
 7. **Hall** — Build (early width) + Space (lateral/air) laws + pins.
 8. **Wiring close** — per-mode defaults + good defaults verified,
