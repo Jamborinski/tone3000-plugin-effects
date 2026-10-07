@@ -387,7 +387,23 @@ right of Width)" is full-tile only. Consistent across all six modes.
    Pins: `RoomTest.EarlyAddsDiscreteTaps` (the early window energy scales with
    Early), `RoomTest.AirDarkensTheEarlyFieldHighs` (the early field's high end is
    darker at high Air), `RoomTest.IsLiveAndBounded`.
-6. **Chamber** — Volley + Bass (dual-decay) laws + pins.
+6. **Chamber** — ✅ DONE. The Chamber is the DIFFUSE EARLY VOLLEY (8 fixed dense
+   early taps, 5/9/14/20/27/35/44/55 ms, a "bunch" of early reflections, denser
+   than Room's discrete 4 taps) + the DUAL-DECAY BASS shelf (the mode-wash loop
+   is low-passed more at high Bass -> the LOW tail extends, the HIGH tail caps,
+   the one signature no other mode has) + a fixed, steeper output HF cap (the
+   ~10 kHz humidity cap, independent of the Bass dial -- the sibilance decays
+   quickly). The Volley dial scales the whole early cluster's energy (more = a
+   denser early burst); the Bass dial drives the loop low-pass (LF extends, HF
+   caps). Gated `Volley>0 || Bass>0`; at both 0 it is the shared plain comb bank
+   (the Digital anchor + `kNumModes==6` hold). The per-tap damping state
+   (`chamberTapsLp_`) + the loop low-pass state (`chamberBassLp_`) + the output
+   HF-cap state (`chamberHFCap_`) are reset in `reset()`; the tap sample offsets
+   (`chamberTapsSamples_`) are computed from the live sample rate in `setParams()`
+   (no hardcoded sample rate in the header). Pins: `ChamberTest.VolleyIsADiffuseEarlyBurst`
+   (the 0–60 ms early window energy scales with Volley), `ChamberTest.BassExtendsTheLowTail`
+   (the sustained tail's low/high Goertzel ratio is higher at Bass 1.0 than at 0.3),
+   `ChamberTest.IsLiveAndBounded`.
 7. **Hall** — Build (early width) + Space (lateral/air) laws + pins.
 8. **Wiring close** — per-mode defaults + good defaults verified,
    save/restore round-trip pin, tile compact/full behaviour, ears pass.

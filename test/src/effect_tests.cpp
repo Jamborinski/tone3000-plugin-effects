@@ -4295,3 +4295,79 @@ TEST(CompressorTest, FluxIsZeroLatencyAndTransientUnity) {
     EXPECT_NEAR(buf.getSample(0, 0), 1.0f, 1e-3f) << "VCA first sample ~1.0 (got " << buf.getSample(0, 0) << ")";
   }
 }
+
+// ---- Chamber (Ticket 6): the diffuse early VOLLEY (8 dense taps, 5–55 ms, a
+// "bunch" of early reflections) + the dual-decay BASS shelf (the loop is
+// low-passed more at high Bass -> the low tail extends, the high tail caps)
+// + the fixed output HF cap (the ~10 kHz humidity cap). Gated
+// Volley>0 || Bass>0; at both 0 it is the shared plain comb bank (the anchor
+// holds).
+static std::vector<float> chamberOut(const std::vector<float>& input,
+                                      double volley, double bass, double decayMs = 2000.0) {
+  Reverb r; r.prepare(kFs);
+  Reverb::Params p;
+  p.decayMs = decayMs; p.tone = 0.4; p.size = 0.5; p.width = 0.0; p.preMs = 0.0;
+  p.mode = 4; p.volley = volley; p.bass = bass;   // arms the Chamber law path
+  r.setParams(p);
+  juce::AudioBuffer<float> buf(1, kBlock);
+  std::vector<float> L(input.size());
+  for (int off = 0; off + kBlock <= (int)input.size(); off += kBlock) {
+    for (int i = 0; i < kBlock; ++i) buf.setSample(0, i, input[off + i]);
+    r.process(buf);
+    for (int i = 0; i < kBlock; ++i) L[off + i] = buf.getSample(0, i);
+  }
+  return L;
+}
+
+// Volley is the Chamber's diffuse early "bunch" (8 dense taps, 5–55 ms) --
+// more Volley = a denser, fuzzier early burst in the 0–60 ms window.
+TEST(ChamberTest, VolleyIsADiffuseEarlyBurst) {
+  const int n = 8 * kBlock;
+  std::vector<float> click(n, 0.0f); for (int i = 0; i < 40; ++i) click[i] = 1.0f;
+  const auto v03 = chamberOut(click, 0.3, 0.0);
+  const auto v10 = chamberOut(click, 1.0, 0.0);
+  auto windowPow = [](const std::vector<float>& v, int a, int b) {
+    double e = 0.0; for (int i = a; i < b && i < (int)v.size(); ++i) e += (double)v[i]*v[i];
+    return e / (b - a);
+  };
+  const int m = std::min((int)v03.size(), (int)(60.0 * kFs / 1000.0));
+  const double s03 = windowPow(v03, 0, m);
+  const double s10 = windowPow(v10, 0, m);
+  EXPECT_GT(s10, s03) << "more Volley should add a denser early burst in the 0–60 ms window";
+}
+
+// Bass is the Chamber's dual-decay (the one signature no other mode has):
+// the loop low-pass (the Bass shelf) makes the low tail outlast the high tail.
+// We isolate it with a broadband click + Goertzel over the SUS TAINED tail window:
+// the ratio of the tail's low-band (120 Hz) power to its high-band (3 kHz) power
+// rises with Bass.
+TEST(ChamberTest, BassExtendsTheLowTail) {
+  const int n = 24 * kBlock;
+  std::vector<float> click(n, 0.0f); for (int i = 0; i < 40; ++i) click[i] = 1.0f;
+  const int from = (int)(0.25 * kFs);   // sustained-tail window (after the onset)
+  const auto toTail = [](const std::vector<float>& v, int f0) {
+    std::vector<float> t; for (int i = f0; i < (int)v.size(); ++i) t.push_back(v[i]); return t;
+  };
+  const auto c03 = chamberOut(click, 0.0, 0.3);
+  const auto c10 = chamberOut(click, 0.0, 1.0);
+  const auto t03 = toTail(c03, from);
+  const auto t10 = toTail(c10, from);
+  const double r0 = goertzelPower(t03, 120.0, kFs) / std::max(1e-12, goertzelPower(t03, 3000.0, kFs));
+  const double r1 = goertzelPower(t10, 120.0, kFs) / std::max(1e-12, goertzelPower(t10, 3000.0, kFs));
+  EXPECT_GT(r1, r0) << "more Bass should let the low tail outlast the high tail (dual-decay)";
+}
+
+// The Chamber is a live voice (diffuse early volley + the mode wash + the fixed
+// HF cap) and all layers are bounded (|fb| < 1, low-pass alphas in (0,1],
+// finite sums).
+TEST(ChamberTest, IsLiveAndBounded) {
+  const int n = 8 * kBlock;
+  const auto v = chamberOut(makeSine(n, 440.0, 0.6f), 0.5, 0.5);
+  double pk = 0.0;
+  for (auto s : v) {
+    EXPECT_TRUE(std::isfinite((double)s)) << "chamber sample finite";
+    EXPECT_LE(std::abs((double)s), 5.0) << "chamber bounded";
+    pk = std::max(pk, std::abs((double)s));
+  }
+  EXPECT_GT(pk, 0.02) << "the chamber must be a live voice";
+}

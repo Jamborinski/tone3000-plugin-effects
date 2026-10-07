@@ -108,6 +108,27 @@ class Reverb {
   static constexpr double kRoomTapAmps[kNumRoomTaps]     = {0.25, 0.22, 0.18, 0.14};
   static constexpr double kRoomAirFrac                   = 0.50;  // per-tap lowpass fraction
 
+  // ---- Chamber laws (mode 4; a diffuse early VOLLEY + the dual-decay bass
+  // shelf -- the one signature no other mode has: LF extends, HF caps) ----
+  // Volley (a short, diffuse cluster, denser than Room's discrete 4 taps but
+  // shorter and fuzzier than Hall's long build) is modelled with a fixed, DENSE
+  // set of 8 early taps (5/9/14/20/27/35/44/55 ms). The "volley" dial scales
+  // the whole cluster's energy (more = a denser early burst). Bass (the
+  // dual-decay) is modelled with TWO low-pass laws:
+  //   (a) the mode-wash loop is low-passed (more at high Bass -> the LOW tail
+  //       survives the HIGH tail longer = the Bass shelf, LF extends);
+  //   (b) the output is low-passed even more (a steeper HF cap, the Abbey Road
+  //       ~10 kHz humidity cap: the HF decays fast regardless of Decay).
+  // No metallic ring (no per-tap resonance), no plate bloom (the loop low-pass
+  // is the only HF law, and the output adds a second cap). Gated
+  // Volley>0 || Bass>0; at both 0 it is the shared plain comb bank (the Digital
+  // anchor + kNumModes==6 hold).
+  static constexpr int kNumChamberTaps = 8;
+  static constexpr double kChamberTapDelaysMs[kNumChamberTaps] = {5, 9, 14, 20, 27, 35, 44, 55};
+  static constexpr double kChamberTapAmps[kNumChamberTaps]     = {0.14, 0.13, 0.12, 0.11, 0.10, 0.09, 0.08, 0.07};
+  static constexpr double kChamberBassFrac     = 0.55;  // loop low-pass (Bass shelf)
+  static constexpr double kChamberHFCapFrac    = 0.30;  // output HF cap (steeper, fixed scale)
+
   // Incommensurate base delay times (ms) so the parallel combs do not cancel
   // into a single pitchy tone.
   static constexpr double kBaseMs[kNumLines] = {
@@ -206,6 +227,10 @@ class Reverb {
     for (int c = 0; c < kMaxChannels; ++c) {
       boingRe_[c] = 0.0f; boingIm_[c] = 0.0f; dripEnv_[c] = 0.0f;
       onsetEnv_[c] = 0.0f;
+      for (int t = 0; t < kNumRoomTaps; ++t) roomTapsLp_[c][t] = 0.0f;
+      for (int t = 0; t < kNumChamberTaps; ++t) chamberTapsLp_[c][t] = 0.0f;
+      chamberBassLp_[c] = 0.0f;
+      chamberHFCap_[c] = 0.0f;
     }
   }
 
@@ -239,6 +264,10 @@ class Reverb {
       // per-tap sample offsets now (they depend on the live sample rate).
       for (int t = 0; t < kNumRoomTaps; ++t)
         roomTapsSamples_[t] = std::max(1.0, kRoomTapDelaysMs[t] * 0.001 * sampleRate_);
+      // Chamber early-volley taps (fixed ms, independent of size/pre): compute
+      // the per-tap sample offsets now (they depend on the live sample rate).
+      for (int t = 0; t < kNumChamberTaps; ++t)
+        chamberTapsSamples_[t] = std::max(1.0, kChamberTapDelaysMs[t] * 0.001 * sampleRate_);
     }
     // Digital Mod (mode 0 only): a sined waver on the read tap. Gated off at
     // Mod 0 so the plain integer read stays bit-exact (the anchor). Only the
@@ -314,6 +343,14 @@ class Reverb {
         (params_.early > 0.0 || params_.air > 0.0);
     if (roomOn) {
       processRoom(buffer);
+      return;
+    }
+    // Chamber (mode 4) is law-live when armed (Volley>0 or Bass>0); at both 0 it
+    // runs the shared plain path (the Digital anchor + kNumModes==6 hold).
+    const bool chamberOn = (params_.mode == 4) &&
+        (params_.volley > 0.0 || params_.bass > 0.0);
+    if (chamberOn) {
+      processChamber(buffer);
       return;
     }
     if (!densityOn && !modOn_) {
@@ -600,6 +637,64 @@ class Reverb {
     }
   }
 
+  // Chamber (mode 4) -- a short, diffuse early VOLLEY (8 fixed diffuse taps,
+  // 5/9/14/20/27/35/44/55 ms, a "bunch" of early reflections -- the Chamber's
+  // fuzzy early field, denser than Room's discrete 4 taps) + the dual-decay BASS
+  // shelf: the mode-wash loop is low-passed (the LOW tail extends, the HIGH tail
+  // caps) + a separate output HF cap (a ~10 kHz humidity cap, independent of the
+  // Bass dial). The Volley dial scales the early cluster's energy; the Bass dial
+  // drives the loop low-pass (LF extends, HF caps). Bounded: |fb| < 1, all
+  // low-pass alphas in (0,1], per-tap lowpass alpha in (0,1].
+  void processChamber(juce::AudioBuffer<float>& buffer) {
+    const int numChannels = juce::jmin(buffer.getNumChannels(), kMaxChannels);
+    const int numSamples = buffer.getNumSamples();
+    const double decayNorm = (params_.decayMs - kMinDecayMs) / (kMaxDecayMs - kMinDecayMs);
+    const double fb = 0.30 + 0.69 * decayNorm;
+    const double norm = (1.0 - fb) / kNumLines;
+    // (a) The Bass shelf (loop lowpass): more Bass = a stronger lowpass -> low
+    // survives longer, high decays faster (the dual-decay, LF extends / HF caps).
+    const float bassAlpha = static_cast<float>((1.0 - params_.tone) * (1.0 - kChamberBassFrac * params_.bass));
+    // (b) The output HF cap: a fixed lowpass (the ~10 kHz humidity cap, the high
+    // tail caps regardless of Decay / Bass).
+    const float capAlpha = static_cast<float>((1.0 - params_.tone) * (1.0 - kChamberHFCapFrac));
+    // (c) The early volley: 8 diffuse taps (a "bunch"), scaled by the Volley dial
+    // (more = a denser early burst), each tap low-passed the same as the output
+    // HF cap (the "fuzzy" early field).
+    float ta[kNumChamberTaps];
+    for (int t = 0; t < kNumChamberTaps; ++t)
+      ta[t] = static_cast<float>(kChamberTapAmps[t] * params_.volley);
+    for (int ch = 0; ch < numChannels; ++ch) {
+      auto& lines = lines_[static_cast<size_t>(ch)];
+      float* out = buffer.getWritePointer(ch);
+      for (int i = 0; i < numSamples; ++i) {
+        const float dry = out[i];
+        float acc = 0.0f;
+        for (int ln = 0; ln < kNumLines; ++ln) {
+          auto& L = lines[ln];
+          const int d = taps_[ln];
+          const float tail = L.ring[(L.write - d) & L.mask];
+          // (a) The Bass shelf (loop lowpass, the low tail extends).
+          L.lp += bassAlpha * (tail - L.lp);
+          L.ring[L.write] = dry + static_cast<float>(fb) * L.lp;
+          L.write = (L.write + 1) & L.mask;
+          acc += L.lp;
+        }
+        acc *= static_cast<float>(norm);
+        // (c) The early volley (8 diffuse taps, a "bunch").
+        for (int t = 0; t < kNumChamberTaps; ++t) {
+          const int ts = static_cast<int>(chamberTapsSamples_[t]);
+          if (ts < 1 || i < ts) continue;
+          const float tv = out[i - ts] * ta[t];
+          chamberTapsLp_[ch][t] += capAlpha * (tv - chamberTapsLp_[ch][t]);
+          acc += chamberTapsLp_[ch][t];
+        }
+        // (b) The output HF cap (the ~10 kHz humidity cap).
+        chamberHFCap_[ch] += capAlpha * (acc - chamberHFCap_[ch]);
+        out[i] = chamberHFCap_[ch];
+      }
+    }
+  }
+
  private:
   struct Line {
     std::vector<float> ring;
@@ -647,4 +742,13 @@ class Reverb {
   float roomTapsLp_[kMaxChannels][kNumRoomTaps] = {};
   // Room early-field tap sample offsets (the 4 fixed taps, setParams time).
   double roomTapsSamples_[kNumRoomTaps] = {};
+  // Chamber state: per-tap lowpass (the diffuse early volley's per-reflection
+  // damping, like Room's air but applied to the cluster taps) + the shared
+  // loop lowpass state (the Bass shelf, the low tail extends) + the output HF-cap
+  // lowpass state (the ~10 kHz humidity cap, the high tail caps).
+  float chamberTapsLp_[kMaxChannels][kNumChamberTaps] = {};
+  float chamberBassLp_[kMaxChannels] = {};
+  float chamberHFCap_[kMaxChannels] = {};
+  // Chamber early-volley tap sample offsets (the 8 diffuse taps, setParams time).
+  double chamberTapsSamples_[kNumChamberTaps] = {};
 };
