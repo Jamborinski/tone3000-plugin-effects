@@ -75,6 +75,25 @@ class Reverb {
   static constexpr double kSpringDripGain   = 0.50;    // scaled by N (driver activity)
   static constexpr double kSpringColorAmt   = 0.35;    // subtle soft-shoulder blend
 
+  // ---- Plate laws (mode 2; the dense 2D mode wash, not a 1-D metallic line) ----
+  // The plate is a DENSE, dispersive 2-D surface: (a) a HIGH fixed cross-coupling
+  // (denseMix) blends all 8 lines into a smooth, uniform mode wash (the plate's
+  // modal density ~ constant over the band -- the fact that separates plate from
+  // spring, and its distinctiveness from Digital which leaves the combs in-
+  // commensurate); (b) Bright = a dense bright onset burst (the "whip" -- the
+  // plate fires as a dense whole from t~0 and decays, not a single comb echo);
+  // (c) Bloom = the dispersion, low survives longer than high (the plate's
+  // bright->bloom, a dispersive medium -- the same low-lag as Spring's Sag, here
+  // named Bloom); (d) a subtle level-driven soft-shoulder (the shared driver
+  // FET-odd / transformer color) warms the peaks. All bounded (|fb|<1, |mean|<1,
+  // bounded onset env, soft shoulder). Gated Bright>0 || Bloom>0; at both 0 the
+  // plate is the shared plain comb bank (the Digital anchor holds).
+  static constexpr double kPlateDenseMix     = 0.70;   // the 2-D dense mode wash
+  static constexpr double kPlateBrightOnset  = 0.45;   // the "whip" onset burst
+  static constexpr double kPlateBrightDecay  = 0.96;   // the burst decay (fast whip)
+  static constexpr double kPlateBloomFrac    = 0.32;   // how far Bloom darkens (low lags)
+  static constexpr double kPlateColorAmt     = 0.30;   // the driver FET/soft blend
+
   // Incommensurate base delay times (ms) so the parallel combs do not cancel
   // into a single pitchy tone.
   static constexpr double kBaseMs[kNumLines] = {
@@ -172,6 +191,7 @@ class Reverb {
     modPhase_ = 0.0;  // restart the Mod LFO
     for (int c = 0; c < kMaxChannels; ++c) {
       boingRe_[c] = 0.0f; boingIm_[c] = 0.0f; dripEnv_[c] = 0.0f;
+      onsetEnv_[c] = 0.0f;
     }
   }
 
@@ -260,6 +280,14 @@ class Reverb {
         (params_.springs > 0.0 || params_.sag > 0.0);
     if (springOn) {
       processSpring(buffer);
+      return;
+    }
+    // Plate (mode 2) is law-live when armed (Bright>0 or Bloom>0); at both 0 it
+    // runs the shared plain path (the anchor + the law-inert premise hold).
+    const bool plateOn = (params_.mode == 2) &&
+        (params_.bright > 0.0 || params_.bloom > 0.0);
+    if (plateOn) {
+      processPlate(buffer);
       return;
     }
     if (!densityOn && !modOn_) {
@@ -431,6 +459,73 @@ class Reverb {
     }
   }
 
+  // Plate (mode 2) -- the dense, dispersive 2-D mode wash. A HIGH fixed cross-
+  // coupling (denseMix, a convex blend of each line's feedback toward the
+  // all-lines mean) smooths the 8 combs into a uniform modal wash -- the plate's
+  // ~constant-over-band modal density, the fact that distinguishes it from the
+  // sparse 1-D spring. Bright adds a dense bright onset burst (the "whip" -- the
+  // plate fires as a dense whole); Bloom darkens the loop so the low survives the
+  // high (the bright->bloom dispersion); and the shared driver soft-shoulder
+  // warms the peaks (level-driven). Bounded: |fb|<1, convex mean-blend <= max|lp|,
+  // decaying env, soft shoulder inside the input range.
+  void processPlate(juce::AudioBuffer<float>& buffer) {
+    const int numChannels = juce::jmin(buffer.getNumChannels(), kMaxChannels);
+    const int numSamples = buffer.getNumSamples();
+    const double bright = params_.bright;
+    const double bloom = params_.bloom;
+    const double density = kPlateDenseMix;                    // the 2-D dense wash
+    const double oneMinusDen = 1.0 - density;
+    const double decayNorm = (params_.decayMs - kMinDecayMs) / (kMaxDecayMs - kMinDecayMs);
+    const double fb = 0.30 + 0.69 * decayNorm;                // stable (|fb| < 1)
+    const double norm = (1.0 - fb) / kNumLines;
+    const double dampAlpha = (1.0 - params_.tone) * (1.0 - kPlateBloomFrac * bloom);  // Bloom darkens (low lags)
+    const double widthSpread = kMaxWidthSpread * params_.width;
+    const float cAmt = static_cast<float>(kPlateColorAmt);
+    // the dense "whip" onset burst; armed only if Bright is on, scales with it.
+    const float onsetAmt = bright > 0.0
+        ? static_cast<float>(kPlateBrightOnset * (0.3 + 0.7 * bright)) : 0.0f;
+    for (int ch = 0; ch < numChannels; ++ch) {
+      auto& lines = lines_[static_cast<size_t>(ch)];
+      const double tapScale = (ch == 0) ? (1.0 - widthSpread) : (1.0 + widthSpread);
+      float* out = buffer.getWritePointer(ch);
+      float delayed[kNumLines];
+      float selfLp[kNumLines];
+      float de = onsetEnv_[ch];
+      for (int i = 0; i < numSamples; ++i) {
+        const float dry = out[i];
+        // Pass A: read each line's tail + its low-pass state (the 2-D mode wash).
+        float meanLp = 0.0f;
+        for (int ln = 0; ln < kNumLines; ++ln) {
+          auto& L = lines[ln];
+          const int d = static_cast<int>(std::max(1.0, taps_[ln] * tapScale)) & L.mask;
+          const float tail = L.ring[(L.write - d) & L.mask];
+          L.lp += static_cast<float>(dampAlpha) * (tail - L.lp);
+          delayed[ln] = tail; selfLp[ln] = L.lp; meanLp += L.lp;
+        }
+        meanLp /= kNumLines;
+        // Pass B: write the densely-coupled feedback (convex blend -> stable) and
+        // sum the wet tails (the 2-D mode wash).
+        float acc = 0.0f;
+        for (int ln = 0; ln < kNumLines; ++ln) {
+          auto& L = lines[ln];
+          const float mix = oneMinusDen * selfLp[ln] + density * meanLp;
+          L.ring[L.write] = dry + static_cast<float>(fb) * mix;
+          L.write = (L.write + 1) & L.mask;
+          acc += delayed[ln];
+        }
+        float o = acc * static_cast<float>(norm);
+        // Bright: the dense onset burst (the plate fires as a dense whole),
+        // excited by input activity; more Bright = a denser, brighter onset.
+        de = std::max(de * static_cast<float>(kPlateBrightDecay), std::fabs(dry) * onsetAmt);
+        o += de * (dry >= 0.0f ? 1.0f : -1.0f);
+        // the shared driver soft-shoulder (FET/transformer, level-driven warmth)
+        o = o * (1.0f - cAmt) + springShoulder(o) * cAmt;
+        out[i] = o;
+      }
+      onsetEnv_[ch] = de;
+    }
+  }
+
  private:
   struct Line {
     std::vector<float> ring;
@@ -468,4 +563,8 @@ class Reverb {
   float boingRe_[kMaxChannels] = {};
   float boingIm_[kMaxChannels] = {};
   float dripEnv_[kMaxChannels] = {};
+  // Plate state: the dense "whip" onset burst envelope per channel (bounded,
+  // decaying, reset in reset()). The dense wash + bloom low-pass + color are
+  // stateless (they use the shared comb lines + the existing Line.lp).
+  float onsetEnv_[kMaxChannels] = {};
 };

@@ -265,10 +265,18 @@ right of Width)" is full-tile only. Consistent across all six modes.
   `SpringTest.OnsetSplashIsPresentAndBounded` (drip = the onset splash; all
   layers bounded), `SpringTest.DriverSoftShoulderBendsThePeak` (subtle
   level-driven soft-shoulder, clean below the knee).
-- Per-mode signature pins (one per signature, upcoming) for the unshipped modes:
-  e.g. `BrightOnsetIsDenserThanBloom`, `EarlyAddsDiscreteTaps`,
-  `VolleyIsADiffuseCluster`, `BuildLengthensTheEarly`, `ChamberBassOutlastsHf`
-  (integrated LF/HF tail ratio at Bass 1 > at 0), `HallSpaceWidensTheLateral`.
+- **Plate (Ticket 4 — BUILT):** `PlateTest.BloomMakesTheLowEndOutlast` (Bloom =
+  the dispersion; the loop darkens so the low survives the high -- the
+  bright->bloom), `PlateTest.BrightDensifiesTheOnset` (Bright = the dense
+  "whip" onset burst, fires harder on the strike at high Bright dials),
+  `PlateTest.IsLiveAndBounded` (the plate is a live dense mode wash; all layers
+  bounded), `PlateTest.DriverColorIsLevelDriven` (the shared level-driven
+  soft-shoulder, clean below the knee).
+- Per-mode signature pins (one per signature, upcoming) for the remaining
+  unshipped modes: e.g. `EarlyAddsDiscreteTaps` / `AirDarkensTheHighs` (Room),
+  `VolleyIsADiffuseCluster` / `ChamberBassOutlastsHf` (integrated LF/HF tail
+  ratio at Bass 1 > at 0) (Chamber), `BuildLengthensTheEarly` /
+  `HallSpaceWidensTheLateral` (Hall).
 - **`ReverbModeSetSurvivesSaveRestore`** — the mode + all 12 sigs round-trip
   the state save (the delay `DelayModeSetAndPunchSurviveSaveRestore` pin).
 - Per-mode `enterMode` defaults applied + alt-click reset land on the
@@ -350,8 +358,20 @@ right of Width)" is full-tile only. Consistent across all six modes.
    core state header (included by ChainBlock.h / ChainState.h) and pulling in
    Compressor.h (which drags in `juce_audio_processors`) there would be too
    heavy, so the color is an inline level-dependent soft-shoulder.
-4. **Plate** — Bright (dense onset) + Bloom (dispersion) + **preamp color**
-   (reuse `fetClip`/`fcClip`, level-driven) on the 2D high-coupling line; pins.
+4. **Plate** — ✅ DONE. The plate is the dense 2-D mode wash (all 8 comb lines
+   at a HIGH fixed convex cross-coupling -- the plate's ~constant-over-band
+   modal density, what distinguishes it from the sparse 1-D spring) + **Bright**
+   (a dense bright onset burst, the "whip" -- the plate fires as a dense whole)
+   + **Bloom** (the loop darkens so the low survives the high = the bright->bloom
+   dispersion, the plate's dispersive medium) + the shared level-driven
+   soft-shoulder (the FET/transformer warmth, clean below the knee, a mild roll
+   off above). Same gate as Spring (`Bright>0 || Bloom>0`; at both 0 the plate is
+   the shared plain comb bank, so the Digital anchor + `kNumModes==6` hold).
+   Pins: the four `PlateTest.*` above.
+   **Color:** the soft-shoulder is a shared clean-room level-driven law (`o*(1-c)
+   + softShoulder(o)*c`); the same helper `springShoulder` is reused here for the
+   Plate's driver warmth. Distinct from Spring's boing/drip (which is the 1-D
+   metallic ring + splash) by the plate's dense 2-D wash + the bright onset.
 5. **Room** — Early (TDL) + Air (per-tap damping) laws + pins.
 6. **Chamber** — Volley + Bass (dual-decay) laws + pins.
 7. **Hall** — Build (early width) + Space (lateral/air) laws + pins.

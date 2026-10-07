@@ -3509,6 +3509,94 @@ TEST(SpringTest, DriverSoftShoulderBendsThePeak) {
   EXPECT_GT(hot, linearHot * 0.35) << "mild shoulder (warmth), not a hard clip";
 }
 
+// ---- Plate (Ticket 4): the dense 2-D mode wash, a bright "whip" onset (Bright),
+// a low-outlasts-high dispersion (Bloom), plus the shared level-driven driver
+// warmth. Gated Bright>0 || Bloom>0; at both 0 it is the shared plain comb
+// bank (the Digital anchor holds).
+static std::vector<float> plateOut(const std::vector<float>& input,
+                                    double bright, double bloom, double decayMs = 2400.0) {
+  Reverb r; r.prepare(kFs);
+  Reverb::Params p;
+  p.decayMs = decayMs; p.tone = 0.35; p.size = 0.80; p.width = 0.0; p.preMs = 0.0;
+  p.mode = 2; p.bright = bright; p.bloom = bloom;   // arms the Plate law path
+  r.setParams(p);
+  juce::AudioBuffer<float> buf(1, kBlock);
+  std::vector<float> L(input.size());
+  for (int off = 0; off + kBlock <= (int)input.size(); off += kBlock) {
+    for (int i = 0; i < kBlock; ++i) buf.setSample(0, i, input[off + i]);
+    r.process(buf);
+    for (int i = 0; i < kBlock; ++i) L[off + i] = buf.getSample(0, i);
+  }
+  return L;
+}
+
+// Bloom is the plate's dispersion (bright->bloom): the loop darkens so the HF
+// decays faster than the LF, and the low end outlasts the high. Pin the effect
+// isolated on the Bloom knob by the low/high sustained-tail ratio.
+TEST(PlateTest, BloomMakesTheLowEndOutlast) {
+  const int n = 20 * kBlock;
+  const int from = n * 2 / 3;
+  auto avgPow = [](const std::vector<float>& v, int a) {
+    double s = 0.0; for (int i = a; i < (int)v.size(); ++i) s += (double)v[i] * v[i];
+    return s / ((int)v.size() - a);
+  };
+  const auto lo0 = plateOut(makeSine(n, 200.0, 0.7f), 0.0, 0.10);   // Bloom mild
+  const auto hi0 = plateOut(makeSine(n, 4000.0, 0.7f), 0.0, 0.10);
+  const auto lo1 = plateOut(makeSine(n, 200.0, 0.7f), 0.0, 1.0);    // Bloom strong
+  const auto hi1 = plateOut(makeSine(n, 4000.0, 0.7f), 0.0, 1.0);
+  const double r0 = avgPow(lo0, from) / std::max(1e-12, avgPow(hi0, from));
+  const double r1 = avgPow(lo1, from) / std::max(1e-12, avgPow(hi1, from));
+  EXPECT_GT(r1, r0) << "Bloom must let the low survive the high more than it does at low Bloom";
+}
+
+// Bright is the plate's "whip" onset (a dense burst at the strike): the onset
+// window fires harder at a higher Bright dial, and the run stays bounded.
+TEST(PlateTest, BrightDensifiesTheOnset) {
+  const int n = 8 * kBlock;
+  std::vector<float> click(n, 0.0f); for (int i = 0; i < 40; ++i) click[i] = 1.0f;
+  const auto b03 = plateOut(click, 0.3, 0.0);   // armed by Bright
+  const auto b10 = plateOut(click, 1.0, 0.0);   // denser onset (Bright 1)
+  for (auto s : b10) EXPECT_LE(std::abs((double)s), 5.0) << "plate out of bound";
+  auto windowPow = [](const std::vector<float>& v, int a, int b) {
+    double e = 0.0; for (int i = a; i < b && i < (int)v.size(); ++i) e += (double)v[i] * v[i];
+    return e / (b - a);
+  };
+  const int m = std::min(200, (int)b03.size());
+  const double o03 = windowPow(b03, 0, m);
+  const double o10 = windowPow(b10, 0, m);
+  EXPECT_GT(o10, o03) << "a denser plate onset (Bright) should fire harder on the strike";
+}
+
+// The plate is a *live* dense mode wash (not a silent comb bank) and all the
+// layers are bounded (|fb|<1, convex mean-blend, decaying env, soft shoulder).
+TEST(PlateTest, IsLiveAndBounded) {
+  const int n = 8 * kBlock;
+  const auto v = plateOut(makeSine(n, 440.0, 0.7f), 0.5, 0.5);
+  double peak = 0.0;
+  for (auto s : v) {
+    EXPECT_TRUE(std::isfinite((double)s)) << "plate sample finite";
+    EXPECT_LE(std::abs((double)s), 5.0) << "plate bounded";
+    peak = std::max(peak, std::abs((double)s));
+  }
+  EXPECT_GT(peak, 0.05) << "the plate must be a live dense wash";
+}
+
+// The shared driver soft-shoulder (FET/transformer) is level-driven: identity
+// at low level, peak-bending above the knee. Same law the Spring uses.
+TEST(PlateTest, DriverColorIsLevelDriven) {
+  const int n = 8 * kBlock;
+  auto peakOf = [n](double amp) {
+    const auto v = plateOut(makeSine(n, 440.0, (float)amp), 0.5, 0.5);
+    double pk = 0.0; for (auto s : v) pk = std::max(pk, std::abs((double)s));
+    return pk;
+  };
+  const double cold = peakOf(0.05);   // below the shoulder knee -> clean
+  const double hot  = peakOf(2.0);    // crossing the knee -> compressed
+  const double lin  = cold * 40.0;    // 2.0 / 0.05 = 40
+  EXPECT_GT(lin, hot) << "a high-level plate tone should compress more than the cold linear scale";
+  EXPECT_GT(hot, lin * 0.30) << "a real but warm color, not a hard-clip";
+}
+
 // TEMP probe: Opto-2A STAGE model characterization (input-driven detection kept).
 
 
