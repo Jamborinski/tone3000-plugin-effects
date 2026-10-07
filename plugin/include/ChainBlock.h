@@ -358,6 +358,31 @@ struct ChainBlock {
   double reverbTone = 0.4;       // 0..1 (0 bright, 1 dark; low-pass on feedback)
   double reverbSize = 0.6;       // 0..1 (scales all delay times)
   double reverbWidth = 1.0;       // 0..1 (stereo width, 0 mono, 1 wide)
+  // Reverb mode (0 Digital..5 Hall) + the 12 per-mode signatures (2/mode,
+  // normalised 0..1). Only the active mode's two sigs are live; `Springs`
+  // stores the normalised 1..6 count (default 3 = 0.4). (Reverb::Params;
+  // plugin/docs/reverb-modes.md.)
+  int reverbMode = 0;
+  double reverbDensity = 0.0;
+  double reverbMod = 0.0;
+  double reverbSprings = 0.4;  // Springs 3
+  double reverbSag = 0.4;
+  double reverbBright = 0.5;
+  double reverbBloom = 0.5;
+  double reverbEarly = 0.5;
+  double reverbAir = 0.3;
+  double reverbVolley = 0.4;
+  double reverbBass = 0.6;
+  double reverbBuild = 0.6;
+  double reverbSpace = 0.7;
+  // ORDER MUST MATCH the Reverb::Params aggregate (positional): the five shared
+  // knobs, then mode, then the 12 sigs (2/mode).
+  Reverb::Params reverbParams() const {
+    return {reverbDecayMs, reverbPreMs, reverbTone, reverbSize, reverbWidth,
+            reverbMode, reverbDensity, reverbMod, reverbSprings, reverbSag,
+            reverbBright, reverbBloom, reverbEarly, reverbAir, reverbVolley,
+            reverbBass, reverbBuild, reverbSpace};
+  }
   Delay delay;
   Chorus chorus;
   Tremolo tremolo;

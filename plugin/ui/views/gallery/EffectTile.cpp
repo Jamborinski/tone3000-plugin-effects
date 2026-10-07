@@ -6,6 +6,7 @@
 #include "core/Theme.h"
 #include "GalleryGeometry.h"
 #include "Compressor.h"
+#include "Reverb.h"
 
 namespace t3k::ui {
 
@@ -98,6 +99,56 @@ help::Key delaySigHelp(int m) {
                                     help::Key::delayChip, help::Key::delayRate,
                                     help::Key::delayRate, help::Key::delayRate};
   return keys[juce::jlimit(0, 5, m)];
+}
+
+// ---- Reverb mode sig slots: (mode, localSlot 0=Sig A/1=B) -> param/scale/
+// label/help. Digital Density/Mod, Spring Springs/Sag, Plate Bright/Bloom,
+// Room Early/Air, Chamber Volley/Bass, Hall Build/Space. All stored 0..1;
+// Springs is the single stepped (1..6) sig. (plugin/docs/reverb-modes.md.)
+static const char* reverbSigParam(int mode, int localSlot) {
+  static const char* p[Reverb::kNumModes][2] = {
+      {"reverbDensity", "reverbMod"},  {"reverbSprings", "reverbSag"},
+      {"reverbBright", "reverbBloom"}, {"reverbEarly", "reverbAir"},
+      {"reverbVolley", "reverbBass"},  {"reverbBuild", "reverbSpace"}};
+  return p[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
+}
+static const char* reverbSigLabel(int mode, int localSlot) {
+  static const char* n[Reverb::kNumModes][2] = {
+      {"Density", "Mod"}, {"Springs", "Sag"}, {"Bright", "Bloom"},
+      {"Early", "Air"}, {"Volley", "Bass"}, {"Build", "Space"}};
+  return n[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
+}
+static const KnobScale* reverbSigScaleForMode(int mode, int localSlot) {
+  if (juce::jlimit(0, Reverb::kNumModes - 1, mode) == 1 && !localSlot)
+    return &scales::springs();  // the only stepped sig (Springs 1..6)
+  return &scales::fraction01();
+}
+static help::Key reverbSigHelp(int mode, int localSlot) {
+  static const help::Key k[Reverb::kNumModes][2] = {
+      {help::Key::reverbDensity, help::Key::reverbMod},
+      {help::Key::reverbSprings, help::Key::reverbSag},
+      {help::Key::reverbBright, help::Key::reverbBloom},
+      {help::Key::reverbEarly, help::Key::reverbAir},
+      {help::Key::reverbVolley, help::Key::reverbBass},
+      {help::Key::reverbBuild, help::Key::reverbSpace}};
+  return k[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
+}
+static juce::String compactReverbModeName(int m) {
+  static const char* n[6] = {"DIG", "SPR", "PLT", "RM", "CHM", "HALL"};
+  return n[juce::jlimit(0, 5, m)];
+}
+// The mode's Sig A/B raw (0..1) block-field value for the display.
+static double reverbSigRaw(const ChainItem& b, int mode, int localSlot) {
+  const int m = juce::jlimit(0, Reverb::kNumModes - 1, mode);
+  const int s = localSlot ? 1 : 0;
+  switch (m) {
+    case 0: return s ? b.reverbMod : b.reverbDensity;  break;
+    case 1: return s ? b.reverbSag : b.reverbSprings;  break;
+    case 2: return s ? b.reverbBloom : b.reverbBright; break;
+    case 3: return s ? b.reverbAir : b.reverbEarly;    break;
+    case 4: return s ? b.reverbBass : b.reverbVolley;  break;
+    default: return s ? b.reverbSpace : b.reverbBuild; break;
+  }
 }
 
 std::vector<EffectParams> paramsFor(const ChainItem& b) {
@@ -404,10 +455,56 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
 
   if (block_.effectKind == "reverb") {
     // Reverb-only: surface the shared "In" (inputGain) knob as "Dwell" -- a
-    // product-copy choice for this block. Only the label + tooltip change here;
-    // Delay/Chorus/Compressor keep their "In" / input-level copy.
+    // product-copy choice for this block. Only the label + tooltip change here
+    // (Delay/Chorus/Compressor keep their "In" / input-level copy).
     input_.setLabel("Dwell");
     input_.setHelp(help::Key::reverbDwell);
+
+    // Six-character mode set (the compressor/delay pattern; design in
+    // plugin/docs/reverb-modes.md). Full tile: the mode combo + the mode's TWO
+    // signature knobs (Sig A right of Pre in row 1, Sig B right of Width in
+    // row 2). Compact: a mode-cycle button; Sig A stays (right of Decay),
+    // Sig B + Pre hide.
+    for (int m = 0; m < Reverb::kNumModes; ++m)
+      modeCombo_.addItem(juce::String(Reverb::modeName(m).data()), m + 1);
+    modeCombo_.setSelectedId(juce::jlimit(0, Reverb::kNumModes - 1, block_.reverbMode) + 1,
+                             juce::dontSendNotification);
+    modeCombo_.onChange = [this] {
+      const int m = modeCombo_.getSelectedId() - 1;
+      if (m >= 0) this->enterReverbMode(m);
+    };
+    modeCombo_.setHelpText(help::text(help::Key::reverbMode));
+    addAndMakeVisible(modeCombo_);
+    modeCombo_.setVisible(!compact_);
+
+    // Sig A (sigKnob_) -- the mode's primary character. Mode-aware so the
+    // write lands on the live mode's Sig A (density/springs/bright/...).
+    sigKnob_.onChange = [this](float v) {
+      const auto* sc = reverbSigScaleForMode(this->block_.reverbMode, 0);
+      const double real = knobToStored(*sc, (double)v);
+      this->services().chain.setBlockParam(blockId(), reverbSigParam(this->block_.reverbMode, 0), real);
+    };
+    addAndMakeVisible(sigKnob_);
+
+    // Sig B (modKnob_) -- the mode's secondary character (full tile only).
+    modKnob_.onChange = [this](float v) {
+      const auto* sc = reverbSigScaleForMode(this->block_.reverbMode, 1);
+      const double real = knobToStored(*sc, (double)v);
+      this->services().chain.setBlockParam(blockId(), reverbSigParam(this->block_.reverbMode, 1), real);
+    };
+    addAndMakeVisible(modKnob_);
+
+    syncReverbMode();
+
+    if (compact_) {
+      modeCycle_.setButtonText(compactReverbModeName(block_.reverbMode));
+      modeCycle_.setHelpText(help::text(help::Key::reverbMode) +
+                             " -- click to switch to the next mode");
+      modeCycle_.onClick = [this] {
+        this->enterReverbMode((this->block_.reverbMode + 1) % Reverb::kNumModes);
+      };
+      addAndMakeVisible(modeCycle_);
+    }
   }
 
   const bool isDelay = block_.effectKind == "delay";
@@ -637,6 +734,77 @@ void EffectTile::syncCompSig(int m) {
   modKnob_.setVisible(true);
 }
 
+void EffectTile::enterReverbMode(int m) {
+  if (m < 0 || m >= Reverb::kNumModes) return;
+  // Selecting a mode lands you on that mode's shared dials + its two
+  // signatures as a starting point (the compressor enterMode contract), then
+  // dial from there. Push the mode + the five dials + this mode's sigs to the
+  // chain; the other modes' sigs keep their values (distinct, untouched
+  // fields).
+  double decay = 0.0, pre = 0.0, tone = 0.0, size = 0.0, width = 0.0;
+  Reverb::defaultDialsForMode(m, decay, pre, tone, size, width);
+  block_.reverbDecayMs = decay;  services().chain.setBlockParam(blockId(), "reverbDecayMs", decay);
+  block_.reverbPreMs = pre;      services().chain.setBlockParam(blockId(), "reverbPreMs", pre);
+  block_.reverbTone = tone;      services().chain.setBlockParam(blockId(), "reverbTone", tone);
+  block_.reverbSize = size;      services().chain.setBlockParam(blockId(), "reverbSize", size);
+  block_.reverbWidth = width;    services().chain.setBlockParam(blockId(), "reverbWidth", width);
+
+  const double sigA = Reverb::defaultSigForMode(m, 0);  // 0 for Digital (the anchor)
+  const double sigB = Reverb::defaultSigForMode(m, 1);
+  services().chain.setBlockParam(blockId(), reverbSigParam(m, 0), sigA);
+  services().chain.setBlockParam(blockId(), reverbSigParam(m, 1), sigB);
+  block_.reverbMode = m;
+  services().chain.setBlockParam(blockId(), "reverbMode", (double)m);
+  syncReverbMode();
+
+  // Alt-click lands on the mode's starting point: the five shared dials + both
+  // signatures. syncReverbMode just set sigKnob_/modKnob_ to the mode's scale.
+  knobA_.setDefaultValue((float)knobFromStored(scales::reverbDecay(), decay));
+  knobB_.setDefaultValue((float)knobFromStored(scales::reverbPre(), pre));
+  knobC_.setDefaultValue((float)knobFromStored(scales::reverbTone(), tone));
+  knobD_.setDefaultValue((float)knobFromStored(scales::reverbSize(), size));
+  knobE_.setDefaultValue((float)knobFromStored(scales::reverbWidth(), width));
+  sigKnob_.setDefaultValue((float)knobFromStored(*reverbSigScaleForMode(m, 0), sigA));
+  modKnob_.setDefaultValue((float)knobFromStored(*reverbSigScaleForMode(m, 1), sigB));
+}
+
+void EffectTile::syncReverbMode() {
+  if (block_.effectKind != "reverb") return;
+  const int m = juce::jlimit(0, Reverb::kNumModes - 1, block_.reverbMode);
+  modeCombo_.setSelectedId(m + 1, juce::dontSendNotification);
+  if (compact_)
+    modeCycle_.setButtonText(compactReverbModeName(m));
+
+  // Sig A (sigKnob_, slot 0) + Sig B (modKnob_, slot 1) -- scale/label/steps/
+  // value follow the mode.
+  const char* lblA = reverbSigLabel(m, 0);
+  const auto* sca = reverbSigScaleForMode(m, 0);
+  sigKnob_.setScale(sca);
+  sigKnob_.setSteps(sca->steps);
+  sigKnob_.setLabel(lblA);
+  sigKnob_.setHelp(reverbSigHelp(m, 0));
+  sigKnob_.setValue((float)knobFromStored(*sca, reverbSigRaw(block_, m, 0)));
+  const char* lblB = reverbSigLabel(m, 1);
+  const auto* sb = reverbSigScaleForMode(m, 1);
+  modKnob_.setScale(sb);
+  modKnob_.setSteps(sb->steps);
+  modKnob_.setLabel(lblB);
+  modKnob_.setHelp(reverbSigHelp(m, 1));
+  modKnob_.setValue((float)knobFromStored(*sb, reverbSigRaw(block_, m, 1)));
+
+  syncKnobs();  // refresh the five shared dials (Decay/Pre/Tone/Size/Width)
+
+  // Per-mode contextual label: Spring's Size reads as the spring's "Length".
+  knobD_.setLabel(m == 1 ? "Length" : "Size");
+
+  // Visibility: Sig A is always shown (the full-tile row-1 slot / the compact
+  // right-of-Decay slot); Sig B + Pre are full-tile only.
+  sigKnob_.setVisible(true);
+  modKnob_.setVisible(!compact_);
+  knobB_.setVisible(!compact_);  // Pre: full row 1, hidden compact
+  resized();
+}
+
 void EffectTile::applySync() {
   if (block_.effectKind != "delay")
     return;
@@ -691,14 +859,24 @@ void EffectTile::resized() {
   // In/Fb/[unique]/Out -- Width and the non-sig Mod are hidden there.
   const bool delayFull = delay && !compact_;
   const bool compFull = compressor && !compact_;
-  const int cols = (delayFull || compFull) ? 5 : (five ? 4 : 3);
+  const bool reverbFull = reverb && !compact_;
+  const bool reverbCompact = reverb && compact_;
+  const int cols = (delayFull || compFull || reverbFull) ? 5 : (five ? 4 : 3);
   const int colW = (W - 8) / cols;
 
-  // Row 1: Mix, p0, p1, p2 [p3 on the full delay tile].
+  // Row 1: Mix, p0, p1, p2 [p3 on the full delay tile]. Reverb: full =
+  // Mix/Decay/Pre/SigA/Tone; compact = Mix/Decay/SigA/Tone (Pre + SigB hide).
   int x = 4;
   mix_.setBounds(x, row1Y, colW, knobH); x += colW;
-  knobA_.setBounds(x, row1Y, colW, knobH); x += colW;
-  knobB_.setBounds(x, row1Y, colW, knobH); x += colW;
+  knobA_.setBounds(x, row1Y, colW, knobH); x += colW;  // Decay
+  if (reverbFull) {
+    knobB_.setBounds(x, row1Y, colW, knobH); x += colW;   // Pre
+    sigKnob_.setBounds(x, row1Y, colW, knobH); x += colW; // Sig A
+  } else if (reverbCompact) {
+    sigKnob_.setBounds(x, row1Y, colW, knobH); x += colW; // Sig A (right of Decay)
+  } else {
+    knobB_.setBounds(x, row1Y, colW, knobH); x += colW;
+  }
   knobC_.setBounds(x, row1Y, colW, knobH); x += colW;
   if (delayFull) {
     knobD_.setBounds(x, row1Y, colW, knobH);  // Fb joins row 1
@@ -717,6 +895,13 @@ void EffectTile::resized() {
     modKnob_.setBounds(x, row2Y, colW, knobH); x += colW;  // the shared Mod
     sigKnob_.setBounds(x, row2Y, colW, knobH);  // the mode's unique (Rate in Mod mode)
     x += colW;
+  } else if (reverbFull) {
+    knobD_.setBounds(x, row2Y, colW, knobH); x += colW;   // Size
+    knobE_.setBounds(x, row2Y, colW, knobH); x += colW;   // Width
+    modKnob_.setBounds(x, row2Y, colW, knobH);            // Sig B (right of Width)
+  } else if (reverbCompact) {
+    knobD_.setBounds(x, row2Y, colW, knobH); x += colW;   // Size
+    knobE_.setBounds(x, row2Y, colW, knobH); x += colW;   // Width
   } else if (compFull) {
     knobE_.setBounds(x, row2Y, colW, knobH); x += colW;   // Thresh
     sigKnob_.setBounds(x, row2Y, colW, knobH); x += colW; // SC

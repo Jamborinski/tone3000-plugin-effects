@@ -569,6 +569,34 @@ inline const KnobScale& reverbWidth() {
   }();
   return s;
 }
+// Springs (Spring mode Sig A): stepped 1..6 line count, stored normalised 0..1
+// so `toStored` is the identity (the tile writes the stored fraction straight
+// into the block param). Noon (knob 0.5) = Springs 3 (index 2). Mirrors the
+// delay `Heads` split without toStored.
+inline const KnobScale& springs() {
+  static const KnobScale s = [] {
+    // 6 detents: stored 0..1 snapped to 0, 1/5 .. 1 -> spring count 1..6.
+    const auto index = [](double n) {
+      return juce::jlimit(0, 5, juce::roundToInt(juce::jlimit(0.0, 1.0, n) * 5.0));
+    };
+    KnobScale c;
+    c.toDisplay = [index](double n) { return 1.0 + (double)index(n); };
+    // Snap typed values to the nearest detent (count -> stored 0..1).
+    c.fromDisplay = [](double d) {
+      return (d <= 1.5 ? 0.0 : d <= 2.5 ? 0.2 : d <= 3.5 ? 0.4 : d <= 4.5 ? 0.6 : d <= 5.5 ? 0.8 : 1.0);
+    };
+    c.toStored = [](double n) { return n; };
+    c.fromStored = [](double d) { return d; };
+    c.format = [index](double n) {
+      const int v = 1 + index(n);
+      return juce::String(v) + (v == 1 ? " spring" : " springs");
+    };
+    c.editText = [index](double n) { return juce::String(1 + index(n)); };
+    c.steps = 6;  // the knob clicks between the six counts
+    return c;
+  }();
+  return s;
+}
 // Stored 0..1 fraction (width/spread, or an effect signature amount), shown
 // 0..100%. toDisplay MUST stay the identity: the tile writes toDisplay(v)
 // straight into the block param, and these params are stored 0..1 and clamped

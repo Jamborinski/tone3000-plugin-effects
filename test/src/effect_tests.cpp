@@ -3241,6 +3241,274 @@ TEST(ReverbTest, WidthControlsStereoWidth) {
   EXPECT_GT(mWide, mMono + 0.02);   // decorrelated banks -> L != R (wide)
 }
 
+// ---- Six-character mode set, scaffold (Ticket 1) ----
+// Feed a fixed stereo input block-by-block through a Reverb at a given Params
+// and return the flat L0,R0,L1,R1,... output stream.
+static std::vector<float> reverbScaffoldOut(const Reverb::Params& p,
+                                            const std::vector<float>& in) {
+  Reverb r;
+  r.prepare(kFs);
+  r.setParams(p);
+  juce::AudioBuffer<float> buf(2, kBlock);
+  std::vector<float> out;
+  out.reserve(2 * in.size());
+  for (size_t off = 0; off + static_cast<size_t>(kBlock) <= in.size(); off += static_cast<size_t>(kBlock)) {
+    for (int i = 0; i < kBlock; ++i) {
+      buf.setSample(0, i, in[off + static_cast<size_t>(i)]);
+      buf.setSample(1, i, in[off + static_cast<size_t>(i)]);
+    }
+    r.process(buf);
+    for (int i = 0; i < kBlock; ++i) {
+      out.push_back(buf.getSample(0, i));
+      out.push_back(buf.getSample(1, i));
+    }
+  }
+  return out;
+}
+
+// Scaffold pin: the six modes are *law-inert* -- selecting a mode must not
+// (yet) change the engine output. All six modes at the same dials produce
+// byte-identical audio, because no per-mode DSP exists yet (process() is the
+// original comb bank for every mode). Retire this pin when the mode DSP lands
+// (Tickets 2-7) and pin each mode's characteristic instead. The Digital row
+// (Density 0 / Mod 0) is the bit-identity anchor the doc relies on.
+// (Retired placeholder.) The original scaffold pin asserted all six modes were
+// byte-identical at their defaults (every signature law-inert). That held in the
+// scaffold; once a mode's laws land it is live by design and the premise breaks.
+// Spring (Ticket 3) is now live at its defaults (springs=0.4/sag=0.4) and is
+// covered by the SpringTest.* pins below; the Digital bit-identity anchor
+// (Digital @ density0/mod0 == the plain comb bank) is still carried by the
+// pre-existing mode-0 behaviour pins (HigherDecay/FullTone/Width), and each
+// remaining mode will carry its own pins as it lands.
+
+// Every mode's enterMode starting dials + both signatures must resolve within
+// the engine's documented bounds (so a future UI row can never set an
+// out-of-range param and snap back).
+TEST(ReverbTest, ModeDefaultsAreWithinBounds) {
+  for (int m = 0; m < Reverb::kNumModes; ++m) {
+    double decay = -1.0, pre = -1.0, tone = -1.0, size = -1.0, width = -1.0;
+    Reverb::defaultDialsForMode(m, decay, pre, tone, size, width);
+    EXPECT_GE(decay, Reverb::kMinDecayMs) << "decay m=" << m;
+    EXPECT_LE(decay, Reverb::kMaxDecayMs) << "decay m=" << m;
+    EXPECT_GE(pre, Reverb::kMinPreMs) << "pre m=" << m;
+    EXPECT_LE(pre, Reverb::kMaxPreMs) << "pre m=" << m;
+    for (const double v : {tone, size, width}) {
+      EXPECT_GE(v, 0.0) << "dial m=" << m;
+      EXPECT_LE(v, 1.0) << "dial m=" << m;
+    }
+    for (int slot = 0; slot < 2; ++slot) {
+      const double sig = Reverb::defaultSigForMode(m, slot);
+      EXPECT_GE(sig, 0.0) << "sig m=" << m << " slot=" << slot;
+      EXPECT_LE(sig, 1.0) << "sig m=" << m << " slot=" << slot;
+    }
+  }
+}
+
+// The Spring count law: 0.4 normalised is the default row (3 springs), with
+// 0 -> 1 and 1 -> 6 at the ends.
+TEST(ReverbTest, SpringsMapsToOneThroughSix) {
+  EXPECT_EQ(Reverb::springsFromNormalized(0.0), 1);
+  EXPECT_EQ(Reverb::springsFromNormalized(0.4), 3);
+  EXPECT_EQ(Reverb::springsFromNormalized(1.0), 6);
+}
+
+// ---- Digital (Ticket 2): Density (feedback coupling) + Mod (read-tap waver) ----
+// Feed a fixed tone through the Digital engine at a given (density, mod) and
+// return the left channel. density/mod=0 is the plain comb bank (the anchor).
+static std::vector<float> digitalOut(double density, double mod, int frames = 24 * kBlock) {
+  Reverb r; r.prepare(kFs);
+  Reverb::Params p;
+  p.decayMs = 1500.0; p.tone = 0.35; p.size = 0.5; p.width = 0.0;
+  p.mode = 0; p.density = density; p.mod = mod;
+  r.setParams(p);
+  const auto in = makeSine(frames, 440.0, 0.8f);
+  juce::AudioBuffer<float> buf(2, kBlock);
+  std::vector<float> L(static_cast<size_t>(frames));
+  for (size_t off = 0; off + static_cast<size_t>(kBlock) <= static_cast<size_t>(frames); off += static_cast<size_t>(kBlock)) {
+    for (int i = 0; i < kBlock; ++i) { buf.setSample(0, i, in[off + i]); buf.setSample(1, i, in[off + i]); }
+    r.process(buf);
+    for (int i = 0; i < kBlock; ++i) L[off + i] = buf.getSample(0, i);
+  }
+  return L;
+}
+
+// Density is the Digital feedback-coupling law: blending each line's feedback
+// toward the all-lines mean must (a) be stable (a convex blend -> bounded),
+// (b) change the tail relative to the plain anchor, and (c) be continuous
+// (the mid position sits strictly between the two ends).
+TEST(ReverbTest, DigitalDensityIsLiveBoundedAndContinuous) {
+  const int F = 24 * kBlock;
+  const auto d0 = digitalOut(0.0, 0.0);
+  const auto dHalf = digitalOut(0.5, 0.0);
+  const auto d1 = digitalOut(1.0, 0.0);
+  ASSERT_EQ(d0.size(), static_cast<size_t>(F));
+  // (a) bounded + finite: coupling cannot destabilise the feedback.
+  for (auto s : d1) {
+    EXPECT_TRUE(std::isfinite((double)s)) << "density tail blew up";
+    EXPECT_LE(std::abs((double)s), 5.0) << "density tail out of bound";
+  }
+  // (b) live + (c) continuous: the mid position is strictly between the ends,
+  // and each end is distinct, over the steady tail (skip the ring fill).
+  double d01 = 0.0, d0h = 0.0, d1h = 0.0;
+  for (int i = kBlock; i < F; ++i) {
+    d01 = std::max(d01, std::abs((double)d1[i] - (double)d0[i]));
+    d0h = std::max(d0h, std::abs((double)dHalf[i] - (double)d0[i]));
+    d1h = std::max(d1h, std::abs((double)d1[i] - (double)dHalf[i]));
+  }
+  EXPECT_GT(d01, 1e-4) << "full density must change the tail vs the plain anchor";
+  EXPECT_GT(d0h, 1e-5) << "density 0.5 must differ from the plain anchor";
+  EXPECT_GT(d1h, 1e-5) << "density 0.5 must differ from full coupling";
+}
+
+// Mod is the Digital read-tap waver: it must move the taps so the tail differs
+// from the plain read, stay bounded, and carry AM at the law rate (5 Hz) that
+// grows with the knob. (Mirrors the delay's Mod -> sidebands at the waver rate
+// in the delay suite.)
+TEST(ReverbTest, DigitalModWaversAtTheLawRate) {
+  const int F = 48 * kBlock;            // 4.8 s of tone -> many waver cycles
+  const int skip = 2 * kBlock;
+  auto run = [&](double mod) {
+    Reverb r; r.prepare(kFs);
+    Reverb::Params p;
+    p.decayMs = 2500.0; p.tone = 0.30; p.size = 0.5; p.width = 0.0;
+    p.mode = 0; p.mod = mod;
+    r.setParams(p);
+    const auto in = makeSine(F, 440.0, 0.8f);
+    juce::AudioBuffer<float> buf(2, kBlock);
+    std::vector<float> L(static_cast<size_t>(F));
+    for (size_t off = 0; off + static_cast<size_t>(kBlock) <= static_cast<size_t>(F); off += static_cast<size_t>(kBlock)) {
+      for (int i = 0; i < kBlock; ++i) { buf.setSample(0, i, in[off + i]); buf.setSample(1, i, in[off + i]); }
+      r.process(buf);
+      for (int i = 0; i < kBlock; ++i) L[off + i] = buf.getSample(0, i);
+    }
+    return L;
+  };
+  const auto m0 = run(0.0);
+  const auto mHalf = run(0.4);
+  const auto m1 = run(1.0);
+  ASSERT_EQ(m0.size(), static_cast<size_t>(F));
+  for (auto s : m1) { EXPECT_TRUE(std::isfinite((double)s)); EXPECT_LE(std::abs((double)s), 5.0); }
+  // Live: moving the taps changes the summed tail relative to the plain read.
+  double diff = 0.0;
+  for (int i = skip; i < F; ++i) diff = std::max(diff, std::abs((double)m1[i] - (double)m0[i]));
+  EXPECT_GT(diff, 1e-4) << "Mod must change the tap (the waver is live)";
+
+  // At the law rate: the waver AMs the 440 Hz tone, so the slow RMS envelope
+  // carries power at Reverb::kDigitalModHz that the plain (unmodulated) run
+  // lacks. Measure the 5 Hz share of the envelope power.
+  auto envRateShare = [&](const std::vector<float>& L) {
+    const int win = 256, step = 32;          // ~5 carrier cycles, 1500 Hz env
+    std::vector<float> env;
+    for (int n = skip; n + win <= F; n += step) {
+      double a = 0.0;
+      for (int j = 0; j < win; ++j) a += (double)L[n + j] * (double)L[n + j];
+      env.push_back(static_cast<float>(std::sqrt(a / win)));
+    }
+    const double ref = goertzelPower(env, 0.5, kFs / step);  // low-ref (near-DC) level
+    const double pw = goertzelPower(env, Reverb::kDigitalModHz, kFs / step);
+    return pw / (ref + 1e-30);  // 5 Hz share vs the low-ref level (a level-normalised ratio)
+  };
+  const double a0 = envRateShare(m0);
+  const double a04 = envRateShare(mHalf);
+  const double a1 = envRateShare(m1);
+  EXPECT_GT(a1, a0 * 3.0 + 1e-6) << "the Mod-rate AM share MUST grow when Mod is on";
+  EXPECT_GT(a04, a0 * 1.5 + 1e-9) << "Mod 0.4 must show more rate-AM than Mod 0";
+}
+
+// ---- Spring (Ticket 3): N spring lines + boing (dilutes w/ N) + Sag (the
+// dispersion) + a drip onset splash + a subtle level-driven driver soft-shoulder.
+// Mode 1, armed when springs>0 or sag>0; at both 0 it runs the shared plain
+// comb bank (so the Digital anchor + the law-inert scaffold pin stay intact).
+static std::vector<float> springOut(const std::vector<float>& input,
+                                    double springs, double sag, double decayMs = 1800.0) {
+  Reverb r; r.prepare(kFs);
+  Reverb::Params p;
+  p.decayMs = decayMs; p.tone = 0.40; p.size = 0.60; p.width = 0.0; p.preMs = 0.0;
+  p.mode = 1; p.springs = springs; p.sag = sag;   // arms the Spring law path
+  r.setParams(p);
+  juce::AudioBuffer<float> buf(1, kBlock);
+  std::vector<float> L(input.size());
+  for (int off = 0; off + kBlock <= (int)input.size(); off += kBlock) {
+    for (int i = 0; i < kBlock; ++i) buf.setSample(0, i, input[off + i]);
+    r.process(buf);
+    for (int i = 0; i < kBlock; ++i) L[off + i] = buf.getSample(0, i);
+  }
+  return L;
+}
+
+// The gotcha: MORE springs = smoother, LESS metallic. The 2.4 kHz boing ring is
+// excited by an onset and its gain scales ~1/N, so one spring pings hard and six
+// wash it out (the diffuse comb tail stays level-constant over N).
+TEST(SpringTest, OneSpringBoingsMoreThanSix) {
+  const int n = 16 * kBlock;
+  std::vector<float> click(n, 0.0f);
+  for (int i = 0; i < 60; ++i) click[i] = 1.0f;  // a strike
+  const auto one = springOut(click, 0.05, 0.0);   // N=1 (armed; boing strong)
+  const auto six = springOut(click, 1.00, 0.0);   // N=6 (boing diluted)
+  for (auto s : one) EXPECT_TRUE(std::isfinite((double)s)) << "boing tail blew up";
+  const double bw1 = goertzelPower(one, 2400.0, kFs);   // the metallic 2.4 kHz ring
+  const double bw6 = goertzelPower(six, 2400.0, kFs);
+  EXPECT_GT(bw1, bw6) << "the metallic boing must dilute as Springs rises";
+  EXPECT_GT(bw1, bw6 * 1.2) << "one spring should be clearly more boingy than six";
+}
+
+// Sag is the spring dispersion (a dispersive medium): the loop low-pass darkens
+// with Sag so the HF decays faster than the LF, and low tones ring longer. Pin
+// the effect isolated on Springs (armed in both runs) by the low/high sustain ratio.
+TEST(SpringTest, SagMakesLowTonesOutsustainHigh) {
+  const int n = 20 * kBlock;
+  const int from = n * 2 / 3;
+  auto avgPow = [](const std::vector<float>& v, int a) {
+    double s = 0.0; for (int i = a; i < (int)v.size(); ++i) s += (double)v[i] * v[i];
+    return s / ((int)v.size() - a);
+  };
+  const auto lo0 = springOut(makeSine(n, 200.0, 0.7f), 0.4, 0.0);   // sag 0 (armed by springs)
+  const auto hi0 = springOut(makeSine(n, 3500.0, 0.7f), 0.4, 0.0);
+  const auto lo1 = springOut(makeSine(n, 200.0, 0.7f), 0.4, 1.0);   // sag 1
+  const auto hi1 = springOut(makeSine(n, 3500.0, 0.7f), 0.4, 1.0);
+  const double r0 = avgPow(lo0, from) / std::max(1e-12, avgPow(hi0, from));
+  const double r1 = avgPow(lo1, from) / std::max(1e-12, avgPow(hi1, from));
+  EXPECT_GT(r1, r0) << "Sag must darken the tail (low outlasts high) more than sag 0";
+}
+
+// The onset splash (driver hitting the spring, a broadband burst) is present at
+// the strike, the tail stays bounded (all layers bounded: |fb|<1, |r|<1, decaying
+// env, soft-shoulder), and it grows as the springs (driver activity) rise.
+TEST(SpringTest, OnsetSplashIsPresentAndBounded) {
+  const int n = 8 * kBlock;
+  std::vector<float> click(n, 0.0f);
+  for (int i = 0; i < 30; ++i) click[i] = 1.0f;
+  const auto out = springOut(click, 1.0, 0.4);   // N=6, sag 0.4 (armed)
+  for (auto s : out) {
+    EXPECT_TRUE(std::isfinite((double)s)) << "sample";
+    EXPECT_LE(std::abs((double)s), 5.0) << "spring out of bound";
+  }
+  auto windowPow = [&](int a, int b) {
+    double e = 0.0; for (int i = a; i < b && i < n; ++i) e += (double)out[i] * out[i];
+    return e / (b - a);
+  };
+  const double onset = windowPow(0, 200);            // the strike + splash
+  const double later = windowPow(n - 4000, n - 2000);  // a later (tail) window
+  EXPECT_GT(onset, later * 0.5) << "the onset splash must be present";
+}
+
+// The driver soft-shoulder is level-driven: identity (clean) well below the knee
+// and peak-bending once the level crosses it -- so the same tone at a hotter level
+// must compress (peak below the cold run's linear scale) without hard-clipping.
+TEST(SpringTest, DriverSoftShoulderBendsThePeak) {
+  const int n = 8 * kBlock;
+  auto peakOf = [n](double amp) {
+    const auto v = springOut(makeSine(n, 440.0, (float)amp), 0.4, 0.4);
+    double pk = 0.0; for (auto s : v) pk = std::max(pk, std::abs((double)s));
+    return pk;
+  };
+  const double cold = peakOf(0.10);   // below the shoulder knee -> clean
+  const double hot = peakOf(1.20);    // 12x the cold level, crossing the knee
+  const double linearHot = cold * 12.0;
+  EXPECT_GT(linearHot, hot) << "the soft-shoulder should bend the peaks at high level";
+  EXPECT_GT(hot, linearHot * 0.35) << "mild shoulder (warmth), not a hard clip";
+}
+
 // TEMP probe: Opto-2A STAGE model characterization (input-driven detection kept).
 
 

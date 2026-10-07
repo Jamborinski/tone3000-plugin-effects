@@ -46,6 +46,12 @@ class EffectTile : public GalleryTile {
   // Delay: refresh the mode combo + signature knob (scale/label/steps/value)
   // + help from block_.
   void syncDelayMode();
+  // Reverb: switch to character mode m (combo / compact cycle) and land on
+  // that mode's dials + signature starting points (docs/reverb-modes.md).
+  void enterReverbMode(int m);
+  // Reverb: refresh the mode combo + sig knobs (scale/label/steps/value) +
+  // the Size->Length label from block_.
+  void syncReverbMode();
   // Compressor: switch to character mode m (combo selection / tight-tile
   // cycle button); loads that mode's default timing + threshold.
   void enterMode(int m);

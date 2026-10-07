@@ -1879,24 +1879,58 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
                                  block->compClip, block->compKnee});
   } else if (param == "reverbDecayMs") {
     block->reverbDecayMs = juce::jlimit(Reverb::kMinDecayMs, Reverb::kMaxDecayMs, value);
-    block->reverb.setParams({block->reverbDecayMs, block->reverbPreMs, block->reverbTone,
-                             block->reverbSize, block->reverbWidth});
+    block->reverb.setParams(block->reverbParams());
   } else if (param == "reverbPreMs") {
     block->reverbPreMs = juce::jlimit(Reverb::kMinPreMs, Reverb::kMaxPreMs, value);
-    block->reverb.setParams({block->reverbDecayMs, block->reverbPreMs, block->reverbTone,
-                             block->reverbSize, block->reverbWidth});
+    block->reverb.setParams(block->reverbParams());
   } else if (param == "reverbTone") {
     block->reverbTone = juce::jlimit(Reverb::kMinTone, Reverb::kMaxTone, value);
-    block->reverb.setParams({block->reverbDecayMs, block->reverbPreMs, block->reverbTone,
-                             block->reverbSize, block->reverbWidth});
+    block->reverb.setParams(block->reverbParams());
   } else if (param == "reverbSize") {
     block->reverbSize = juce::jlimit(Reverb::kMinSize, Reverb::kMaxSize, value);
-    block->reverb.setParams({block->reverbDecayMs, block->reverbPreMs, block->reverbTone,
-                             block->reverbSize, block->reverbWidth});
+    block->reverb.setParams(block->reverbParams());
   } else if (param == "reverbWidth") {
     block->reverbWidth = juce::jlimit(Reverb::kMinWidth, Reverb::kMaxWidth, value);
-    block->reverb.setParams({block->reverbDecayMs, block->reverbPreMs, block->reverbTone,
-                             block->reverbSize, block->reverbWidth});
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbMode") {
+    block->reverbMode = juce::jlimit(0, Reverb::kNumModes - 1, static_cast<int>(value));
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbDensity") {
+    block->reverbDensity = juce::jlimit(0.0, 1.0, value);
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbMod") {
+    block->reverbMod = juce::jlimit(0.0, 1.0, value);
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbSprings") {
+    block->reverbSprings = juce::jlimit(0.0, 1.0, value);
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbSag") {
+    block->reverbSag = juce::jlimit(0.0, 1.0, value);
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbBright") {
+    block->reverbBright = juce::jlimit(0.0, 1.0, value);
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbBloom") {
+    block->reverbBloom = juce::jlimit(0.0, 1.0, value);
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbEarly") {
+    block->reverbEarly = juce::jlimit(0.0, 1.0, value);
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbAir") {
+    block->reverbAir = juce::jlimit(0.0, 1.0, value);
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbVolley") {
+    block->reverbVolley = juce::jlimit(0.0, 1.0, value);
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbBass") {
+    block->reverbBass = juce::jlimit(0.0, 1.0, value);
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbBuild") {
+    block->reverbBuild = juce::jlimit(0.0, 1.0, value);
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbSpace") {
+    block->reverbSpace = juce::jlimit(0.0, 1.0, value);
+    block->reverb.setParams(block->reverbParams());
   }
 
   // Continuous drags settle into one bump after the gesture ends; discrete

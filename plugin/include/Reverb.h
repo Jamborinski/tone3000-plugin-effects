@@ -50,10 +50,89 @@ class Reverb {
   static constexpr double kDefaultWidth = 1.0;
   static constexpr double kMaxWidthSpread = 0.05;  // max tap offset (fraction) at full width
 
+  // Digital mode laws (mode 0 only). Both reduce to the identity at 0, so
+  // Digital @ Density 0 @ Mod 0 is byte-identical to the plain comb bank (the
+  // bit-identity anchor). Density blends each line's feedback toward the mean
+  // of all lines (a convex combination -> cannot destabilise). The Mod waver
+  // mirrors the delay's Mod: a sined read-tap wobble, L + / R - opposite
+  // phase, gated off at 0 -> the plain integer read stays bit-exact.
+  static constexpr double kDigitalModHz = 5.0;        // Mod waver rate (Hz)
+  static constexpr double kDigitalModWaverMs = 4.0;   // full-mod tap waver +/- ms
+
+  // ---- Spring laws (mode 1; the recognisable 1-D metallic spring) ----
+  // boing: the metallic few-mode ring, a single 2.4 kHz resonator excited by
+  // the onset, gain kSpringBoingGain/N so it DILUTES as Springs rises (the
+  // gotcha: more springs = smoother, less boingy). drip: a short onset splash
+  // (the driver hitting the spring), more springs = more driver activity.
+  // Sag: extra loop low-pass (HF decays faster -> low tones lag/darken = the
+  // dispersion). color: a subtle level-driven soft-shoulder (clean at low
+  // level, mild warmth on peaks) -- our own clean-room law, not a re-clip from
+  // the compressor (avoids pulling juce_audio_processors into core headers).
+  static constexpr double kSpringBoingHz    = 2400.0;  // the metallic ring tone
+  static constexpr double kSpringBoingR     = 0.995;   // ringout (per-sample decay, stable)
+  static constexpr double kSpringBoingGain  = 0.20;    // onset excitation (then / N)
+  static constexpr double kSpringDripDecay  = 0.98;    // the onset splash decay (per sample)
+  static constexpr double kSpringDripGain   = 0.50;    // scaled by N (driver activity)
+  static constexpr double kSpringColorAmt   = 0.35;    // subtle soft-shoulder blend
+
   // Incommensurate base delay times (ms) so the parallel combs do not cancel
   // into a single pitchy tone.
   static constexpr double kBaseMs[kNumLines] = {
       33.3, 57.1, 81.7, 106.1, 130.4, 155.0, 179.3, 203.7};
+
+  // ---- Six-character mode set (see plugin/docs/reverb-modes.md) ----
+  // 0 Digital, 1 Spring, 2 Plate, 3 Room, 4 Chamber, 5 Hall. Each is a distinct
+  // reverb law-set on one shared engine; Decay/Pre/Tone/Size/Width are the
+  // shared dials and each mode carries its own two signatures. Modes differ by
+  // *law*, not by separate DSP. (The delay/compressor `kNumModes` precedent.
+  // Scaffold: the character blocks are wired per-ticket — Digital first, and
+  // Digital@Density0@Mod0 must stay the current engine bit-for-bit.)
+  static constexpr int kNumModes = 6;
+  static std::string_view modeName(int mode) {
+    switch (juce::jlimit(0, kNumModes - 1, mode)) {
+      case 0: return "Digital";
+      case 1: return "Spring";
+      case 2: return "Plate";
+      case 3: return "Room";
+      case 4: return "Chamber";
+      default: return "Hall";
+    }
+  }
+  // Spring `Springs`: stepped 1..6 line count, default 3. Stored normalised
+  // 0..1 like every other sig; this maps it to the shown count.
+  static constexpr int kSpringsMax = 6;
+  static int springsFromNormalized(double n) {
+    return juce::jlimit(1, kSpringsMax,
+                        juce::roundToInt(juce::jlimit(0.0, 1.0, n) * (kSpringsMax - 1)) + 1);
+  }
+  // enterMode starting points (the doc's mode table) + the default value of
+  // each mode's two signatures (local slot 0 = Sig A, 1 = Sig B; normalised
+  // 0..1, `Springs` returned as 3 -> 0.4).
+  static void defaultDialsForMode(int mode, double& decayMs, double& preMs,
+                                  double& tone, double& size, double& width) {
+    switch (juce::jlimit(0, kNumModes - 1, mode)) {
+      case 1: decayMs = 1500.0; preMs = 0.0; tone = 0.45; size = 0.70; width = 0.90; break;  // Spring
+      case 2: decayMs = 2200.0; preMs = 0.5; tone = 0.35; size = 0.80; width = 0.80; break;  // Plate
+      case 3: decayMs = 500.0;  preMs = 0.0; tone = 0.50; size = 0.35; width = 0.70; break;  // Room
+      case 4: decayMs = 2000.0; preMs = 1.0; tone = 0.50; size = 0.55; width = 0.85; break;  // Chamber
+      case 5: decayMs = 3000.0; preMs = 2.0; tone = 0.60; size = 0.90; width = 0.95; break;  // Hall (decay at the engine max: longest allowed tail)
+      default: decayMs = 1200.0; preMs = 0.0; tone = 0.40; size = 0.60; width = 1.00; break;  // Digital
+    }
+  }
+  static double defaultSigForMode(int mode, int localSlot) {
+    const int m = juce::jlimit(0, kNumModes - 1, mode);
+    const int slot = (localSlot == 1) ? 1 : 0;
+    double a = 0.0, b = 0.0;
+    switch (m) {
+      case 1: a = 0.4; b = 0.4; break;  // Springs 3 (normalised 0.4), Sag
+      case 2: a = 0.5; b = 0.5; break;  // Bright, Bloom
+      case 3: a = 0.5; b = 0.3; break;  // Early, Air
+      case 4: a = 0.4; b = 0.6; break;  // Volley, Bass
+      case 5: a = 0.6; b = 0.7; break;  // Build, Space
+      default: a = 0.0; b = 0.0; break; // Digital: Density 0, Mod 0 (the anchor)
+    }
+    return slot ? b : a;
+  }
 
   struct Params {
     double decayMs = kDefaultDecayMs;
@@ -61,10 +140,17 @@ class Reverb {
     double tone = kDefaultTone;
     double size = kDefaultSize;
     double width = kDefaultWidth;  // stereo width (0 = mono, 1 = wide)
+    int mode = 0;                  // 0..5 (Digital..Hall)
+    // Per-mode signatures (2/mode, normalised 0..1; only the active mode's
+    // two are live). Appended after the five shared knobs.
+    double density = 0.0, mod = 0.0, springs = 0.4, sag = 0.4;
+    double bright = 0.5, bloom = 0.5, early = 0.5, air = 0.3;
+    double volley = 0.4, bass = 0.6, build = 0.6, space = 0.7;
   };
 
   void prepare(double sampleRate) {
     sampleRate_ = sampleRate > 0.0 ? sampleRate : 48000.0;
+    modPhase_ = 0.0;  // start the Mod LFO at phase 0
     // Longest possible tap: the largest base line at max size (1.5x) plus max
     // pre, with headroom for the width spread (the R bank runs a little longer).
     // Sized as a size_t so the ring length is exact even when the delay count
@@ -83,6 +169,10 @@ class Reverb {
   void reset() {
     for (auto& ch : lines_)
       for (auto& L : ch) L.clear();
+    modPhase_ = 0.0;  // restart the Mod LFO
+    for (int c = 0; c < kMaxChannels; ++c) {
+      boingRe_[c] = 0.0f; boingIm_[c] = 0.0f; dripEnv_[c] = 0.0f;
+    }
   }
 
   void setParams(const Params& p) {
@@ -91,6 +181,19 @@ class Reverb {
     params_.tone = juce::jlimit(kMinTone, kMaxTone, p.tone);
     params_.size = juce::jlimit(kMinSize, kMaxSize, p.size);
     params_.width = juce::jlimit(kMinWidth, kMaxWidth, p.width);
+    params_.mode = juce::jlimit(0, kNumModes - 1, p.mode);
+    params_.density = juce::jlimit(0.0, 1.0, p.density);
+    params_.mod = juce::jlimit(0.0, 1.0, p.mod);
+    params_.springs = juce::jlimit(0.0, 1.0, p.springs);
+    params_.sag = juce::jlimit(0.0, 1.0, p.sag);
+    params_.bright = juce::jlimit(0.0, 1.0, p.bright);
+    params_.bloom = juce::jlimit(0.0, 1.0, p.bloom);
+    params_.early = juce::jlimit(0.0, 1.0, p.early);
+    params_.air = juce::jlimit(0.0, 1.0, p.air);
+    params_.volley = juce::jlimit(0.0, 1.0, p.volley);
+    params_.bass = juce::jlimit(0.0, 1.0, p.bass);
+    params_.build = juce::jlimit(0.0, 1.0, p.build);
+    params_.space = juce::jlimit(0.0, 1.0, p.space);
     if (sampleRate_ > 0.0) {
       // Size scales every line (0 = half base), 1 = large (1.5x base); Pre
       // offsets every tap.
@@ -98,6 +201,19 @@ class Reverb {
       const double preSamples = params_.preMs * 0.001 * sampleRate_;
       for (int i = 0; i < kNumLines; ++i)
         taps_[i] = kBaseMs[i] * 0.001 * sampleRate_ * sizeScale + preSamples;
+    }
+    // Digital Mod (mode 0 only): a sined waver on the read tap. Gated off at
+    // Mod 0 so the plain integer read stays bit-exact (the anchor). Only the
+    // depth scales with the knob (the delay's sigMod convention); the rate is
+    // the Digital law. Not Digital -> off, so no other mode ever touches it.
+    modOn_ = (params_.mode == 0) && (params_.mod > 0.0) && (sampleRate_ > 0.0);
+    if (modOn_) {
+      modDepthSamples_ = static_cast<float>(
+          kDigitalModWaverMs * 0.001 * sampleRate_ * params_.mod);
+      modInc_ = 2.0 * M_PI * kDigitalModHz / sampleRate_;
+    } else {
+      modDepthSamples_ = 0.0f;
+      modInc_ = 0.0;
     }
   }
 
@@ -130,25 +246,188 @@ class Reverb {
     // decorrelate; width = 0 keeps both banks identical (mono, L == R).
     const double widthSpread = kMaxWidthSpread * params_.width;
 
+    // Digital laws are live in mode 0 only. Density (feedback coupling toward
+    // the per-lines mean) and Mod (sined read-tap waver) both reduce to the
+    // identity at 0, so when NEITHER is on the plain comb-bank path below is
+    // byte-identical to the current engine (and every other mode uses it too
+    // -> the law-inert anchor).
+    const bool densityOn = (params_.mode == 0) && (params_.density > 0.0);
+    // Spring (mode 1) is law-live only when armed (springs>0 or sag>0); at both
+    // 0 it runs the shared plain path (the anchor + the law-inert scaffold pin
+    // stay intact). Plate/Room/Chamber/Hall are still law-inert (their sigs do
+    // nothing yet) -> they too fall through to the plain path.
+    const bool springOn = (params_.mode == 1) &&
+        (params_.springs > 0.0 || params_.sag > 0.0);
+    if (springOn) {
+      processSpring(buffer);
+      return;
+    }
+    if (!densityOn && !modOn_) {
+      for (int ch = 0; ch < numChannels; ++ch) {
+        auto& lines = lines_[static_cast<size_t>(ch)];
+        const double tapScale = (ch == 0) ? (1.0 - widthSpread) : (1.0 + widthSpread);
+        float* out = buffer.getWritePointer(ch);
+        for (int i = 0; i < numSamples; ++i) {
+          const float dry = out[i];
+          float acc = 0.0f;
+          for (int ln = 0; ln < kNumLines; ++ln) {
+            auto& L = lines[ln];
+            const int d =
+                static_cast<int>(std::max(1.0, taps_[ln] * tapScale)) & L.mask;
+            const float delayed = L.ring[(L.write - d) & L.mask];  // e[n - d] tail
+            L.lp += dampAlpha * (delayed - L.lp);                 // low-pass it
+            L.ring[L.write] = dry + static_cast<float>(fb) * L.lp; // e[n]
+            L.write = (L.write + 1) & L.mask;
+            acc += delayed;  // wet: the tail (not the current input)
+          }
+          out[i] = static_cast<float>(acc * norm);
+        }
+      }
+      return;
+    }
+
+    // ---- Digital law path: Density (feedback coupling) and/or Mod (waver) ----
+    const float depth = modDepthSamples_;
+    const double inc = modInc_;
+    const double phase0 = modPhase_;
+    const double density = params_.density;
+    const double oneMinusDensity = 1.0 - density;
+
+    for (int ch = 0; ch < numChannels; ++ch) {
+      auto& lines = lines_[static_cast<size_t>(ch)];
+      const double tapScale = (ch == 0) ? (1.0 - widthSpread) : (1.0 + widthSpread);
+      const float side = (ch == 0) ? +1.0f : -1.0f;  // L + / R - (opposite phase)
+      float* out = buffer.getWritePointer(ch);
+      float delayed[kNumLines];
+      float selfLp[kNumLines];
+      for (int i = 0; i < numSamples; ++i) {
+        const float dry = out[i];
+        // Pass A: read each line's tail (wobbled read when Mod is live -> a
+        // smooth interpolated tap; the plain integer read otherwise) and update
+        // its low-pass state. Reads and writes are split so a line's write can
+        // only affect later samples of ITS OWN ring (lines have separate rings,
+        // so the order is exactly the plain path's at Density 0).
+        const float wob = modOn_
+            ? side * depth * static_cast<float>(std::sin(phase0 + inc * i))
+            : 0.0f;
+        for (int ln = 0; ln < kNumLines; ++ln) {
+          auto& L = lines[ln];
+          const double base = std::max(1.0, taps_[ln] * tapScale);
+          float tail;
+          if (modOn_) {
+            const double tapF = std::max(1.0, base + static_cast<double>(wob));
+            const int d0 = static_cast<int>(tapF);  // floor(tapF)
+            const float frac = static_cast<float>(tapF - static_cast<double>(d0));
+            const uint32_t iNew = static_cast<uint32_t>(((L.write - d0) & L.mask));
+            const uint32_t iOld = static_cast<uint32_t>(((L.write - d0 - 1) & L.mask));
+            tail = L.ring[iNew] + frac * (L.ring[iOld] - L.ring[iNew]);
+          } else {
+            const int d = static_cast<int>(base) & L.mask;
+            tail = L.ring[static_cast<uint32_t>(((L.write - d) & L.mask))];
+          }
+          L.lp += dampAlpha * (tail - L.lp);
+          delayed[ln] = tail;
+          selfLp[ln] = L.lp;
+        }
+        // Density: blend each line's feedback toward the mean of all lines
+        // (identity at Density 0). A convex combination of the tails -> stays
+        // within their range, so it cannot destabilise (|mix| <= max|tail|).
+        float mean = 0.0f;
+        if (densityOn) {
+          for (int k = 0; k < kNumLines; ++k) mean += selfLp[k];
+          mean /= kNumLines;
+        }
+        // Pass B: write the (possibly coupled) feedback and sum the wet tails.
+        float acc = 0.0f;
+        for (int ln = 0; ln < kNumLines; ++ln) {
+          auto& L = lines[ln];
+          const float mix = densityOn
+              ? (oneMinusDensity * selfLp[ln] + density * mean)
+              : selfLp[ln];
+          L.ring[L.write] = dry + static_cast<float>(fb) * mix;
+          L.write = (L.write + 1) & L.mask;
+          acc += delayed[ln];
+        }
+        out[i] = static_cast<float>(acc * norm);
+      }
+    }
+    if (modOn_)
+      modPhase_ = phase0 + inc * numSamples;  // advance the LFO once per block
+  }
+
+  // Subtle level-driven soft-shoulder for the spring driver color: identity
+  // (clean) below the knee, a mild bounded roll-off above (warms the peaks,
+  // so it is level-dependent by construction). Our own law (knee + shoulder).
+  static float springShoulder(float x) {
+    const float a = std::fabs(x), knee = 0.30f, k = 0.7f;
+    if (a <= knee) return x;
+    return std::copysign(knee + (a - knee) / (1.0f + (a - knee) / k), x);
+  }
+
+  // Spring (mode 1) -- the 1-D metallic spring voice. Layers, all bounded:
+  //  1. N active comb lines (the N springs, N = springsFromNormalized), level-
+  //     constant over N so adding springs is denser, not louder.
+  //  2. boing: a 2.4 kHz metallic resonant ring, excited by an onset burst and
+  //     gain ~ 1/N, so the metallic few-mode character DILUTES as Springs
+  //     rises (more springs = smoother, less boingy -- the gotcha).
+  //  3. drip: the short broadband onset splash (driver hitting the spring),
+  //     more springs = more driver activity.
+  //  4. Sag: extra loop low-pass so the HF decays faster than the LF (low
+  //     tones lag / darken -- the dispersion of a dispersive medium).
+  //  5. a subtle level-driven soft-shoulder (clean at low level, mild warmth
+  //     on peaks -- the driver/preamp breathes with drive).
+  void processSpring(juce::AudioBuffer<float>& buffer) {
+    const int numChannels = juce::jmin(buffer.getNumChannels(), kMaxChannels);
+    const int numSamples = buffer.getNumSamples();
+    const int N = springsFromNormalized(params_.springs);  // 1..6 active lines
+    const double sag = params_.sag;
+    const double decayNorm = (params_.decayMs - kMinDecayMs) / (kMaxDecayMs - kMinDecayMs);
+    const double fb = 0.30 + 0.69 * decayNorm;              // stable (|fb| < 1)
+    const double nScale = (1.0 - fb) / (double)N;           // level-const over N lines
+    const double dampAlpha = (1.0 - params_.tone) * (1.0 - 0.5 * sag);  // Sag darkens
+    const double widthSpread = kMaxWidthSpread * params_.width;
+    const float ra = static_cast<float>(kSpringBoingR * std::cos(2.0 * M_PI * kSpringBoingHz / sampleRate_));
+    const float ia = static_cast<float>(kSpringBoingR * std::sin(2.0 * M_PI * kSpringBoingHz / sampleRate_));
+    const float boingGain = static_cast<float>(kSpringBoingGain / N);   // dilutes w/ N
+    const float dripAmt = static_cast<float>(kSpringDripGain * N / kNumLines);  // grows w/ N
+    const float cAmt = static_cast<float>(kSpringColorAmt);
     for (int ch = 0; ch < numChannels; ++ch) {
       auto& lines = lines_[static_cast<size_t>(ch)];
       const double tapScale = (ch == 0) ? (1.0 - widthSpread) : (1.0 + widthSpread);
       float* out = buffer.getWritePointer(ch);
+      float rre = boingRe_[ch], rim = boingIm_[ch];
+      float de = dripEnv_[ch];
       for (int i = 0; i < numSamples; ++i) {
         const float dry = out[i];
+        // 1. the N spring lines (comb tails), level-constant
         float acc = 0.0f;
-        for (int ln = 0; ln < kNumLines; ++ln) {
+        for (int ln = 0; ln < N; ++ln) {
           auto& L = lines[ln];
-          const int d =
-              static_cast<int>(std::max(1.0, taps_[ln] * tapScale)) & L.mask;
-          const float delayed = L.ring[(L.write - d) & L.mask];  // e[n - d] tail
-          L.lp += dampAlpha * (delayed - L.lp);                 // low-pass it
-          L.ring[L.write] = dry + static_cast<float>(fb) * L.lp; // e[n]
+          const int d = static_cast<int>(std::max(1.0, taps_[ln] * tapScale)) & L.mask;
+          const float tail = L.ring[(L.write - d) & L.mask];
+          L.lp += static_cast<float>(dampAlpha) * (tail - L.lp);
+          L.ring[L.write] = dry + static_cast<float>(fb) * L.lp;
           L.write = (L.write + 1) & L.mask;
-          acc += delayed;  // wet: the tail (not the current input)
+          acc += tail;
         }
-        out[i] = static_cast<float>(acc * norm);
+        const float wet = acc * static_cast<float>(nScale);
+        const float sign = (dry >= 0.0f) ? 1.0f : -1.0f;
+        // onset burst (0..|dry|), a fast-attack envelope, decayed per sample
+        de = std::max(de * static_cast<float>(kSpringDripDecay), std::fabs(dry));
+        // 2. boing: 2.4k metallic ring excited by the burst, gain ~1/N -> dilutes
+        const float nre = rre + de * sign * boingGain;  // st += (burst, inIm = 0)
+        const float nim = rim;
+        rre = nre * ra - nim * ia;
+        rim = nre * ia + nim * ra;
+        const float boing = rre;
+        // 3. drip: broadband onset splash, more springs = more driver activity
+        const float splash = de * sign * dripAmt;
+        // 4. sum + 5. subtle level-driven soft-shoulder color
+        float o = wet + boing + splash;
+        o = o * (1.0f - cAmt) + springShoulder(o) * cAmt;
+        out[i] = o;
       }
+      boingRe_[ch] = rre; boingIm_[ch] = rim; dripEnv_[ch] = de;
     }
   }
 
@@ -176,4 +455,17 @@ class Reverb {
   double taps_[kNumLines] = {};
   double sampleRate_ = 0.0;
   Params params_{};
+  // Digital Mod waver state (mirrors the delay's modOn_/modDepth/modInc/modPhase):
+  // a sined read-tap wobble, L + / R - opposite, gated off at Mod 0 so the plain
+  // integer read stays bit-exact.
+  bool modOn_ = false;
+  float modDepthSamples_ = 0.0f;  // full-mod wobble depth (samples)
+  double modInc_ = 0.0;          // LFO increment per sample (2*pi*rate/sr)
+  double modPhase_ = 0.0;        // cross-block LFO phase
+  // Spring state: the metallic boing resonator (2.4 kHz) per channel + the
+  // onset-splash (drip) env per channel. Both are bounded (|r|<1, decaying env)
+  // and reset in reset(). Only used when the Spring law path is live.
+  float boingRe_[kMaxChannels] = {};
+  float boingIm_[kMaxChannels] = {};
+  float dripEnv_[kMaxChannels] = {};
 };

@@ -256,6 +256,19 @@ juce::ValueTree TONE3000Processor::serializeBlockSettings(const ChainBlock& bloc
       blockState.setProperty("reverbTone", block.reverbTone, nullptr);
       blockState.setProperty("reverbSize", block.reverbSize, nullptr);
       blockState.setProperty("reverbWidth", block.reverbWidth, nullptr);
+      blockState.setProperty("reverbMode", block.reverbMode, nullptr);
+      blockState.setProperty("reverbDensity", block.reverbDensity, nullptr);
+      blockState.setProperty("reverbMod", block.reverbMod, nullptr);
+      blockState.setProperty("reverbSprings", block.reverbSprings, nullptr);
+      blockState.setProperty("reverbSag", block.reverbSag, nullptr);
+      blockState.setProperty("reverbBright", block.reverbBright, nullptr);
+      blockState.setProperty("reverbBloom", block.reverbBloom, nullptr);
+      blockState.setProperty("reverbEarly", block.reverbEarly, nullptr);
+      blockState.setProperty("reverbAir", block.reverbAir, nullptr);
+      blockState.setProperty("reverbVolley", block.reverbVolley, nullptr);
+      blockState.setProperty("reverbBass", block.reverbBass, nullptr);
+      blockState.setProperty("reverbBuild", block.reverbBuild, nullptr);
+      blockState.setProperty("reverbSpace", block.reverbSpace, nullptr);
     }
   }
 
@@ -387,6 +400,20 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
       block.reverbWidth = juce::jlimit(Reverb::kMinWidth, Reverb::kMaxWidth,
                                      static_cast<double>(
                                          blockState.getProperty("reverbWidth", 1.0)));
+      block.reverbMode = juce::jlimit(0, Reverb::kNumModes - 1,
+                                      static_cast<int>(blockState.getProperty("reverbMode", 0)));
+      block.reverbDensity = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbDensity", 0.0)));
+      block.reverbMod = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbMod", 0.0)));
+      block.reverbSprings = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbSprings", 0.4)));
+      block.reverbSag = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbSag", 0.4)));
+      block.reverbBright = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbBright", 0.5)));
+      block.reverbBloom = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbBloom", 0.5)));
+      block.reverbEarly = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbEarly", 0.5)));
+      block.reverbAir = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbAir", 0.3)));
+      block.reverbVolley = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbVolley", 0.4)));
+      block.reverbBass = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbBass", 0.6)));
+      block.reverbBuild = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbBuild", 0.6)));
+      block.reverbSpace = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbSpace", 0.7)));
       block.delay.setParams({block.delayTimeMs, block.delayFeedback, block.delayDamping});
       block.chorus.setParams({block.chorusRateHz, block.chorusDepthMs, block.chorusSpread,
                               block.chorusTone, block.chorusWave});
@@ -394,8 +421,7 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
                                   block.compReleaseMs, block.compToneDb, block.compScHpHz,
                                   block.compThresholdDb, block.compMbc,
                                   block.compClip, block.compKnee});
-      block.reverb.setParams({block.reverbDecayMs, block.reverbPreMs, block.reverbTone,
-                              block.reverbSize, block.reverbWidth});
+      block.reverb.setParams(block.reverbParams());
     }
     // Size the rate-dependent engines (EQ/spectrum + built-in effects) for the
     // live chain rate: none of these restore funnels has seen prepareChain.

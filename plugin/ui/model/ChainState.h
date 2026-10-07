@@ -166,6 +166,20 @@ struct ChainItem {
   double reverbTone = 0.4;       // 0..1 (0 bright, 1 dark)
   double reverbSize = 0.6;       // 0..1 (scales all delay times)
   double reverbWidth = 1.0;       // 0..1 (stereo width, 0 mono, 1 wide)
+  // Reverb mode (0 Digital..5 Hall) + 12 per-mode signatures (2/mode, 0..1).
+  int reverbMode = 0;
+  double reverbDensity = 0.0;
+  double reverbMod = 0.0;
+  double reverbSprings = 0.4;  // Springs 3
+  double reverbSag = 0.4;
+  double reverbBright = 0.5;
+  double reverbBloom = 0.5;
+  double reverbEarly = 0.5;
+  double reverbAir = 0.3;
+  double reverbVolley = 0.4;
+  double reverbBass = 0.6;
+  double reverbBuild = 0.6;
+  double reverbSpace = 0.7;
 
   bool isTone() const { return !isInsert && !isEffect; }
 };
