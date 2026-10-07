@@ -1054,6 +1054,13 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
     double compClip = 1.0, compKnee = 6.0;
     double reverbDecayMs = 1200.0, reverbPreMs = 0.0;
     double reverbTone = 0.4, reverbSize = 0.6, reverbWidth = 1.0;
+    int reverbMode = 0;
+    double reverbDensity = 0.0, reverbMod = 0.0;
+    double reverbSprings = 0.0, reverbSag = 0.0;
+    double reverbBright = 0.0, reverbBloom = 0.0;
+    double reverbEarly = 0.0, reverbAir = 0.0;
+    double reverbVolley = 0.0, reverbBass = 0.0;
+    double reverbBuild = 0.0, reverbSpace = 0.0;
   };
 
   juce::uint32 revision = 0;
@@ -1134,6 +1141,19 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
           row.reverbTone = block->reverbTone;
           row.reverbSize = block->reverbSize;
           row.reverbWidth = block->reverbWidth;
+          row.reverbMode = block->reverbMode;
+          row.reverbDensity = block->reverbDensity;
+          row.reverbMod = block->reverbMod;
+          row.reverbSprings = block->reverbSprings;
+          row.reverbSag = block->reverbSag;
+          row.reverbBright = block->reverbBright;
+          row.reverbBloom = block->reverbBloom;
+          row.reverbEarly = block->reverbEarly;
+          row.reverbAir = block->reverbAir;
+          row.reverbVolley = block->reverbVolley;
+          row.reverbBass = block->reverbBass;
+          row.reverbBuild = block->reverbBuild;
+          row.reverbSpace = block->reverbSpace;
           row.enabled = block->enabled;
           row.inputGain = block->inputGainNormalized;
           row.outputGain = block->outputGainNormalized;
@@ -1263,6 +1283,19 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
         params->setProperty("reverbTone", row.reverbTone);
         params->setProperty("reverbSize", row.reverbSize);
         params->setProperty("reverbWidth", row.reverbWidth);
+        params->setProperty("reverbMode", row.reverbMode);
+        params->setProperty("reverbDensity", row.reverbDensity);
+        params->setProperty("reverbMod", row.reverbMod);
+        params->setProperty("reverbSprings", row.reverbSprings);
+        params->setProperty("reverbSag", row.reverbSag);
+        params->setProperty("reverbBright", row.reverbBright);
+        params->setProperty("reverbBloom", row.reverbBloom);
+        params->setProperty("reverbEarly", row.reverbEarly);
+        params->setProperty("reverbAir", row.reverbAir);
+        params->setProperty("reverbVolley", row.reverbVolley);
+        params->setProperty("reverbBass", row.reverbBass);
+        params->setProperty("reverbBuild", row.reverbBuild);
+        params->setProperty("reverbSpace", row.reverbSpace);
         item->setProperty("params", juce::var(params.get()));
         chainArray.add(juce::var(item.get()));
         continue;
@@ -1675,7 +1708,7 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
                              param == "tremoloSpread" || param == "tremoloWave" ||
                              param == "compRatio" || param == "compAttackMs" ||
                              param == "compReleaseMs" || param == "compToneDb" ||
-                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth";
+                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace";
   const bool isContinuous = param == "inputGain" || param == "outputGain" || param == "mix" ||
                             isEffectParam;
   const bool isKnown = isContinuous || param == "enabled" || param == "normalize";

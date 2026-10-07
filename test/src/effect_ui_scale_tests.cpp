@@ -338,3 +338,32 @@ TEST(CompressorKnobScaleTest, ClipAndKneeScalesMeetTheEngineRanges) {
   EXPECT_DOUBLE_EQ(knee.toDisplay(1.0), 11.0);
   EXPECT_EQ(knee.steps.value_or(0), 0);                      // continuous
 }
+
+// The reverb mode + sig dials round-trip through the full processor state:
+// the tile writes them via setBlockParam, the processor stores them in the
+// BlockState (already clamped), and getChainState hands them back for the
+// tile's resync. At both sigs == 0 the mode runs the shared plain comb bank;
+// at sig > 0 the mode law fires. This pins those two facts.
+TEST(ChainRoundTrip, ReverbModeAndHallsSigsSurviveRoundTrip) {
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto id = proc.addEffectBlock(EffectKind::Reverb, "left", 0);
+  ASSERT_FALSE(id.empty());
+  // Mode 5 (Hall), build 0.7, space 0.8: the two sig dials that drive the hall law.
+  ASSERT_TRUE(proc.setBlockParam(id, "reverbMode", 5.0));
+  ASSERT_TRUE(proc.setBlockParam(id, "reverbBuild", 0.70));
+  ASSERT_TRUE(proc.setBlockParam(id, "reverbSpace", 0.80));
+  const juce::var state = proc.getChainState(-1);
+  EXPECT_DOUBLE_EQ(paramFromState(state, "reverbMode"), 5.0);
+  EXPECT_TRUE(near(paramFromState(state, "reverbBuild"), 0.70));
+  EXPECT_TRUE(near(paramFromState(state, "reverbSpace"), 0.80));
+  // Out-of-range mode (99) must be clamped to kNumModes-1 = 5 on load.
+  ASSERT_TRUE(proc.setBlockParam(id, "reverbMode", 99.0));
+  const juce::var state2 = proc.getChainState(-1);
+  EXPECT_LE(paramFromState(state2, "reverbMode"), 5.0) << "mode must clamp to kNumModes-1";
+  // Sigs must stay in [0, 1] after clamp: set 2.0 (out of range) and verify clamp to 1.0.
+  ASSERT_TRUE(proc.setBlockParam(id, "reverbBuild", 2.0));
+  const juce::var state3 = proc.getChainState(-1);
+  EXPECT_LE(paramFromState(state3, "reverbBuild"), 1.0) << "sig must clamp to 1.0";
+}

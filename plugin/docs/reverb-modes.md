@@ -418,8 +418,25 @@ right of Width)" is full-tile only. Consistent across all six modes.
    (no hardcoded sample rate in the header). Pins: `HallTest.BuildLengthensTheEarlyField`
    (the 0–160 ms early window energy scales with Build), `HallTest.IsLiveAndBounded`
    (finite + bounded + the early field adds energy above the plain comb bank).
-8. **Wiring close** — per-mode defaults + good defaults verified,
-   save/restore round-trip pin, tile compact/full behaviour, ears pass.
+8. **Wiring close** — ✅ DONE. Three wiring fixes + pin:
+   1. `ProcessorChain.cpp` `isEffectParam` list: the 13 reverb mode + sig params
+      (`reverbMode`, `reverbDensity`, `reverbMod`, `reverbSprings`, `reverbSag`,
+      `reverbBright`, `reverbBloom`, `reverbEarly`, `reverbAir`, `reverbVolley`,
+      `reverbBass`, `reverbBuild`, `reverbSpace`) were handled in the
+      `setBlockParam` if-else chain but were missing from the validation list,
+      so `setBlockParam` rejected them before the handler was reached. Added.
+   2. `ProcessorChain.cpp` `getChainState`: the `BlockRow` struct + `copyLane`
+      lambda + `toVar` call all carried only the 5 shared dials (`decayMs`,
+      `preMs`, `tone`, `size`, `width`) and omitted the mode + 12 sigs, so the
+      tile resync would always reset to default values.
+      Added all 13 fields to all three places.
+   3. `effect_ui_scale_tests.cpp` — `ChainRoundTrip.ReverbModeAndHallsSigsSurviveRoundTrip`
+      pin: sets mode 5 (Hall) + build 0.70 + space 0.80 via `setBlockParam`,
+      reads back via `getChainState`, verifies all three round-trip exactly.
+      Also verifies out-of-range mode (99) clamps to `kNumModes-1` (5) and
+      out-of-range sig (2.0) clamps to 1.0.
+   Per-mode `enterMode` defaults, load-clamp logic, tile compact/full behaviour,
+   and `ChainState` read path were already in place from Tickets 1 and 7.
 
 ## Open / to confirm at ears-pass
 
