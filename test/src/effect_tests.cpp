@@ -4371,3 +4371,66 @@ TEST(ChamberTest, IsLiveAndBounded) {
   }
   EXPECT_GT(pk, 0.02) << "the chamber must be a live voice";
 }
+
+// ---- Hall (Ticket 7): the LONGEST early section (10 long diffuse taps, 10–150
+// ms -- 2x the length of Chamber's 8 taps) + the LATERAL ENERGY (the L/R split
+// of the early cluster, function of the Space dial: more Space = a wider, more
+// lateral early field) + the mode wash (the longest RT, 3000 ms, the ceiling,
+// untouched by the Hall law). Gated Build>0 || Space>0; at both 0 it is the
+// shared plain comb bank (the anchor + kNumModes==6 hold).
+static std::vector<float> hallOut(const std::vector<float>& input,
+                                  double build, double space, double decayMs = 3000.0) {
+  Reverb r; r.prepare(kFs);
+  Reverb::Params p;
+  p.decayMs = decayMs; p.tone = 0.4; p.size = 0.8; p.width = 0.0; p.preMs = 0.0;
+  p.mode = 5; p.build = build; p.space = space;   // arms the Hall law path
+  r.setParams(p);
+  juce::AudioBuffer<float> buf(1, kBlock);
+  std::vector<float> L(input.size());
+  for (int off = 0; off + kBlock <= (int)input.size(); off += kBlock) {
+    for (int i = 0; i < kBlock; ++i) buf.setSample(0, i, input[off + i]);
+    r.process(buf);
+    for (int i = 0; i < kBlock; ++i) L[off + i] = buf.getSample(0, i);
+  }
+  return L;
+}
+
+// Build is the Hall's distinctive: a LONGER early section (10 long diffuse taps,
+// 10–150 ms -- 2x the length of Chamber 8) + the L/R lateral split. More Build
+// = a longer, denser early build-up; the 0–160 ms window energy scales with it.
+TEST(HallTest, BuildLengthensTheEarlyField) {
+  const int n = 8 * kBlock;
+  std::vector<float> click(n, 0.0f); for (int i = 0; i < 40; ++i) click[i] = 1.0f;
+  const auto b03 = hallOut(click, 0.3, 0.0);
+  const auto b10 = hallOut(click, 1.0, 0.0);
+  auto windowPow = [](const std::vector<float>& v, int a, int b) {
+    double e = 0.0; for (int i = a; i < b && i < (int)v.size(); ++i) e += (double)v[i]*v[i];
+    return e / (b - a);
+  };
+  const int m = std::min((int)b03.size(), (int)(160.0 * kFs / 1000.0));
+  EXPECT_GT(windowPow(b10, 0, m), windowPow(b03, 0, m))
+      << "more Build should add a longer, denser early build-up in 0–160 ms";
+}
+
+// The Hall is a live voice (bounded + finite) and the early field (10 long taps,
+// 10–150 ms) adds measurable energy on top of the mode wash at the same settings.
+TEST(HallTest, IsLiveAndBounded) {
+  const int n = 8 * kBlock;
+  std::vector<float> click(n, 0.0f); for (int i = 0; i < 40; ++i) click[i] = 1.0f;
+  const auto v = hallOut(click, 0.5, 0.5, 2500.0);   // decay 2500 ms (within the anchor range)
+  double pk = 0.0; bool fin = true;
+  for (auto s : v) { pk = std::max(pk, std::abs((double)s)); if (!std::isfinite((double)s)) fin = false; }
+  EXPECT_TRUE(fin) << "hall output finite";
+  EXPECT_LE(pk, 5.0) << "hall bounded";
+  EXPECT_GT(pk, 0.003) << "hall is a live voice";
+  // The early field (10 taps, 10–150 ms) adds energy to the 200–600 ms window
+  // above the flat mode wash alone (run the same decay at build=0 / space=0).
+  const auto plain = hallOut(click, 0.0, 0.0, 2500.0);
+  auto winPow = [](const std::vector<float>& v, int a, int b) {
+    double e = 0.0; for (int i = a; i < b && i < (int)v.size(); ++i) e += (double)v[i]*v[i];
+    return e / (b - a);
+  };
+  const int a = (int)(0.1 * kFs), b = (int)(0.6 * kFs);
+  EXPECT_GT(winPow(v, a, b), winPow(plain, a, b))
+      << "the hall's early field (10 taps, 10–150 ms) should add energy above the plain comb bank";
+}

@@ -129,6 +129,25 @@ class Reverb {
   static constexpr double kChamberBassFrac     = 0.55;  // loop low-pass (Bass shelf)
   static constexpr double kChamberHFCapFrac    = 0.30;  // output HF cap (steeper, fixed scale)
 
+  // ---- Hall laws (mode 5; the LONGEST early section + the strongest L/R
+  // lateral energy -- the one signature no other mode has: a long, wide, dense
+  // early build-up + the longest overall decay). ----
+  // Build (the long diffuse early build-up, the hall's "air") is modelled with a
+  // fixed SET OF 10 LONG EARLY TAPS (10/18/28/40/55/72/90/110/130/150 ms -- a
+  // LONG build-up, 2x the length of Chamber's 8 taps). The Build dial scales the
+  // whole cluster's energy (more = a longer, denser early build-up). Space (the
+  // lateral energy, the spatial impression) is modelled with a LATERAL SPLIT of
+  // the early cluster: the L channel's early taps get MORE energy, the R
+  // channel's get LESS (more Space = a WIDER, more lateral early field).
+  // No metallic ring, no plate bloom, no chamber bass shelf -- just the long
+  // early + the long decay + the strong lateral split.
+  static constexpr int kNumHallTaps = 10;
+  static constexpr double kHallTapDelaysMs[kNumHallTaps] =
+      {10, 18, 28, 40, 55, 72, 90, 110, 130, 150};
+  static constexpr double kHallTapAmps[kNumHallTaps] =
+      {0.10, 0.09, 0.08, 0.07, 0.06, 0.06, 0.05, 0.05, 0.04, 0.04};
+  static constexpr double kHallLateralSplit = 0.40;  // the L/R early split (per Space dial)
+  
   // Incommensurate base delay times (ms) so the parallel combs do not cancel
   // into a single pitchy tone.
   static constexpr double kBaseMs[kNumLines] = {
@@ -268,6 +287,10 @@ class Reverb {
       // the per-tap sample offsets now (they depend on the live sample rate).
       for (int t = 0; t < kNumChamberTaps; ++t)
         chamberTapsSamples_[t] = std::max(1.0, kChamberTapDelaysMs[t] * 0.001 * sampleRate_);
+      // Hall early build-up taps (fixed ms, independent of size/pre): the 10
+      // long taps (10–150 ms), computed from the live sample rate now.
+      for (int t = 0; t < kNumHallTaps; ++t)
+        hallTapsSamples_[t] = std::max(1.0, kHallTapDelaysMs[t] * 0.001 * sampleRate_);
     }
     // Digital Mod (mode 0 only): a sined waver on the read tap. Gated off at
     // Mod 0 so the plain integer read stays bit-exact (the anchor). Only the
@@ -351,6 +374,16 @@ class Reverb {
         (params_.volley > 0.0 || params_.bass > 0.0);
     if (chamberOn) {
       processChamber(buffer);
+      return;
+    }
+    // Hall (mode 5) is law-live when armed (Build>0 or Space>0); at both 0 it
+    // runs the shared plain path (the Digital anchor + kNumModes==6 hold).
+    // Hall is the LONGEST RT (3000 ms) -- the ceiling, untouched (the
+    // bit-identity anchor holds at decay 3000).
+    const bool hallOn = (params_.mode == 5) &&
+        (params_.build > 0.0 || params_.space > 0.0);
+    if (hallOn) {
+      processHall(buffer);
       return;
     }
     if (!densityOn && !modOn_) {
@@ -695,6 +728,60 @@ class Reverb {
     }
   }
 
+  // Hall (mode 5) -- the LONGEST early section (10 long diffuse taps,
+  // 10/18/28/40/55/72/90/110/130/150 ms -- 2x the length of Chamber's 8 taps,
+  // the hall's "long build-up") + the LATERAL ENERGY (the spatial impression):
+  // the early cluster's L/R split (more on L, less on R, a function of the
+  // Space dial -- more Space = a wider, more lateral early field) + the mode
+  // wash (the longest RT, 3000 ms, the ceiling, untouched by the Hall law).
+  // The Build dial scales the early cluster's energy (more = a longer, denser
+  // build-up). Gated Build>0 || Space>0; at both 0 it is the shared plain comb
+  // bank (the anchor + kNumModes==6 hold). Bounded: |fb| < 1, tap amplitudes
+  // sum < 0.67 (the diffuse cluster, a low gain), the L/R split in [0.60, 1.40].
+  void processHall(juce::AudioBuffer<float>& buffer) {
+    const int numChannels = juce::jmin(buffer.getNumChannels(), kMaxChannels);
+    const int numSamples = buffer.getNumSamples();
+    const double decayNorm = (params_.decayMs - kMinDecayMs) / (kMaxDecayMs - kMinDecayMs);
+    const double fb = 0.30 + 0.69 * decayNorm;
+    const double norm = (1.0 - fb) / kNumLines;
+    // The early cluster (10 long taps, 10–150 ms) + the L/R lateral split
+    // (more on L, less on R, a function of the Space dial). The Build dial scales
+    // the whole cluster's energy (more = a longer, denser build-up).
+    float ta[kNumHallTaps][2];
+    for (int t = 0; t < kNumHallTaps; ++t) {
+      const double base = kHallTapAmps[t] * params_.build;
+      ta[t][0] = static_cast<float>(base * (1.0 + kHallLateralSplit * params_.space));
+      ta[t][1] = static_cast<float>(base * (1.0 - kHallLateralSplit * params_.space));
+    }
+    const float dampAlpha = static_cast<float>(1.0 - params_.tone);
+    for (int ch = 0; ch < numChannels; ++ch) {
+      auto& lines = lines_[static_cast<size_t>(ch)];
+      float* out = buffer.getWritePointer(ch);
+      for (int i = 0; i < numSamples; ++i) {
+        const float dry = out[i];
+        float acc = 0.0f;
+        for (int ln = 0; ln < kNumLines; ++ln) {
+          auto& L = lines[ln];
+          const int d = taps_[ln];
+          const float tail = L.ring[(L.write - d) & L.mask];
+          L.lp += dampAlpha * (tail - L.lp);
+          L.ring[L.write] = dry + static_cast<float>(fb) * L.lp;
+          L.write = (L.write + 1) & L.mask;
+          acc += L.lp;
+        }
+        acc *= static_cast<float>(norm);
+        // The early cluster (10 long taps) + the L/R lateral split (the Space dial
+        // widens the L, narrows the R -- the lateral energy, the spatial impression).
+        for (int t = 0; t < kNumHallTaps; ++t) {
+          const int ts = static_cast<int>(hallTapsSamples_[t]);
+          if (ts < 1 || i < ts) continue;
+          acc += out[i - ts] * ta[t][ch];
+        }
+        out[i] = acc;
+      }
+    }
+  }
+
  private:
   struct Line {
     std::vector<float> ring;
@@ -751,4 +838,10 @@ class Reverb {
   float chamberHFCap_[kMaxChannels] = {};
   // Chamber early-volley tap sample offsets (the 8 diffuse taps, setParams time).
   double chamberTapsSamples_[kNumChamberTaps] = {};
+  // Hall state: the per-tap early cluster is a STATELESS ADDITION (each tap is a
+  // low-passed read of the input buffer, the diffuse long build-up); the L/R
+  // LATERAL SPLIT (more on L, less on R, a function of the Space dial) is
+  // applied at the sum; the tap sample offsets are computed from the live sample
+  // rate in setParams().
+  double hallTapsSamples_[kNumHallTaps] = {};
 };

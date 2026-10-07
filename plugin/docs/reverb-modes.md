@@ -404,7 +404,20 @@ right of Width)" is full-tile only. Consistent across all six modes.
    (the 0–60 ms early window energy scales with Volley), `ChamberTest.BassExtendsTheLowTail`
    (the sustained tail's low/high Goertzel ratio is higher at Bass 1.0 than at 0.3),
    `ChamberTest.IsLiveAndBounded`.
-7. **Hall** — Build (early width) + Space (lateral/air) laws + pins.
+7. **Hall** — ✅ DONE. The Hall is the LONGEST early section (10 long diffuse taps,
+   10/18/28/40/55/72/90/110/130/150 ms -- 2x the length of Chamber's 8 taps,
+   the hall's "long build-up") + the LATERAL ENERGY (the L/R split of the early
+   cluster, the spatial impression: more on L, less on R, a function of the Space
+   dial -- more Space = a wider, more lateral early field) + the mode wash (the
+   longest RT, 3000 ms, the ceiling -- untouched by the Hall law, the anchor
+   holds). The Build dial scales the whole early cluster's energy (more = a
+   longer, denser build-up); the Space dial drives the L/R split (wider, more
+   lateral). Gated `Build>0 || Space>0`; at both 0 it is the shared plain comb
+   bank (the Digital anchor + `kNumModes==6` hold). The tap sample offsets
+   (`hallTapsSamples_`) are computed from the live sample rate in `setParams()`
+   (no hardcoded sample rate in the header). Pins: `HallTest.BuildLengthensTheEarlyField`
+   (the 0–160 ms early window energy scales with Build), `HallTest.IsLiveAndBounded`
+   (finite + bounded + the early field adds energy above the plain comb bank).
 8. **Wiring close** — per-mode defaults + good defaults verified,
    save/restore round-trip pin, tile compact/full behaviour, ears pass.
 
