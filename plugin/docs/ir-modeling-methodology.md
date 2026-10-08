@@ -131,6 +131,8 @@ one-line comment at every level constant recording the dB intent.
 - **Dwell and out-volume are separate dimensions** (learned by a wrong
   guess: cutting the dwell fixed nothing because the complaint was overall
   level; the hot component was a dry-driven resonator cluster).
+- **Level passes follow §5 (G1–G8)** — uniform trim on the last heard state,
+  component-scoped only on a named component, never mix/character.
 - **User-specified numbers win.** "around 0.942" is the value; the comment
   records the derivation (1.120 × 10^(−1.5/20)).
 - **Preserve what the ears already approved.** Rounding a number to a
@@ -143,7 +145,49 @@ one-line comment at every level constant recording the dB intent.
   asked. No pushes ever without "push."
 - **Never kill/restart Ollama or user-managed processes** (project rule).
 
-## 5. Definition of done (per mode)
+## 5. Gotchas — level & wet calibration (learned the hard way)
+
+- **G1 · Never fix a level with character.** "Still hot" from a state the user has
+  A/B'd = a **uniform trim on the mode sum** (one output constant). Splitting the
+  trim across components (wash +x / ping −y) *changes the internal ratio* — it is
+  a character change and it will be rejected as one. A component-scoped move is
+  valid only when the request names the component ("the WET part of the mix a bit
+  louder" → raise the sustained wash, leave the ping where it was).
+- **G2 · Passes stack on the LAST state the user heard, never the original.**
+  dB steps are multiplicative on the current constant
+  (0.794 → 0.70 → 0.417 → 0.209; each step = ×10^(−N/20) applied to the
+  previous). Keep the pass history in the constant's comment so the A/B chain
+  is reconstructible.
+- **G3 · "Too hot" and "not wet enough" can both be true at once.** Peak
+  (transient, e.g. the spring "boing") and sustained body (the wash that sits
+  against the dry in a 50% mix) are **independent axes**. Diagnose which
+  component carries the complaint; measure peak vs windowed sustained RMS
+  separately before touching any level.
+- **G4 · Don't make "wet vs dry" with mix defaults.** The mix knob is a shared,
+  user-owned dial. The mode-side lever for "this mode needs more wet relative
+  to dry" is the **mode's own output level** (the wet path gain), not
+  `mixNormalized` / default-mix machinery. Don't touch mix defaults unless
+  explicitly told to.
+- **G5 · Per-mode defaults live in `Reverb::defaultDialsForMode`, not the block
+  field.** `ChainBlock.h` fields (e.g. `reverbTone = 0.4`) are the pre-mode
+  initial value; on mode change the tile pushes `defaultDialsForMode(m, …)`
+  over them. "Default tone for Spring" = edit **case 1 of that table**.
+  (Existing tests assert *ranges* of the per-mode dials, not exact values, so
+  default retargets are test-safe — verify, don't assume.)
+- **G6 · Level comparisons must be apples-to-apples.** Same peak-normalized
+  input burst across modes; per-mode dial defaults (unless the dial is the
+  variable on trial); width = 0 for the comparison; report peak *and* multiple
+  sustained windows (e.g. 400–1.2 s, 1–2 s) relative to the input peak — a
+  single "tail RMS" number is meaningless across modes with different decay
+  curves.
+- **G7 · Measure before/after in the SAME compiled binary, and rebuild
+  between both measurements.** A stale test binary produces phantom-dB
+  "changes"; a run on a pre-edit binary is not evidence that the edit landed.
+- **G8 · Don't fight numbers against ears.** A measurement table tells you
+  where a state *is*; it does not arbitrate whether it is *right*. "Still +N
+  dB hotter than the one I just heard" is the spec (see R5).
+
+## 6. Definition of done (per mode)
 
 - [ ] Band-peak profiles (attack/mid/deep) in the reference family's range;
       target IR cited in the constant comments.
@@ -156,7 +200,7 @@ one-line comment at every level constant recording the dB intent.
 - [ ] All constants carry intent comments (dB / Hz / family reference).
 - [ ] Instrumentation stripped; tree clean; round log updated in the PR/chat.
 
-## 6. Invariants checklist (every edit)
+## 7. Invariants checklist (every edit)
 
 - [ ] Zero allocations on the audio thread; `setParams` under `chainMutex`,
       `process` on the audio thread.
@@ -170,7 +214,7 @@ one-line comment at every level constant recording the dB intent.
 - [ ] LF line endings; repo conventions preserved; no drive-by refactors.
 - [ ] Long runs: detached + polled, never a >5 min blocking call.
 
-## 7. Reference constants (spring, as of this writing)
+## 8. Reference constants (spring, as of this writing)
 
 | Percept | Constant | Value | Why |
 |---|---|---|---|
@@ -179,5 +223,6 @@ one-line comment at every level constant recording the dB intent.
 | wash shimmer | `kSpringWashLpA` | 0.28 | 8 k −19…−42 dB in the family |
 | ping cluster | `kSpringModeGain[8]` | see code | body 220–900 H, sparkle 1.3–2.8 k |
 | dwell | `kSpringPresence` | 0.942 | user A/B value |
-| out level | `kSpringOutLevel` | 0.70 (−3.1 dB) | hottest-mode normalisation |
+| out level | `kSpringOutLevel` | 0.209 (−13.6 dB) | uniform trim on the mode sum (all four passes, G1/G2) |
+| wet lift | `kSpringWetLift` | 1.414 (+3.01 dB) | "WET part of the mix a bit louder" — sustained wash only (G3) |
 | tail length | fb × 1.04 | mode-scoped | "a bit longer", cap-safe |

@@ -186,8 +186,16 @@ class Reverb {
   // the family band (Digital/Room/Plate) so the spring is a quiet, subtle voice --
   // "a very small amount of compression with almost no breakup" -- not the loudest tail.
   static constexpr double kSpringWashFrac   = 1.20;    // comb wash background (resonators carry the metallic voice)
-  // OUT-LEVEL: ears-pass 1: -3 dB (Spring read hotter than the family). Ears-pass 2: still "a bit higher" -> -1.6 dB more (0.794 -> 0.70; total -3.1 dB).
-  static constexpr double kSpringOutLevel   = 0.70;    // 10^(-3.1/20)
+  // OUT-LEVEL — single uniform trim on the summed Spring output (ears passes 1-4).
+  // Pass 4: "still hotter, -6 dB more" / "just lower the output trim - do NOT
+  //  Shift the wash:ping character". -6 dB below 084117 = total -13.6 dB on
+  static constexpr double kSpringOutLevel   = 0.157;   // 10^(-16.1/20): pass 8 "just -1.0 dB on the output" on 0.176
+  // Pass 5: "at mix 50% the WET part of the mix (the sustained reverb) needs
+  //   to be slightly louder vs the dry - nothing else, no mix defaults" ->
+  //   the WET (comb wash) component alone, +3 dB. Ping/splash untouched.
+  // Pass 6: "+3 dB more like before" -> +6 dB total on the wash.
+  // Pass 7: "+1.5 dB on the wash" -> +7.0 dB total on the wash.
+  static constexpr double kSpringWetLift    = 2.239;   // 10^(+7/20)
 
   // ---- Plate laws (mode 2; the dense 2D mode wash, not a 1-D metallic line) ----
   // The plate is a DENSE, dispersive 2-D surface: (a) a HIGH fixed cross-coupling
@@ -324,7 +332,7 @@ class Reverb {
   static void defaultDialsForMode(int mode, double& decayMs, double& preMs,
                                   double& tone, double& size, double& width) {
     switch (juce::jlimit(0, kNumModes - 1, mode)) {
-      case 1: decayMs = 2000.0; preMs = 0.0; tone = 0.50; size = 0.60; width = 0.90; break;  // Spring (size 60%: the user's ears)
+      case 1: decayMs = 2000.0; preMs = 0.0; tone = 0.60; size = 0.60; width = 0.90; break;  // Spring (size 60%: the user's ears; tone 60% at the user's request)
       case 2: decayMs = 2000.0; preMs = 0.5; tone = 0.35; size = 0.70; width = 0.80; break;  // Plate (the ears: size 70% / decay 2000)
       case 3: decayMs = 500.0;  preMs = 0.0; tone = 0.40; size = 0.30; width = 0.70; break;  // Room (the ears: tone 40%)
       case 4: decayMs = 1800.0; preMs = 1.0; tone = 0.50; size = 0.45; width = 0.85; break;  // Chamber
@@ -904,7 +912,8 @@ class Reverb {
         // 4. sum the layers (the soft-shoulder is gated by kSpringColorAmt --
         // 0.0 by default so the path stays linear/clean; the user can toggle it
         // on for a hair of driver "warmth" without it reading as fizz)
-        float o = (wet + boing + splLp) * static_cast<float>(kSpringOutLevel);
+        float o = (wet * static_cast<float>(kSpringWetLift) + boing + splLp)
+                  * static_cast<float>(kSpringOutLevel);
         o = o * (1.0f - cAmt) + springShoulder(o) * cAmt;
         out[i] = o;
       }

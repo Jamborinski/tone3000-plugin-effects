@@ -23,6 +23,10 @@ target_sources(DspTests PRIVATE
     src/dual_mono_tests.cpp
     src/duplicate_tests.cpp
     src/effect_tests.cpp
+    src/spring_full_family.cpp
+    src/spring_noise_burst.cpp
+    src/spring_conv_compare.cpp
+    src/spring_ir_test.cpp
     src/effect_ui_scale_tests.cpp
     src/eq_chain_rate_tests.cpp
     src/eq_post_routing_tests.cpp
