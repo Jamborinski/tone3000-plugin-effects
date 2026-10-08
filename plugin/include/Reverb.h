@@ -111,22 +111,42 @@ class Reverb {
   // three rings at non-harmonic spacings avoid the clean THD of a single tuned
   // resonator while keeping the metallic, springy character spread across the
   // 200 Hz – 3 kHz band the real tank shows in the Deluxe IRs.
-  static constexpr double kSpringR1Hz   = 250.0;    // low 'suspension body' (IR: broad mid peak)
-  static constexpr double kSpringR1Rb   = 0.88;     // wide ring, sustainy (the "fat" mid)
-  static constexpr double kSpringR1Gain = 0.002;    // modest: foundation, not the lead
-  static constexpr double kSpringR2Hz   = 800.0;    // mid body (incommensurate with R1)
-  static constexpr double kSpringR2Rb   = 0.80;     // tighter ring (audibly "ringier" than R1)
-  static constexpr double kSpringR2Gain = 0.003;    // the "boing" proper -- more present than R1
-  static constexpr double kSpringR3Hz   = 2000.0;   // metallic peak (IR: 2 kHz peak in Deluxe)
-  static constexpr double kSpringR3Rb   = 0.72;     // tightest, shortest ring (the bright "ping")
-  static constexpr double kSpringR3Gain = 0.001;    // the metallic ring -- present but damped
+  // HPF on the comb output: cuts the 63 Hz comb peak (6 parallel delays sum
+  // coherently at DC — the 30-IR average shows 63-125 Hz at -4 to -13 dB below
+  // the 500 Hz peak). 1-pole HPF @ 200 Hz cuts 63 Hz by ~-17 dB, 125 Hz ~-5 dB.
+  // State: hpfX_ (prev input), hpfY_  (prev output), per channel (2 new arrays).
+  // 8 incommensurate resonator modes (metallic body, peak at ~500 Hz).
+  // rb is the per-sample amplitude decay (|pole|); higher = longer ring.
+  // gain is the dry-signal excitation; combined with the mode's 1/(1-rb)
+  // resonance peak they shape the spectrum. Peak at mode 2 (490 Hz).
+  static constexpr int    kSpringNumModes = 8;
+  static constexpr double kSpringModeHz  [kSpringNumModes] = {
+      220.0,  350.0,  490.0,  640.0,  900.0, 1300.0, 1800.0, 2800.0 };
+  static constexpr double kSpringModeRb  [kSpringNumModes] = {
+      0.90,   0.90,   0.92,   0.90,   0.88,   0.88,   0.86,   0.84  };
+  static constexpr double kSpringModeGain[kSpringNumModes] = {
+      0.046,  0.058,  0.080,  0.058,  0.046,  0.046,  0.032,  0.022 };  // ears-pass: boing slightly louder RELATIVE to the wash, brighter — the 1.3-2.8 kHz pings lifted ~+4 dB more than the 220-900 Hz body modes (ping + sparkle)
   // (removed: kSpringBodyHz/Rb -- replaced by kSpringR1)
   static constexpr double kSpringBodyGain   = 0.018;   // ISOLATION: body ON   // modest: body is under the metal, not over it
   // Wash low-pass: cut HF shimmer. IRs show -20 dB+ at 8 kHz, up to -73 dB at 16 kHz.
   // A 1-pole LP at ~5 kHz @48 kHz kills the artificial HF comb shimmer.
   static constexpr double kSpringWashLpHz   = 3500.0;  // wash LP corner
   // alpha for 1-pole LP @5 kHz @48 kHz: 1 - exp(-2*pi*5000/48000) = 1 - exp(-0.654) ~= 0.48
-  static constexpr double kSpringWashLpA    = 0.22;    // steeper LP @3.5 kHz (IR: -35 to -91 dB at 8 kHz)
+  static constexpr double kSpringWashLpA    = 0.28;    // wash LP @3.5 kHz (family IRs: -19 to -42 dB at 8 kHz): a hair brighter than 0.32 for a sparkle lift over 1-4 kHz
+  // ---- Spring tail tone (spring-family convolved-burst calibration) ----
+  // The BARE comb tail is BRIGHT: band-peak scans of the raw spring land on
+  // 2-4 kHz with 8-12 kHz shimmer (single-bin DFT misread this as a "125 Hz
+  // peak / 500 Hz hole" -- it was just missing the sharp resonances that sit
+  // slightly off bin). Real springs are LOW-CUT (GBS 63 H -22, 125 H -27;
+  // Demeter 63 H -40) and peak their body at 250-500 H with the highs tamed.
+  // Three small, linear, live elements shape it there:
+  //   1) 1-pole HPF: tames the parallel-comb DC/sub bump (real springs lack it).
+  //   2) Peaking EQ: pulls the tonal centre down to the 250-500 H body band.
+  //   3) (above) steeper wash LP: rolls the 8-12 kHz shimmer (GBS -19, Demeter -40).
+  static constexpr double kSpringHpfHz      = 200.0;   // HPF corner (real springs are low-cut)
+  static constexpr double kSpringPeakHz     = 500.0;   // body centre: centred up from 450 so the 250-350 Hz low-mids thin out (ears: "low mids a bit stronger than a spring")
+  static constexpr double kSpringPeakDb     = 11.0;    // body lift: -2 dB vs 13 (ears: low mids slightly too strong)
+  static constexpr double kSpringPeakQ      = 0.70;    // wide body shelf, not a whistly ring
   // The metallic boing and the broadband drip splash are the FIZZ/breakup (bright
   // sustained resonance + broadband transient). Removed (0.0): the spring is now
   // the clean 1-D mode wash + Sag dispersion + a faint level-driven compression.
@@ -139,20 +159,20 @@ class Reverb {
   static constexpr double kSpringBoingGain  = 0.000;   // disabled: replaced by the R1/R2/R3 cluster   // metallic ring (up from 0.028: more "ping")
   static constexpr double kSpringDripDecay  = 0.98;    // the onset splash decay (per sample)
   static constexpr double kSpringDripAtk    = 0.060;   // slow onset (IR peak at 40-68 ms -- the 'plonk', not a 'clack')
-  static constexpr double kSpringDripGain   = 0.012;   // reduced: less comb excitation   // broadband splash (the ORIGINAL value -- reducing it didn't move the needle on the Spring's distortion, so we keep it for the "drip" character)
+  static constexpr double kSpringDripGain   = 0.020;   // reduced: less comb excitation   // broadband splash (the ORIGINAL value -- reducing it didn't move the needle on the Spring's distortion, so we keep it for the "drip" character)
   // --- the "+3dB dwell" the ears found nicer, baked into Spring + Plate presence ---
   // kSpringPresence is pulled back to 1.0 (0 dB): the +1 dB "dwell" now lives in
   // kSpringWashRef (below), so the Spring's wet level + dwell are governed by
   // one coherent constant (the wash law) instead of two (wash * presence).
   // The Spring reads about the same at the fader (the user normalizes in the DAW).
-  static constexpr double kSpringPresence   = 1.334;   // +2.5 dB wet dwell (user-confirmed: Spring has the higher dwell, not Plate)
+  static constexpr double kSpringPresence   = 0.942;   // dwell: user A/B'd the 073339 build (1.120) and prefers it backed off -1.5 dB (1.120 * 10^(-1.5/20) = 0.942)
   static constexpr double kPlatePresence    = 1.189;   // +1.5 dB wet dwell (user-confirmed: Plate is the LOWER-dwell member of the pair)
   // --- shared wash diffusion (1st-order all-pass, Schroeder/Moorer). --- The comb
   // wash's long-decay resonances turn into standing-waves / whistles / the metallic
   // "echo" that appears after a second (worse past ~2000 ms). A phase-only all-pass
   // on the wash smears them into a smoother decay. Per-mode basis (x a decay scale
   // 0.4..1.0, more at long decay where the modes break):
-  static constexpr double kSpringWashAp     = 0.55;    // Spring wash diffusion (back to the pre-round-12 value while we are isolating the true source of the Spring distortion)
+  static constexpr double kSpringWashAp     = 0.30;    // Spring wash diffusion (back to the pre-round-12 value while we are isolating the true source of the Spring distortion)
   static constexpr double kPlateWashAp      = 0.62;    // Plate wash diffusion (more: kills the tiny residual hiss at high dwell)
   static constexpr double kRoomWashAp       = 0.22;    // Room wash diffusion (keep the early discrete, smooth the long tail)
   static constexpr double kHallWashAp       = 0.68;    // Hall wash diffusion (more: tames the pinging/metallic standing wave under hard drive)
@@ -165,7 +185,9 @@ class Reverb {
   // default RT give a high (1-fb)/N). kSpringWashFrac scales the wash body DOWN into
   // the family band (Digital/Room/Plate) so the spring is a quiet, subtle voice --
   // "a very small amount of compression with almost no breakup" -- not the loudest tail.
-  static constexpr double kSpringWashFrac   = 0.62;    // the spring wash body scale (calibrated to the family band)
+  static constexpr double kSpringWashFrac   = 1.20;    // comb wash background (resonators carry the metallic voice)
+  // OUT-LEVEL: ears-pass 1: -3 dB (Spring read hotter than the family). Ears-pass 2: still "a bit higher" -> -1.6 dB more (0.794 -> 0.70; total -3.1 dB).
+  static constexpr double kSpringOutLevel   = 0.70;    // 10^(-3.1/20)
 
   // ---- Plate laws (mode 2; the dense 2D mode wash, not a 1-D metallic line) ----
   // The plate is a DENSE, dispersive 2-D surface: (a) a HIGH fixed cross-coupling
@@ -390,7 +412,13 @@ class Reverb {
       smearPhase_[c] = 0.0f;
       fbDriftPhase_[c] = 0.5f*M_PI_F;   // quarter-cycle offset from smearPhase_
       r1Re_[c] = 0.0f; r1Im_[c] = 0.0f; r2Re_[c] = 0.0f; r2Im_[c] = 0.0f; r3Re_[c] = 0.0f; r3Im_[c] = 0.0f;
+      r4Re_[c]=0.0f; r4Im_[c]=0.0f; r5Re_[c]=0.0f; r5Im_[c]=0.0f;
+      r6Re_[c]=0.0f; r6Im_[c]=0.0f; r7Re_[c]=0.0f; r7Im_[c]=0.0f;
+      r8Re_[c]=0.0f; r8Im_[c]=0.0f;
       washLp_[c] = 0.0f;
+      washLp2_[c] = 0.0f;
+      hpfX_[c] = 0.0f; hpfY_[c] = 0.0f;
+      for (int j = 0; j < 4; ++j) peakEq_[c][j] = 0.0f;
     }
     for (int c = 0; c < kMaxChannels; ++c)
       std::fill(inHist_[c].begin(), inHist_[c].end(), 0.0f);
@@ -738,23 +766,48 @@ class Reverb {
     const int numSamples = buffer.getNumSamples();
     const int N = springsFromNormalized(params_.springs);  // 1..6 active lines
     const double sag = params_.sag;
-    const double fb = decayFb(params_.decayMs);              // stable (|fb| < 1)
+    // Spring keeps ringing a little past the shared decay curve (the family
+    // springs ring long and pingy): +4 % fb, spring-scoped only (Plate/Room/
+    // Chamber/Hall keep the shared curve). At Spring's own 2500 ms cap the
+    // lifted fb tops out at ~0.910, stable through the +/-3 % drift.
+    const double fb = decayFb(params_.decayMs) * 1.04;  // stable (|fb| < 1)
     const double nScale = kSpringWashRef / (double)N * kSpringWashFrac;  // FIXED ref (was live (1-fb)); level holds across decay, scaled into the family band
-    const double dampAlpha = (1.0 - params_.tone) * (1.0 - 0.5 * sag);  // Sag darkens
+    const double dampAlpha =
+      (0.75 + 0.25 * params_.tone) * (1.0 - 0.25 * sag);  // higher tone = gentler
     const double widthSpread = kMaxWidthSpread * params_.width;
-    // Incommensurate resonator cluster: 3 rings, non-harmonic spacings (250/800/2000 Hz)
-    const float r1a = static_cast<float>(kSpringR1Rb * std::cos(2.0 * M_PI * kSpringR1Hz / sampleRate_));
-    const float r1i = static_cast<float>(kSpringR1Rb * std::sin(2.0 * M_PI * kSpringR1Hz / sampleRate_));
-    const float r1g = static_cast<float>(kSpringR1Gain / N);   // dilutes w/ N
-    const float r2a = static_cast<float>(kSpringR2Rb * std::cos(2.0 * M_PI * kSpringR2Hz / sampleRate_));
-    const float r2i = static_cast<float>(kSpringR2Rb * std::sin(2.0 * M_PI * kSpringR2Hz / sampleRate_));
-    const float r2g = static_cast<float>(kSpringR2Gain / N);
-    const float r3a = static_cast<float>(kSpringR3Rb * std::cos(2.0 * M_PI * kSpringR3Hz / sampleRate_));
-    const float r3i = static_cast<float>(kSpringR3Rb * std::sin(2.0 * M_PI * kSpringR3Hz / sampleRate_));
-    const float r3g = static_cast<float>(kSpringR3Gain / N);
+    // 8 incommensurate resonator modes (metallic body, peak at ~500 Hz).
+    // Each mode: y_complex[n] = (y_complex[n-1] + dry*gain) * (r*a + j*r*b)
+    // Pre-compute real/imag parts of the complex pole per mode.
+    float mRe[kSpringNumModes], mIm[kSpringNumModes], mGain[kSpringNumModes];
+    for (int m = 0; m < kSpringNumModes; ++m) {
+      const double w0 = 2.0*M_PI*kSpringModeHz[m]/sampleRate_;
+      const double rb = kSpringModeRb[m];
+      mRe[m]   = static_cast<float>(rb*std::cos(w0));
+      mIm[m]   = static_cast<float>(rb*std::sin(w0));
+      mGain[m] = static_cast<float>(kSpringModeGain[m]);   // per-sample excitation
+    }
     // 5 kHz wash LP (kills the artificial 8+ kHz comb shimmer)
     const float washLpA = static_cast<float>(kSpringWashLpA);
+    // 1-pole HPF @ kSpringHpfHz (kills the parallel-comb DC/lows bump).
+    const float hpK = static_cast<float>(2.0*M_PI*kSpringHpfHz/sampleRate_);
+    const float hpG = 2.0f/(2.0f+hpK);
+    const float hpA = (2.0f-hpK)/(2.0f+hpK);
+    // Body peaking EQ (pre-normalized biquad, RBJ peak: gain kSpringPeakDb @ kSpringPeakHz).
+    float pkB[3]; float pkA1, pkA2;
+    { const double A  = std::pow(10.0, kSpringPeakDb / 40.0);
+      const double w0 = 2.0*M_PI*kSpringPeakHz/sampleRate_;
+      const double cw = std::cos(w0);
+      const double al = std::sin(w0) / (2.0*kSpringPeakQ);
+      const double a0 = 1.0 + al/A;
+      pkB[0] = static_cast<float>((1.0 + al*A) / a0);
+      pkB[1] = static_cast<float>(-2.0*cw / a0);
+      pkB[2] = static_cast<float>((1.0 - al*A) / a0);
+      // DF-II: y = (b0 x + b1 x1 + b2 x2 - a1 y1 - a2 y2)/a0, with raw a1=-2cw,
+      // a2=(1-al/A)  >>  the y-feedback terms added are +2cw/a0 and -(1-al/A)/a0:
+      pkA1   = static_cast<float>( 2.0*cw / a0);
+      pkA2   = static_cast<float>(-(1.0 - al/A) / a0); }
     const float dripAmt = static_cast<float>(kSpringDripGain * N / kNumLines);  // grows w/ N
+    // TEMP DIAG (remove): component peaks
     const float cAmt = static_cast<float>(kSpringColorAmt);
     for (int ch = 0; ch < numChannels; ++ch) {
       auto& lines = lines_[static_cast<size_t>(ch)];
@@ -763,9 +816,15 @@ class Reverb {
       float rr1e = r1Re_[ch], rr1i = r1Im_[ch];
       float rr2e = r2Re_[ch], rr2i = r2Im_[ch];
       float rr3e = r3Re_[ch], rr3i = r3Im_[ch];
+      float rr4e = r4Re_[ch], rr4i = r4Im_[ch];
+      float rr5e = r5Re_[ch], rr5i = r5Im_[ch];
+      float rr6e = r6Re_[ch], rr6i = r6Im_[ch];
+      float rr7e = r7Re_[ch], rr7i = r7Im_[ch];
+      float rr8e = r8Re_[ch], rr8i = r8Im_[ch];
       float de = dripEnv_[ch];
       float splLp = splashLp_[ch];
       float wl = washLp_[ch];
+      float wp2s = (ch < kMaxChannels) ? washLp2_[ch] : 0.0f;
       for (int i = 0; i < numSamples; ++i) {
         const float dry = out[i];
         // 1. the N spring lines (comb tails), level-constant
@@ -784,37 +843,76 @@ class Reverb {
           acc += tail;
         }
         float wet = acc * static_cast<float>(nScale) * static_cast<float>(kSpringPresence);
+        // 1) HPF: pull the parallel-comb DC/lows bump (63 Hz -13 dB, 125 Hz -6 dB)
+        { const float inP = wet, inPrev = hpfX_[ch], outPrev = hpfY_[ch];
+          const float outN = hpA*outPrev + hpG*(inP - inPrev);
+          hpfX_[ch] = inP; hpfY_[ch] = outN;
+          wet = outN; }
         wet = washApSc(wet, kSpringWashAp, ch);   // diffuse: smear the long-decay comb resonance (kill the whistle)
         // 5 kHz wash LP: kills the artificial 8+ kHz comb shimmer (IR: -20 dB+ at 8 kHz)
         wl += washLpA * (wet - wl);
         wet = wl;
-        // 500 Hz body resonator: broad warm mid (the 'suspension' under the metal)
+        // 2) body peaking EQ: 250 Hz-1 kHz band (family springs PEAK there)
+        { const float xI = wet;
+          const float x1 = peakEq_[ch][0], x2 = peakEq_[ch][1];
+          const float y1 = peakEq_[ch][2], y2 = peakEq_[ch][3];
+          const float yI = pkB[0]*xI + pkB[1]*x1 + pkB[2]*x2 + pkA1*y1 + pkA2*y2;
+          peakEq_[ch][0] = xI; peakEq_[ch][1] = x1; peakEq_[ch][2] = yI; peakEq_[ch][3] = y1;
+          wet = yI; }
+        // 2nd wash LP pole disabled (single pole is enough for a spring)
 
         // onset burst: fast-attack envelope tracking |dry|
         de = std::max(de * static_cast<float>(kSpringDripDecay),
                       de + static_cast<float>(kSpringDripAtk) * (std::fabs(dry) - de));
         // Drive the resonator cluster + drip with the LINEAR input signal
         // (not a hard square-wave clipper — sign() was the main THD source)
-        const float drive = de * dry;
+        // 8 resonator modes (metallic body — the primary spring voice).
+        // Each is excited by the LEVEL-DRIVEN dry signal (not de*dry),
+        // so they ring proportionally with input level.
         float boing = 0.0f;
-        { float nr = rr1e + drive * r1g; float ni = rr1i;
-          rr1e = nr*r1a - ni*r1i; rr1i = nr*r1i + ni*r1a; boing += rr1e; }
-        { float nr = rr2e + drive * r2g; float ni = rr2i;
-          rr2e = nr*r2a - ni*r2i; rr2i = nr*r2i + ni*r2a; boing += rr2e; }
-        { float nr = rr3e + drive * r3g; float ni = rr3i;
-          rr3e = nr*r3a - ni*r3i; rr3i = nr*r3i + ni*r3a; boing += rr3e; }
+        { const float ex = dry;                       // level-driven excitation
+          // Mode 0 (220 Hz)
+          { float nr = rr1e + ex * mGain[0]; float ni = rr1i;
+            rr1e = nr*mRe[0] - ni*mIm[0]; rr1i = nr*mIm[0] + ni*mRe[0]; boing += rr1e; }
+          // Mode 1 (350 Hz)
+          { float nr = rr2e + ex * mGain[1]; float ni = rr2i;
+            rr2e = nr*mRe[1] - ni*mIm[1]; rr2i = nr*mIm[1] + ni*mRe[1]; boing += rr2e; }
+          // Mode 2 (490 Hz — PEAK)
+          { float nr = rr3e + ex * mGain[2]; float ni = rr3i;
+            rr3e = nr*mRe[2] - ni*mIm[2]; rr3i = nr*mIm[2] + ni*mRe[2]; boing += rr3e; }
+          // Mode 3 (640 Hz)
+          { float nr = rr4e + ex * mGain[3]; float ni = rr4i;
+            rr4e = nr*mRe[3] - ni*mIm[3]; rr4i = nr*mIm[3] + ni*mRe[3]; boing += rr4e; }
+          // Mode 4 (900 Hz)
+          { float nr = rr5e + ex * mGain[4]; float ni = rr5i;
+            rr5e = nr*mRe[4] - ni*mIm[4]; rr5i = nr*mIm[4] + ni*mRe[4]; boing += rr5e; }
+          // Mode 5 (1300 Hz)
+          { float nr = rr6e + ex * mGain[5]; float ni = rr6i;
+            rr6e = nr*mRe[5] - ni*mIm[5]; rr6i = nr*mIm[5] + ni*mRe[5]; boing += rr6e; }
+          // Mode 6 (1800 Hz)
+          { float nr = rr7e + ex * mGain[6]; float ni = rr7i;
+            rr7e = nr*mRe[6] - ni*mIm[6]; rr7i = nr*mIm[6] + ni*mRe[6]; boing += rr7e; }
+          // Mode 7 (2800 Hz)
+          { float nr = rr8e + ex * mGain[7]; float ni = rr8i;
+            rr8e = nr*mRe[7] - ni*mIm[7]; rr8i = nr*mIm[7] + ni*mRe[7]; boing += rr8e; }
+        }
+        // Drive for drip splash (envelope-driven transient)
+        const float drive = de * dry;
         // drip: broadband onset splash through soft LP (linear drive, no harmonics)
         const float splashRaw = drive * dripAmt;
         splLp += static_cast<float>(kSplashSoftA) * (splashRaw - splLp);
         // 4. sum the layers (the soft-shoulder is gated by kSpringColorAmt --
         // 0.0 by default so the path stays linear/clean; the user can toggle it
         // on for a hair of driver "warmth" without it reading as fizz)
-        float o = wet + boing + splLp;
+        float o = (wet + boing + splLp) * static_cast<float>(kSpringOutLevel);
         o = o * (1.0f - cAmt) + springShoulder(o) * cAmt;
         out[i] = o;
       }
-      r1Re_[ch] = rr1e; r1Im_[ch] = rr1i; r2Re_[ch] = rr2e; r2Im_[ch] = rr2i; r3Re_[ch] = rr3e; r3Im_[ch] = rr3i;
-      dripEnv_[ch] = de; splashLp_[ch] = splLp; washLp_[ch] = wl;
+      r1Re_[ch]=rr1e; r1Im_[ch]=rr1i; r2Re_[ch]=rr2e; r2Im_[ch]=rr2i;
+      r3Re_[ch]=rr3e; r3Im_[ch]=rr3i; r4Re_[ch]=rr4e; r4Im_[ch]=rr4i;
+      r5Re_[ch]=rr5e; r5Im_[ch]=rr5i; r6Re_[ch]=rr6e; r6Im_[ch]=rr6i;
+      r7Re_[ch]=rr7e; r7Im_[ch]=rr7i; r8Re_[ch]=rr8e; r8Im_[ch]=rr8i;
+      dripEnv_[ch] = de; splashLp_[ch] = splLp; washLp_[ch] = wl; washLp2_[ch] = wp2s;
     }
   }
 
@@ -1166,12 +1264,23 @@ class Reverb {
   float dripEnv_[kMaxChannels] = {};
   float splashLp_[kMaxChannels] = {};  // softened (low-pass) drip splash, per channel
   float whipLp_[kMaxChannels] = {};    // softened (low-pass) plate whip, per channel
-  // Spring: 3 incommensurate resonator cluster state (250/800/2000 Hz)
-  float r1Re_[kMaxChannels] = {}; float r1Im_[kMaxChannels] = {};
-  float r2Re_[kMaxChannels] = {}; float r2Im_[kMaxChannels] = {};
-  float r3Re_[kMaxChannels] = {}; float r3Im_[kMaxChannels] = {};
+  // Spring: 8 incommensurate resonator mode states (220-2800 Hz metallic body)
+  float r1Re_[kMaxChannels] = {}; float r1Im_[kMaxChannels] = {};   // 220 Hz
+  float r2Re_[kMaxChannels] = {}; float r2Im_[kMaxChannels] = {};   // 350 Hz
+  float r3Re_[kMaxChannels] = {}; float r3Im_[kMaxChannels] = {};   // 490 Hz (peak)
+  float r4Re_[kMaxChannels] = {}; float r4Im_[kMaxChannels] = {};   // 640 Hz
+  float r5Re_[kMaxChannels] = {}; float r5Im_[kMaxChannels] = {};   // 900 Hz
+  float r6Re_[kMaxChannels] = {}; float r6Im_[kMaxChannels] = {};   // 1300 Hz
+  float r7Re_[kMaxChannels] = {}; float r7Im_[kMaxChannels] = {};   // 1800 Hz
+  float r8Re_[kMaxChannels] = {}; float r8Im_[kMaxChannels] = {};   // 2800 Hz
   // Spring: 5 kHz wash low-pass state (kills the artificial 8+ kHz comb shimmer).
   float washLp_[kMaxChannels] = {};
+  float washLp2_[kMaxChannels] = {};   // 2nd LP pole (steeper HF rolloff: -12 dB/oct total)
+  float hpfX_[kMaxChannels] = {};   // 1-pole HPF prev input (per channel)
+  float hpfY_[kMaxChannels] = {};   // 1-pole HPF prev output (per channel)
+  // Spring body peaking-EQ state (biquad DF-II: x1, x2, y1, y2 per channel).
+  float peakEq_[kMaxChannels][4] = {};
+
   // Plate state: the dense "whip" onset burst envelope per channel (bounded,
   // decaying, reset in reset()). The dense wash + bloom low-pass + color are
   // stateless (they use the shared comb lines + the existing Line.lp).
