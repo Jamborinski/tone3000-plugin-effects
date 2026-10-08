@@ -103,8 +103,30 @@ class Reverb {
   // dispersion). color: a subtle level-driven soft-shoulder (clean at low
   // level, mild warmth on peaks) -- our own clean-room law, not a re-clip from
   // the compressor (avoids pulling juce_audio_processors into core headers).
-  static constexpr double kSpringBoingHz    = 2400.0;  // the metallic ring tone
-  static constexpr double kSpringBoingR     = 0.90;    // ringout: a bright BOUNCE, not a long metallic 'whistle' (shorter ringout = less whine)
+  // IR-measured: the real Deluxe spring peaks at 2 kHz, has a broad 500 Hz
+  // 'suspension body', and rolls off hard above ~4 kHz (-20 dB+ at 8 kHz).
+  // We model this with a 2 kHz metallic ring, a 500 Hz body resonator, and a
+  // 5 kHz wash low-pass. The 3-8 kHz energy is the artificial part we remove.
+  // Incommensurate resonator cluster (IR-driven, replaces single 2 kHz boing):
+  // three rings at non-harmonic spacings avoid the clean THD of a single tuned
+  // resonator while keeping the metallic, springy character spread across the
+  // 200 Hz – 3 kHz band the real tank shows in the Deluxe IRs.
+  static constexpr double kSpringR1Hz   = 250.0;    // low 'suspension body' (IR: broad mid peak)
+  static constexpr double kSpringR1Rb   = 0.88;     // wide ring, sustainy (the "fat" mid)
+  static constexpr double kSpringR1Gain = 0.002;    // modest: foundation, not the lead
+  static constexpr double kSpringR2Hz   = 800.0;    // mid body (incommensurate with R1)
+  static constexpr double kSpringR2Rb   = 0.80;     // tighter ring (audibly "ringier" than R1)
+  static constexpr double kSpringR2Gain = 0.003;    // the "boing" proper -- more present than R1
+  static constexpr double kSpringR3Hz   = 2000.0;   // metallic peak (IR: 2 kHz peak in Deluxe)
+  static constexpr double kSpringR3Rb   = 0.72;     // tightest, shortest ring (the bright "ping")
+  static constexpr double kSpringR3Gain = 0.001;    // the metallic ring -- present but damped
+  // (removed: kSpringBodyHz/Rb -- replaced by kSpringR1)
+  static constexpr double kSpringBodyGain   = 0.018;   // ISOLATION: body ON   // modest: body is under the metal, not over it
+  // Wash low-pass: cut HF shimmer. IRs show -20 dB+ at 8 kHz, up to -73 dB at 16 kHz.
+  // A 1-pole LP at ~5 kHz @48 kHz kills the artificial HF comb shimmer.
+  static constexpr double kSpringWashLpHz   = 3500.0;  // wash LP corner
+  // alpha for 1-pole LP @5 kHz @48 kHz: 1 - exp(-2*pi*5000/48000) = 1 - exp(-0.654) ~= 0.48
+  static constexpr double kSpringWashLpA    = 0.22;    // steeper LP @3.5 kHz (IR: -35 to -91 dB at 8 kHz)
   // The metallic boing and the broadband drip splash are the FIZZ/breakup (bright
   // sustained resonance + broadband transient). Removed (0.0): the spring is now
   // the clean 1-D mode wash + Sag dispersion + a faint level-driven compression.
@@ -114,10 +136,10 @@ class Reverb {
   // The FIZZ/distortion came from the per-sample soft-shoulder below (a non-
   // linearity: clipping a reverb tail's many peaks adds high harmonic fuzz). It
   // is now OFF (colorAmt = 0), so the layers stay linear/clean.
-  static constexpr double kSpringBoingGain  = 0.028;   // metallic 2.4k ring (the ORIGINAL value -- removing it was a misread of the user's feedback; the "distortion" is still there even at 0.030 drip / 0.008 boing so it's not the drip/boing driving it)
+  static constexpr double kSpringBoingGain  = 0.000;   // disabled: replaced by the R1/R2/R3 cluster   // metallic ring (up from 0.028: more "ping")
   static constexpr double kSpringDripDecay  = 0.98;    // the onset splash decay (per sample)
-  static constexpr double kSpringDripAtk    = 0.010;   // the drip ATTACK (slower -> onset + boing come slightly LATER, less 'too early')
-  static constexpr double kSpringDripGain   = 0.060;   // broadband splash (the ORIGINAL value -- reducing it didn't move the needle on the Spring's distortion, so we keep it for the "drip" character)
+  static constexpr double kSpringDripAtk    = 0.060;   // slow onset (IR peak at 40-68 ms -- the 'plonk', not a 'clack')
+  static constexpr double kSpringDripGain   = 0.012;   // reduced: less comb excitation   // broadband splash (the ORIGINAL value -- reducing it didn't move the needle on the Spring's distortion, so we keep it for the "drip" character)
   // --- the "+3dB dwell" the ears found nicer, baked into Spring + Plate presence ---
   // kSpringPresence is pulled back to 1.0 (0 dB): the +1 dB "dwell" now lives in
   // kSpringWashRef (below), so the Spring's wet level + dwell are governed by
@@ -137,8 +159,8 @@ class Reverb {
   // The splash/whip re-inject the dry ATTACK transient (a sharp broadband burst =
   // the "fizz"). We low-pass them (kSplashSoftA) so they keep the transient BODY
   // but lose the sharp HF "hi-hat" fizz. Shared by Spring drip + Plate whip.
-  static constexpr double kSplashSoftA      = 0.30;    // softening 1-pole coeff (back to the pre-round-12 value; moot while drip/boing are off)
-  static constexpr double kSpringColorAmt   = 0.0;     // OFF: the soft-shoulder was the fizz/distortion (knee/amount moot) -- clean-rooms port of the compressor's soft-knee law, kept in-tree for the driver color (identity below the knee, only touches true peaks)
+  static constexpr double kSplashSoftA      = 0.08;   // slower LP (more HF cut on the drip onset)    // softening 1-pole coeff (back to the pre-round-12 value; moot while drip/boing are off)
+  static constexpr double kSpringColorAmt   = 0.5;     // OFF: the soft-shoulder was the fizz/distortion (knee/amount moot) -- clean-rooms port of the compressor's soft-knee law, kept in-tree for the driver color (identity below the knee, only touches true peaks)
   // Spring wash level law: the spring's few-line wash runs loud (small N + its long
   // default RT give a high (1-fb)/N). kSpringWashFrac scales the wash body DOWN into
   // the family band (Digital/Room/Plate) so the spring is a quiet, subtle voice --
@@ -162,7 +184,7 @@ class Reverb {
   static constexpr double kPlateBrightOnset  = 0.026;   // the "whip" onset (character, kept gentle) -- round 12: user only wanted Spring touched, Plate is back to the original value
   static constexpr double kPlateBrightDecay  = 0.96;   // the burst decay (fast whip)
   static constexpr double kPlateBloomFrac    = 0.32;   // how far Bloom darkens (low lags) -- the ORIGINAL value (I had reduced it to 0.25 without being asked; user did not want the Plate touched)
-  static constexpr double kPlateColorAmt     = 0.0;    // OFF: the soft-shoulder was the fizz/distortion (knee/amount moot) -- clean-rooms port of the compressor's soft-knee law, kept in-tree for the driver color (identity below the knee, only touches true peaks)
+  static constexpr double kPlateColorAmt     = 0.3;    // OFF: the soft-shoulder was the fizz/distortion (knee/amount moot) -- clean-rooms port of the compressor's soft-knee law, kept in-tree for the driver color (identity below the knee, only touches true peaks)
   // ---- Room laws (mode 3; the discrete early-reflection set + per-tap air
   // absorption + a mode wash, per Gardner small 1992 / Moorer air law) ----
   // The early field is a fixed 4-tap TDL (Gardner small: 8.3/22/35/66 ms, we
@@ -280,7 +302,7 @@ class Reverb {
   static void defaultDialsForMode(int mode, double& decayMs, double& preMs,
                                   double& tone, double& size, double& width) {
     switch (juce::jlimit(0, kNumModes - 1, mode)) {
-      case 1: decayMs = 2000.0; preMs = 0.0; tone = 0.50; size = 0.75; width = 0.90; break;  // Spring
+      case 1: decayMs = 2000.0; preMs = 0.0; tone = 0.50; size = 0.60; width = 0.90; break;  // Spring (size 60%: the user's ears)
       case 2: decayMs = 2000.0; preMs = 0.5; tone = 0.35; size = 0.70; width = 0.80; break;  // Plate (the ears: size 70% / decay 2000)
       case 3: decayMs = 500.0;  preMs = 0.0; tone = 0.40; size = 0.30; width = 0.70; break;  // Room (the ears: tone 40%)
       case 4: decayMs = 1800.0; preMs = 1.0; tone = 0.50; size = 0.45; width = 0.85; break;  // Chamber
@@ -293,7 +315,7 @@ class Reverb {
     const int slot = (localSlot == 1) ? 1 : 0;
     double a = 0.0, b = 0.0;
     switch (m) {
-      case 1: a = 0.4; b = 0.45; break;  // Springs 3 (normalised 0.4), Sag 45%
+      case 1: a = 0.4; b = 0.30; break;  // Springs 3 (normalised 0.4), Sag 30% (the user's ears)
       case 2: a = 0.55; b = 0.55; break;  // Bright 55%, Bloom 55% (the ears)
       case 3: a = 0.40; b = 0.40; break;  // Early 40%, Air 40%
       case 4: a = 0.4; b = 0.6; break;  // Volley, Bass
@@ -365,6 +387,10 @@ class Reverb {
       chamberHFCap_[c] = 0.0f;
       for (int t = 0; t < kNumHallTaps; ++t) hallTapsLp_[c][t] = 0.0f;
       digApX_[c] = 0.0f; digApY_[c] = 0.0f;
+      smearPhase_[c] = 0.0f;
+      fbDriftPhase_[c] = 0.5f*M_PI_F;   // quarter-cycle offset from smearPhase_
+      r1Re_[c] = 0.0f; r1Im_[c] = 0.0f; r2Re_[c] = 0.0f; r2Im_[c] = 0.0f; r3Re_[c] = 0.0f; r3Im_[c] = 0.0f;
+      washLp_[c] = 0.0f;
     }
     for (int c = 0; c < kMaxChannels; ++c)
       std::fill(inHist_[c].begin(), inHist_[c].end(), 0.0f);
@@ -676,7 +702,17 @@ class Reverb {
   // (past ~2000 ms). Identity at 0. Reuses the shared wash-diffuser state.
   float washApSc(float x, double base, int ch) {
     const float dfrac = static_cast<float>(decayDiffFrac(params_.decayMs));
-    const float diffCoef = static_cast<float>(base * (0.4f + 0.6f * dfrac));
+    // LFO-smear: slowly wobble diffCoef by ±12 % so the all-pass's peak/valley
+    // position drifts. This spreads the comb's periodic eigenfrequencies across
+    // a small band and beats them out (the Spin Semi "spread the eigentones"
+    // technique) instead of smoothing one fixed set of modes to the metallic
+    // shimmer you hear on a sustained tone. Gated: base = 0 (Digital anchor at
+    // Density 0) still falls through to identity below, so the bit-identity
+    // anchor holds.
+    constexpr float kSmearAmt = 0.12f;   // ±12 % wobble depth
+    const float smear = kSmearAmt * std::sin(smearPhase_[ch]);
+    smearPhase_[ch] = fmodf(smearPhase_[ch] + kSmearRate / static_cast<float>(sampleRate_), 2.0f*M_PI_F);
+    const float diffCoef = static_cast<float>(base * (0.4f + 0.6f * dfrac) * (1.0f + smear));
     float& x1 = digApX_[ch]; float& y1 = digApY_[ch];
     if (diffCoef <= 0.0005f) { x1 = x; y1 = x; return x; }
     const float a = 0.5f;
@@ -706,18 +742,30 @@ class Reverb {
     const double nScale = kSpringWashRef / (double)N * kSpringWashFrac;  // FIXED ref (was live (1-fb)); level holds across decay, scaled into the family band
     const double dampAlpha = (1.0 - params_.tone) * (1.0 - 0.5 * sag);  // Sag darkens
     const double widthSpread = kMaxWidthSpread * params_.width;
-    const float ra = static_cast<float>(kSpringBoingR * std::cos(2.0 * M_PI * kSpringBoingHz / sampleRate_));
-    const float ia = static_cast<float>(kSpringBoingR * std::sin(2.0 * M_PI * kSpringBoingHz / sampleRate_));
-    const float boingGain = static_cast<float>(kSpringBoingGain / N);   // dilutes w/ N
+    // Incommensurate resonator cluster: 3 rings, non-harmonic spacings (250/800/2000 Hz)
+    const float r1a = static_cast<float>(kSpringR1Rb * std::cos(2.0 * M_PI * kSpringR1Hz / sampleRate_));
+    const float r1i = static_cast<float>(kSpringR1Rb * std::sin(2.0 * M_PI * kSpringR1Hz / sampleRate_));
+    const float r1g = static_cast<float>(kSpringR1Gain / N);   // dilutes w/ N
+    const float r2a = static_cast<float>(kSpringR2Rb * std::cos(2.0 * M_PI * kSpringR2Hz / sampleRate_));
+    const float r2i = static_cast<float>(kSpringR2Rb * std::sin(2.0 * M_PI * kSpringR2Hz / sampleRate_));
+    const float r2g = static_cast<float>(kSpringR2Gain / N);
+    const float r3a = static_cast<float>(kSpringR3Rb * std::cos(2.0 * M_PI * kSpringR3Hz / sampleRate_));
+    const float r3i = static_cast<float>(kSpringR3Rb * std::sin(2.0 * M_PI * kSpringR3Hz / sampleRate_));
+    const float r3g = static_cast<float>(kSpringR3Gain / N);
+    // 5 kHz wash LP (kills the artificial 8+ kHz comb shimmer)
+    const float washLpA = static_cast<float>(kSpringWashLpA);
     const float dripAmt = static_cast<float>(kSpringDripGain * N / kNumLines);  // grows w/ N
     const float cAmt = static_cast<float>(kSpringColorAmt);
     for (int ch = 0; ch < numChannels; ++ch) {
       auto& lines = lines_[static_cast<size_t>(ch)];
       const double tapScale = (ch == 0) ? (1.0 - widthSpread) : (1.0 + widthSpread);
       float* out = buffer.getWritePointer(ch);
-      float rre = boingRe_[ch], rim = boingIm_[ch];
+      float rr1e = r1Re_[ch], rr1i = r1Im_[ch];
+      float rr2e = r2Re_[ch], rr2i = r2Im_[ch];
+      float rr3e = r3Re_[ch], rr3i = r3Im_[ch];
       float de = dripEnv_[ch];
       float splLp = splashLp_[ch];
+      float wl = washLp_[ch];
       for (int i = 0; i < numSamples; ++i) {
         const float dry = out[i];
         // 1. the N spring lines (comb tails), level-constant
@@ -727,26 +775,36 @@ class Reverb {
           const int d = static_cast<int>(std::max(1.0, taps_[ln] * tapScale)) & L.mask;
           const float tail = L.ring[(L.write - d) & L.mask];
           L.lp += static_cast<float>(dampAlpha) * (tail - L.lp);
-          L.ring[L.write] = dry + static_cast<float>(fb) * L.lp;
+          // Fb-drift (per-sample, per-channel): modulate the comb feedback so the
+          // resonance frequencies shift and the standing-wave shimmer beats out.
+          const float fbMod = static_cast<float>(fb) * (1.0f + static_cast<float>(kFbDriftAmt) * std::sin(fbDriftPhase_[ch]));
+          fbDriftPhase_[ch] = fmodf(fbDriftPhase_[ch] + static_cast<float>(kFbDriftRate / sampleRate_), 2.0f*M_PI_F);
+          L.ring[L.write] = dry + fbMod * L.lp;
           L.write = (L.write + 1) & L.mask;
           acc += tail;
         }
         float wet = acc * static_cast<float>(nScale) * static_cast<float>(kSpringPresence);
         wet = washApSc(wet, kSpringWashAp, ch);   // diffuse: smear the long-decay comb resonance (kill the whistle)
-        const float sign = (dry >= 0.0f) ? 1.0f : -1.0f;
-        // onset burst (0..|dry|), a fast-attack envelope, decayed per sample
+        // 5 kHz wash LP: kills the artificial 8+ kHz comb shimmer (IR: -20 dB+ at 8 kHz)
+        wl += washLpA * (wet - wl);
+        wet = wl;
+        // 500 Hz body resonator: broad warm mid (the 'suspension' under the metal)
+
+        // onset burst: fast-attack envelope tracking |dry|
         de = std::max(de * static_cast<float>(kSpringDripDecay),
                       de + static_cast<float>(kSpringDripAtk) * (std::fabs(dry) - de));
-        // 2. boing: 2.4k metallic ring excited by the burst, gain ~1/N -> dilutes
-        const float nre = rre + de * sign * boingGain;  // st += (burst, inIm = 0)
-        const float nim = rim;
-        rre = nre * ra - nim * ia;
-        rim = nre * ia + nim * ra;
-        const float boing = rre;
-        // 3. drip: broadband onset splash, more springs = more driver activity;
-        //    softened (low-passed) so the dry attack keeps its BODY but loses the
-        //    sharp HF "hi-hat" fizz.
-        const float splashRaw = de * sign * dripAmt;
+        // Drive the resonator cluster + drip with the LINEAR input signal
+        // (not a hard square-wave clipper — sign() was the main THD source)
+        const float drive = de * dry;
+        float boing = 0.0f;
+        { float nr = rr1e + drive * r1g; float ni = rr1i;
+          rr1e = nr*r1a - ni*r1i; rr1i = nr*r1i + ni*r1a; boing += rr1e; }
+        { float nr = rr2e + drive * r2g; float ni = rr2i;
+          rr2e = nr*r2a - ni*r2i; rr2i = nr*r2i + ni*r2a; boing += rr2e; }
+        { float nr = rr3e + drive * r3g; float ni = rr3i;
+          rr3e = nr*r3a - ni*r3i; rr3i = nr*r3i + ni*r3a; boing += rr3e; }
+        // drip: broadband onset splash through soft LP (linear drive, no harmonics)
+        const float splashRaw = drive * dripAmt;
         splLp += static_cast<float>(kSplashSoftA) * (splashRaw - splLp);
         // 4. sum the layers (the soft-shoulder is gated by kSpringColorAmt --
         // 0.0 by default so the path stays linear/clean; the user can toggle it
@@ -755,7 +813,8 @@ class Reverb {
         o = o * (1.0f - cAmt) + springShoulder(o) * cAmt;
         out[i] = o;
       }
-      boingRe_[ch] = rre; boingIm_[ch] = rim; dripEnv_[ch] = de; splashLp_[ch] = splLp;
+      r1Re_[ch] = rr1e; r1Im_[ch] = rr1i; r2Re_[ch] = rr2e; r2Im_[ch] = rr2i; r3Re_[ch] = rr3e; r3Im_[ch] = rr3i;
+      dripEnv_[ch] = de; splashLp_[ch] = splLp; washLp_[ch] = wl;
     }
   }
 
@@ -806,10 +865,14 @@ class Reverb {
         // Pass B: write the densely-coupled feedback (convex blend -> stable) and
         // sum the wet tails (the 2-D mode wash).
         float acc = 0.0f;
+        // Fb-drift (per-sample, per-board): modulate the comb feedback so the
+        // resonance frequencies shift and the standing-wave shimmer beats out.
+        const float fbMod = static_cast<float>(fb) * (1.0f + static_cast<float>(kFbDriftAmt) * std::sin(fbDriftPhase_[ch]));
+        fbDriftPhase_[ch] = fmodf(fbDriftPhase_[ch] + static_cast<float>(kFbDriftRate / sampleRate_), 2.0f*M_PI_F);
         for (int ln = 0; ln < kNumLines; ++ln) {
           auto& L = lines[ln];
           const float mix = oneMinusDen * selfLp[ln] + density * meanLp;
-          L.ring[L.write] = dry + static_cast<float>(fb) * mix;
+          L.ring[L.write] = dry + fbMod * mix;
           L.write = (L.write + 1) & L.mask;
           acc += delayed[ln];
         }
@@ -819,7 +882,8 @@ class Reverb {
         // excited by input activity; more Bright = a denser, brighter onset.
         de = std::max(de * static_cast<float>(kPlateBrightDecay), std::fabs(dry) * onsetAmt);
         // whip softened: transient body kept, the sharp HF "fizz" low-passed away.
-        const float whipRaw = de * (dry >= 0.0f ? 1.0f : -1.0f);
+        // (replaces the old sign hard-clipper that injected square-wave harmonics)
+        const float whipRaw = de * dry;
         whpLp += static_cast<float>(kSplashSoftA) * (whipRaw - whpLp);
         o += whpLp;
         // (the shared driver soft-shoulder is gated by kPlateColorAmt -- 0.0 by
@@ -1079,6 +1143,21 @@ class Reverb {
   // channel. Identity at Density 0; reset in reset().
   float digApX_[kMaxChannels] = {};
   float digApY_[kMaxChannels] = {};
+  // LFO-smear (Spin Semi technique): slowly drift the wash all-pass coefficient
+  // so the comb's periodic eigenfrequencies spread and beat out, instead of
+  // reading as a metallic shimmer on a sustained tone. Rate 0.25 Hz -> one full
+  // wobble per 4 s, inaudible as a wobble but enough to decorrelate the ripple.
+  static constexpr double kSmearRate = 0.25;              // Hz
+  static constexpr float  M_PI_F     = static_cast<float>(M_PI);
+  float smearPhase_[kMaxChannels] = {};   // per-channel LFO phase (radians)
+  // Fb-drift: modulates the comb's feedback directly (not the post-comb all-pass).
+  // Rate 0.18 Hz (one wobble every ~5.5 s), depth ±3 % of the raw fb value.
+  // This shifts each line's resonance frequency by ±3 % per cycle, enough to
+  // smear the standing-wave peaks so a sustained tone no longer lands on a bright
+  // resonance. Gated: OFF when kFbDriftAmt = 0 (Digital anchor stays bit-identical).
+  static constexpr double kFbDriftRate = 0.18;
+  static constexpr double kFbDriftAmt  = 0.03;         // ISOLATION: drift ON ±3%   // ±3 %
+  float fbDriftPhase_[kMaxChannels] = {};        // offset by quarter-cycle from smearPhase_
   // Spring state: the metallic boing resonator (2.4 kHz) per channel + the
   // onset-splash (drip) env per channel. Both are bounded (|r|<1, decaying env)
   // and reset in reset(). Only used when the Spring law path is live.
@@ -1087,6 +1166,12 @@ class Reverb {
   float dripEnv_[kMaxChannels] = {};
   float splashLp_[kMaxChannels] = {};  // softened (low-pass) drip splash, per channel
   float whipLp_[kMaxChannels] = {};    // softened (low-pass) plate whip, per channel
+  // Spring: 3 incommensurate resonator cluster state (250/800/2000 Hz)
+  float r1Re_[kMaxChannels] = {}; float r1Im_[kMaxChannels] = {};
+  float r2Re_[kMaxChannels] = {}; float r2Im_[kMaxChannels] = {};
+  float r3Re_[kMaxChannels] = {}; float r3Im_[kMaxChannels] = {};
+  // Spring: 5 kHz wash low-pass state (kills the artificial 8+ kHz comb shimmer).
+  float washLp_[kMaxChannels] = {};
   // Plate state: the dense "whip" onset burst envelope per channel (bounded,
   // decaying, reset in reset()). The dense wash + bloom low-pass + color are
   // stateless (they use the shared comb lines + the existing Line.lp).
