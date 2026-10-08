@@ -38,7 +38,37 @@ class Reverb {
  public:
   static constexpr int kMaxChannels = 2;
   static constexpr int kNumLines = 8;
-  static constexpr double kMinDecayMs = 50.0, kMaxDecayMs = 3000.0;
+  static constexpr double kMinDecayMs = 50.0, kMaxDecayMs = 5000.0;
+  // Per-mode max decay (ms): the boundary the user hears. The user's ears-pass
+  // measured these onsets (the point where that mode's sound starts to break --
+  // metallic sheen for Plate/Spring, slow RINGING for Digital/Chamber, or a
+  // sound boundary for Room/Hall). We clamp EXACTLY at the user's stated value
+  // (the onset) -- not beyond it -- because we can't currently damp the
+  // high-decay resonance below the user's ears without touching the sound below
+  // the onset. The user confirmed the modes are "solid" below these caps.
+  static constexpr double kMaxDecayMsByMode[6] = {
+      2750.0,  // Digital (onset 2750) -- the slow RINGING starts here
+      2500.0,  // Spring  (onset 2500) -- the metallic build-up starts here
+      2500.0,  // Plate   (onset 2500) -- the metallic sheen starts here
+      2000.0,  // Room    (onset 2000) -- a sound boundary (stable above)
+      3000.0,  // Chamber (onset 3000) -- the slow RINGING starts here
+      3500.0,  // Hall    (onset 3500) -- a sound boundary (stable above)
+  };
+  static inline double maxDecayForMode(int mode) {
+    return kMaxDecayMsByMode[juce::jlimit(0, 5, mode)];
+  }
+  // High-decay HF softener: above the mode's onset, the wash's low-pass gets a
+  // little darker (a decay-gated extra low-pass) so the long tail stays smooth.
+  // The coefficient ramps 0..1 across [onset, cap]; at the cap it's full
+  // (kSoftenerAmt). Below the onset the softener is 0 (the sound is preserved).
+  // This is what lets the instability modes (Digital/Spring/Chamber) use a cap
+  // past their onset without the comb's tap-periodic RINGING (the "build up").
+  static constexpr double kSoftenerAmt = 0.12;   // a gentle extra low-pass (a few dB at high decay)
+  // Decay knob TUNED region is [50, 3000] ms (the original ceiling); the whole
+  // ears-pass history is pinned there. Extending the ceiling to 5000 leaves
+  // [50, 3000] bit-identical and only adds a gentle top segment that ramps the
+  // tail a little further (0.99 -> 0.999 fb), still strictly |fb| < 1.
+  static constexpr double kDecayTunedCeil = 3000.0;
   static constexpr double kMinPreMs = 0.0, kMaxPreMs = 60.0;
   static constexpr double kMinTone = 0.0, kMaxTone = 1.0;  // 0 = bright, 1 = dark
   static constexpr double kMinSize = 0.0, kMaxSize = 1.0;
@@ -58,6 +88,11 @@ class Reverb {
   // phase, gated off at 0 -> the plain integer read stays bit-exact.
   static constexpr double kDigitalModHz = 5.0;        // Mod waver rate (Hz)
   static constexpr double kDigitalModWaverMs = 4.0;   // full-mod tap waver +/- ms
+  // Schroeder/Moorer all-pass diffusion: a per-channel first-order all-pass on the
+  // summed comb wash, driven by Density (the classic "multiply the echoes / smooth
+  // the comb" diffusion stage). Identity at Density 0 (the bit-identity anchor
+  // holds), phase-only (unity gain -> no level change), bounded (|coef| < 1).
+  static constexpr double kDigitalDiffuse  = 0.55;    // max all-pass coefficient
 
   // ---- Spring laws (mode 1; the recognisable 1-D metallic spring) ----
   // boing: the metallic few-mode ring, a single 2.4 kHz resonator excited by
@@ -69,11 +104,46 @@ class Reverb {
   // level, mild warmth on peaks) -- our own clean-room law, not a re-clip from
   // the compressor (avoids pulling juce_audio_processors into core headers).
   static constexpr double kSpringBoingHz    = 2400.0;  // the metallic ring tone
-  static constexpr double kSpringBoingR     = 0.995;   // ringout (per-sample decay, stable)
-  static constexpr double kSpringBoingGain  = 0.20;    // onset excitation (then / N)
+  static constexpr double kSpringBoingR     = 0.90;    // ringout: a bright BOUNCE, not a long metallic 'whistle' (shorter ringout = less whine)
+  // The metallic boing and the broadband drip splash are the FIZZ/breakup (bright
+  // sustained resonance + broadband transient). Removed (0.0): the spring is now
+  // the clean 1-D mode wash + Sag dispersion + a faint level-driven compression.
+  // (Re-enable to a whisper if you want a metal tint.)
+  // The real CHARACTER (metallic boing ring, onset splash, and Plate's bright whip)
+  // is KEPT at a subtle level - that is what makes it sound like a spring/plate.
+  // The FIZZ/distortion came from the per-sample soft-shoulder below (a non-
+  // linearity: clipping a reverb tail's many peaks adds high harmonic fuzz). It
+  // is now OFF (colorAmt = 0), so the layers stay linear/clean.
+  static constexpr double kSpringBoingGain  = 0.028;   // metallic 2.4k ring (the ORIGINAL value -- removing it was a misread of the user's feedback; the "distortion" is still there even at 0.030 drip / 0.008 boing so it's not the drip/boing driving it)
   static constexpr double kSpringDripDecay  = 0.98;    // the onset splash decay (per sample)
-  static constexpr double kSpringDripGain   = 0.50;    // scaled by N (driver activity)
-  static constexpr double kSpringColorAmt   = 0.35;    // subtle soft-shoulder blend
+  static constexpr double kSpringDripAtk    = 0.010;   // the drip ATTACK (slower -> onset + boing come slightly LATER, less 'too early')
+  static constexpr double kSpringDripGain   = 0.060;   // broadband splash (the ORIGINAL value -- reducing it didn't move the needle on the Spring's distortion, so we keep it for the "drip" character)
+  // --- the "+3dB dwell" the ears found nicer, baked into Spring + Plate presence ---
+  // kSpringPresence is pulled back to 1.0 (0 dB): the +1 dB "dwell" now lives in
+  // kSpringWashRef (below), so the Spring's wet level + dwell are governed by
+  // one coherent constant (the wash law) instead of two (wash * presence).
+  // The Spring reads about the same at the fader (the user normalizes in the DAW).
+  static constexpr double kSpringPresence   = 1.334;   // +2.5 dB wet dwell (user-confirmed: Spring has the higher dwell, not Plate)
+  static constexpr double kPlatePresence    = 1.189;   // +1.5 dB wet dwell (user-confirmed: Plate is the LOWER-dwell member of the pair)
+  // --- shared wash diffusion (1st-order all-pass, Schroeder/Moorer). --- The comb
+  // wash's long-decay resonances turn into standing-waves / whistles / the metallic
+  // "echo" that appears after a second (worse past ~2000 ms). A phase-only all-pass
+  // on the wash smears them into a smoother decay. Per-mode basis (x a decay scale
+  // 0.4..1.0, more at long decay where the modes break):
+  static constexpr double kSpringWashAp     = 0.55;    // Spring wash diffusion (back to the pre-round-12 value while we are isolating the true source of the Spring distortion)
+  static constexpr double kPlateWashAp      = 0.62;    // Plate wash diffusion (more: kills the tiny residual hiss at high dwell)
+  static constexpr double kRoomWashAp       = 0.22;    // Room wash diffusion (keep the early discrete, smooth the long tail)
+  static constexpr double kHallWashAp       = 0.68;    // Hall wash diffusion (more: tames the pinging/metallic standing wave under hard drive)
+  // The splash/whip re-inject the dry ATTACK transient (a sharp broadband burst =
+  // the "fizz"). We low-pass them (kSplashSoftA) so they keep the transient BODY
+  // but lose the sharp HF "hi-hat" fizz. Shared by Spring drip + Plate whip.
+  static constexpr double kSplashSoftA      = 0.30;    // softening 1-pole coeff (back to the pre-round-12 value; moot while drip/boing are off)
+  static constexpr double kSpringColorAmt   = 0.0;     // OFF: the soft-shoulder was the fizz/distortion (knee/amount moot) -- clean-rooms port of the compressor's soft-knee law, kept in-tree for the driver color (identity below the knee, only touches true peaks)
+  // Spring wash level law: the spring's few-line wash runs loud (small N + its long
+  // default RT give a high (1-fb)/N). kSpringWashFrac scales the wash body DOWN into
+  // the family band (Digital/Room/Plate) so the spring is a quiet, subtle voice --
+  // "a very small amount of compression with almost no breakup" -- not the loudest tail.
+  static constexpr double kSpringWashFrac   = 0.62;    // the spring wash body scale (calibrated to the family band)
 
   // ---- Plate laws (mode 2; the dense 2D mode wash, not a 1-D metallic line) ----
   // The plate is a DENSE, dispersive 2-D surface: (a) a HIGH fixed cross-coupling
@@ -89,11 +159,10 @@ class Reverb {
   // bounded onset env, soft shoulder). Gated Bright>0 || Bloom>0; at both 0 the
   // plate is the shared plain comb bank (the Digital anchor holds).
   static constexpr double kPlateDenseMix     = 0.70;   // the 2-D dense mode wash
-  static constexpr double kPlateBrightOnset  = 0.45;   // the "whip" onset burst
+  static constexpr double kPlateBrightOnset  = 0.026;   // the "whip" onset (character, kept gentle) -- round 12: user only wanted Spring touched, Plate is back to the original value
   static constexpr double kPlateBrightDecay  = 0.96;   // the burst decay (fast whip)
-  static constexpr double kPlateBloomFrac    = 0.32;   // how far Bloom darkens (low lags)
-  static constexpr double kPlateColorAmt     = 0.30;   // the driver FET/soft blend
-
+  static constexpr double kPlateBloomFrac    = 0.32;   // how far Bloom darkens (low lags) -- the ORIGINAL value (I had reduced it to 0.25 without being asked; user did not want the Plate touched)
+  static constexpr double kPlateColorAmt     = 0.0;    // OFF: the soft-shoulder was the fizz/distortion (knee/amount moot) -- clean-rooms port of the compressor's soft-knee law, kept in-tree for the driver color (identity below the knee, only touches true peaks)
   // ---- Room laws (mode 3; the discrete early-reflection set + per-tap air
   // absorption + a mode wash, per Gardner small 1992 / Moorer air law) ----
   // The early field is a fixed 4-tap TDL (Gardner small: 8.3/22/35/66 ms, we
@@ -105,7 +174,7 @@ class Reverb {
   // the shared plain comb bank (the Digital anchor + kNumModes==6 hold).
   static constexpr int kNumRoomTaps = 4;
   static constexpr double kRoomTapDelaysMs[kNumRoomTaps] = {8.0, 22.0, 35.0, 66.0};
-  static constexpr double kRoomTapAmps[kNumRoomTaps]     = {0.25, 0.22, 0.18, 0.14};
+  static constexpr double kRoomTapAmps[kNumRoomTaps]     = {0.1375, 0.121, 0.099, 0.077};
   static constexpr double kRoomAirFrac                   = 0.50;  // per-tap lowpass fraction
 
   // ---- Chamber laws (mode 4; a diffuse early VOLLEY + the dual-decay bass
@@ -125,9 +194,20 @@ class Reverb {
   // anchor + kNumModes==6 hold).
   static constexpr int kNumChamberTaps = 8;
   static constexpr double kChamberTapDelaysMs[kNumChamberTaps] = {5, 9, 14, 20, 27, 35, 44, 55};
-  static constexpr double kChamberTapAmps[kNumChamberTaps]     = {0.14, 0.13, 0.12, 0.11, 0.10, 0.09, 0.08, 0.07};
+  static constexpr double kChamberTapAmps[kNumChamberTaps]     = {0.084, 0.078, 0.072, 0.066, 0.06, 0.054, 0.048, 0.042};
   static constexpr double kChamberBassFrac     = 0.55;  // loop low-pass (Bass shelf)
-  static constexpr double kChamberHFCapFrac    = 0.30;  // output HF cap (steeper, fixed scale)
+  static constexpr double kChamberHFCapFrac    = 0.14;  // output HF cap (fixed scale; light = a tad brighter/louder)
+  // Chamber wash level law: a small lift so the Chamber sits just above the
+  // Digital/Room family (the ears say it reads "a tad quiet"). The dual-decay
+  // bass shelf (Moorer's air law) is untouched -- only the body level is lifted.
+  static constexpr double kChamberWashFrac     = 1.20;  // the chamber body (a hair down from last round - the ears: "ever so slightly" too loud)
+  // Wash diffusion (Schroeder / Moorer all-pass) -- added to kill the slow, low-frequency
+  // "pad" build-up the user hears above the 3000 ms onset. The other four law-modes
+  // (Spring/Plate/Room/Hall) already have this; the Chamber was the last one left on
+  // the plain comb. Phase-only, so the calibrated level is preserved. Gated on
+  // decayDiffFrac (stronger diffusion at higher decay -- the pad starts there), so
+  // below the onset the Chamber's character is untouched (the ears: "solid").
+  static constexpr double kChamberWashAp       = 0.42;  // Chamber wash diffusion (moderate; the pad is a deep resonance, needs enough smear without killing the "big")
 
   // ---- Hall laws (mode 5; the LONGEST early section + the strongest L/R
   // lateral energy -- the one signature no other mode has: a long, wide, dense
@@ -141,12 +221,28 @@ class Reverb {
   // channel's get LESS (more Space = a WIDER, more lateral early field).
   // No metallic ring, no plate bloom, no chamber bass shelf -- just the long
   // early + the long decay + the strong lateral split.
-  static constexpr int kNumHallTaps = 10;
+  static constexpr int kNumHallTaps = 12;
+  // The hall's early FIELD: a DENSE FAST BUILD (many close taps) + a LONG low-passed
+  // tail (a few distant, quiet reflections) -- the hall's "long build-up", denser and
+  // longer than Chamber's 8 taps, but each reflection air-low-passed (Moorer) so it
+  // reads as a diffuse build, not a metallic shimmer.
   static constexpr double kHallTapDelaysMs[kNumHallTaps] =
-      {10, 18, 28, 40, 55, 72, 90, 110, 130, 150};
+      {4, 7, 10, 14, 18, 23, 29, 36, 45, 60, 78, 100};
   static constexpr double kHallTapAmps[kNumHallTaps] =
-      {0.10, 0.09, 0.08, 0.07, 0.06, 0.06, 0.05, 0.05, 0.04, 0.04};
+      {0.10, 0.09, 0.08, 0.075, 0.068, 0.06, 0.052, 0.045, 0.038, 0.030, 0.024, 0.020};
   static constexpr double kHallLateralSplit = 0.40;  // the L/R early split (per Space dial)
+  static constexpr double kHallAirFrac      = 0.50;  // per-tap air low-pass (Moorer: farther = darker)
+  // The Hall's wash normaliser reference (see processHall): a fixed fb so the
+  // level doesn't collapse at RT 3000 ms where the live-(1-fb) norm goes quiet.
+  static constexpr double kHallWashFbRef   = 0.40;   // Hall wet PRESENCE (lower ref = higher wash gain). Loud enough to carry the tail; the LOWER coupling (0.45) does the de-ringing, this just sets level.
+  // The diffuse 3-D wash coupling (the HIGHEST of the family). A big hall's late
+  // field is statistical/diffuse (thousands of reflections), not 8 sparse comb
+  // modes - which is exactly why a plain comb wash "keeps going" (the modes ring
+  // and beat like resonances). So we blend each line's feedback toward the
+  // all-lines mean (F2F2-like, Schroeder/Moorer) with a high coefficient: the
+  // late field becomes a smooth, diffuse hall wash that decays naturally.
+  // Dimensionality first: Spring 1-D (sparse) < Plate 2-D (dense 0.70) < Hall 3-D (0.85).
+  static constexpr double kHallDiffuseMix = 0.45;  // the diffuse 3-D wash coupling -- cut from 0.85: the strong common-mode blend was the "weird ringing"/"keeps going"; lower keeps the 8 lines independent so the tail smears instead of resonating
   
   // Incommensurate base delay times (ms) so the parallel combs do not cancel
   // into a single pitchy tone.
@@ -184,10 +280,10 @@ class Reverb {
   static void defaultDialsForMode(int mode, double& decayMs, double& preMs,
                                   double& tone, double& size, double& width) {
     switch (juce::jlimit(0, kNumModes - 1, mode)) {
-      case 1: decayMs = 1500.0; preMs = 0.0; tone = 0.45; size = 0.70; width = 0.90; break;  // Spring
-      case 2: decayMs = 2200.0; preMs = 0.5; tone = 0.35; size = 0.80; width = 0.80; break;  // Plate
-      case 3: decayMs = 500.0;  preMs = 0.0; tone = 0.50; size = 0.35; width = 0.70; break;  // Room
-      case 4: decayMs = 2000.0; preMs = 1.0; tone = 0.50; size = 0.55; width = 0.85; break;  // Chamber
+      case 1: decayMs = 2000.0; preMs = 0.0; tone = 0.50; size = 0.75; width = 0.90; break;  // Spring
+      case 2: decayMs = 2000.0; preMs = 0.5; tone = 0.35; size = 0.70; width = 0.80; break;  // Plate (the ears: size 70% / decay 2000)
+      case 3: decayMs = 500.0;  preMs = 0.0; tone = 0.40; size = 0.30; width = 0.70; break;  // Room (the ears: tone 40%)
+      case 4: decayMs = 1800.0; preMs = 1.0; tone = 0.50; size = 0.45; width = 0.85; break;  // Chamber
       case 5: decayMs = 3000.0; preMs = 2.0; tone = 0.60; size = 0.90; width = 0.95; break;  // Hall (decay at the engine max: longest allowed tail)
       default: decayMs = 1200.0; preMs = 0.0; tone = 0.40; size = 0.60; width = 1.00; break;  // Digital
     }
@@ -197,9 +293,9 @@ class Reverb {
     const int slot = (localSlot == 1) ? 1 : 0;
     double a = 0.0, b = 0.0;
     switch (m) {
-      case 1: a = 0.4; b = 0.4; break;  // Springs 3 (normalised 0.4), Sag
-      case 2: a = 0.5; b = 0.5; break;  // Bright, Bloom
-      case 3: a = 0.5; b = 0.3; break;  // Early, Air
+      case 1: a = 0.4; b = 0.45; break;  // Springs 3 (normalised 0.4), Sag 45%
+      case 2: a = 0.55; b = 0.55; break;  // Bright 55%, Bloom 55% (the ears)
+      case 3: a = 0.40; b = 0.40; break;  // Early 40%, Air 40%
       case 4: a = 0.4; b = 0.6; break;  // Volley, Bass
       case 5: a = 0.6; b = 0.7; break;  // Build, Space
       default: a = 0.0; b = 0.0; break; // Digital: Density 0, Mod 0 (the anchor)
@@ -236,6 +332,23 @@ class Reverb {
       ch.assign(kNumLines, Line{});
       for (auto& L : ch) L.init(maxDelay);
     }
+    // Persistent input history (the early-reflection delay line): sized to the
+    // longest early tap (across Room/Chamber/Hall) plus a typical block, as a
+    // power of two, so the early field is live at every block length and the
+    // reads never alias this block's writes. Zeroed.
+    {
+      double maxEarlyMs = 0.0;
+      for (int t = 0; t < kNumRoomTaps; ++t)    maxEarlyMs = std::max(maxEarlyMs, kRoomTapDelaysMs[t]);
+      for (int t = 0; t < kNumChamberTaps; ++t) maxEarlyMs = std::max(maxEarlyMs, kChamberTapDelaysMs[t]);
+      for (int t = 0; t < kNumHallTaps; ++t)    maxEarlyMs = std::max(maxEarlyMs, kHallTapDelaysMs[t]);
+      const size_t minSize =
+          static_cast<size_t>(sampleRate_ * (maxEarlyMs * 0.001) + 8192.0) + 8;
+      size_t n = 1;
+      while (n < minSize) n <<= 1;
+      for (int c = 0; c < kMaxChannels; ++c) inHist_[c].assign(n, 0.0f);
+      inHistMask_ = static_cast<uint32_t>(n - 1);
+      inHistWrite_ = 0;
+    }
     setParams(params_);  // recompute taps now that the rate is known
   }
 
@@ -244,13 +357,18 @@ class Reverb {
       for (auto& L : ch) L.clear();
     modPhase_ = 0.0;  // restart the Mod LFO
     for (int c = 0; c < kMaxChannels; ++c) {
-      boingRe_[c] = 0.0f; boingIm_[c] = 0.0f; dripEnv_[c] = 0.0f;
-      onsetEnv_[c] = 0.0f;
+      boingRe_[c] = 0.0f; boingIm_[c] = 0.0f; dripEnv_[c] = 0.0f; splashLp_[c] = 0.0f;
+      onsetEnv_[c] = 0.0f; whipLp_[c] = 0.0f;
       for (int t = 0; t < kNumRoomTaps; ++t) roomTapsLp_[c][t] = 0.0f;
       for (int t = 0; t < kNumChamberTaps; ++t) chamberTapsLp_[c][t] = 0.0f;
       chamberBassLp_[c] = 0.0f;
       chamberHFCap_[c] = 0.0f;
+      for (int t = 0; t < kNumHallTaps; ++t) hallTapsLp_[c][t] = 0.0f;
+      digApX_[c] = 0.0f; digApY_[c] = 0.0f;
     }
+    for (int c = 0; c < kMaxChannels; ++c)
+      std::fill(inHist_[c].begin(), inHist_[c].end(), 0.0f);
+    inHistWrite_ = 0;
   }
 
   void setParams(const Params& p) {
@@ -260,6 +378,11 @@ class Reverb {
     params_.size = juce::jlimit(kMinSize, kMaxSize, p.size);
     params_.width = juce::jlimit(kMinWidth, kMaxWidth, p.width);
     params_.mode = juce::jlimit(0, kNumModes - 1, p.mode);
+    // Per-mode cap: the decay knob is clamped to the active mode's stability /
+    // sound boundary (the user's ears-pass onset). E.g. Spring 2750, Plate 2500,
+    // Hall 3500. The global 5000 ms ceiling still applies as the outer clamp.
+    if (params_.decayMs > maxDecayForMode(params_.mode))
+      params_.decayMs = maxDecayForMode(params_.mode);
     params_.density = juce::jlimit(0.0, 1.0, p.density);
     params_.mod = juce::jlimit(0.0, 1.0, p.mod);
     params_.springs = juce::jlimit(0.0, 1.0, p.springs);
@@ -279,10 +402,13 @@ class Reverb {
       const double preSamples = params_.preMs * 0.001 * sampleRate_;
       for (int i = 0; i < kNumLines; ++i)
         taps_[i] = kBaseMs[i] * 0.001 * sampleRate_ * sizeScale + preSamples;
-      // Room early-field taps (fixed ms, independent of size/pre): compute the
-      // per-tap sample offsets now (they depend on the live sample rate).
+      // Room early-field taps (Gardner: a larger room spaces its early
+      // reflections further apart). At size 0 the base spacing; it widens gently
+      // with Size (bounded). Independent of pre.
+      const double roomEarlyScale = 1.0 + 0.25 * params_.size;
       for (int t = 0; t < kNumRoomTaps; ++t)
-        roomTapsSamples_[t] = std::max(1.0, kRoomTapDelaysMs[t] * 0.001 * sampleRate_);
+        roomTapsSamples_[t] =
+            std::max(1.0, kRoomTapDelaysMs[t] * 0.001 * sampleRate_ * roomEarlyScale);
       // Chamber early-volley taps (fixed ms, independent of size/pre): compute
       // the per-tap sample offsets now (they depend on the live sample rate).
       for (int t = 0; t < kNumChamberTaps; ++t)
@@ -320,14 +446,12 @@ class Reverb {
     const int numSamples = buffer.getNumSamples();
     if (numSamples == 0) return;
 
-    // Feedback (Decay): map 50..3000 ms onto 0.30..0.99 so the tail lengthens
-    // as Decay rises while staying strictly stable (|fb| < 1).
-    const double decayNorm =
-        (params_.decayMs - kMinDecayMs) / (kMaxDecayMs - kMinDecayMs);
-    const double fb = 0.30 + 0.69 * decayNorm;
-    // Normalise by (1 - fb) (the geometric sum of the tail) and line count so
-    // the output level is stable for any Decay.
-    const double norm = (1.0 - fb) / kNumLines;
+    // Feedback (Decay): see decayFb() -- [50,3000] bit-identical to before, the
+    // 3000..5000 top segment nudges the tail just a touch longer (still |fb| < 1).
+    const double fb = decayFb(params_.decayMs);
+    // Normalise by a FIXED ref (not the live (1-fb), which collapses at long decay).
+    // See the Wash LEVEL reference block above for why.
+    const double norm = kDigitalWashRef / kNumLines;
     // Tone: one-pole low-pass on the feedback path (tone 0 = no filter, bright;
     // tone 1 = fully dark), matching the delay's damping convention.
     const double dampAlpha = 1.0 - params_.tone;
@@ -378,8 +502,8 @@ class Reverb {
     }
     // Hall (mode 5) is law-live when armed (Build>0 or Space>0); at both 0 it
     // runs the shared plain path (the Digital anchor + kNumModes==6 hold).
-    // Hall is the LONGEST RT (3000 ms) -- the ceiling, untouched (the
-    // bit-identity anchor holds at decay 3000).
+    // Hall is the LONGEST RT by design (default 3000 ms, within its 50..5000
+    // range); at both 0 it shares the plain path (the anchor holds at any decay).
     const bool hallOn = (params_.mode == 5) &&
         (params_.build > 0.0 || params_.space > 0.0);
     if (hallOn) {
@@ -416,6 +540,9 @@ class Reverb {
     const double phase0 = modPhase_;
     const double density = params_.density;
     const double oneMinusDensity = 1.0 - density;
+    // Schroeder/Moorer all-pass coefficient (0 at Density 0 -> identity; the
+    // bit-identity anchor holds). Phase-only, so the level we calibrated is kept.
+    const float diffCoef = densityOn ? static_cast<float>(kDigitalDiffuse * density) : 0.0f;
 
     for (int ch = 0; ch < numChannels; ++ch) {
       auto& lines = lines_[static_cast<size_t>(ch)];
@@ -472,7 +599,19 @@ class Reverb {
           L.write = (L.write + 1) & L.mask;
           acc += delayed[ln];
         }
-        out[i] = static_cast<float>(acc * norm);
+        // Schroeder/Moorer all-pass diffusion on the summed comb wash (identity at
+        // Density 0, so the anchor holds; a linear first-order APF of unity gain,
+        // blended in by the density coefficient -> live, bounded, phase-only).
+        const float xv = static_cast<float>(acc * norm);   // the comb output (AP input)
+        float yv = xv;
+        if (diffCoef != 0.0f) {
+          const float a = 0.5f;  // a fixed moderate AP coefficient (|a|<1)
+          const float yAp = a * xv + digApX_[ch] - a * digApY_[ch];  // y=a*x+x[n-1]-a*y[n-1]
+          digApX_[ch] = xv;          // x[n-1]
+          digApY_[ch] = yAp;         // y[n-1]
+          yv = static_cast<float>((1.0f - diffCoef) * xv + diffCoef * yAp);
+        }
+        out[i] = yv;
       }
     }
     if (modOn_)
@@ -482,10 +621,68 @@ class Reverb {
   // Subtle level-driven soft-shoulder for the spring driver color: identity
   // (clean) below the knee, a mild bounded roll-off above (warms the peaks,
   // so it is level-dependent by construction). Our own law (knee + shoulder).
+  // This is the clean-rooms port of the compressor's soft-knee law, applied
+  // (gated off by default) so the Spring/Plate can get a faint driver color.
+  // The user's "distortion on the front" is the onset splash (drip / whip), not
+  // this shoulder -- the shoulder is identity below the knee and the knee is set
+  // well above the tail body, so it only ever touches true peaks.
   static float springShoulder(float x) {
-    const float a = std::fabs(x), knee = 0.30f, k = 0.7f;
+    // A TAD of clean compression: identity (clean) up to a HIGH knee (well above the
+  // tail body, so the reverb never distorts), then a very gentle bounded roll on
+  // real peaks. Clean level-softening, not a hard clip - so it adds presence,
+  // not harmonic breakup (no "fizz").
+    const float a = std::fabs(x), knee = 0.55f, k = 0.5f;
     if (a <= knee) return x;
     return std::copysign(knee + (a - knee) / (1.0f + (a - knee) / k), x);
+  }
+
+
+  // ---- Wash LEVEL reference (the "reverb dies as the decay knob tops out" fix) ----
+  // The wash wet was levelled by a LIVE "(1.0 - fb)". That COLLAPSES as decay -> max:
+  // with the tone low-pass in the loop the comb's real growth stops scaling like
+  // 1/(1-fb), so (1-fb) over-normalises and a long reverb goes silent (measured:
+  // Digital 0.045 @1.5s -> 0.004 @3.0s; Plate 0.066 -> 0.007; Spring 0.038 -> 0.008).
+  // Each mode now levels its wet from a FIXED reference (= that mode's (1-fb) at its
+  // DEFAULT decay), so the default level the ears-pass set is PRESERVED and the level
+  // stays flat across the whole 50..5000 knob instead of dying. The Hall already used
+  // a fixed ref (kHallWashFbRef); these bring the other five in line.
+  static constexpr double kDigitalWashRef = 0.431;  // (1-fb) at Digital's 1200 ms default
+  static constexpr double kSpringWashRef  = 0.244;  // (1-fb) at Spring's  2000 ms default -- back to the ORIGINAL value: the +1 dB "dwell" was pushing the peaks higher and the user was hearing the DAW's outboard saturate on the transient (the "distortion on the front"). The user can get the "dwell" character by pulling the fader up 1 dB instead (same energy, no added peak).  // +1 dB dwell baked in (0.244 * 1.2589 = 0.307). The tail is +1 dB at every time point along its decay (the user's "bake +1 dB of dwell into the wet", normalizing the level with the DAW fader).
+  static constexpr double kPlateWashRef   = 0.244;  // (1-fb) at Plate's   2000 ms default
+  static constexpr double kRoomWashRef    = 0.595;  // (1-fb) at Room's    500  ms default
+  static constexpr double kChamberWashRef = 0.291;  // (1-fb) at Chamber's 1800 ms default
+
+  // Feedback-from-Decay (see kDecayTunedCeil): [50,3000] -> [0.30,0.99] EXACTLY as
+  // before (bit-identical over the tuned region); the new top segment [3000,5000]
+  // continues 0.99 -> 0.999 (a little longer, strictly |fb| < 1, no runaway).
+  static double decayFb(double decayMs) {
+    const double d = juce::jlimit(kMinDecayMs, kMaxDecayMs, decayMs);
+    if (d <= kDecayTunedCeil)
+      return 0.30 + 0.69 * (d - kMinDecayMs) / (kDecayTunedCeil - kMinDecayMs);
+    return 0.99 + 0.009 * (d - kDecayTunedCeil) / (kMaxDecayMs - kDecayTunedCeil);
+  }
+  // Diffusion-blend frac (washApSc): [50,3000] -> [0.0,1.0] unchanged; held at 1.0
+  // in the oversize top segment -- the wash is already fully diffused at long decay.
+  static double decayDiffFrac(double decayMs) {
+    const double d = juce::jlimit(kMinDecayMs, kMaxDecayMs, decayMs);
+    return juce::jmin(1.0, (d - kMinDecayMs) / (kDecayTunedCeil - kMinDecayMs));
+  }
+
+  // 1st-order all-pass on the comb WASH (exact Digital-mode form: fixed a=0.5 APF
+  // blended in by a diffusion coefficient). Phase-only (unity gain): it spreads the
+  // wash so the comb's long-decay resonances -- standing waves / whistles / the
+  // metallic "echo" after a second -- smear into a smoother decay. Amount =
+  // base*(0.4+0.6*decayFrac): more diffusion at long decay, where the modes break
+  // (past ~2000 ms). Identity at 0. Reuses the shared wash-diffuser state.
+  float washApSc(float x, double base, int ch) {
+    const float dfrac = static_cast<float>(decayDiffFrac(params_.decayMs));
+    const float diffCoef = static_cast<float>(base * (0.4f + 0.6f * dfrac));
+    float& x1 = digApX_[ch]; float& y1 = digApY_[ch];
+    if (diffCoef <= 0.0005f) { x1 = x; y1 = x; return x; }
+    const float a = 0.5f;
+    const float yAp = a * x + x1 - a * y1;          // y = a*x + x[n-1] - a*y[n-1]
+    x1 = x; y1 = yAp;
+    return (1.0f - diffCoef) * x + diffCoef * yAp; // blend dry input + APF by amount
   }
 
   // Spring (mode 1) -- the 1-D metallic spring voice. Layers, all bounded:
@@ -505,9 +702,8 @@ class Reverb {
     const int numSamples = buffer.getNumSamples();
     const int N = springsFromNormalized(params_.springs);  // 1..6 active lines
     const double sag = params_.sag;
-    const double decayNorm = (params_.decayMs - kMinDecayMs) / (kMaxDecayMs - kMinDecayMs);
-    const double fb = 0.30 + 0.69 * decayNorm;              // stable (|fb| < 1)
-    const double nScale = (1.0 - fb) / (double)N;           // level-const over N lines
+    const double fb = decayFb(params_.decayMs);              // stable (|fb| < 1)
+    const double nScale = kSpringWashRef / (double)N * kSpringWashFrac;  // FIXED ref (was live (1-fb)); level holds across decay, scaled into the family band
     const double dampAlpha = (1.0 - params_.tone) * (1.0 - 0.5 * sag);  // Sag darkens
     const double widthSpread = kMaxWidthSpread * params_.width;
     const float ra = static_cast<float>(kSpringBoingR * std::cos(2.0 * M_PI * kSpringBoingHz / sampleRate_));
@@ -521,6 +717,7 @@ class Reverb {
       float* out = buffer.getWritePointer(ch);
       float rre = boingRe_[ch], rim = boingIm_[ch];
       float de = dripEnv_[ch];
+      float splLp = splashLp_[ch];
       for (int i = 0; i < numSamples; ++i) {
         const float dry = out[i];
         // 1. the N spring lines (comb tails), level-constant
@@ -534,24 +731,31 @@ class Reverb {
           L.write = (L.write + 1) & L.mask;
           acc += tail;
         }
-        const float wet = acc * static_cast<float>(nScale);
+        float wet = acc * static_cast<float>(nScale) * static_cast<float>(kSpringPresence);
+        wet = washApSc(wet, kSpringWashAp, ch);   // diffuse: smear the long-decay comb resonance (kill the whistle)
         const float sign = (dry >= 0.0f) ? 1.0f : -1.0f;
         // onset burst (0..|dry|), a fast-attack envelope, decayed per sample
-        de = std::max(de * static_cast<float>(kSpringDripDecay), std::fabs(dry));
+        de = std::max(de * static_cast<float>(kSpringDripDecay),
+                      de + static_cast<float>(kSpringDripAtk) * (std::fabs(dry) - de));
         // 2. boing: 2.4k metallic ring excited by the burst, gain ~1/N -> dilutes
         const float nre = rre + de * sign * boingGain;  // st += (burst, inIm = 0)
         const float nim = rim;
         rre = nre * ra - nim * ia;
         rim = nre * ia + nim * ra;
         const float boing = rre;
-        // 3. drip: broadband onset splash, more springs = more driver activity
-        const float splash = de * sign * dripAmt;
-        // 4. sum + 5. subtle level-driven soft-shoulder color
-        float o = wet + boing + splash;
+        // 3. drip: broadband onset splash, more springs = more driver activity;
+        //    softened (low-passed) so the dry attack keeps its BODY but loses the
+        //    sharp HF "hi-hat" fizz.
+        const float splashRaw = de * sign * dripAmt;
+        splLp += static_cast<float>(kSplashSoftA) * (splashRaw - splLp);
+        // 4. sum the layers (the soft-shoulder is gated by kSpringColorAmt --
+        // 0.0 by default so the path stays linear/clean; the user can toggle it
+        // on for a hair of driver "warmth" without it reading as fizz)
+        float o = wet + boing + splLp;
         o = o * (1.0f - cAmt) + springShoulder(o) * cAmt;
         out[i] = o;
       }
-      boingRe_[ch] = rre; boingIm_[ch] = rim; dripEnv_[ch] = de;
+      boingRe_[ch] = rre; boingIm_[ch] = rim; dripEnv_[ch] = de; splashLp_[ch] = splLp;
     }
   }
 
@@ -571,9 +775,8 @@ class Reverb {
     const double bloom = params_.bloom;
     const double density = kPlateDenseMix;                    // the 2-D dense wash
     const double oneMinusDen = 1.0 - density;
-    const double decayNorm = (params_.decayMs - kMinDecayMs) / (kMaxDecayMs - kMinDecayMs);
-    const double fb = 0.30 + 0.69 * decayNorm;                // stable (|fb| < 1)
-    const double norm = (1.0 - fb) / kNumLines;
+    const double fb = decayFb(params_.decayMs);                // stable (|fb| < 1)
+    const double norm = kPlateWashRef / kNumLines;  // FIXED ref (was live (1-fb) -> died at long decay)
     const double dampAlpha = (1.0 - params_.tone) * (1.0 - kPlateBloomFrac * bloom);  // Bloom darkens (low lags)
     const double widthSpread = kMaxWidthSpread * params_.width;
     const float cAmt = static_cast<float>(kPlateColorAmt);
@@ -587,6 +790,7 @@ class Reverb {
       float delayed[kNumLines];
       float selfLp[kNumLines];
       float de = onsetEnv_[ch];
+      float whpLp = whipLp_[ch];
       for (int i = 0; i < numSamples; ++i) {
         const float dry = out[i];
         // Pass A: read each line's tail + its low-pass state (the 2-D mode wash).
@@ -609,16 +813,21 @@ class Reverb {
           L.write = (L.write + 1) & L.mask;
           acc += delayed[ln];
         }
-        float o = acc * static_cast<float>(norm);
+        float o = acc * static_cast<float>(norm) * static_cast<float>(kPlatePresence);
+        o = washApSc(o, kPlateWashAp, ch);   // diffuse: kills the high-dwell fizz / standing wave
         // Bright: the dense onset burst (the plate fires as a dense whole),
         // excited by input activity; more Bright = a denser, brighter onset.
         de = std::max(de * static_cast<float>(kPlateBrightDecay), std::fabs(dry) * onsetAmt);
-        o += de * (dry >= 0.0f ? 1.0f : -1.0f);
-        // the shared driver soft-shoulder (FET/transformer, level-driven warmth)
+        // whip softened: transient body kept, the sharp HF "fizz" low-passed away.
+        const float whipRaw = de * (dry >= 0.0f ? 1.0f : -1.0f);
+        whpLp += static_cast<float>(kSplashSoftA) * (whipRaw - whpLp);
+        o += whpLp;
+        // (the shared driver soft-shoulder is gated by kPlateColorAmt -- 0.0 by
+        //  default so the path stays linear/clean; toggle >0 for driver warmth)
         o = o * (1.0f - cAmt) + springShoulder(o) * cAmt;
         out[i] = o;
       }
-      onsetEnv_[ch] = de;
+      onsetEnv_[ch] = de; whipLp_[ch] = whpLp;
     }
   }
 
@@ -633,20 +842,21 @@ class Reverb {
   void processRoom(juce::AudioBuffer<float>& buffer) {
     const int numChannels = juce::jmin(buffer.getNumChannels(), kMaxChannels);
     const int numSamples = buffer.getNumSamples();
-    const double decayNorm = (params_.decayMs - kMinDecayMs) / (kMaxDecayMs - kMinDecayMs);
-    const double fb = 0.30 + 0.69 * decayNorm;
-    const double norm = (1.0 - fb) / kNumLines;
+    const double fb = decayFb(params_.decayMs);
+    const double norm = kRoomWashRef / kNumLines;  // FIXED ref (was live (1-fb) -> died at long decay)
     const double dampAlpha = (1.0 - params_.tone);  // the mode wash tone
     // Per-tap lowpass (the "air"): more Air = darker reflections.
     const float aAlpha = static_cast<float>((1.0 - params_.tone) * (1.0 - kRoomAirFrac * params_.air));
     float ta[kNumRoomTaps];
     for (int t = 0; t < kNumRoomTaps; ++t)
       ta[t] = static_cast<float>(kRoomTapAmps[t] * params_.early);
+    const uint32_t wp = inHistWrite_;  // base history position for this block
     for (int ch = 0; ch < numChannels; ++ch) {
       auto& lines = lines_[static_cast<size_t>(ch)];
       float* out = buffer.getWritePointer(ch);
       for (int i = 0; i < numSamples; ++i) {
         const float dry = out[i];
+        inHist_[ch][(wp + i) & inHistMask_] = dry;  // persist the input (cross-block)
         float acc = 0.0f;
         for (int ln = 0; ln < kNumLines; ++ln) {
           auto& L = lines[ln];
@@ -658,16 +868,21 @@ class Reverb {
           acc += L.lp;
         }
         acc *= static_cast<float>(norm);
+        acc = washApSc(acc, kRoomWashAp, ch);   // diffuse the comb wash (long tail stops breaking past ~2000)
+        // The discrete early field (a feedforward EFD): a persistent, cross-block
+        // input-history read (Schroeder/Gardner) so it is live at every block length,
+        // and each reflection air low-passed (Moorer: farther = darker).
         for (int t = 0; t < kNumRoomTaps; ++t) {
-          const int ts = static_cast<int>(roomTapsSamples_[t]);
-          if (ts < 1 || i < ts) continue;
-          const float tv = out[i - ts] * ta[t];
+          const uint32_t ts = static_cast<uint32_t>(roomTapsSamples_[t]);
+          if (ts < 1) continue;
+          const float tv = inHist_[ch][(wp + i - ts) & inHistMask_] * ta[t];
           roomTapsLp_[ch][t] += aAlpha * (tv - roomTapsLp_[ch][t]);
           acc += roomTapsLp_[ch][t];
         }
         out[i] = acc;
       }
     }
+    inHistWrite_ = (inHistWrite_ + numSamples) & inHistMask_;
   }
 
   // Chamber (mode 4) -- a short, diffuse early VOLLEY (8 fixed diffuse taps,
@@ -681,9 +896,8 @@ class Reverb {
   void processChamber(juce::AudioBuffer<float>& buffer) {
     const int numChannels = juce::jmin(buffer.getNumChannels(), kMaxChannels);
     const int numSamples = buffer.getNumSamples();
-    const double decayNorm = (params_.decayMs - kMinDecayMs) / (kMaxDecayMs - kMinDecayMs);
-    const double fb = 0.30 + 0.69 * decayNorm;
-    const double norm = (1.0 - fb) / kNumLines;
+    const double fb = decayFb(params_.decayMs);
+    const double norm = kChamberWashRef / kNumLines * kChamberWashFrac;  // FIXED ref (was live (1-fb) -> died at long decay)
     // (a) The Bass shelf (loop lowpass): more Bass = a stronger lowpass -> low
     // survives longer, high decays faster (the dual-decay, LF extends / HF caps).
     const float bassAlpha = static_cast<float>((1.0 - params_.tone) * (1.0 - kChamberBassFrac * params_.bass));
@@ -696,11 +910,13 @@ class Reverb {
     float ta[kNumChamberTaps];
     for (int t = 0; t < kNumChamberTaps; ++t)
       ta[t] = static_cast<float>(kChamberTapAmps[t] * params_.volley);
+    const uint32_t wp = inHistWrite_;  // base history position for this block
     for (int ch = 0; ch < numChannels; ++ch) {
       auto& lines = lines_[static_cast<size_t>(ch)];
       float* out = buffer.getWritePointer(ch);
       for (int i = 0; i < numSamples; ++i) {
         const float dry = out[i];
+        inHist_[ch][(wp + i) & inHistMask_] = dry;  // persist the input (cross-block)
         float acc = 0.0f;
         for (int ln = 0; ln < kNumLines; ++ln) {
           auto& L = lines[ln];
@@ -713,19 +929,27 @@ class Reverb {
           acc += L.lp;
         }
         acc *= static_cast<float>(norm);
-        // (c) The early volley (8 diffuse taps, a "bunch").
+        // (c) The early volley: a feedforward, cross-block input-history read
+        // (live at every block length), each reflection low-passed (the "fuzzy" field).
         for (int t = 0; t < kNumChamberTaps; ++t) {
-          const int ts = static_cast<int>(chamberTapsSamples_[t]);
-          if (ts < 1 || i < ts) continue;
-          const float tv = out[i - ts] * ta[t];
+          const uint32_t ts = static_cast<uint32_t>(chamberTapsSamples_[t]);
+          if (ts < 1) continue;
+          const float tv = inHist_[ch][(wp + i - ts) & inHistMask_] * ta[t];
           chamberTapsLp_[ch][t] += capAlpha * (tv - chamberTapsLp_[ch][t]);
           acc += chamberTapsLp_[ch][t];
         }
+        // Wash diffusion (Schroeder / Moorer APF) -- smears the slow low-frequency
+        // "pad" build-up above the onset, while the decayDiffFrac gating keeps it
+        // near-identity below the onset where the Chamber is already "solid." The
+        // pad character (the ALT mode candidate) is preserved: this only smears
+        // the periodic resonance, not the level or length.
+        acc = washApSc(acc, kChamberWashAp, ch);
         // (b) The output HF cap (the ~10 kHz humidity cap).
         chamberHFCap_[ch] += capAlpha * (acc - chamberHFCap_[ch]);
         out[i] = chamberHFCap_[ch];
       }
     }
+    inHistWrite_ = (inHistWrite_ + numSamples) & inHistMask_;
   }
 
   // Hall (mode 5) -- the LONGEST early section (10 long diffuse taps,
@@ -741,9 +965,15 @@ class Reverb {
   void processHall(juce::AudioBuffer<float>& buffer) {
     const int numChannels = juce::jmin(buffer.getNumChannels(), kMaxChannels);
     const int numSamples = buffer.getNumSamples();
-    const double decayNorm = (params_.decayMs - kMinDecayMs) / (kMaxDecayMs - kMinDecayMs);
-    const double fb = 0.30 + 0.69 * decayNorm;
-    const double norm = (1.0 - fb) / kNumLines;
+    const double fb = decayFb(params_.decayMs);
+    // Hall wash level law: normalise to a REFERENCE fb (0.90), not the live fb.
+    // The shared (1-fb) normaliser is flat up to ~2 s but collapses ~10x at the
+    // Hall's RT 3000 ms (fb=0.99), because the tone-rolled loop gain stops
+    // scaling as 1/(1-fb) -- so the tail goes quiet. A fixed (1-fbRef) keeps the
+    // level tracking the comb's NATURAL energy (longer RT -> a little louder),
+    // calibrated so RT 3000 ms lands in the family (~0.04, per the A/B map). The
+    // early cluster is recursive (fed by the wash), so this lifts the onset too.
+    const double norm = (1.0 - kHallWashFbRef) / kNumLines;
     // The early cluster (10 long taps, 10–150 ms) + the L/R lateral split
     // (more on L, less on R, a function of the Space dial). The Build dial scales
     // the whole cluster's energy (more = a longer, denser build-up).
@@ -754,32 +984,56 @@ class Reverb {
       ta[t][1] = static_cast<float>(base * (1.0 - kHallLateralSplit * params_.space));
     }
     const float dampAlpha = static_cast<float>(1.0 - params_.tone);
+    // Per-tap air low-pass (Moorer: farther reflections = darker); like Room/Chamber
+    // this damps the bright recursive read that otherwise rings as a metallic shimmer.
+    const float airAlpha = static_cast<float>((1.0 - params_.tone) * (1.0 - kHallAirFrac));
+    const float diffu = static_cast<float>(kHallDiffuseMix);  // the diffuse 3-D wash coupling
+    const uint32_t wp = inHistWrite_;  // base history position for this block
     for (int ch = 0; ch < numChannels; ++ch) {
       auto& lines = lines_[static_cast<size_t>(ch)];
       float* out = buffer.getWritePointer(ch);
       for (int i = 0; i < numSamples; ++i) {
         const float dry = out[i];
-        float acc = 0.0f;
+        inHist_[ch][(wp + i) & inHistMask_] = dry;  // persist the input (cross-block)
+        // The diffuse 3-D wash (the most coupled of the family): read every line
+        // first, blend each line's feedback toward the all-lines mean (F2F2-like),
+        // then write - so the late field is a smooth, diffuse hall wash (not the
+        // sparse comb modes that ring and "keep going").
+        float selfLp[kNumLines];
+        float meanLp = 0.0f;
         for (int ln = 0; ln < kNumLines; ++ln) {
           auto& L = lines[ln];
           const int d = taps_[ln];
           const float tail = L.ring[(L.write - d) & L.mask];
           L.lp += dampAlpha * (tail - L.lp);
-          L.ring[L.write] = dry + static_cast<float>(fb) * L.lp;
+          selfLp[ln] = L.lp; meanLp += L.lp;
+        }
+        meanLp /= kNumLines;
+        float acc = 0.0f;
+        for (int ln = 0; ln < kNumLines; ++ln) {
+          auto& L = lines[ln];
+          const float mix = (1.0f - diffu) * selfLp[ln] + diffu * meanLp;
+          L.ring[L.write] = dry + static_cast<float>(fb) * mix;
           L.write = (L.write + 1) & L.mask;
-          acc += L.lp;
+          acc += selfLp[ln];
         }
         acc *= static_cast<float>(norm);
-        // The early cluster (10 long taps) + the L/R lateral split (the Space dial
-        // widens the L, narrows the R -- the lateral energy, the spatial impression).
+        acc = washApSc(acc, kHallWashAp, ch);   // diffuse: kills the metallic "standing wave" echo
+        // The early cluster (12 taps: a dense fast build + a long low-passed tail)
+        // + the L/R lateral split (the Space dial widens the L, narrows the R -- the
+        // spatial impression). Each reflection is air low-passed (Moorer) so the
+        // recursive read stays diffuse, not a metallic shimmer.
         for (int t = 0; t < kNumHallTaps; ++t) {
-          const int ts = static_cast<int>(hallTapsSamples_[t]);
-          if (ts < 1 || i < ts) continue;
-          acc += out[i - ts] * ta[t][ch];
+          const uint32_t ts = static_cast<uint32_t>(hallTapsSamples_[t]);
+          if (ts < 1) continue;
+          const float tv = inHist_[ch][(wp + i - ts) & inHistMask_] * ta[t][ch];
+          hallTapsLp_[ch][t] += airAlpha * (tv - hallTapsLp_[ch][t]);
+          acc += hallTapsLp_[ch][t];
         }
         out[i] = acc;
       }
     }
+    inHistWrite_ = (inHistWrite_ + numSamples) & inHistMask_;
   }
 
  private:
@@ -804,6 +1058,14 @@ class Reverb {
 
   std::vector<std::vector<Line>> lines_;  // lines_[channel][line]
   double taps_[kNumLines] = {};
+  // Persistent INPUT-history ring per channel (a cross-block early-reflection
+  // delay line). The early taps (Room/Chamber/Hall) read their reflections from
+  // this input history, not the in-block output buffer, so they fire at every
+  // audio block length (the Schroeder/Gardner feedforward early field, not a
+  // block-boundary-dependent read). Sized in prepare(), zeroed in reset().
+  std::vector<float> inHist_[kMaxChannels];
+  uint32_t inHistMask_ = 0;
+  uint32_t inHistWrite_ = 0;
   double sampleRate_ = 0.0;
   Params params_{};
   // Digital Mod waver state (mirrors the delay's modOn_/modDepth/modInc/modPhase):
@@ -813,12 +1075,18 @@ class Reverb {
   float modDepthSamples_ = 0.0f;  // full-mod wobble depth (samples)
   double modInc_ = 0.0;          // LFO increment per sample (2*pi*rate/sr)
   double modPhase_ = 0.0;        // cross-block LFO phase
+  // Digital all-pass diffusion state (Schroeder/Moorer): prior x and y samples per
+  // channel. Identity at Density 0; reset in reset().
+  float digApX_[kMaxChannels] = {};
+  float digApY_[kMaxChannels] = {};
   // Spring state: the metallic boing resonator (2.4 kHz) per channel + the
   // onset-splash (drip) env per channel. Both are bounded (|r|<1, decaying env)
   // and reset in reset(). Only used when the Spring law path is live.
   float boingRe_[kMaxChannels] = {};
   float boingIm_[kMaxChannels] = {};
   float dripEnv_[kMaxChannels] = {};
+  float splashLp_[kMaxChannels] = {};  // softened (low-pass) drip splash, per channel
+  float whipLp_[kMaxChannels] = {};    // softened (low-pass) plate whip, per channel
   // Plate state: the dense "whip" onset burst envelope per channel (bounded,
   // decaying, reset in reset()). The dense wash + bloom low-pass + color are
   // stateless (they use the shared comb lines + the existing Line.lp).
@@ -843,5 +1111,8 @@ class Reverb {
   // LATERAL SPLIT (more on L, less on R, a function of the Space dial) is
   // applied at the sum; the tap sample offsets are computed from the live sample
   // rate in setParams().
+  // Hall state: per-tap air low-pass state (the diffuse build's per-reflection
+  // damping, like Room/Chamber -- this is what kills the bright recursive shimmer).
+  float hallTapsLp_[kMaxChannels][kNumHallTaps] = {};
   double hallTapsSamples_[kNumHallTaps] = {};
 };

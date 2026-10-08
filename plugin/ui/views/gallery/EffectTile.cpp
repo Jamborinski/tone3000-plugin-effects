@@ -834,7 +834,7 @@ void EffectTile::resized() {
   const bool compressor = block_.effectKind == "compressor";
   if (delay)
     syncToggle_.setBounds(28, 4, compact_ ? 30 : 36, 20);
-  if ((compressor || delay) && !compact_)
+  if ((compressor || delay || block_.effectKind == "reverb") && !compact_)
     modeCombo_.setBounds(W - 14 - 120, 44, 120, 26);
   if (compressor)
     mbcToggle_.setBounds(compact_ ? 65 : 28, 4, compact_ ? 30 : 50, 20);
@@ -842,6 +842,8 @@ void EffectTile::resized() {
     modeCycle_.setBounds(28, 4, 34, 20);
   if (delay && compact_)
     modeCycle_.setBounds(62, 4, 34, 20);  // right of the Sync toggle
+  if (block_.effectKind == "reverb" && compact_)
+    modeCycle_.setBounds(28, 4, 44, 20);  // the icon slot (reverb has no Sync): the mode cycler
 
   const int knobH =
       Knob::heightFor(compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary);
@@ -898,7 +900,7 @@ void EffectTile::resized() {
   } else if (reverbFull) {
     knobD_.setBounds(x, row2Y, colW, knobH); x += colW;   // Size
     knobE_.setBounds(x, row2Y, colW, knobH); x += colW;   // Width
-    modKnob_.setBounds(x, row2Y, colW, knobH);            // Sig B (right of Width)
+    modKnob_.setBounds(x, row2Y, colW, knobH); x += colW; // Sig B (right of Width)
   } else if (reverbCompact) {
     knobD_.setBounds(x, row2Y, colW, knobH); x += colW;   // Size
     knobE_.setBounds(x, row2Y, colW, knobH); x += colW;   // Width
@@ -939,8 +941,9 @@ void EffectTile::paint(juce::Graphics& g) {
     g.fillAll(juce::Colours::black.withAlpha(0.30f));  // bypassed: dim the face
 
   // Effect-type icon: right of the power button, power-button sized (20x20). The
-  // compressor has no drawn glyph -- its icon slot is the PUNCH toggle button.
-  if (!compressor && !delay) {
+  // compressor has no drawn glyph -- its icon slot is the PUNCH toggle button. The
+  // compact reverb likewise puts its mode cycler in the icon slot.
+  if (!compressor && !delay && !(reverb && compact_)) {
     const float gs = 20.0f;
     const float iconX = 28.0f;
     const float iconY = 4.0f;
@@ -953,7 +956,8 @@ void EffectTile::paint(juce::Graphics& g) {
   // Tight tiles: smaller font, starts after the header buttons (mode/PCH), and
   // the compressor is abbreviated to fit.
   const int chrome = theme::kIconBoxSize;
-  const int titleX0 = compact_ ? (compressor ? 100 : (delay ? 100 : 50)) : (28 + 36 + 6);
+  const int titleX0 =
+      compact_ ? (compressor ? 100 : (delay ? 100 : (reverb ? 76 : 50))) : (28 + 36 + 6);
   juce::Font font(compact_ ? 13.0f : 16.0f, juce::Font::bold);
   const juce::String title =
       compact_ && compressor ? "Comp"

@@ -38,9 +38,9 @@ shared dials underneath — the delay/compressor precedent. Shared with all:
 
 Selecting a mode resets that mode's dials + signatures to the starting row
 (the delay/compressor `enterMode` contract), then the user dials from there.
-All starting decays fit the engine's 50..3000 ms range (Hall = 3000, the
-ceiling; the feedback law is unchanged so the Digital anchor stays
-byte-identical). Alt-click on any knob returns it to that mode's starting
+All starting decays fit the engine's 50..5000 ms range (Hall = 3000, the
+longest default; 5000 is the ceiling). The [50, 3000] region is bit-identical
+(`decayFb`) so the Digital anchor stays byte-identical. Alt-click on any knob returns it to that mode's starting
 value (`EffectTile::EnterReverbMode` sets each knob's default via
 `knobFromStored` of the mode's starting value; the delay
 `sigKnob_.setDefaultValue` / compressor `Thresh` precedent).
@@ -115,9 +115,41 @@ the current engine** — realized by the `ReverbTest.ModesAreLawInertInTheScaffo
 pin (all six modes at the same dials produce byte-identical audio because
 `process()` is the original comb bank for every mode yet; it also pins the
 Digital anchor at mode 0, sigs 0). The feedback law is unchanged (so a 1200 ms
-Digital tail is identical to pre-feature); the ceiling stays 3000 ms (Hall =
-3000, the longest mode) rather than widening it — widening it would change the
-`fb = 0.30 + 0.69 * (decay - kMin)/(kMax - kMin)` mapping and break the anchor.
+Digital tail is identical to pre-feature); the ceiling was extended to 5000 ms (Hall stays 3000, the longest default) BY
+KEEPING THE [50, 3000] TUNED REGION BIT-IDENTICAL: `decayFb` maps [50, 3000] ->
+[0.30, 0.99] exactly as before, then nudges 0.99 -> 0.999 over the new 3000..5000
+top segment — so the anchor + every existing default are unchanged, and
+`ReverbTest.AllModesBoundedAcrossDecaySweep` proves nothing breaks at any decay.
+
+**Wash level is decay-independent (a fixed reference, not a live `(1-fb)`).**
+The wash wet used to be levelled by a live `(1.0 - fb)`. That is wrong with the
+tone low-pass in the loop: the comb's real growth stops scaling like `1/(1-fb)`
+well before `fb` reaches 1, so `(1-fb)` over-normalises and a long reverb went
+silent ("dies at 3000": measured Digital 0.045 @1.5 s -> 0.004 @3.0 s; Plate
+0.066 -> 0.007; Spring 0.038 -> 0.008). Each mode now levels its wet from a
+fixed reference -- `kDigitalWashRef` / `kSpringWashRef` / `kPlateWashRef` /
+`kRoomWashRef` / `kChamberWashRef` -- each set to that mode's actual `(1-fb)` at
+its *default* decay, so the default level the ears-pass tuned is **preserved**
+and the level stays flat across the whole 50..5000 knob instead of dying (the
+Hall already used a fixed `kHallWashFbRef`; the other five now match it). The
+decay knob now controls **length**, not level. The KnobScale's UI face was
+likewise capped at 3000 and has been widened to `linear(50.0, 5000.0, ...)`.
+`TEMPMeasure.DecaySweep` (still present, remove before commit) confirms every
+mode holds or grows as the knob tops out.
+
+**Per-mode max decay (the user's ears-pass onsets).** The listening sweeps
+found each mode develops a different artefact above its own onset: Digital /
+Chamber develop a slow comb RINGING build-up; Spring develops the metallic
+boing build-up; Plate develops the bright metallic sheen; Room / Hall simply
+become "too much" (a sound boundary rather than instability). The engine
+therefore clamps `params_.decayMs` to `kMaxDecayMsByMode[mode]` inside
+`setParams` after the mode is settled (the global 50..5000 bound is still the
+outer clamp). The UI knob still reports 50..5000 so every mode's starting-row
+default stays in range; the DSP just stops tracking past the mode's cap. The
+caps are user-ears constants, not a fixed law -- when we later fix the
+high-decay ringing / metallic build-up (e.g. slow-LFO smear of the wash APs,
+per the Spin Semi Spring-thread "spread the eigentones" trick) we can raise
+these constants and each mode will stay clean past its old onset.
 
 **Provenance discipline:** Valhalla / zita-rev1 / FDN-Toolbox / KPlateA /
 Ducceschi / mhamilt FDTD / all academic+AGPL material is **reference only** —
@@ -214,7 +246,7 @@ One int + 12 doubles added through, in the existing reverb style:
 4. `KnobScale.h` — `scales::` entries incl. `springs()` (stepped) declaring
    `toStored`/`fromStored`; the existing `reverbDecay()/Pre()/Tone()/Size()/
    Width()` scales carry the per-mode FACE (all modes' starting decays sit
-   within the 50..3000 ms range; Hall = 3000 is the ceiling).
+   within the 50..5000 ms range; Hall = 3000 is the longest default).
 5. `EffectTile.cpp` — mode **combo** (full) + **modeCycle_** button
    (compact), the two sig slots (A right of Pre in row 1, B right of Width
    in row 2), per-mode label/default/helper-text swap on mode change.
@@ -409,15 +441,20 @@ right of Width)" is full-tile only. Consistent across all six modes.
    the hall's "long build-up") + the LATERAL ENERGY (the L/R split of the early
    cluster, the spatial impression: more on L, less on R, a function of the Space
    dial -- more Space = a wider, more lateral early field) + the mode wash (the
-   longest RT, 3000 ms, the ceiling -- untouched by the Hall law, the anchor
-   holds). The Build dial scales the whole early cluster's energy (more = a
+   longest RT, 3000 ms) under a HALL WASH LEVEL LAW: the hall normalises its
+   wash to a fixed reference fb (0.90, `kHallWashFbRef`), not the live fb, so
+   the tail stays an audible voice at the ceiling RT -- the shared `(1-fb)`
+   normaliser would collapse the tail ~10x to a near-silent floor there, and
+   the Digital anchor (the plain-comb path) is left untouched. The Build dial
+   scales the whole early cluster's energy (more = a
    longer, denser build-up); the Space dial drives the L/R split (wider, more
    lateral). Gated `Build>0 || Space>0`; at both 0 it is the shared plain comb
    bank (the Digital anchor + `kNumModes==6` hold). The tap sample offsets
    (`hallTapsSamples_`) are computed from the live sample rate in `setParams()`
    (no hardcoded sample rate in the header). Pins: `HallTest.BuildLengthensTheEarlyField`
    (the 0–160 ms early window energy scales with Build), `HallTest.IsLiveAndBounded`
-   (finite + bounded + the early field adds energy above the plain comb bank).
+   (finite + bounded + a live, audible voice at its long default RT 3000 ms -- the
+   wash level law keeps it in the family, not the collapsed plain-comb floor).
 8. **Wiring close** — ✅ DONE. Three wiring fixes + pin:
    1. `ProcessorChain.cpp` `isEffectParam` list: the 13 reverb mode + sig params
       (`reverbMode`, `reverbDensity`, `reverbMod`, `reverbSprings`, `reverbSag`,
@@ -444,7 +481,8 @@ right of Width)" is full-tile only. Consistent across all six modes.
 - Exact per-mode table constants (Density matrix amount, Sag lag, Bass
   shelf depth, etc.) — dial by ear in each mode, then pin.
 - ~~Whether Hall Decay face should extend past 50..3000 ms (e.g. to ~5 s)~~ —
-  **RESOLVED (scaffold): stay within 50..3000 ms (Hall = 3000, the ceiling) so
-  the feedback law + the bit-identity anchor are untouched.** Revisit only if
-  the ear-pass truly needs a longer Hall and we accept a per-mode decay face
-  that leaves the Digital anchor intact (a separate mapping, not a wider kMax).
+  **RESOLVED (extended to 5000 ms): the ceiling is now 50..5000 ms.** The
+  [50, 3000] tuned region stays bit-identical (`decayFb`) and the top segment
+  3000..5000 only nudges fb 0.99 -> 0.999, so the feedback law over the tuned
+  region + the bit-identity anchor are untouched; `ReverbTest.AllModesBoundedAcrossDecaySweep`
+  pins boundedness across the whole range. Revisit only if a mode runs away.

@@ -522,9 +522,10 @@ inline const KnobScale& compThreshold() {
 }
 
 // ---- Reverb (see Reverb.h) ----
-// Decay: tail length, 50..3000 ms.
+// Decay: tail length, 50..5000 ms (extended; [50,3000] bit-identical, the 3000..5000
+// top segment extends the tail a touch -- decayFb caps fb at 0.999 so it stays stable).
 inline const KnobScale& reverbDecay() {
-  static const KnobScale s = linear(50.0, 3000.0, "ms", 0);
+  static const KnobScale s = linear(50.0, 5000.0, "ms", 0);
   return s;
 }
 // Pre-delay: 0..60 ms.
