@@ -174,12 +174,36 @@ class Reverb {
   // 0.4..1.0, more at long decay where the modes break):
   static constexpr double kSpringWashAp     = 0.30;    // Spring wash diffusion (back to the pre-round-12 value while we are isolating the true source of the Spring distortion)
   static constexpr double kPlateWashAp      = 0.62;    // Plate wash diffusion (more: kills the tiny residual hiss at high dwell)
+  // P-body (percept: the low-mid BODY -- 500-800 Hz is the plate's fundamental
+  // sustain; the EMT 140 keeps it almost alive at 1-2 s where ours died 6-9 dB
+  // early). Measured as a SURVIVAL (per-round-trip) deficit, not flatness
+  // (a unity-gain APF measured dead, <=0.6 dB), so the lever is a per-RT
+  // band-selective boost in the feedback loop. Capped to fb*A = 1 so it stays
+  // stable at every decay dial (the wash-norm lesson). Constants are the
+  // tuning knobs (fine-tune against the ears).
+  static constexpr double kPlateBodyHz      = 550.0;   // resonance centre (the body note)
+  static constexpr double kPlateBodyDb      = 1.30;    // per-round-trip boost (dB) at the centre
+  static constexpr double kPlateBodyQ       = 0.60;    // bandwidth (Q) -- 500-800 Hz coverage
   static constexpr double kRoomWashAp       = 0.22;    // Room wash diffusion (keep the early discrete, smooth the long tail)
   static constexpr double kHallWashAp       = 0.68;    // Hall wash diffusion (more: tames the pinging/metallic standing wave under hard drive)
   // The splash/whip re-inject the dry ATTACK transient (a sharp broadband burst =
   // the "fizz"). We low-pass them (kSplashSoftA) so they keep the transient BODY
   // but lose the sharp HF "hi-hat" fizz. Shared by Spring drip + Plate whip.
   static constexpr double kSplashSoftA      = 0.08;   // slower LP (more HF cut on the drip onset)    // softening 1-pole coeff (back to the pre-round-12 value; moot while drip/boing are off)
+  // P-ons (percept: onset density, 2026-10-06): the plate fires as a dense
+  // whole -- the EMT 140 ref onset is a discrete early whip (~12 resolvable
+  // pings in the first 120 ms) on top of the wash, ours had only the 33-204 ms
+  // comb echoes (8 dark pings + one soft 600 Hz body burst). A small
+  // incommensurate early-tap bank (membrane pings) is added on the wet path:
+  // fixed ms (like Chamber/Hall), incommensurate with the 33.3-203.7 ms comb
+  // periods, through a ~2.5 kHz soft single-pole LP (fizz-safe: no clipping,
+  // roll stays inside the ref's own onset bell ~-6 dB @ 4k), armed by the
+  // Bright gate exactly like the body-burst and levelled by the same Bright
+  // law -- zero at Bright = 0, so the plain comb stays for the anchor.
+  static constexpr int kPlateOnsetTaps = 5;
+  static constexpr double kPlateOnsetDelayMs[kPlateOnsetTaps] = {12.7, 19.3, 27.8, 43.1, 58.4};
+  static constexpr double kPlateOnsetAmps[kPlateOnsetTaps]    = {0.32, 0.27, 0.23, 0.19, 0.16};
+  static constexpr double kPlateOnsetLpA  = 0.33;           // ~2.5 kHz soft LP (fizz-safe)
   static constexpr double kSpringColorAmt   = 0.5;     // OFF: the soft-shoulder was the fizz/distortion (knee/amount moot) -- clean-rooms port of the compressor's soft-knee law, kept in-tree for the driver color (identity below the knee, only touches true peaks)
   // Spring wash level law: the spring's few-line wash runs loud (small N + its long
   // default RT give a high (1-fb)/N). kSpringWashFrac scales the wash body DOWN into
@@ -410,7 +434,7 @@ class Reverb {
     modPhase_ = 0.0;  // restart the Mod LFO
     for (int c = 0; c < kMaxChannels; ++c) {
       boingRe_[c] = 0.0f; boingIm_[c] = 0.0f; dripEnv_[c] = 0.0f; splashLp_[c] = 0.0f;
-      onsetEnv_[c] = 0.0f; whipLp_[c] = 0.0f;
+      onsetEnv_[c] = 0.0f; whipLp_[c] = 0.0f; plateOnsetLp_[c] = 0.0f;
       for (int t = 0; t < kNumRoomTaps; ++t) roomTapsLp_[c][t] = 0.0f;
       for (int t = 0; t < kNumChamberTaps; ++t) chamberTapsLp_[c][t] = 0.0f;
       chamberBassLp_[c] = 0.0f;
@@ -425,7 +449,7 @@ class Reverb {
       r8Re_[c]=0.0f; r8Im_[c]=0.0f;
       washLp_[c] = 0.0f;
       washLp2_[c] = 0.0f;
-      hpfX_[c] = 0.0f; hpfY_[c] = 0.0f;
+      for (int ln = 0; ln < kNumLines; ++ln) { bodyW1_[c][ln] = 0.0f; bodyW2_[c][ln] = 0.0f; }      hpfX_[c] = 0.0f; hpfY_[c] = 0.0f;
       for (int j = 0; j < 4; ++j) peakEq_[c][j] = 0.0f;
     }
     for (int c = 0; c < kMaxChannels; ++c)
@@ -479,6 +503,26 @@ class Reverb {
       // long taps (10–150 ms), computed from the live sample rate now.
       for (int t = 0; t < kNumHallTaps; ++t)
         hallTapsSamples_[t] = std::max(1.0, kHallTapDelaysMs[t] * 0.001 * sampleRate_);
+      // Plate onset pings (P-ons, fixed ms -- the membrane taps, see constants).
+      for (int t = 0; t < kPlateOnsetTaps; ++t)
+        plateOnsetSamples_[t] = std::max(1.0, kPlateOnsetDelayMs[t] * 0.001 * sampleRate_);
+      // P-body: the peaking coefficients (biquad, peaking @kPlateBodyHz),
+      // fb-capped so the round-trip gain never crosses 1.0 at any decay dial.
+      if (kPlateBodyDb > 0.0 && sampleRate_ > 0.0) {
+        const double A = std::min(std::pow(10.0, kPlateBodyDb / 40.0), 0.990 / plateFb(params_.decayMs));
+        const double w0 = 2.0 * M_PI * kPlateBodyHz / sampleRate_;
+        // Exact peaking (zeros at +/-1 -> unity at DC/Nyquist): B(z) = C(1-z^-2)/d(z),
+        // poles at r e(+/−j w0), C chosen so B(w0) = 1 exactly, and
+        // H(z) = 1 + (A-1)B(z) -> H(w0) = A exactly (the +kPlateBodyDb bump).
+        const double r = 1.0 - (w0 / (2.0 * kPlateBodyQ));
+        const double d0 = (1.0 - r) * (1.0 - r) + 2.0 * r * (1.0 - std::cos(w0));
+        const double C = d0 / (2.0 * std::sin(w0));
+        const double dA = (A - 1.0) * C;
+        bodyB0_ = 1.0 + dA;        bodyB1_ = -2.0 * r * std::cos(w0);
+        bodyB2_ = r * r - dA;      bodyA1_ = bodyB1_;        bodyA2_ = r * r;
+      } else {
+        bodyB0_ = 1.0; bodyB1_ = 0.0; bodyB2_ = 0.0; bodyA1_ = 0.0; bodyA2_ = 0.0;
+      }
     }
     // Digital Mod (mode 0 only): a sined waver on the read tap. Gated off at
     // Mod 0 so the plain integer read stays bit-exact (the anchor). Only the
@@ -711,6 +755,22 @@ class Reverb {
   static constexpr double kDigitalWashRef = 0.431;  // (1-fb) at Digital's 1200 ms default
   static constexpr double kSpringWashRef  = 0.244;  // (1-fb) at Spring's  2000 ms default -- back to the ORIGINAL value: the +1 dB "dwell" was pushing the peaks higher and the user was hearing the DAW's outboard saturate on the transient (the "distortion on the front"). The user can get the "dwell" character by pulling the fader up 1 dB instead (same energy, no added peak).  // +1 dB dwell baked in (0.244 * 1.2589 = 0.307). The tail is +1 dB at every time point along its decay (the user's "bake +1 dB of dwell into the wet", normalizing the level with the DAW fader).
   static constexpr double kPlateWashRef   = 0.244;  // (1-fb) at Plate's   2000 ms default
+  // P1 (percept: tail length, 2026-10-06): Plate gets its own curve on top of the
+  // shared decayFb -- the SAME scope-lift pattern the Spring already uses
+  // (decayFb(d)*1.04, spring-scoped only), so every other mode stays bit-identical.
+  // WHY: burst-probe (M2/M4, vs the Nevo EMT 140 convolved reference, both
+  // peak-normalised): at our 2000 ms default the shared curve rings ~40 % short
+  // (our T30 0.89 s; the EMT 140 2.0s file measures T30 1.38 s). The +10.4 % fb
+  // lift brings 2000 ms to T30 ~1.35 s / T60 ~2.7 s (the reference tail) and,
+  // with the dial kept honest, gives the 2500 ms ceiling real reach (T60 ~5.6 s
+  // instead of ~3.7 s -- the "does the cap go long enough" question).
+  // STABILITY: hard ceiling 0.940; with the +/-3 % fb-drift the loop tops out at
+  // 0.940 * 1.03 = 0.968 < 1, so the Plate cannot run away at any dial setting.
+  static constexpr double kPlateDecayLift = 1.104;
+  static constexpr double kPlateFbCeiling = 0.940;
+  static double plateFb(double decayMs) {
+    return juce::jmin(kPlateFbCeiling, decayFb(decayMs) * kPlateDecayLift);
+  }
   static constexpr double kRoomWashRef    = 0.595;  // (1-fb) at Room's    500  ms default
   static constexpr double kChamberWashRef = 0.291;  // (1-fb) at Chamber's 1800 ms default
 
@@ -941,7 +1001,7 @@ class Reverb {
     const double bloom = params_.bloom;
     const double density = kPlateDenseMix;                    // the 2-D dense wash
     const double oneMinusDen = 1.0 - density;
-    const double fb = decayFb(params_.decayMs);                // stable (|fb| < 1)
+    const double fb = plateFb(params_.decayMs);   // P1: Plate-scoped lift + ceiling (stable (|fb| < 1))
     const double norm = kPlateWashRef / kNumLines;  // FIXED ref (was live (1-fb) -> died at long decay)
     const double dampAlpha = (1.0 - params_.tone) * (1.0 - kPlateBloomFrac * bloom);  // Bloom darkens (low lags)
     const double widthSpread = kMaxWidthSpread * params_.width;
@@ -949,6 +1009,10 @@ class Reverb {
     // the dense "whip" onset burst; armed only if Bright is on, scales with it.
     const float onsetAmt = bright > 0.0
         ? static_cast<float>(kPlateBrightOnset * (0.3 + 0.7 * bright)) : 0.0f;
+    // P-ons (percept: onset density): the dense whole-fire early pings.
+    const uint32_t wp = inHistWrite_;  // base history position for this block
+    const float onGain = bright > 0.0
+        ? static_cast<float>(0.3 + 0.7 * bright) : 0.0f;  // off at Bright = 0
     for (int ch = 0; ch < numChannels; ++ch) {
       auto& lines = lines_[static_cast<size_t>(ch)];
       const double tapScale = (ch == 0) ? (1.0 - widthSpread) : (1.0 + widthSpread);
@@ -957,8 +1021,10 @@ class Reverb {
       float selfLp[kNumLines];
       float de = onsetEnv_[ch];
       float whpLp = whipLp_[ch];
+      float olp = plateOnsetLp_[ch];
       for (int i = 0; i < numSamples; ++i) {
         const float dry = out[i];
+        inHist_[ch][(wp + i) & inHistMask_] = dry;  // persist the input (P-ons cross-block history)
         // Pass A: read each line's tail + its low-pass state (the 2-D mode wash).
         float meanLp = 0.0f;
         for (int ln = 0; ln < kNumLines; ++ln) {
@@ -979,7 +1045,14 @@ class Reverb {
         for (int ln = 0; ln < kNumLines; ++ln) {
           auto& L = lines[ln];
           const float mix = oneMinusDen * selfLp[ln] + density * meanLp;
-          L.ring[L.write] = dry + fbMod * mix;
+          float fbSig = mix;
+          if (kPlateBodyDb > 0.0) {   // P-body: per-round-trip body retention (identity when off)
+            fbSig = static_cast<float>(bodyB0_) * mix + bodyW1_[ch][ln];
+            const float w1n = static_cast<float>(bodyB1_) * mix - static_cast<float>(bodyA1_) * fbSig + bodyW2_[ch][ln];
+            bodyW1_[ch][ln] = w1n;
+            bodyW2_[ch][ln] = static_cast<float>(bodyB2_) * mix - static_cast<float>(bodyA2_) * fbSig;
+          }
+          L.ring[L.write] = dry + fbMod * fbSig;
           L.write = (L.write + 1) & L.mask;
           acc += delayed[ln];
         }
@@ -993,13 +1066,27 @@ class Reverb {
         const float whipRaw = de * dry;
         whpLp += static_cast<float>(kSplashSoftA) * (whipRaw - whpLp);
         o += whpLp;
+        // P-ons (percept: onset density): the membrane pings -- early-tap bank
+        // through the ~2.5 kHz soft LP (fizz-safe), levelled by the Bright law.
+        if (onGain > 0.0f) {
+          float onsetAcc = 0.0f;
+          for (int t = 0; t < kPlateOnsetTaps; ++t) {
+            const uint32_t ts = static_cast<uint32_t>(plateOnsetSamples_[t]);
+            if (ts < 1) continue;
+            onsetAcc += inHist_[ch][(wp + i - ts) & inHistMask_]
+                       * static_cast<float>(kPlateOnsetAmps[t]);
+          }
+          olp += static_cast<float>(kPlateOnsetLpA) * (onsetAcc - olp);
+          o += olp * onGain;
+        }
         // (the shared driver soft-shoulder is gated by kPlateColorAmt -- 0.0 by
         //  default so the path stays linear/clean; toggle >0 for driver warmth)
         o = o * (1.0f - cAmt) + springShoulder(o) * cAmt;
         out[i] = o;
       }
-      onsetEnv_[ch] = de; whipLp_[ch] = whpLp;
+      onsetEnv_[ch] = de; whipLp_[ch] = whpLp; plateOnsetLp_[ch] = olp;
     }
+    inHistWrite_ = (inHistWrite_ + numSamples) & inHistMask_;  // P-ons: advance the shared early-history
   }
 
   // Room (mode 3) -- the discrete early-reflection set (a fixed 4-tap TDL, the
@@ -1294,6 +1381,17 @@ class Reverb {
   // decaying, reset in reset()). The dense wash + bloom low-pass + color are
   // stateless (they use the shared comb lines + the existing Line.lp).
   float onsetEnv_[kMaxChannels] = {};
+  // P-ons (onset density): the softened membrane-ping bank state per channel
+  // (zero-initialized, reset in reset()); tap offsets computed in setParams.
+  float plateOnsetLp_[kMaxChannels] = {};
+  double plateOnsetSamples_[kPlateOnsetTaps] = {};
+  // P-body (percept: low-mid body): the per-line peaking state (biquad w1/w2,
+  // zero-initialized, reset in reset()) + the fb-capped coefficients
+  // (setParams-time, sample-rate dependent).
+  float bodyW1_[kMaxChannels][kNumLines] = {};
+  float bodyW2_[kMaxChannels][kNumLines] = {};
+  double bodyB0_ = 1.0, bodyB1_ = 0.0, bodyB2_ = 0.0;
+  double bodyA1_ = 0.0, bodyA2_ = 0.0;
   // Room state: per-tap lowpass state (the "air" damping), 4 taps per channel
   // (zero-initialized, reset in reset()). The early field + mode wash are
   // stateless (they use the shared comb lines + existing state).

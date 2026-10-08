@@ -80,6 +80,15 @@ one-line comment at every level constant recording the dB intent.
 - long-tail NaN probe: run the mode at max decay for several seconds and
   assert finite output in the suite.
 
+**M8. Verify the DESIGNED-GAIN FREQUENCY in the first measurement of any new
+parametric filter.** The 405 suite guards bounds/stability — it happily passes
+both a +1.3 dB peaking and a -15 dB notch. The first probe after a new filter
+must show |H(f0)| ~ the designed dB at its own centre; if it's inverted, the
+coefficients are wrong, not the concept. Re-derive them from scratch (make it
+exactly 1 at the centre by construction) instead of tuning constants at a
+broken filter -- a remembered "peaking" formula measured as a notch at its own
+centre frequency, while the derived version measured right.
+
 ## 3. The loop (per mode)
 
 ```
@@ -105,6 +114,11 @@ one-line comment at every level constant recording the dB intent.
 │      tail length         → the decayFb curve (keep the shared scale; a
 │                            mode-scoped multiplier is the sanctioned tweak,
 │                            bounded by M7)
+│      band-selective SURVIVAL (some Hz dies early, other Hz live) →
+│                            peaking/dip IN THE FEEDBACK LOOP (per-round-trip
+│                            gain at that Hz, capped so fb*A < 1 at every dial;
+│                            output-side EQ cannot resurrect energy the loop
+│                            already killed -- survival is a feedback axis)
 │      dwell vs out-level  → two DIFFERENT knobs. Dwell = sustained wet
 │                            level (presence). Out-level = whole-mode trim.
 │                            "Louder than the other modes" → out-level.
@@ -186,6 +200,14 @@ one-line comment at every level constant recording the dB intent.
 - **G8 · Don't fight numbers against ears.** A measurement table tells you
   where a state *is*; it does not arbitrate whether it is *right*. "Still +N
   dB hotter than the one I just heard" is the spec (see R5).
+- **G9 · A fix that measures backwards is a mechanism bug, not a level.**
+  If the targeted band moved the WRONG way (or nowhere), do NOT shrink the
+  constant and retry — re-read the code path, re-derive the math, find the
+  coefficient/insertion-point error first. Plate 2026-10-08: a "+1.3 dB per
+  round-trip body boost" measured -15 dB at 500 Hz because the remembered
+  peaking coefficients actually built a notch at their own centre (M8);
+  after re-derivation (B(w0) = 1 exactly) the same constants measured
+  +1 to +3 dB exactly where designed.
 
 ## 6. Definition of done (per mode)
 
@@ -212,9 +234,15 @@ one-line comment at every level constant recording the dB intent.
       contextual labels (Spring: Size → "Length"); unique state field per
       mode (the delay precedent).
 - [ ] LF line endings; repo conventions preserved; no drive-by refactors.
-- [ ] Long runs: detached + polled, never a >5 min blocking call.
+- [ ] Long jobs follow the tiered rule (§9): < ~15 min = ONE blocking WSL call
+  with a deliberately set tool timeout; longer = detached + polled AND
+  liveness-checked within seconds of launch (no log file = died with the
+  launch session — re-run blocking). Detach without the check is banned.
+- [ ] Any file written to a WSL path from the Windows side is verified
+  WSL-side (grep/sed) — a UNC write can no-op silently; WSL is the only truth.
+  (Both sides of G7: the binary AND the edit must be what you think they are.)
 
-## 8. Reference constants (spring, as of this writing)
+## 8. Reference constants (spring and plate, as of this writing)
 
 | Percept | Constant | Value | Why |
 |---|---|---|---|
@@ -226,3 +254,68 @@ one-line comment at every level constant recording the dB intent.
 | out level | `kSpringOutLevel` | 0.209 (−13.6 dB) | uniform trim on the mode sum (all four passes, G1/G2) |
 | wet lift | `kSpringWetLift` | 1.414 (+3.01 dB) | "WET part of the mix a bit louder" — sustained wash only (G3) |
 | tail length | fb × 1.04 | mode-scoped | "a bit longer", cap-safe |
+
+### Plate (2026-10-08, vs EMT 140 2.0 s convolved IR, 405/405 green).
+
+| Percept | Constant | Value | Why |
+|---|---|---|---|
+| tail survival lift | `kPlateDecayLift` / `kPlateFbCeiling` | ×1.104, cap 0.940 | T30 0.89 s → 0.99 s (ref 1.38 s); at the 2500 ms dial the plate now EXCEEDS the ref in low-band persistence (125 Hz T40 3.71 s vs 2.68 s) — length complaint retired by data |
+| onset density | `kPlateOnsetDelayMs[5]` / `kPlateOnsetTapGain[5]` | {12.7, 19.3, 27.8, 43.1, 58.4} ms; {0.32, 0.27, 0.23, 0.19, 0.16} × onGain (bright-gated: 0.3 + 0.7·bright) | pings 8 → 11 (ref 12); attack 8k −3.1 vs ref −5.4; reuses `inHist_` (Room/Chamber/Hall pattern), 2.5 kHz 1-pole LP for fizz safety — NOT a comb-tap add |
+| body survival | `kPlateBodyHz/Db/Q` | 550 Hz, +1.3 dB per RT, Q 0.60 | 500–1k body +1.0…+2.7 dB mid/deep, 500 Hz T40 1.12 → 1.25 s (ref 2.00 s); A capped to 0.990/fb (M7); DERIVED peaking, B(w0)=1 exactly (M8) — not the remembered formula |
+| wash diffusion | `kPlateWashAp` | 0.62 (unchanged) | pre-P-ons fizz fix, preserved |
+| presence | `kPlatePresence` | 1.189 (unchanged) | G1/G2: user's A/B value |
+
+## 9. Session-run gotcha notes (WSL/Windows cross-env, 2026-10-08 plate session)
+
+- **WSL /tmp is NOT persistent across `wsl bash -c` invocations.** Every log
+  and measurement goes to a file in the repo (e.g. `tmp_panel.txt`), never the
+  default /tmp — and a panel file is meaningless until its mtime + line count
+  are checked (stale/truncated reads twice produced phantom regressions). This
+  is the G7 sibling on the ARTIFACT side.
+- **Windows → WSL file writes can no-op silently** (UNC `//wsl.localhost/...`
+  ETIMEDOUT) — the editor says success, the file was not written. WSL-side
+  `grep -n`/`sed -n` is the only truth; after any cross-write, verify before
+  the next build/measure.
+- **Never inline `$` into `wsl -e bash -c "..."` from Git Bash** — the
+  Windows-side bash pre-expands it away, and the CWD can be
+  C:/Windows/System32 (unscoped commands there are banned). Anything with shell
+  variables/loops: write a script file, `wsl -e bash /home/.../x.sh`.
+- **Never pipe a possibly-crashing or long process into `head`/`tail`** —
+  early close SIGPIPEs it and loses the death tail. `cmd > log 2>&1; echo
+  rc=$?` into a file, then read the file.
+- **Long jobs: tiered, and the detach pattern is NOT trusted here.**
+  2026-10-08: the textbook `nohup setsid bash -c '<cmd> > log 2>&1; echo
+  "done=$?" >> log' & disown` launch died WITH its launch session in this WSL
+  environment (log file never appeared, no process, nothing to poll — the WSL
+  instance reaps detached children when the session ends). Tiers that actually
+  work:
+  - **< ~15 min: ONE blocking call** `wsl -e bash -c 'cd <repo> && bash
+    scripts/x.sh'` with the bash tool timeout set deliberately (e.g. 1500 s).
+    Incremental cross-builds (JUCE already staged; only the changed TUs + link)
+    fit comfortably here — this is the default for staging runs.
+  - **> ~15 min: detach + poll** with the `done=$?` marker — AND verify
+    liveness IMMEDIATELY after launch (same or next call): the log file must
+    exist and `pgrep` must show the job. No log seconds after launch = the
+    child died with the session; do not sit and poll a corpse — re-run in the
+    blocking form or launch from within the polling session itself.
+  - Never block > ~5 min on a single tool call without a set timeout and a
+    known-good tier; never treat a missing marker as "still building" without
+    the liveness check.
+- **Stale-build trap:** after a Windows-side edit of a WSL repo file, `touch`
+  it before `cmake --build` (9p mtime); confirm the ninja tail actually shows
+  the recompile; prove the feature is in the binary (`strings`, a runtime
+  print) BEFORE concluding "the feature is dead".
+- **Peak-normalization sensitivity:** adding a legitimately louder feature
+  (the onset pings) re-normalizes every tail window — an apparent "T30
+  collapse" was 100% the normalizer (absolute tails bit-identical). Always
+  sanity-check a "collapse" against a no-normalization run before chasing it.
+- **Probe discipline:** in-tree probe test DURING the session (it stays in
+  the 405 binary and is filter-excludable: `--gtest_filter=-PlateConvProbe.*`);
+  BEFORE any commit: strip the TEMP line + the probe file + all `tmp_*` scratch
+  files — `git status` must show only the intended files.
+- **The band data kills theory, not the other way around.** This session's
+  "Dirichlet eigen-null" theory predicted a comb-notch body hole; the measure
+  showed a smooth plateau and the 8k head→deep delta matching the ref exactly
+  → theory killed by its first measurement; the surviving lever
+  (band-selective SURVIVAL = in-loop peaking, §3 C) is the one that measured.
+  One-percept + measure-first is what caught it.
