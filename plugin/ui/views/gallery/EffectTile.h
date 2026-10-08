@@ -49,6 +49,8 @@ class EffectTile : public GalleryTile {
   // Reverb: switch to character mode m (combo / compact cycle) and land on
   // that mode's dials + signature starting points (docs/reverb-modes.md).
   void enterReverbMode(int m);
+  void enterReverbType(int mode, int type);
+  void syncReverbTypeButton(int mode);
   // Reverb: refresh the mode combo + sig knobs (scale/label/steps/value) +
   // the Size->Length label from block_.
   void syncReverbMode();
@@ -101,6 +103,12 @@ class EffectTile : public GalleryTile {
   // replaces the mode combo (compact header has no room for the combo row);
   // clicks step to the next mode with that mode's defaults.
   juce::TextButton modeCycle_;
+
+  // Reverb only, TIGHT tiles: the per-mode TYPE cycler (a sub-model within
+  // the mode -- a distinct character/law set, not a preset; Reverb::numTypes).
+  // Sits right of the mode cycler; each mode remembers its own type
+  // (block_.reverbType0..5, the sig-family precedent). reverb-modes.md.
+  juce::TextButton typeCycle_;
 
   // Delay only: the mode-set signature KNOB -- the mode's UNIQUE control.
   // PING/CHIP are continuous 0..100% (scales::fraction01), HEADS steps 1/2/3/4

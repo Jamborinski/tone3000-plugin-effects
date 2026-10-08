@@ -3192,6 +3192,33 @@ TEST(ReverbTest, AllModesBoundedAcrossDecaySweep) {
   }
 }
 
+// Per-mode TYPE (a sub-model within a mode; the scaffold that lets a mode
+// carry more than one differently-BUILT character): every mode currently
+// has exactly one type (its modeled character, type 0) -- numTypes is the
+// single source of truth; out-of-range stored values clamp to 0 (the
+// engine law, so state can never select a nonexistent sub-model); and no
+// type overrides the dials (a type switch is a sub-model switch, not a
+// preset -- defaultDialsForType stays false until a type with its own
+// starting point lands).
+TEST(ReverbTest, TypeScaffoldIsOnePerModeAndClamped) {
+  for (int m = 0; m < Reverb::kNumModes; ++m)
+    EXPECT_EQ(Reverb::numTypes(m), 1) << "scaffold: mode " << m << " has one type";
+
+  Reverb::Params p;
+  for (int m = 0; m < Reverb::kNumModes; ++m) p.type[m] = m + 1;  // out of range
+  Reverb r;
+  r.prepare(kFs);
+  r.reset();
+  r.setParams(p);
+  for (int m = 0; m < Reverb::kNumModes; ++m)
+    EXPECT_EQ(r.params().type[m], 0)
+        << "type for mode " << m << " must clamp out of range to type 0";
+
+  double d = 0.0;
+  EXPECT_FALSE(Reverb::defaultDialsForType(2, 0, d, d, d, d, d))
+      << "a type must not override the dials until it has its own starting point";
+}
+
 TEST(ReverbTest, LatencyTracksThePreDelay) {
   Reverb r;
   r.prepare(kFs);

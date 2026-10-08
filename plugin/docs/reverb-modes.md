@@ -235,6 +235,45 @@ is overridden for now. (Candidate future overrides — flag if you want any:
 Spring `Tone→Damp`, Chamber/Hall `Size→Size` fine as-is.) Sig knobs carry
 their own per-mode labels above.
 
+## Types (sub-models within a mode -- scaffold, one per mode today)
+
+A mode's **TYPE** is a distinct character BUILT on that mode -- its own
+laws/structure (or another algorithm sharing the mode slot), **not a knob
+preset**. On the **full** tile the type face sits **right of the mode
+selector**; on the **compact** tile it sits right of the mode cycler (3-char
+IDs). Each mode REMEMBERS its own type (six independent state
+fields, the sig-family precedent). Type 0 = the mode's MODELED character
+(hover blurbs are tonal wordings ONLY, never the modeled product):
+
+| mode    | type-0 ID | the modeled character (internal name) |
+|---------|-----------|----------------------------------------|
+| Digital | `DIG`     | the clean 8-comb field                 |
+| Spring  | `RV1`     | the single-can spring tank             |
+| Plate   | `140`     | the dense flat plate (this session's pass) |
+| Room    | `SML`     | the small close room                   |
+| Chamber | `CHM`     | the open stone chamber                 |
+| Hall    | `HAL`     | the long wide hall                     |
+
+**Engine** (`Reverb.h`): `Params::type[6]` (appended after the 12 sigs,
+zero-init); `setParams` clamps each `type[i]` via
+`Reverb::numTypes(i)` -- the single source of truth (all 1 today); a type
+with its own starting dials reports them via
+`Reverb::defaultDialsForType(m, t, ...)` (returns false today = dials stay
+where the user left them). `process()` branches on `params_.type[mode]`
+when a mode's second type lands (that pass is the reference implementation).
+
+**State** (ui-wiring's 4 places, mirroring `reverbMode`): fields
+`reverbType0..5` on ChainItem/ChainBlock + `reverbParams()` (the six values
+fill the `type[]` array member); pinned by
+`StateCacheTest.ReverbTypeSetSurvivesSaveRestore` and
+`ReverbTest.TypeScaffoldIsOnePerModeAndClamped`.
+
+**Adding a second type to a mode**: (1) `numTypes(mode)` -> 2; (2) the
+engine branch for `params_.type[mode] == 1` (new laws; may reuse shared
+plumbing); (3) UI table row (ID + tonal blurb) in EffectTile.cpp;
+(4) optionally a `defaultDialsForType` override. Plate's type-0 is the
+140 pass itself (`ir-modeling-methodology.md`).
+
 ## Plumbing (the "4 state places" + UI)
 
 One int + 12 doubles added through, in the existing reverb style:

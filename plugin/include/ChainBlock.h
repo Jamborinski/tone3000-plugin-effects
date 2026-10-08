@@ -375,13 +375,20 @@ struct ChainBlock {
   double reverbBass = 0.6;
   double reverbBuild = 0.6;
   double reverbSpace = 0.7;
+  // Per-mode TYPE (sub-model within a mode; see Reverb.h + reverb-modes.md).
+  // One field per mode = the choice is remembered per mode (the 12-sig
+  // precedent). 0 = the mode's modeled/first type (the only one today).
+  int reverbType0 = 0, reverbType1 = 0, reverbType2 = 0;
+  int reverbType3 = 0, reverbType4 = 0, reverbType5 = 0;
   // ORDER MUST MATCH the Reverb::Params aggregate (positional): the five shared
-  // knobs, then mode, then the 12 sigs (2/mode).
+  // knobs, then mode, then the 12 sigs (2/mode), then the 6 per-mode types
+  // (type[0..5] is an aggregate array member -- the six values fill it).
   Reverb::Params reverbParams() const {
     return {reverbDecayMs, reverbPreMs, reverbTone, reverbSize, reverbWidth,
             reverbMode, reverbDensity, reverbMod, reverbSprings, reverbSag,
             reverbBright, reverbBloom, reverbEarly, reverbAir, reverbVolley,
-            reverbBass, reverbBuild, reverbSpace};
+            reverbBass, reverbBuild, reverbSpace,
+            reverbType0, reverbType1, reverbType2, reverbType3, reverbType4, reverbType5};
   }
   Delay delay;
   Chorus chorus;

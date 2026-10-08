@@ -293,3 +293,54 @@ TEST(StateCacheTest, DelayModeSetAndPunchSurviveSaveRestore) {
   EXPECT_NEAR(c.getProperty("compKnee", -1.0).toString().getDoubleValue(), 8.5, 1e-9)
       << "KNEE width (compKnee) must reach the host state blob";
 }
+
+// The per-mode TYPE selectors (a sub-model within a mode; the type cycler
+// remembers its choice PER MODE -- six independent fields, the sig-family
+// precedent): every one of the six must make the host-state-blob round
+// trip (the delay-mode regression class -- a missing save line is a silent
+// default reset on restart), and untouched modes keep their 0 (type) value.
+TEST(StateCacheTest, ReverbTypeSetSurvivesSaveRestore) {
+  juce::ValueTree reverb("ChainBlock");
+  reverb.setProperty("id", "blk-rvb", nullptr);
+  reverb.setProperty("type", "effect", nullptr);
+  reverb.setProperty("effectKind", "reverb", nullptr);
+  reverb.setProperty("enabled", true, nullptr);
+  reverb.setProperty("reverbMode", 2, nullptr);   // Plate
+  reverb.setProperty("reverbType0", 1, nullptr);   // three per-mode picks
+  reverb.setProperty("reverbType3", 2, nullptr);   // (beyond today's counts; the
+  reverb.setProperty("reverbType5", 1, nullptr);   //  state law keeps them verbatim)
+
+  juce::ValueTree lane("ChainBlocks");
+  lane.appendChild(reverb, nullptr);
+  juce::ValueTree snap("ChainSnapshot");
+  snap.appendChild(lane, nullptr);
+
+  ChainTestProcessor proc;
+  proc.restoreFromTree(snap);
+  ASSERT_TRUE(waitForChainLoaded(proc));
+
+  juce::MemoryBlock saved;
+  proc.getStateInformation(saved);
+  const juce::ValueTree state = parseStateBlob(saved);
+  ASSERT_TRUE(state.isValid());
+
+  const auto blocks =
+      state.getChildWithName("ChainSnapshot").getChildWithName("ChainBlocks");
+  juce::ValueTree r;
+  for (int i = 0; i < blocks.getNumChildren(); ++i)
+    if (blocks.getChild(i).getProperty("id").toString() == "blk-rvb")
+      r = juce::ValueTree(blocks.getChild(i));
+  ASSERT_TRUE(r.isValid()) << "the reverb block itself is missing from the save";
+  EXPECT_EQ(static_cast<int>(r.getProperty("reverbType0", -1)), 1)
+      << "reverbType0 must reach the host state blob (per-mode type memory)";
+  EXPECT_EQ(static_cast<int>(r.getProperty("reverbType3", -1)), 2)
+      << "reverbType3 must reach the host state blob";
+  EXPECT_EQ(static_cast<int>(r.getProperty("reverbType5", -1)), 1)
+      << "reverbType5 must reach the host state blob";
+  EXPECT_EQ(static_cast<int>(r.getProperty("reverbType1", -1)), 0)
+      << "an untouched per-mode type must keep its 0 (type) default";
+
+  ChainTestProcessor reopened;
+  reopened.setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
+  EXPECT_TRUE(waitForChainLoaded(reopened));
+}

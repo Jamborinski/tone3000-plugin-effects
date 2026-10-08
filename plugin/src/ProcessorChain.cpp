@@ -1061,6 +1061,8 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
     double reverbEarly = 0.0, reverbAir = 0.0;
     double reverbVolley = 0.0, reverbBass = 0.0;
     double reverbBuild = 0.0, reverbSpace = 0.0;
+    int reverbType0 = 0, reverbType1 = 0, reverbType2 = 0;
+    int reverbType3 = 0, reverbType4 = 0, reverbType5 = 0;
   };
 
   juce::uint32 revision = 0;
@@ -1142,6 +1144,12 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
           row.reverbSize = block->reverbSize;
           row.reverbWidth = block->reverbWidth;
           row.reverbMode = block->reverbMode;
+          row.reverbType0 = block->reverbType0;
+          row.reverbType1 = block->reverbType1;
+          row.reverbType2 = block->reverbType2;
+          row.reverbType3 = block->reverbType3;
+          row.reverbType4 = block->reverbType4;
+          row.reverbType5 = block->reverbType5;
           row.reverbDensity = block->reverbDensity;
           row.reverbMod = block->reverbMod;
           row.reverbSprings = block->reverbSprings;
@@ -1284,6 +1292,12 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
         params->setProperty("reverbSize", row.reverbSize);
         params->setProperty("reverbWidth", row.reverbWidth);
         params->setProperty("reverbMode", row.reverbMode);
+        params->setProperty("reverbType0", row.reverbType0);
+        params->setProperty("reverbType1", row.reverbType1);
+        params->setProperty("reverbType2", row.reverbType2);
+        params->setProperty("reverbType3", row.reverbType3);
+        params->setProperty("reverbType4", row.reverbType4);
+        params->setProperty("reverbType5", row.reverbType5);
         params->setProperty("reverbDensity", row.reverbDensity);
         params->setProperty("reverbMod", row.reverbMod);
         params->setProperty("reverbSprings", row.reverbSprings);
@@ -1708,7 +1722,7 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
                              param == "tremoloSpread" || param == "tremoloWave" ||
                              param == "compRatio" || param == "compAttackMs" ||
                              param == "compReleaseMs" || param == "compToneDb" ||
-                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace";
+                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbType0" || param == "reverbType1" || param == "reverbType2" || param == "reverbType3" || param == "reverbType4" || param == "reverbType5" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace";
   const bool isContinuous = param == "inputGain" || param == "outputGain" || param == "mix" ||
                             isEffectParam;
   const bool isKnown = isContinuous || param == "enabled" || param == "normalize";
@@ -1927,6 +1941,24 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
     block->reverb.setParams(block->reverbParams());
   } else if (param == "reverbMode") {
     block->reverbMode = juce::jlimit(0, Reverb::kNumModes - 1, static_cast<int>(value));
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbType0") {
+    block->reverbType0 = static_cast<int>(value);  // state keeps the selection verbatim; the engine clamps (setParams/numTypes)
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbType1") {
+    block->reverbType1 = static_cast<int>(value);  // state keeps the selection verbatim; the engine clamps (setParams/numTypes)
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbType2") {
+    block->reverbType2 = static_cast<int>(value);  // state keeps the selection verbatim; the engine clamps (setParams/numTypes)
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbType3") {
+    block->reverbType3 = static_cast<int>(value);  // state keeps the selection verbatim; the engine clamps (setParams/numTypes)
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbType4") {
+    block->reverbType4 = static_cast<int>(value);  // state keeps the selection verbatim; the engine clamps (setParams/numTypes)
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbType5") {
+    block->reverbType5 = static_cast<int>(value);  // state keeps the selection verbatim; the engine clamps (setParams/numTypes)
     block->reverb.setParams(block->reverbParams());
   } else if (param == "reverbDensity") {
     block->reverbDensity = juce::jlimit(0.0, 1.0, value);

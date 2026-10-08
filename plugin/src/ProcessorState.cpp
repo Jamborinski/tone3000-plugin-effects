@@ -257,6 +257,12 @@ juce::ValueTree TONE3000Processor::serializeBlockSettings(const ChainBlock& bloc
       blockState.setProperty("reverbSize", block.reverbSize, nullptr);
       blockState.setProperty("reverbWidth", block.reverbWidth, nullptr);
       blockState.setProperty("reverbMode", block.reverbMode, nullptr);
+      blockState.setProperty("reverbType0", block.reverbType0, nullptr);
+      blockState.setProperty("reverbType1", block.reverbType1, nullptr);
+      blockState.setProperty("reverbType2", block.reverbType2, nullptr);
+      blockState.setProperty("reverbType3", block.reverbType3, nullptr);
+      blockState.setProperty("reverbType4", block.reverbType4, nullptr);
+      blockState.setProperty("reverbType5", block.reverbType5, nullptr);
       blockState.setProperty("reverbDensity", block.reverbDensity, nullptr);
       blockState.setProperty("reverbMod", block.reverbMod, nullptr);
       blockState.setProperty("reverbSprings", block.reverbSprings, nullptr);
@@ -402,6 +408,12 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
                                          blockState.getProperty("reverbWidth", 1.0)));
       block.reverbMode = juce::jlimit(0, Reverb::kNumModes - 1,
                                       static_cast<int>(blockState.getProperty("reverbMode", 0)));
+      block.reverbType0 = static_cast<int>(blockState.getProperty("reverbType0", 0));  // state keeps the selection verbatim; the engine clamps
+      block.reverbType1 = static_cast<int>(blockState.getProperty("reverbType1", 0));  // state keeps the selection verbatim; the engine clamps
+      block.reverbType2 = static_cast<int>(blockState.getProperty("reverbType2", 0));  // state keeps the selection verbatim; the engine clamps
+      block.reverbType3 = static_cast<int>(blockState.getProperty("reverbType3", 0));  // state keeps the selection verbatim; the engine clamps
+      block.reverbType4 = static_cast<int>(blockState.getProperty("reverbType4", 0));  // state keeps the selection verbatim; the engine clamps
+      block.reverbType5 = static_cast<int>(blockState.getProperty("reverbType5", 0));  // state keeps the selection verbatim; the engine clamps
       block.reverbDensity = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbDensity", 0.0)));
       block.reverbMod = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbMod", 0.0)));
       block.reverbSprings = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbSprings", 0.4)));

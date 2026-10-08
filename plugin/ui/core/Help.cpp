@@ -200,6 +200,7 @@ std::map<Key, String> buildTable() {
   t[Key::reverbWidth] = knobDesktop("Width", "reverb stereo width — 0 = mono (L == R), 1 = wide (decorrelated channels).");
   t[Key::reverbDwell] = knobDesktop("Dwell", "increases the dwell of the reverb.");
   t[Key::reverbMode] = knobDesktop("Mode", "reverb type: Digital (clean 8-comb), Spring (1D metallic), Plate (dense 2D wash), Room (short early set), Chamber (diffuse + LF tail), Hall (long, wide, spatial). Select to apply that mode's starting dials; the two signature knobs follow the mode.");
+  t[Key::reverbType] = knobDesktop("Type", "a TYPE within the mode: a distinct character BUILT on that mode's engine (a sub-model -- its own laws and structure, not a knob preset). The choice is remembered per mode.");
   t[Key::reverbDensity] = knobDesktop("Density", "Digital: how thick the tail sounds -- low is a crisp dry echo, high blends into a big dense wash.");
   t[Key::reverbMod] = knobDesktop("Mod", "Digital: a slow waver on the taps (subtle motion on the tail).");
   t[Key::reverbSprings] = knobDesktop("Springs", "Spring: how many spring lines blend -- more = smoother, less metallic (1-6).");

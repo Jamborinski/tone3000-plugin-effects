@@ -350,6 +350,29 @@ class Reverb {
     return juce::jlimit(1, kSpringsMax,
                         juce::roundToInt(juce::jlimit(0.0, 1.0, n) * (kSpringsMax - 1)) + 1);
   }
+  // Type (sub-model within a mode): each type is a distinct character
+  // BUILT on the mode -- its own laws/structure (or a different algorithm
+  // sharing the mode slot), NOT a knob preset. The UI cycles a mode's types
+  // and remembers the choice per mode (Params::type[mode]). Type 0 is the
+  // mode's modeled character (today's engine). numTypes is the single
+  // source of truth (UI cycle + the setParams clamp below); a mode's count
+  // goes to 2 when its second sub-model lands (the plate pass is the
+  // reference implementation).
+  static constexpr int numTypes(int mode) {
+    (void)mode;
+    return 1;  // scaffold: one type per mode so far
+  }
+  // A type's characteristic dial defaults, if it has any. false = the dials
+  // are left as the user left them (a type switch is a sub-model switch,
+  // not a preset); a later type with its own starting point returns true
+  // and the tile lands those values (the compressor enterMode contract).
+  static bool defaultDialsForType(int mode, int type, double& decayMs, double& preMs,
+                                  double& tone, double& size, double& width) {
+    (void)mode; (void)type; (void)decayMs; (void)preMs;
+    (void)tone; (void)size; (void)width;
+    return false;  // no type overrides dials yet
+  }
+
   // enterMode starting points (the doc's mode table) + the default value of
   // each mode's two signatures (local slot 0 = Sig A, 1 = Sig B; normalised
   // 0..1, `Springs` returned as 3 -> 0.4).
@@ -391,6 +414,12 @@ class Reverb {
     double density = 0.0, mod = 0.0, springs = 0.4, sag = 0.4;
     double bright = 0.5, bloom = 0.5, early = 0.5, air = 0.3;
     double volley = 0.4, bass = 0.6, build = 0.6, space = 0.7;
+    // Per-mode TYPE selectors (sub-model within a mode; type[i] = mode i's
+    // type, 0 = its modeled/first character -- the only one today). One
+    // field per mode = the choice is remembered per mode (the 12-sig
+    // precedent). Appended after the 12 sigs (existing brace-inits keep
+    // compiling; legacy state without the key = 0 = type 0).
+    int type[6] = {0, 0, 0, 0, 0, 0};
   };
 
   void prepare(double sampleRate) {
@@ -485,6 +514,12 @@ class Reverb {
       // Size scales every line (0 = half base), 1 = large (1.5x base); Pre
       // offsets every tap.
       const double sizeScale = 0.5 + 1.0 * params_.size;
+    // Per-mode type selectors (sub-model within a mode). Clamped per mode
+    // by numTypes -- the engine law: state/UI may name any value, the
+    // engine never exceeds the mode's type count (all 1 today -> all 0).
+    for (int i = 0; i < kNumModes; ++i)
+      params_.type[i] = static_cast<int>(juce::jlimit(0, numTypes(i) - 1, p.type[i]));
+
       const double preSamples = params_.preMs * 0.001 * sampleRate_;
       for (int i = 0; i < kNumLines; ++i)
         taps_[i] = kBaseMs[i] * 0.001 * sampleRate_ * sizeScale + preSamples;

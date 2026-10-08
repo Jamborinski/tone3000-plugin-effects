@@ -33,7 +33,7 @@ enum class Key {
   signInBack, signInCopyLink, signInPhone, signInNewCode, signInRetry, signInDismiss,
   // Chain gallery
   addTile, closeToneBrowser, copyBlock, pasteBlock, addEffectDelay, addEffectChorus, addEffectTremolo, addEffectCompressor,
-  addEffectReverb, effectReverb, reverbDecay, reverbPre, reverbTone, reverbSize, reverbWidth, reverbDwell, reverbMode, reverbDensity, reverbMod, reverbSprings, reverbSag, reverbBright, reverbBloom, reverbEarly, reverbAir, reverbVolley, reverbBass, reverbBuild, reverbSpace, effectDelay,
+  addEffectReverb, effectReverb, reverbDecay, reverbPre, reverbTone, reverbSize, reverbWidth, reverbDwell, reverbType, reverbMode, reverbDensity, reverbMod, reverbSprings, reverbSag, reverbBright, reverbBloom, reverbEarly, reverbAir, reverbVolley, reverbBass, reverbBuild, reverbSpace, effectDelay,
   effectChorus, effectTremolo, effectCompressor, effectMix, effectTime, effectFeedback, effectRate, effectDepth, effectInput, effectOutput,
   effectDamping, delaySpread, effectSpread, delayMode, delayPing, delayHeads, delayChip, delayMod, delayRate, effectTone, effectWave, effectBpm, effectSubdivision, tremoloRate, tremoloDepth, tremoloTone, tremoloLfo, tremoloSpread, compRatio, compAttack, compRelease, compTone, compScHp, compMode, compThreshold, compMakeup, compIn, compMbc, compClip, compKnee, loadFileTile, loadFolderTile, blockPower,
   retryLoad, swapTone, removeBlock, panLeft, panRight, panLink, monoSum, panMonoSum, soloLeft,

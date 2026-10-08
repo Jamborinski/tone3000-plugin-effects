@@ -137,6 +137,38 @@ static juce::String compactReverbModeName(int m) {
   static const char* n[6] = {"DIG", "SPR", "PLT", "RM", "CHM", "HALL"};
   return n[juce::jlimit(0, 5, m)];
 }
+// ---- Reverb TYPE faces (a sub-model within a mode; Reverb::numTypes owns
+// the count, today 1 per mode). Type 0 = the mode's MODELED character --
+// the blurb describes that tonal identity in words ONLY (never the modeled
+// product name). A second type = a new row per mode (id + blurb + engine
+// branch + count bump; the plate pass is the reference implementation).
+static const char* compactReverbTypeName(int m, int t) {
+  static const char* n[Reverb::kNumModes] = {"DIG", "RV1", "140", "SML", "CHM", "HAL"};
+  (void)t;  // one type per mode today
+  return n[juce::jlimit(0, Reverb::kNumModes - 1, m)];
+}
+static const char* reverbTypeBlurb(int m, int t) {
+  static const char* b[Reverb::kNumModes] = {
+      "clean comb field -- flat to the top, dense, even repeats",
+      "single-can spring tank -- crisp metallic boing, high bite, long shimmer tail",
+      "dense flat-plate body -- deep low-mid sustain, bright early slap, huge smooth tail",
+      "small room -- fast early set, short decay, drier than it looks",
+      "open stone chamber -- tight body, long bright tail, LF blooming off",
+      "concert hall -- slow to build, long and wide, low end hangs"};
+  (void)t;  // one type per mode today
+  return b[juce::jlimit(0, Reverb::kNumModes - 1, m)];
+}
+// The block's remembered type for a mode (per-mode field, the sig pattern).
+static int reverbTypeOf(const ChainItem& b, int m) {
+  switch (juce::jlimit(0, Reverb::kNumModes - 1, m)) {
+    case 0: return b.reverbType0;
+    case 1: return b.reverbType1;
+    case 2: return b.reverbType2;
+    case 3: return b.reverbType3;
+    case 4: return b.reverbType4;
+    default: return b.reverbType5;
+  }
+}
 // The mode's Sig A/B raw (0..1) block-field value for the display.
 static double reverbSigRaw(const ChainItem& b, int mode, int localSlot) {
   const int m = juce::jlimit(0, Reverb::kNumModes - 1, mode);
@@ -496,6 +528,23 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
 
     syncReverbMode();
 
+    // The per-mode TYPE cycler, BOTH views: right of the mode cycler on the
+    // compact tile; right of the mode SELECTOR on the full tile. It cycles the
+    // mode's sub-models (Reverb::numTypes; 1 per mode today -- the face is
+    // the scaffolding for the mode's other, differently-built types).
+    const int tm0 = block_.reverbMode;
+    const int tt0 = reverbTypeOf(block_, tm0);
+    typeCycle_.setButtonText(compactReverbTypeName(tm0, tt0));
+    typeCycle_.setHelpText(help::text(help::Key::reverbType) + " -- " +
+                           reverbTypeBlurb(tm0, tt0) +
+                           " -- click to cycle " +
+                           juce::String(Reverb::modeName(tm0).data()) + " type");
+    typeCycle_.onClick = [this] {
+      const int m = this->block_.reverbMode;
+      this->enterReverbType(m, reverbTypeOf(this->block_, m) + 1);
+    };
+    addAndMakeVisible(typeCycle_);
+
     if (compact_) {
       modeCycle_.setButtonText(compactReverbModeName(block_.reverbMode));
       modeCycle_.setHelpText(help::text(help::Key::reverbMode) +
@@ -768,12 +817,59 @@ void EffectTile::enterReverbMode(int m) {
   modKnob_.setDefaultValue((float)knobFromStored(*reverbSigScaleForMode(m, 1), sigB));
 }
 
+void EffectTile::syncReverbTypeButton(int m) {
+  if (block_.effectKind != "reverb") return;
+  m = juce::jlimit(0, Reverb::kNumModes - 1, m);
+  const int t = reverbTypeOf(block_, m);
+  typeCycle_.setButtonText(compactReverbTypeName(m, t));
+  typeCycle_.setHelpText(help::text(help::Key::reverbType) + " -- " +
+                         reverbTypeBlurb(m, t) + " -- click to cycle " +
+                         juce::String(Reverb::modeName(m).data()) + " type");
+}
+
+void EffectTile::enterReverbType(int mode, int type) {
+  if (block_.effectKind != "reverb") return;
+  const int m = juce::jlimit(0, Reverb::kNumModes - 1, mode);
+  const int n = Reverb::numTypes(m);
+  type = ((type % n) + n) % n;  // wrap within the mode's type set
+
+  // A type is a SUB-MODEL, not a preset: the dials stay as the user left
+  // them unless the type defines its own characteristic starting points
+  // (defaultDialsForType -> true; none do in the scaffold).
+  double decay = 0.0, pre = 0.0, tone = 0.0, size = 0.0, width = 0.0;
+  if (Reverb::defaultDialsForType(m, type, decay, pre, tone, size, width)) {
+    block_.reverbDecayMs = decay;  services().chain.setBlockParam(blockId(), "reverbDecayMs", decay);
+    block_.reverbPreMs = pre;      services().chain.setBlockParam(blockId(), "reverbPreMs", pre);
+    block_.reverbTone = tone;      services().chain.setBlockParam(blockId(), "reverbTone", tone);
+    block_.reverbSize = size;      services().chain.setBlockParam(blockId(), "reverbSize", size);
+    block_.reverbWidth = width;    services().chain.setBlockParam(blockId(), "reverbWidth", width);
+    knobA_.setDefaultValue((float)knobFromStored(scales::reverbDecay(), decay));
+    knobB_.setDefaultValue((float)knobFromStored(scales::reverbPre(), pre));
+    knobC_.setDefaultValue((float)knobFromStored(scales::reverbTone(), tone));
+    knobD_.setDefaultValue((float)knobFromStored(scales::reverbSize(), size));
+    knobE_.setDefaultValue((float)knobFromStored(scales::reverbWidth(), width));
+  }
+
+  // Remember the choice PER MODE (its own field, the sig-family pattern).
+  switch (m) {
+    case 0: block_.reverbType0 = type; break;
+    case 1: block_.reverbType1 = type; break;
+    case 2: block_.reverbType2 = type; break;
+    case 3: block_.reverbType3 = type; break;
+    case 4: block_.reverbType4 = type; break;
+    default: block_.reverbType5 = type; break;
+  }
+  services().chain.setBlockParam(blockId(), ("reverbType" + juce::String(m)), (double)type);
+  syncReverbTypeButton(m);
+}
+
 void EffectTile::syncReverbMode() {
   if (block_.effectKind != "reverb") return;
   const int m = juce::jlimit(0, Reverb::kNumModes - 1, block_.reverbMode);
   modeCombo_.setSelectedId(m + 1, juce::dontSendNotification);
   if (compact_)
     modeCycle_.setButtonText(compactReverbModeName(m));
+  syncReverbTypeButton(m);  // the type face remembers its own per-mode choice (both views)
 
   // Sig A (sigKnob_, slot 0) + Sig B (modKnob_, slot 1) -- scale/label/steps/
   // value follow the mode.
@@ -834,7 +930,12 @@ void EffectTile::resized() {
   const bool compressor = block_.effectKind == "compressor";
   if (delay)
     syncToggle_.setBounds(28, 4, compact_ ? 30 : 36, 20);
-  if ((compressor || delay || block_.effectKind == "reverb") && !compact_)
+  if (block_.effectKind == "reverb" && !compact_) {
+    // The type cycler sits RIGHT OF THE mode selector (the user's call):
+    // both share the y=44 band, combo slides left to make room.
+    modeCombo_.setBounds(W - 14 - 44 - 8 - 120, 44, 120, 26);
+    typeCycle_.setBounds(W - 14 - 44, 44, 44, 26);
+  } else if ((compressor || delay) && !compact_)
     modeCombo_.setBounds(W - 14 - 120, 44, 120, 26);
   if (compressor)
     mbcToggle_.setBounds(compact_ ? 65 : 28, 4, compact_ ? 30 : 50, 20);
@@ -842,8 +943,10 @@ void EffectTile::resized() {
     modeCycle_.setBounds(28, 4, 34, 20);
   if (delay && compact_)
     modeCycle_.setBounds(62, 4, 34, 20);  // right of the Sync toggle
-  if (block_.effectKind == "reverb" && compact_)
-    modeCycle_.setBounds(28, 4, 44, 20);  // the icon slot (reverb has no Sync): the mode cycler
+  if (block_.effectKind == "reverb" && compact_) {
+    modeCycle_.setBounds(28, 4, 34, 20);  // the icon slot (reverb has no Sync): the mode cycler (34px, the comp/delay width so the title clears)
+    typeCycle_.setBounds(66, 4, 34, 20); // the per-mode TYPE cycler (3-char id), right of it
+  }
 
   const int knobH =
       Knob::heightFor(compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary);
@@ -941,8 +1044,8 @@ void EffectTile::paint(juce::Graphics& g) {
     g.fillAll(juce::Colours::black.withAlpha(0.30f));  // bypassed: dim the face
 
   // Effect-type icon: right of the power button, power-button sized (20x20). The
-  // compressor has no drawn glyph -- its icon slot is the PUNCH toggle button. The
-  // compact reverb likewise puts its mode cycler in the icon slot.
+  // compressor has no drawn glyph -- its icon slot is the PUNCH toggle button.
+  // The compact reverb likewise puts its mode cycler in the icon slot.
   if (!compressor && !delay && !(reverb && compact_)) {
     const float gs = 20.0f;
     const float iconX = 28.0f;
@@ -957,12 +1060,13 @@ void EffectTile::paint(juce::Graphics& g) {
   // the compressor is abbreviated to fit.
   const int chrome = theme::kIconBoxSize;
   const int titleX0 =
-      compact_ ? (compressor ? 100 : (delay ? 100 : (reverb ? 76 : 50))) : (28 + 36 + 6);
+      compact_ ? (compressor ? 100 : (delay ? 100 : (reverb ? 106 : 50))) : (28 + 36 + 6);
   juce::Font font(compact_ ? 13.0f : 16.0f, juce::Font::bold);
   const juce::String title =
       compact_ && compressor ? "Comp"
+                             : (compact_ && reverb ? "Rev"
                              : (delay ? "Delay" : (tremolo ? "Tremolo"
-                               : (compressor ? "Compressor" : (reverb ? "Reverb" : "Chorus"))));
+                               : (compressor ? "Compressor" : (reverb ? "Reverb" : "Chorus")))));
   paint::text(g, title,
               juce::Rectangle<int>(titleX0, 4, W - titleX0 - (4 + chrome), chrome),
               font, theme::kMuted, juce::Justification::centred);

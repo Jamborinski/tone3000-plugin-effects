@@ -196,6 +196,12 @@ ChainItem parseItem(const juce::var& v) {
     item.reverbSize = num(v["params"], "reverbSize", 0.6);
     item.reverbWidth = num(v["params"], "reverbWidth", 1.0);
     item.reverbMode = num(v["params"], "reverbMode", 0);
+    item.reverbType0 = num(v["params"], "reverbType0", 0);
+    item.reverbType1 = num(v["params"], "reverbType1", 0);
+    item.reverbType2 = num(v["params"], "reverbType2", 0);
+    item.reverbType3 = num(v["params"], "reverbType3", 0);
+    item.reverbType4 = num(v["params"], "reverbType4", 0);
+    item.reverbType5 = num(v["params"], "reverbType5", 0);
     item.reverbDensity = num(v["params"], "reverbDensity", 0.0);
     item.reverbMod = num(v["params"], "reverbMod", 0.0);
     item.reverbSprings = num(v["params"], "reverbSprings", 0.4);
