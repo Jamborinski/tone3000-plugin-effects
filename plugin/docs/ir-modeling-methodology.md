@@ -81,13 +81,13 @@ one-line comment at every level constant recording the dB intent.
   assert finite output in the suite.
 
 **M8. Verify the DESIGNED-GAIN FREQUENCY in the first measurement of any new
-parametric filter.** The 405 suite guards bounds/stability — it happily passes
-both a +1.3 dB peaking and a -15 dB notch. The first probe after a new filter
-must show |H(f0)| ~ the designed dB at its own centre; if it's inverted, the
-coefficients are wrong, not the concept. Re-derive them from scratch (make it
-exactly 1 at the centre by construction) instead of tuning constants at a
-broken filter -- a remembered "peaking" formula measured as a notch at its own
-centre frequency, while the derived version measured right.
+parametric filter.** The suite (407 as of the type-scaffold commit; it grows)
+guards bounds/stability — it happily passes both a +1.3 dB peaking and a
+-15 dB notch. The first probe after a new filter must show |H(f0)| ~ the
+designed dB at its own centre; if it's inverted, the coefficients are wrong,
+not the concept. Re-derive them from scratch (make it exactly 1 at the
+centre by construction) instead of tuning constants at a broken filter —
+see G9 for the plate instance of exactly this.
 
 ## 3. The loop (per mode)
 
@@ -233,6 +233,11 @@ centre frequency, while the derived version measured right.
 - [ ] UI param round-trips through all four state places; per-mode
       contextual labels (Spring: Size → "Length"); unique state field per
       mode (the delay precedent).
+- [ ] Any NEW state field family ships with its round-trip test in
+      `test/src/state_cache_tests.cpp` (the `DelayModeSetAndPunch... /
+      ReverbType...` pattern: set → restore → save → assert the blob) — a
+      missing save line is a silent default-reset on restart, and NOTHING
+      in the suite catches it without the test.
 - [ ] LF line endings; repo conventions preserved; no drive-by refactors.
 - [ ] Long jobs follow the tiered rule (§9): < ~15 min = ONE blocking WSL call
   with a deliberately set tool timeout; longer = detached + polled AND
@@ -255,7 +260,7 @@ centre frequency, while the derived version measured right.
 | wet lift | `kSpringWetLift` | 1.414 (+3.01 dB) | "WET part of the mix a bit louder" — sustained wash only (G3) |
 | tail length | fb × 1.04 | mode-scoped | "a bit longer", cap-safe |
 
-### Plate (2026-10-08, vs EMT 140 2.0 s convolved IR, 405/405 green).
+### Plate (2026-10-08, vs EMT 140 2.0 s convolved IR, 407/407 green).
 
 | Percept | Constant | Value | Why |
 |---|---|---|---|
@@ -283,24 +288,20 @@ centre frequency, while the derived version measured right.
 - **Never pipe a possibly-crashing or long process into `head`/`tail`** —
   early close SIGPIPEs it and loses the death tail. `cmd > log 2>&1; echo
   rc=$?` into a file, then read the file.
-- **Long jobs: tiered, and the detach pattern is NOT trusted here.**
-  2026-10-08: the textbook `nohup setsid bash -c '<cmd> > log 2>&1; echo
-  "done=$?" >> log' & disown` launch died WITH its launch session in this WSL
-  environment (log file never appeared, no process, nothing to poll — the WSL
-  instance reaps detached children when the session ends). Tiers that actually
-  work:
+- **Long jobs: tiered, and the detach pattern is NOT trusted here**
+  (detached children have died with their launch session in this WSL
+  environment — the log never appeared; re-run blocking). Tiers that work:
   - **< ~15 min: ONE blocking call** `wsl -e bash -c 'cd <repo> && bash
-    scripts/x.sh'` with the bash tool timeout set deliberately (e.g. 1500 s).
-    Incremental cross-builds (JUCE already staged; only the changed TUs + link)
-    fit comfortably here — this is the default for staging runs.
+    scripts/x.sh'`, bash-tool timeout set deliberately (e.g. 1500 s).
+    Incremental cross-builds (JUCE already staged; only the changed TUs +
+    link) fit comfortably here — this is the default for staging runs.
   - **> ~15 min: detach + poll** with the `done=$?` marker — AND verify
-    liveness IMMEDIATELY after launch (same or next call): the log file must
-    exist and `pgrep` must show the job. No log seconds after launch = the
-    child died with the session; do not sit and poll a corpse — re-run in the
-    blocking form or launch from within the polling session itself.
-  - Never block > ~5 min on a single tool call without a set timeout and a
-    known-good tier; never treat a missing marker as "still building" without
-    the liveness check.
+    liveness IMMEDIATELY (same or next call): log file exists + `pgrep`
+    shows the job. No log seconds after launch = child died with the
+    session; re-run in the blocking form or launch from within the polling
+    session itself.
+  - Never block > ~5 min on one call without a set timeout; never treat a
+    missing marker as "still building" without the liveness check.
 - **Stale-build trap:** after a Windows-side edit of a WSL repo file, `touch`
   it before `cmake --build` (9p mtime); confirm the ninja tail actually shows
   the recompile; prove the feature is in the binary (`strings`, a runtime
@@ -310,12 +311,10 @@ centre frequency, while the derived version measured right.
   collapse" was 100% the normalizer (absolute tails bit-identical). Always
   sanity-check a "collapse" against a no-normalization run before chasing it.
 - **Probe discipline:** in-tree probe test DURING the session (it stays in
-  the 405 binary and is filter-excludable: `--gtest_filter=-PlateConvProbe.*`);
-  BEFORE any commit: strip the TEMP line + the probe file + all `tmp_*` scratch
-  files — `git status` must show only the intended files.
-- **The band data kills theory, not the other way around.** This session's
-  "Dirichlet eigen-null" theory predicted a comb-notch body hole; the measure
-  showed a smooth plateau and the 8k head→deep delta matching the ref exactly
-  → theory killed by its first measurement; the surviving lever
-  (band-selective SURVIVAL = in-loop peaking, §3 C) is the one that measured.
-  One-percept + measure-first is what caught it.
+  the suite binary and is filter-excludable, e.g.
+  `--gtest_filter=-PlateConvProbe.*`); BEFORE any commit: strip the TEMP
+  line + the probe file + all `tmp_*` scratch — `git status` must show only
+  the intended files.
+- **The band data kills theory, not the other way around** (the plate
+  "Dirichlet eigen-null" theory died at its first measurement; the lever
+  that survived was the one that measured — §3 C / G9).
