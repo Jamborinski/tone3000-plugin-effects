@@ -71,7 +71,18 @@ file(GLOB_RECURSE T3K_UI_SOURCES CONFIGURE_DEPENDS
 
 function(t3k_add_native_ui target)
     target_sources(${target} PRIVATE ${T3K_UI_SOURCES})
-    target_include_directories(${target} PRIVATE "${T3K_UI_DIR}" "${CMAKE_BINARY_DIR}/t3k_ui")
+    target_include_directories(${target} PRIVATE
+        "${T3K_UI_DIR}"
+        "${T3K_UI_DIR}/../include"
+        # ChainBlock.h -> NamEngine.h -> NAM/dsp.h: the UI needs NAM's
+        # decls (and its header-only deps); the impl stays in plugin/src.
+        "${T3K_UI_DIR}/../NeuralAmpModelerCore"
+        "${T3K_UI_DIR}/../NeuralAmpModelerCore/Dependencies/eigen"
+        "${T3K_UI_DIR}/../NeuralAmpModelerCore/Dependencies/nlohmann"
+        # ChainDomain.h -> dsp/ResamplingContainer/... (matches plugin/CMakeLists L450f)
+        "${T3K_UI_DIR}/../AudioDSPTools"
+        "${T3K_UI_DIR}/../AudioDSPTools/dsp/ResamplingContainer/Dependencies"
+        "${CMAKE_BINARY_DIR}/t3k_ui")
     target_link_libraries(${target} PRIVATE NativeUiAssets juce::juce_animation juce::juce_cryptography)
     # macOS: paint through a Metal-backed layer so each dirty rect is drawn
     # on its own. Plain CoreGraphics gets one merged rect per frame, so the

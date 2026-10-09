@@ -63,6 +63,9 @@ public:
   void setInputMode(const juce::String& mode) override;
   void setActiveEditChain(const juce::String&) override {}
   void setNamSlimSizeDefault(double slimSize) override;
+  // E-2: the mock never hydrates an engine; a real one would load `file` and
+  // report the built kernel's length in seconds.
+  juce::var loadConvIr(const std::string&, const juce::File&) override { return {}; }
   void setMultiCore(bool enabled) override;
   // Recorded so self-tests can check which Settings-page edits were stored
   // as machine defaults.

@@ -38,6 +38,11 @@ CompareResult compareImages(const juce::Image& reference, const juce::Image& can
       const bool bad = d > tolerance;
       if (bad) {
         ++r.mismatched;
+        if (r.mismatched == 1) {
+          r.diffMinX = x; r.diffMinY = y;
+        }
+        r.diffMaxX = juce::jmax(r.diffMaxX, x);
+        r.diffMaxY = juce::jmax(r.diffMaxY, y);
         ++tileHits[static_cast<size_t>((y / kTile) * tilesX + x / kTile)];
       }
       if (diffOut != nullptr) {

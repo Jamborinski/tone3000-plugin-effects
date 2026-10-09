@@ -1189,6 +1189,9 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
     double convPreMs = 0.0, convFadeIn = 0.0, convFadeOut = 0.0;
     double convInCurve = 0.5, convOutCurve = 0.5, convToneDb = 0.0;
     juce::String convIrName;  // the IR this block is running (session data; display only)
+    juce::String convIrPath;  // its source file (Load-IR recovery on a fresh engine)
+    bool convIrLoaded = false;  // the engine actually holds the IR (else: file missing)
+    double convSeconds = 0.0;   // the edited kernel's length (time readout)
   };
 
   juce::uint32 revision = 0;
@@ -1300,6 +1303,10 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
           row.convOutCurve = block->convOutCurve;
           row.convToneDb = block->convToneDb;
           row.convIrName = block->conv.irName();
+          row.convIrPath = block->convIrPath;
+          row.convIrLoaded = block->conv.hasIr();
+          row.convSeconds =
+              block->conv.hasIr() ? block->conv.editedSeconds() : 0.0;
           row.enabled = block->enabled;
           row.inputGain = block->inputGainNormalized;
           row.outputGain = block->outputGainNormalized;
@@ -1464,6 +1471,12 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
         // reads it.
         if (row.convIrName.isNotEmpty())
           item->setProperty("convIrName", row.convIrName);
+        if (row.convIrPath.isNotEmpty())
+          item->setProperty("convIrPath", row.convIrPath);
+        if (row.convIrLoaded)
+          item->setProperty("convIrLoaded", true);
+        if (row.convSeconds > 0.0)
+          item->setProperty("convSeconds", row.convSeconds);
         item->setProperty("params", juce::var(params.get()));
         chainArray.add(juce::var(item.get()));
         continue;

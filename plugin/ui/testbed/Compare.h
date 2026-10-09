@@ -13,6 +13,11 @@ struct CompareResult {
   juce::String error;
   int width = 0, height = 0;
   juce::int64 mismatched = 0;
+  // Bounding box of every mismatching pixel (valid when mismatched > 0;
+  // x1/y1 stay -1 until the first hit).
+  int diffMinX = 0, diffMinY = 0, diffMaxX = -1, diffMaxY = -1;
+  struct Bounds { int x0 = 0, y0 = 0, x1 = -1, y1 = -1; };
+  Bounds diffBounds() const { return {diffMinX, diffMinY, diffMaxX, diffMaxY}; }
   double mismatchPercent() const {
     return width * height == 0 ? 100.0 : 100.0 * mismatched / (double(width) * height);
   }

@@ -8,6 +8,7 @@ genuine detail; the danger summaries below are the safety net, not a substitute.
 1. **Match by PATH, not by vibes, before you edit anything:**
    - touch `plugin/include/{Delay,Chorus,Tremolo,Compressor}.h|src/*` or `test/src/*` → **`docs/agents/dsp-invariants.md`**
    - touch `plugin/ui/**`, chain state, KnobScale, tiles, a param's plumbing → **`docs/agents/ui-wiring.md`**
+   - touch `plugin/ui/testbed/**`, TileShot/Compare, UI goldens, or re-shooting a tile → **`docs/agents/ui-snapshots.md`**
    - touch `CMakeLists*`, `build/`|`build-win/`, `scripts/win-*`, or a Windows exe → **`docs/agents/windows-build.md`** (and `linux-build-deep.md` if it's the Linux build/fresh-configure/helper)
    - `git merge`/`fetch upstream`, tags/branches/push → **`docs/agents/merge-upstream.md`**
    - borderline (a param change that affects both DSP and wiring, a build that touches UI, …) → **read every matching file; default to `dsp-invariants.md` + `ui-wiring.md`.**

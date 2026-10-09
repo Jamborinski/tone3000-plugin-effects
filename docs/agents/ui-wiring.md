@@ -56,4 +56,7 @@ The layout's `five`/`cols` flag is a SEPARATE gate — update both.
   (`ninja -C build TONE3000_Standalone` or the VST3 target) before committing.
 - **This JUCE's API:** `ValueTree::isValid()` (not `isObject()`); read a
   number from `juce::var` via `.toString().getDoubleValue()` (no `toDouble`);
-  `TextButton::setButtonText(text)` takes ONE arg.
+  `TextButton::setButtonText(text)` takes ONE arg; **`String(const char*)`
+  decodes byte-per-char (Latin-1) — non-ASCII literals need
+  `String(CharPointer_UTF8 ("..."))`** (else `\u2014` renders `â□□`; full note
+  in `docs/agents/ui-snapshots.md`).

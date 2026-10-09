@@ -647,8 +647,14 @@ void EffectTile::setBlock(const ChainItem& block) {
   power_.setOn(enabled_);
   if (block_.effectKind == "compressor")
     mbcToggle_.setToggleState(block_.compMbc, juce::dontSendNotification);
-  if (block_.effectKind == "convolution")
+  if (block_.effectKind == "convolution") {
     updateConvIrLabel();  // pick up the loaded-kernel name / button caption
+    // A re-hydrated IR (E-2: state carries path+length but never bytes) only
+    // re-appears in the preview/strip if we pull it here — otherwise the
+    // waveform goes stale until the user loads the file in the UI again.
+    if (!compact_)
+      pullConvPreview();
+  }
   syncKnobs();
   applySync();
   updateSyncLabel();
@@ -1049,23 +1055,31 @@ void EffectTile::updateConvIrLabel() {
   if (block_.effectKind != "convolution")
     return;
   const bool hasName = block_.convIrName.isNotEmpty();
+  const juce::String secondsText = (block_.convSeconds > 0.0005)
+      ? juce::String(block_.convSeconds, 2) + juce::String(" s")
+      : juce::String();
   if (block_.convIrLoaded && hasName) {
-    // E-2 + length readout UNDER THE filename: the file's own label is not the
-    // truth (a "5.0 s" NEVO plate renders ~10 s), so the engine's real length
-    // carries its own line directly below the name.
-    convIrLabel_.setText(block_.convIrName, juce::dontSendNotification);
-    if (block_.convSeconds > 0.0005) {
-      convIrSeconds_.setText(juce::String(block_.convSeconds, 2) + juce::String(" s"),
-                              juce::dontSendNotification);
-      convIrSeconds_.setVisible(true);
-    } else {
-      convIrSeconds_.setVisible(false);
-    }
+    // E-2 + length readout. Full tile: the length gets its OWN line under the
+    // filename (the file's label is not the truth — a "5.0 s" NEVO plate
+    // renders ~10 s, so the engine's real seconds carry it). Compact tile:
+    // no height for a second line — append "· N.NN s" to the name line.
+    if (compact_ && secondsText.isNotEmpty())
+      convIrLabel_.setText(block_.convIrName +
+                               juce::String(juce::CharPointer_UTF8 (" \u00B7 ")) + secondsText,
+                           juce::dontSendNotification);
+    else
+      convIrLabel_.setText(block_.convIrName, juce::dontSendNotification);
+    const juce::String secondsLine = secondsText;
+    convIrSeconds_.setText(secondsLine, juce::dontSendNotification);
+    convIrSeconds_.setVisible(!compact_ && secondsText.isNotEmpty());
     convIrButton_.setButtonText("Change IR");
   } else if (hasName) {
     // E-2: identity persisted but engine not hydrated (file missing on this
     // machine) — the Load-IR button re-hydrates. No length (engine empty).
-    convIrLabel_.setText("IR FILE MISSING — " + block_.convIrName,
+    // NOTE: the em-dash goes in via CharPointer_UTF8 — in this JUCE fork
+    // String(const char*) decodes byte-per-char (ASCII/Latin-1), so a plain
+    // \u2014 literal renders as "â□□" (the E-1 mojibake users saw).
+    convIrLabel_.setText(juce::String(juce::CharPointer_UTF8 ("IR FILE MISSING \u2014 ")) + block_.convIrName,
                          juce::dontSendNotification);
     convIrSeconds_.setVisible(false);
     convIrButton_.setButtonText("Load IR");
@@ -1122,7 +1136,7 @@ void EffectTile::resized() {
   if (block_.effectKind == "reverb" && compact_) {
     modeCycle_.setBounds(28, 4, 34, 20);  // the icon slot (reverb has no Sync): the mode cycler (34px, the comp/delay width so the title clears)
     typeCycle_.setBounds(66, 4, 34, 20); // the per-mode TYPE cycler (3-char id), right of it
-  } else if (block_.effectKind == "convolution") {
+  } else if (block_.effectKind == "convolution" && !compact_) {
     // Full conv tile: the Load/Change IR button sits in the CHROME icon slot
     // (where the effect glyph would be). The y=26 band is the kernel
     // readout — filename on line 1, the engine's real length on line 2
@@ -1130,14 +1144,23 @@ void EffectTile::resized() {
     convIrButton_.setBounds(28, 4, 68, 20);
     convIrLabel_.setBounds(4, 25, W - 8, 14);
     convIrSeconds_.setBounds(4, 38, W - 8, 12);
+  } else if (block_.effectKind == "convolution") {
+    // Compact conv: ONE label line (seconds appended to the name in
+    // updateConvIrLabel — no height for a second line + waveform), then a
+    // clean 4x2 below. The old 30px rows collided with that band.
+    convIrButton_.setBounds(28, 4, 68, 20);
+    convIrLabel_.setBounds(4, 25, W - 8, 14);
+    convIrSeconds_.setVisible(false);
   }
 
   const int knobH =
       Knob::heightFor((compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary);
   const bool convFullTile = (block_.effectKind == "convolution") && !compact_;
+  const bool convCompactTile = (block_.effectKind == "convolution") && compact_;
   const int rowGap = compact_ ? 6 : 8;
   // Full conv: the waveform strip owns y=46..90, so the knob rows start lower.
-  const int row1Y = convFullTile ? 94 : (compact_ ? 30 : 92);
+  // Compact conv: one label line (y 25..39) then row 1 at 44.
+  const int row1Y = convFullTile ? 94 : (convCompactTile ? 44 : (compact_ ? 30 : 92));
   const int row2Y = row1Y + knobH + rowGap;
   const bool reverb = block_.effectKind == "reverb";
   const bool chorus = block_.effectKind == "chorus";
@@ -1180,7 +1203,7 @@ void EffectTile::resized() {
     knobD_.setBounds(x, row1Y, colW, knobH);  // Tone sits right of Release
   }
   if (convFull) {
-    knobD_.setBounds(x, row1Y, colW, knobH);  // F Out
+    knobD_.setBounds(x, row1Y, colW, knobH); x += colW;  // F Out
     knobE_.setBounds(x, row1Y, colW, knobH);  // Tone
   }
 
@@ -1220,10 +1243,13 @@ void EffectTile::resized() {
     sigKnob_.setBounds(x, row2Y, colW, knobH); x += colW;  // Dry (wet level)
     modKnob_.setBounds(x, row2Y, colW, knobH); x += colW;  // Width
     knobF_.setBounds(x, row2Y, colW, knobH); x += colW;    // InCrv
-    knobG_.setBounds(x, row2Y, colW, knobH);               // OutCrv
+    knobG_.setBounds(x, row2Y, colW, knobH); x += colW;    // OutCrv
   } else if (convCompact) {
-    sigKnob_.setBounds(x, row2Y, colW, knobH); x += colW;  // Dry (wet level)
-    modKnob_.setBounds(x, row2Y, colW, knobH);             // Width
+    // Compact conv's Dry/Width live in knobD_/knobE_ (paramsFor maps the
+    // compact list to slots A..E — sig_/mod_ are NOT children of the compact
+    // tile, so bounds on them would land on nothing).
+    knobD_.setBounds(x, row2Y, colW, knobH); x += colW;  // Dry (wet level)
+    knobE_.setBounds(x, row2Y, colW, knobH); x += colW;  // Width
   } else if (five) {
     knobD_.setBounds(x, row2Y, colW, knobH); x += colW;
     knobE_.setBounds(x, row2Y, colW, knobH); x += colW;
@@ -1265,7 +1291,8 @@ void EffectTile::paint(juce::Graphics& g) {
   // the compressor is abbreviated to fit.
   const int chrome = theme::kIconBoxSize;
   const int titleX0 =
-      compact_ ? (compressor ? 100 : (delay ? 100 : (reverb ? 106 : 50)))
+      compact_ ? (compressor ? 100 : (delay ? 100 : (reverb ? 106
+                                                    : (convolution ? 102 : 50))))
                 : (convolution ? (28 + 68 + 6) : (28 + 36 + 6));
   juce::Font font(compact_ ? 13.0f : 16.0f, juce::Font::bold);
   const juce::String title =

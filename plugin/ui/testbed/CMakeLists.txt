@@ -65,6 +65,46 @@ target_link_libraries(UiTestbed PRIVATE
     juce::juce_recommended_warning_flags
 )
 
+# TileShot (docs/agents/ui-snapshots.md): render ONE gallery tile with a
+# deterministic fixture state into a PNG and diff it against an approved
+# golden in goldens/. Deliberately NOT a ctest target: goldens are
+# re-approved by a human (--regen) and must be compared on the platform's
+# own rasteriser.
+juce_add_gui_app(TileShot PRODUCT_NAME "TileShot" COMPANY_NAME "TONE3000")
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/../NativeUi.cmake")
+t3k_add_native_ui(TileShot)
+
+target_sources(TileShot PRIVATE
+    TileShot.cpp
+    Compare.h
+    Compare.cpp
+    MockBackend.h
+    MockBackend.cpp
+    MockSession.h
+    MockSession.cpp
+    MockSignal.h
+    MockSignal.cpp
+)
+
+target_compile_definitions(TileShot PRIVATE
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_WEBP=0
+    JUCE_USE_CURL=0
+    JUCE_MODAL_LOOPS_PERMITTED=1
+    JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:TileShot,JUCE_PRODUCT_NAME>"
+    JUCE_APPLICATION_VERSION_STRING="1.0"
+    T3K_TESTBED_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+)
+
+target_link_libraries(TileShot PRIVATE
+    juce::juce_gui_extra
+    juce::juce_audio_processors
+    juce::juce_audio_utils
+    juce::juce_recommended_config_flags
+    juce::juce_recommended_warning_flags
+)
+
 # Pure-logic unit tests (parsers, wrapping, OAuth, token refresh, the
 # connection gate's state machine, tuner math). Captures are not registered:
 # they are reviewed by eye or diffed against a previous run, not asserted.
