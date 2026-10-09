@@ -598,6 +598,92 @@ inline const KnobScale& springs() {
   }();
   return s;
 }
+
+// ---- Convolution reverb (see ConvolutionReverb.h) --------------------------
+// The gain + pitch laws below are single-sourced from that header's
+// gainToDb/dbToGain and pitchToScale/scaleToPitch (±24 dB span; 0.25x..4x
+// log-uniform length). Re-derive from the constants here, don't hardcode, so
+// the knob readout and the DSP name the same number.
+
+// GAIN: stored 0..1 (0.5 = 0 dB), shown as ±dB. toStored FROM the knob is the
+// identity (knob 0..1 == stored 0..1); the DISPLAY is dB. Without the
+// toStored/fromStored split the tile would write the dB reading into a 0..1
+// param and clamp -> the classic snap-back.
+inline const KnobScale& convGain() {
+  static const KnobScale s = [] {
+    KnobScale c;
+    c.toDisplay = [](double n) { return juce::jmap(n, 0.0, 1.0, -24.0, 24.0); };
+    c.fromDisplay = [](double d) { return juce::jmap(d, -24.0, 24.0, 0.0, 1.0); };
+    c.toStored = [](double n) { return n; };          // knob 0..1 == stored 0..1
+    c.fromStored = [](double d) { return d; };
+    c.format = [](double n) {
+      const double db = juce::jmap(n, 0.0, 1.0, -24.0, 24.0);
+      return juce::String(db, std::abs(db) - std::trunc(db) < 0.05 ? 0 : 1) + " dB";
+    };
+    c.editText = [](double n) { return juce::String(juce::jmap(n, 0.0, 1.0, -24.0, 24.0), 1); };
+    return c;
+  }();
+  return s;
+}
+
+// WIDTH: stored 0..1 (0 mono, 1 full stereo), shown 0..100%.
+inline const KnobScale& convWidth() {
+  static const KnobScale s = [] {
+    KnobScale c;
+    c.toDisplay = [](double n) { return n; };
+    c.fromDisplay = [](double d) { return d; };
+    c.toStored = [](double n) { return n; };
+    c.fromStored = [](double d) { return d; };
+    c.format = [](double n) { return juce::String(juce::roundToInt(n * 100.0)) + "%"; };
+    c.editText = [](double n) { return juce::String(juce::roundToInt(n * 100.0)); };
+    return c;
+  }();
+  return s;
+}
+
+// START: trim-window start in seconds of the raw IR (0..10 = the IR cap). The
+// stored domain IS seconds (a knob whose stored unit == the display unit), so
+// no toStored split is needed -- mirror the delay/chores time knobs.
+inline const KnobScale& convStart() {
+  static const KnobScale s = linear(0.0, 10.0, "s", 2);
+  return s;
+}
+
+// END: trim-window end in seconds of the raw IR; 0 = to the end.
+inline const KnobScale& convEnd() {
+  static const KnobScale s = linear(0.0, 10.0, "s", 2);
+  return s;
+}
+
+// PITCH: stored 0..1 (0.5 = unity), shown as a length scale 0.25x..4x
+// (log-uniform, same law as the engine). toStored is the identity (knob 0..1
+// == stored 0..1); the display is the scale factor.
+inline const KnobScale& convPitch() {
+  static const KnobScale s = [] {
+    KnobScale c;
+    c.toDisplay = [](double n) {
+      const double t = juce::jlimit(0.0, 1.0, n);
+      return 0.25 * std::pow(4.0 / 0.25, t);
+    };
+    c.fromDisplay = [](double sc) {
+      sc = juce::jlimit(0.25, 4.0, sc);
+      return std::log(sc / 0.25) / std::log(4.0 / 0.25);
+    };
+    c.toStored = [](double n) { return n; };          // knob 0..1 == stored 0..1
+    c.fromStored = [](double d) { return d; };
+    c.format = [](double n) {
+      const double t = juce::jlimit(0.0, 1.0, n);
+      const double sc = 0.25 * std::pow(4.0 / 0.25, t);
+      return juce::String(sc, 2) + "x";
+    };
+    c.editText = [](double n) {
+      const double t = juce::jlimit(0.0, 1.0, n);
+      return juce::String(0.25 * std::pow(4.0 / 0.25, t), 2);
+    };
+    return c;
+  }();
+  return s;
+}
 // Stored 0..1 fraction (width/spread, or an effect signature amount), shown
 // 0..100%. toDisplay MUST stay the identity: the tile writes toDisplay(v)
 // straight into the block param, and these params are stored 0..1 and clamped

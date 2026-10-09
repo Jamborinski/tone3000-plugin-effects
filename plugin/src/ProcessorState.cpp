@@ -275,6 +275,11 @@ juce::ValueTree TONE3000Processor::serializeBlockSettings(const ChainBlock& bloc
       blockState.setProperty("reverbBass", block.reverbBass, nullptr);
       blockState.setProperty("reverbBuild", block.reverbBuild, nullptr);
       blockState.setProperty("reverbSpace", block.reverbSpace, nullptr);
+      blockState.setProperty("convGain", block.convGain, nullptr);
+      blockState.setProperty("convWidth", block.convWidth, nullptr);
+      blockState.setProperty("convStartS", block.convStartS, nullptr);
+      blockState.setProperty("convEndS", block.convEndS, nullptr);
+      blockState.setProperty("convPitch", block.convPitch, nullptr);
     }
   }
 
@@ -426,6 +431,11 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
       block.reverbBass = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbBass", 0.6)));
       block.reverbBuild = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbBuild", 0.6)));
       block.reverbSpace = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbSpace", 0.7)));
+      block.convGain = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convGain", 0.5)));
+      block.convWidth = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convWidth", 1.0)));
+      block.convStartS = juce::jlimit(0.0, ConvolutionReverb::kMaxIrSeconds, static_cast<double>(blockState.getProperty("convStartS", 0.0)));
+      block.convEndS = juce::jlimit(0.0, ConvolutionReverb::kMaxIrSeconds, static_cast<double>(blockState.getProperty("convEndS", 0.0)));
+      block.convPitch = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convPitch", 0.5)));
       block.delay.setParams({block.delayTimeMs, block.delayFeedback, block.delayDamping});
       block.chorus.setParams({block.chorusRateHz, block.chorusDepthMs, block.chorusSpread,
                               block.chorusTone, block.chorusWave});

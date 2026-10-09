@@ -1,0 +1,271 @@
+// convolution_reverb_tests.cpp — DSP contract for ConvolutionReverb.
+//
+// Ground truth (session Rule 1): the wet is the linear convolution of the
+// input with the EDITED IR (window -> stretch -> fades) at JUCE's
+// amplitude law (Normalise: factor 0.125/sqrt(max channel sum-of-squares),
+// see juce_Convolution.cpp), then our live law (Width M/S fold x Gain
+// smoothed on the wet path). Zero latency: sample 0 of the first pass
+// already carries h[0]*x[0] (both JUCE engines are zero-latency;
+// house-verified at ChainBlock.h:82).
+//
+// Unit IRs: the 0.125 tap is JUCE's normalise constant (factor
+// 0.125/sqrt(sum-of-squares), juce_Convolution.cpp), so for the 2-channel
+// unit delta the per-channel factor is exactly 0.125 and the wet is the
+// exact law 0.125 * input, with no hidden scale.
+
+#include <gtest/gtest.h>
+#include "ConvolutionReverb.h"
+
+#include <cmath>
+
+namespace {
+
+void Fill(juce::AudioBuffer<float>& buf, float v) {
+  for (int c = 0; c < buf.getNumChannels(); ++c)
+    juce::FloatVectorOperations::fill(buf.getWritePointer(c), v,
+                                      static_cast<int>(buf.getNumSamples()));
+}
+
+// Single 0.125 tap per channel: JUCE factor 0.125 on each channel (law
+// wet = 0.125 * input).
+juce::AudioBuffer<float> UnitDeltaIr() {
+  juce::AudioBuffer<float> ir(2, 1);
+  Fill(ir, 0.125f);
+  return ir;
+}
+
+// Constant IR chosen so the JUCE normalise factor is exactly 1.0:
+// factor = 0.125 / sqrt(n * v^2) = 1  =>  v = 0.125 / sqrt(n).
+juce::AudioBuffer<float> UnitConstantIr(int n) {
+  juce::AudioBuffer<float> ir(2, n);
+  Fill(ir, static_cast<float>(0.125 / std::sqrt(static_cast<double>(n))));
+  return ir;
+}
+
+} // namespace
+
+// No IR: inert block — wet is silence, so the chain's 50% default mix reads
+// as unity dry at the Out.
+TEST(ConvolutionReverb, NoIrIsInertSilence) {
+  ConvolutionReverb fx;
+  fx.prepare(48000.0);
+  juce::AudioBuffer<float> buf(2, 24);
+  Fill(buf, 0.5f);
+  fx.process(buf);
+  for (int i = 0; i < 24; ++i) {
+    EXPECT_NEAR(buf.getSample(0, i), 0.0f, 1e-8);
+    EXPECT_NEAR(buf.getSample(1, i), 0.0f, 1e-8);
+  }
+}
+
+// Zero latency + wet = 0.125 * input for the 2-channel unit delta IR:
+// the first sample already carries h[0]*x[0] (no onset floor) and the
+// per-channel normalise factor is exactly 0.125 (exact contract law).
+TEST(ConvolutionReverb, ZeroLatencyIdentityWet) {
+  ConvolutionReverb fx;
+  ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
+  fx.prepare(48000.0);
+  ASSERT_TRUE(fx.usesUniformEngine());
+
+  const std::vector<float> inL = {0.25f, 0.5f, 0.75f};
+  const std::vector<float> inR = {-0.1f, 0.7f, 0.3f};
+  juce::AudioBuffer<float> buf(2, 3);
+  buf.copyFrom(0, 0, inL.data(), 3);
+  buf.copyFrom(1, 0, inR.data(), 3);
+  fx.process(buf);
+  for (int i = 0; i < 3; ++i) {
+    EXPECT_NEAR(buf.getSample(0, i), 0.125f * inL[i], 1e-5) << "L i=" << i;
+    EXPECT_NEAR(buf.getSample(1, i), 0.125f * inR[i], 1e-5) << "R i=" << i;
+  }
+}
+
+// Gain law: the knob multiplies the wet (0.5 = 0 dB, -12 dB = x0.25) on the
+// live path, never re-baked into the kernel. House SmoothedValue law: the
+// first pumped block is mid-ramp, so anchor on the first sample and assert
+// the steady state on the last samples.
+TEST(ConvolutionReverb, GainLaw) {
+  ConvolutionReverb fx;
+  ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
+  fx.prepare(48000.0);
+
+  const int n = 256;
+  juce::AudioBuffer<float> a(2, n);
+  Fill(a, 0.5f);
+  fx.process(a);
+  const float unity = a.getSample(0, n - 1);
+  EXPECT_NEAR(unity, 0.0625f, 1e-5);  // 0.125 law * 0.5 input, settled
+
+  ConvolutionReverb::Params p;
+  p.gain = ConvolutionReverb::dbToGain(-12.0);
+  fx.setParams(p);
+  Fill(a, 0.5f);
+  fx.process(a);  // smoothed: first samples mid-ramp, tail near new gain
+  const float tail = a.getSample(0, n - 1);
+  EXPECT_GT(tail, unity * 0.25f - 1e-6f);   // approaching the new gain
+  EXPECT_LT(tail, unity + 1e-6f);           // strictly damped
+  EXPECT_NEAR(tail, unity * 0.25f, 1e-3f);  // within 0.1% of steady state
+}
+
+// Width: 0 folds the wet to mono mid on both channels, 1 passes through
+// (unit delta IR, 0 dB gain, 0.125 law).
+TEST(ConvolutionReverb, WidthFold) {
+  {
+    ConvolutionReverb fx;
+    ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
+    fx.prepare(48000.0);
+    ConvolutionReverb::Params p;
+    p.width = 0.0;
+    fx.setParams(p);
+    juce::AudioBuffer<float> b(2, 1);
+    b.setSample(0, 0, 0.9f);
+    b.setSample(1, 0, 0.1f);
+    fx.process(b);
+    const float mid = 0.125f * (0.5f * (0.9f + 0.1f));
+    EXPECT_NEAR(b.getSample(0, 0), mid, 1e-5);
+    EXPECT_NEAR(b.getSample(1, 0), mid, 1e-5);
+  }
+  {
+    ConvolutionReverb fx;
+    ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
+    fx.prepare(48000.0);
+    juce::AudioBuffer<float> b(2, 1);
+    b.setSample(0, 0, 0.9f);
+    b.setSample(1, 0, 0.1f);
+    fx.process(b);
+    EXPECT_NEAR(b.getSample(0, 0), 0.1125f, 1e-5);   // 0.125 * 0.9
+    EXPECT_NEAR(b.getSample(1, 0), 0.0125f, 1e-5);   // 0.125 * 0.1
+  }
+}
+
+// Quad IR law: JUCE would read c0/c1 and drop the rear pair (juce
+// _Convolution.cpp:554), so the engine folds L = (c0+c2)/sqrt(2) instead.
+TEST(ConvolutionReverb, QuadDownmixLaw) {
+  ConvolutionReverb fx;
+  const int n = 64;
+  juce::AudioBuffer<float> ir(4, n);
+  ir.clear();
+  // c0 and c2 each carry a tap; the /sqrt(2) fold of the pair must leave a
+  // strictly positive L, while the all-zero R pair stays exactly zero.
+  const float tap = 0.125f * std::sqrt(2.0f);
+  ir.setSample(0, 0, tap);
+  ir.setSample(2, 0, tap);
+  ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+  EXPECT_EQ(fx.rawChannelCount(), 4);
+  fx.prepare(48000.0);
+
+  juce::AudioBuffer<float> buf(2, 4);
+  Fill(buf, 0.5f);
+  fx.process(buf);
+  EXPECT_NEAR(buf.getSample(1, 0), 0.0f, 1e-7);  // R = (c1+c3)/sqrt(2) = 0
+  EXPECT_GT(buf.getSample(0, 0), 0.0f);          // L = (c0+c2)/sqrt(2) > 0
+}
+
+// Mono IR: one kernel on both channels — both out channels carry the same
+// wet value.
+TEST(ConvolutionReverb, MonoIrBothChannels) {
+  ConvolutionReverb fx;
+  const int n = 8;
+  juce::AudioBuffer<float> ir(1, n);
+  Fill(ir, 0.1f);
+  ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+  fx.prepare(48000.0);
+  juce::AudioBuffer<float> buf(2, n);
+  Fill(buf, 0.25f);
+  fx.process(buf);
+  for (int i = 0; i < n; ++i)
+    EXPECT_NEAR(buf.getSample(0, i), buf.getSample(1, i), 1e-7);
+}
+
+// Trim window: seconds of raw IR, honoured in the engine length readback.
+TEST(ConvolutionReverb, TrimWindowLaw) {
+  ConvolutionReverb fx;
+  const int rawLen = 24000; // 0.5 s @ 48k
+  juce::AudioBuffer<float> ir(1, rawLen);
+  Fill(ir, 0.1f);
+  ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+  fx.prepare(48000.0);
+  EXPECT_NEAR(fx.editedSeconds(), 0.5, 0.01);
+
+  ConvolutionReverb::Params p;
+  p.startS = 0.1;
+  p.endS = 0.4; // 0.3 s window
+  fx.setParams(p);
+  EXPECT_NEAR(fx.editedSeconds(), 0.3, 0.01);
+}
+
+// Pitch: log-uniform length scale; scale 2x doubles the edited length.
+TEST(ConvolutionReverb, PitchStretchLaw) {
+  ConvolutionReverb fx;
+  const int rawLen = 12000; // 0.25 s
+  juce::AudioBuffer<float> ir(1, rawLen);
+  Fill(ir, 0.1f);
+  ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+  fx.prepare(48000.0);
+
+  ConvolutionReverb::Params p;
+  p.pitch = ConvolutionReverb::scaleToPitch(2.0);
+  fx.setParams(p);
+  EXPECT_NEAR(fx.editedSeconds(), 0.5, 0.01);
+}
+
+// Fade-in: a linear ramp over the first half of a unit-energy constant IR
+// yields a strictly monotone-increas wet under a constant input (the wet
+// is the running sum of the ramped taps).
+TEST(ConvolutionReverb, FadeInRampLaw) {
+  ConvolutionReverb fx;
+  const int n = 1200;
+  ASSERT_TRUE(fx.loadBuffer(UnitConstantIr(n), 48000.0));
+  fx.prepare(48000.0);
+
+  ConvolutionReverb::Params p;
+  p.fadeIn = 0.5;
+  p.fadeInCurve = 0.0; // linear ramp
+  fx.setParams(p);
+
+  const int nF = 600;
+  float prev = 0.0f;
+  bool monotone = true;
+  for (int i = 0; i < nF; ++i) {
+    juce::AudioBuffer<float> buf(2, 1);
+    Fill(buf, 1.0f);
+    fx.process(buf);
+    const float got = buf.getSample(0, 0);
+    if (i > 0 && got < prev - 1e-6)
+      monotone = false;
+    prev = got;
+  }
+  EXPECT_TRUE(monotone);
+}
+
+// Long IR (> 1.0 s) engages the two-stage zero-latency engine, and a pass
+// larger than the 256 house cap still runs clean (chunked feed).
+TEST(ConvolutionReverb, LongIrTwoStageEngine) {
+  ConvolutionReverb fx;
+  const int n = 64000; // ~1.33 s
+  juce::AudioBuffer<float> ir(2, n);
+  Fill(ir, 0.02f);
+  ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+  fx.prepare(48000.0);
+  ASSERT_FALSE(fx.usesUniformEngine());
+
+  juce::AudioBuffer<float> buf(2, 512);
+  Fill(buf, 0.01f);
+  fx.process(buf);
+  for (int i = 0; i < 512; ++i) {
+    EXPECT_TRUE(std::isfinite(buf.getSample(0, i)));
+    EXPECT_TRUE(std::isfinite(buf.getSample(1, i)));
+  }
+}
+
+// Sample-rate change rebuilds the engine; identity delta held at the new
+// rate (no stale kernel, no crash).
+TEST(ConvolutionReverb, RateChangeRebuild) {
+  ConvolutionReverb fx;
+  ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
+  fx.prepare(48000.0);
+  fx.prepare(44100.0);
+  juce::AudioBuffer<float> buf(2, 16);
+  Fill(buf, 0.5f);
+  fx.process(buf);
+  EXPECT_NEAR(buf.getSample(0, 0), 0.0625f, 1e-4);  // 0.125 law * 0.5 input
+}

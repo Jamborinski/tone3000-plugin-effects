@@ -515,4 +515,38 @@ TEST(ProcessorTest, ReverbParamsAreAcceptedBySetBlockParam) {
   EXPECT_TRUE(proc.setBlockParam(id, "reverbWidth", 0.5)) << "reverbWidth rejected";
 }
 
+TEST(ProcessorTest, ConvolutionParamsAreAcceptedBySetBlockParam) {
+  // Same regression guard as the reverb family: the five Convolution knobs
+  // (Gain/Width/Start/End/Length) must each survive the known-param
+  // allow-list, apply to the block, and round-trip through the state.
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto id = proc.addEffectBlock(EffectKind::Convolution, "left", 0);
+  ASSERT_FALSE(id.empty()) << "addEffectBlock(Convolution) was rejected";
+  EXPECT_TRUE(proc.setBlockParam(id, "convGain", 0.7)) << "convGain rejected";
+  EXPECT_TRUE(proc.setBlockParam(id, "convWidth", 0.3)) << "convWidth rejected";
+  EXPECT_TRUE(proc.setBlockParam(id, "convStartS", 1.5)) << "convStartS rejected";
+  EXPECT_TRUE(proc.setBlockParam(id, "convEndS", 4.0)) << "convEndS rejected";
+  EXPECT_TRUE(proc.setBlockParam(id, "convPitch", 0.9)) << "convPitch rejected";
+}
+
+TEST(ProcessorTest, ConvolutionBlockRunsDryUntilAnIrIsLoaded) {
+  // With no kernel installed the wet path is silence, so the house mix
+  // (dry(1-m) + wet*m at the balanced 0.5 default) yields 0.5x the input:
+  // the block is inaudible-on-its-own but still live in the chain, exactly
+  // like a tone block with no model. (A flat pass-through would read 0 dB.)
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto id = proc.addEffectBlock(EffectKind::Convolution, "left", 0);
+  ASSERT_FALSE(id.empty());
+  const int total = 93 * 512;
+  const auto in = makeSine(total, 997.0, 0.5f, 48000.0);
+  const auto out = processThrough(proc, in, 512);
+  EXPECT_NEAR(settledGainDb(out, in, 997.0, 48000.0), -6.0, 0.3)
+      << "a Convolution block without an IR must sit at its dry/wet mix (0.5) -- "
+         "0 dB means it leaked dry as wet, +inf/nan means it went silent or died";
+}
+
 }  // namespace

@@ -19,6 +19,7 @@ target_sources(DspTests PRIVATE
     src/auto_offset_tests.cpp
     src/branch_tests.cpp
     src/clipboard_tests.cpp
+    src/convolution_reverb_tests.cpp
     src/dsp_tests.cpp
     src/dual_mono_tests.cpp
     src/duplicate_tests.cpp
@@ -57,6 +58,7 @@ target_sources(DspTests PRIVATE
     ../plugin/src/AutoOffset.cpp
     ../plugin/src/BlockEq.cpp
     ../plugin/src/BlockSpectrum.cpp
+    ../plugin/src/ConvolutionReverb.cpp
     ../plugin/src/Chorus.cpp
     ../plugin/src/Delay.cpp
     ../plugin/src/LegacyParamIds.cpp

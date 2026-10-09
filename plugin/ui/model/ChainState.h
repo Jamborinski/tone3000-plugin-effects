@@ -186,6 +186,15 @@ struct ChainItem {
   int reverbType0 = 0, reverbType1 = 0, reverbType2 = 0;
   int reverbType3 = 0, reverbType4 = 0, reverbType5 = 0;
 
+  // Convolution block (EffectKind::Convolution): the five user controls plus
+  // the loaded IR's name (display only; the IR data does not persist).
+  double convGain = 0.5;
+  double convWidth = 1.0;
+  double convStartS = 0.0;
+  double convEndS = 0.0;
+  double convPitch = 0.5;
+  juce::String convIrName;
+
   bool isTone() const { return !isInsert && !isEffect; }
 };
 

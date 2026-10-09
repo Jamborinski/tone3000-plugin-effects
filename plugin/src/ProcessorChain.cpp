@@ -391,6 +391,57 @@ std::string TONE3000Processor::addEffectBlock(EffectKind kind, const juce::Strin
   return newId;
 }
 
+juce::var TONE3000Processor::loadConvIr(const std::string& blockId,
+                                        const juce::File& file) {
+  // Message-thread method (see the header contract): takes the lock itself,
+  // builds the engine synchronously, so by the time this returns the block
+  // is live. No history push: an IR load is not an undoable param change in
+  // v1 (the block's settings still are).
+  juce::ScopedLock lock(chainMutex);
+  auto err = [&](const juce::String& message) {
+    auto* obj = new juce::DynamicObject();
+    obj->setProperty("blockId", juce::String(blockId));
+    obj->setProperty("error", message);
+    return juce::var(obj);
+  };
+  ChainBlock* block = findBlockById(blockId);
+  if (block == nullptr || block->type != ChainBlockType::EFFECT ||
+      block->effectKind != EffectKind::Convolution)
+    return err("Target block is not a Convolution block");
+  if (!file.existsAsFile())
+    return err("File not found: " + file.getFileName());
+
+  // Decode to float (house reader path, see ProcessorModelLoader.cpp):
+  // the IR's own sample rate + channel layout ride along so the engine
+  // resamples and folds (quad law) exactly once at install.
+  juce::AudioFormatManager formatManager;
+  formatManager.registerBasicFormats();
+  std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(file));
+  if (reader == nullptr)
+    return err("Could not decode " + file.getFileName() + " (use wav / aiff)");
+  const int ch = juce::jlimit(1, 4, static_cast<int>(reader->numChannels));
+  juce::AudioBuffer<float> buf(ch, static_cast<int>(reader->lengthInSamples));
+  if (!reader->read(&buf, 0, buf.getNumSamples(), 0, true, true))
+    return err("Could not read " + file.getFileName());
+
+  juce::String loadError;
+  if (!block->conv.loadBuffer(buf, reader->sampleRate, &loadError,
+                              file.getFileName()))
+    return err(loadError);
+
+  // The engine was built + installed synchronously inside loadBuffer (JUCE
+  // runs its background build to completion when a prepared rate is already
+  // set), so the block is live right now. Ship the loaded IR's name to the
+  // tile readout via the chain state (display only; not persisted).
+  bumpChainRevision();
+
+  auto* obj = new juce::DynamicObject();
+  obj->setProperty("blockId", juce::String(blockId));
+  obj->setProperty("irName", block->conv.irName());
+  obj->setProperty("seconds", static_cast<double>(block->conv.editedSeconds()));
+  return juce::var(obj);
+}
+
 std::string TONE3000Processor::duplicateChainBlock(const std::string& sourceBlockId,
                                                    const juce::String& side, int index) {
   // Structural like reorder/move (a whole new block splices into the running
@@ -1063,6 +1114,10 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
     double reverbBuild = 0.0, reverbSpace = 0.0;
     int reverbType0 = 0, reverbType1 = 0, reverbType2 = 0;
     int reverbType3 = 0, reverbType4 = 0, reverbType5 = 0;
+    double convGain = 0.5, convWidth = 1.0;
+    double convStartS = 0.0, convEndS = 0.0;
+    double convPitch = 0.5;
+    juce::String convIrName;  // the IR this block is running (session data; display only)
   };
 
   juce::uint32 revision = 0;
@@ -1162,6 +1217,12 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
           row.reverbBass = block->reverbBass;
           row.reverbBuild = block->reverbBuild;
           row.reverbSpace = block->reverbSpace;
+          row.convGain = block->convGain;
+          row.convWidth = block->convWidth;
+          row.convStartS = block->convStartS;
+          row.convEndS = block->convEndS;
+          row.convPitch = block->convPitch;
+          row.convIrName = block->conv.irName();
           row.enabled = block->enabled;
           row.inputGain = block->inputGainNormalized;
           row.outputGain = block->outputGainNormalized;
@@ -1310,6 +1371,11 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
         params->setProperty("reverbBass", row.reverbBass);
         params->setProperty("reverbBuild", row.reverbBuild);
         params->setProperty("reverbSpace", row.reverbSpace);
+        params->setProperty("convGain", row.convGain);
+        params->setProperty("convWidth", row.convWidth);
+        params->setProperty("convStartS", row.convStartS);
+        params->setProperty("convEndS", row.convEndS);
+        params->setProperty("convPitch", row.convPitch);
         item->setProperty("params", juce::var(params.get()));
         chainArray.add(juce::var(item.get()));
         continue;
@@ -1339,6 +1405,10 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
       // Long (reverb-like) IR: drives the UI's Mix knob default/Alt-click
       // reset and the Out knob help (long IRs carry no -18 dB pad).
       item->setProperty("irLong", row.irLong);
+      // Convolution block's loaded IR (display only; the IR data itself is
+      // session and does not persist).
+      if (row.convIrName.isNotEmpty())
+        item->setProperty("convIrName", row.convIrName);
 
       if (row.hasInputDbu)
         item->setProperty("inputLevelDbu", row.inputDbu);
@@ -1722,7 +1792,7 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
                              param == "tremoloSpread" || param == "tremoloWave" ||
                              param == "compRatio" || param == "compAttackMs" ||
                              param == "compReleaseMs" || param == "compToneDb" ||
-                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbType0" || param == "reverbType1" || param == "reverbType2" || param == "reverbType3" || param == "reverbType4" || param == "reverbType5" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace";
+                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbType0" || param == "reverbType1" || param == "reverbType2" || param == "reverbType3" || param == "reverbType4" || param == "reverbType5" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace" || param == "convGain" || param == "convWidth" || param == "convStartS" || param == "convEndS" || param == "convPitch";
   const bool isContinuous = param == "inputGain" || param == "outputGain" || param == "mix" ||
                             isEffectParam;
   const bool isKnown = isContinuous || param == "enabled" || param == "normalize";
@@ -1996,6 +2066,23 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
   } else if (param == "reverbSpace") {
     block->reverbSpace = juce::jlimit(0.0, 1.0, value);
     block->reverb.setParams(block->reverbParams());
+  } else if (param == "convGain") {
+    block->convGain = juce::jlimit(0.0, 1.0, value);
+    block->conv.setParams(block->convParams());
+  } else if (param == "convWidth") {
+    block->convWidth = juce::jlimit(0.0, 1.0, value);
+    block->conv.setParams(block->convParams());
+  } else if (param == "convStartS") {
+    // Trim times are in seconds of the raw IR; clamp to the IR cap.
+    block->convStartS = juce::jlimit(0.0, ConvolutionReverb::kMaxIrSeconds, value);
+    block->conv.setParams(block->convParams());
+  } else if (param == "convEndS") {
+    // 0 = to the end; otherwise clamp to the IR cap.
+    block->convEndS = juce::jlimit(0.0, ConvolutionReverb::kMaxIrSeconds, value);
+    block->conv.setParams(block->convParams());
+  } else if (param == "convPitch") {
+    block->convPitch = juce::jlimit(0.0, 1.0, value);
+    block->conv.setParams(block->convParams());
   }
 
   // Continuous drags settle into one bump after the gesture ends; discrete

@@ -16,18 +16,20 @@
 #include "Tremolo.h"
 #include "Compressor.h"
 #include "Reverb.h"
+#include "ConvolutionReverb.h"
 
 // Chain block types
 enum class ChainBlockType { NAM, IR, INSERT, EFFECT };
 
 // Which built-in effect a ChainBlockType::EFFECT block runs (see Delay.h /
 // Chorus.h): one self-contained DSP module, no model to load or stream.
-enum class EffectKind { Delay, Chorus, Tremolo, Compressor, Reverb };
+enum class EffectKind { Delay, Chorus, Tremolo, Compressor, Reverb, Convolution };
 inline juce::String effectKindToString(EffectKind kind) {
   if (kind == EffectKind::Chorus) return "chorus";
   if (kind == EffectKind::Tremolo) return "tremolo";
   if (kind == EffectKind::Compressor) return "compressor";
   if (kind == EffectKind::Reverb) return "reverb";
+  if (kind == EffectKind::Convolution) return "convolution";
   return "delay";
 }
 inline EffectKind effectKindFromString(const juce::String& s) {
@@ -35,6 +37,7 @@ inline EffectKind effectKindFromString(const juce::String& s) {
   if (s == "tremolo") return EffectKind::Tremolo;
   if (s == "compressor") return EffectKind::Compressor;
   if (s == "reverb") return EffectKind::Reverb;
+  if (s == "convolution") return EffectKind::Convolution;
   return EffectKind::Delay;
 }
 
@@ -390,11 +393,36 @@ struct ChainBlock {
             reverbBass, reverbBuild, reverbSpace,
             reverbType0, reverbType1, reverbType2, reverbType3, reverbType4, reverbType5};
   }
+  // Convolution (EffectKind::Convolution): IR-driven convolution reverb (see
+  // ConvolutionReverb.h). Five user controls, all normalised except the two
+  // trim times (seconds of the raw IR). Pre-delay, fades and fade curves run
+  // on the engine's own defaults (not persisted in v1). The IR itself is
+  // session data loaded into `conv` (the block's IR data is NOT part of the
+  // chain state: the house IR path keeps its IR on the tone/model machinery,
+  // an effect block has no model slot to hang it on).
+  double convGain = 0.5;    // 0..1 stored; 0.5 = 0 dB (±24 dB span)
+  double convWidth = 1.0;   // 0..1 (stereo width fold)
+  double convStartS = 0.0;  // trim window start, seconds of raw IR (0 = 0).
+  double convEndS = 0.0;    // trim window end (0 = to the end).
+  double convPitch = 0.5;   // 0..1 stored; 0.5 = unity (0.25x..4x length)
+  /** Mirror the convolution block's controls into the engine in one call.
+      Starts from the engine's own default Params, so the non-persisted
+      fields (preMs, the fades + curves) keep their documented defaults. */
+  ConvolutionReverb::Params convParams() const {
+    ConvolutionReverb::Params p;  // preMs/fades/curves = class defaults
+    p.gain = convGain;
+    p.width = convWidth;
+    p.startS = convStartS;
+    p.endS = convEndS;
+    p.pitch = convPitch;
+    return p;
+  }
   Delay delay;
   Chorus chorus;
   Tremolo tremolo;
   Compressor compressor;
   Reverb reverb;
+  ConvolutionReverb conv;
 
   /** Spread-family lane hint (see Delay::setLane): tells the L/R engines
       which side of the pair this block's signal is, so the split is the same

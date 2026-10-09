@@ -64,6 +64,10 @@ public:
   bool clearBranch();
   // Fire-and-forget (safe at drag rates); no resync.
   void setBlockParam(const std::string& blockId, const juce::String& param, double value);
+  // Convolution block: install an IR file. Returns the result var
+  // ({ blockId, irName, seconds } or { blockId, error }); call on the UI
+  // thread (blocks on the backend run).
+  juce::var loadConvIr(const std::string& blockId, const juce::File& file);
   void setBlockParam(const std::string& blockId, const juce::String& param, bool value) {
     setBlockParam(blockId, param, value ? 1.0 : 0.0);
   }

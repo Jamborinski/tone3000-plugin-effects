@@ -136,6 +136,10 @@ void ChainStore::setBlockParam(const std::string& blockId, const juce::String& p
   backend_.setBlockParam(blockId, param, value);
 }
 
+juce::var ChainStore::loadConvIr(const std::string& blockId, const juce::File& file) {
+  return run([&] { return backend_.loadConvIr(blockId, file); });
+}
+
 void ChainStore::setBlockEqBand(const std::string& blockId, int bandIndex, const EqBand& band) {
   backend_.setBlockEqBand(blockId, bandIndex, band.toVar());
 }

@@ -78,6 +78,8 @@ public:
 
   // Per-block params / EQ / spectrum
   virtual bool setBlockParam(const std::string& blockId, const juce::String& param, double value) = 0;
+  // Convolution block: install an IR file (see TONE3000Processor::loadConvIr).
+  virtual juce::var loadConvIr(const std::string& blockId, const juce::File& file) = 0;
   virtual bool setBlockSlimSize(const std::string& blockId, double slimSize) = 0;
   virtual bool setBlockEqBand(const std::string& blockId, int bandIndex, const juce::var& band) = 0;
   virtual bool setBlockEqEnabled(const std::string& blockId, bool enabled) = 0;

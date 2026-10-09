@@ -214,6 +214,13 @@ ChainItem parseItem(const juce::var& v) {
     item.reverbBass = num(v["params"], "reverbBass", 0.6);
     item.reverbBuild = num(v["params"], "reverbBuild", 0.6);
     item.reverbSpace = num(v["params"], "reverbSpace", 0.7);
+    // Convolution block controls (params) + loaded IR name (block top level).
+    item.convGain = num(v["params"], "convGain", 0.5);
+    item.convWidth = num(v["params"], "convWidth", 1.0);
+    item.convStartS = num(v["params"], "convStartS", 0.0);
+    item.convEndS = num(v["params"], "convEndS", 0.0);
+    item.convPitch = num(v["params"], "convPitch", 0.5);
+    item.convIrName = str(v, "convIrName", "");
     item.params = parseParams(v["params"]);
     return item;
   }

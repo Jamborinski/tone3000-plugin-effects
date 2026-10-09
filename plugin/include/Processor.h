@@ -221,6 +221,19 @@ public:
   // block's id, or "" if rejected (right lane without stereo mode).
   std::string addEffectBlock(EffectKind kind, const juce::String& side, int index);
 
+  /** Load an IR file into a Convolution (EffectKind::Convolution) block.
+      Reads the file (any format the basic formats cover — wav/aiff; mono,
+      stereo or quad), folds the channels (quad law) and installs the engine
+      on the message thread (JUCE builds synchronously; no background load,
+      so the block is live the moment this returns). Message thread, no lock
+      (takes chainMutex itself). Returns { blockId, error? } — the error
+      string is user-facing (file not found, decode failed, over the 10 s
+      cap, block not a Convolution). The IR is session data: not persisted,
+      not part of the chain state (see ChainBlock.h).
+      ChainState's block tree is untouched except the block's conv params,
+      which the block owns. */
+  juce::var loadConvIr(const std::string& blockId, const juce::File& file);
+
   // TONE3000 OAuth access token. Updated by the UI after the Select flow and
   // again on every refresh. `fetchModelFromUrl` attaches it as a Bearer header
   // because the new TONE3000 model_url endpoints reject anonymous requests.

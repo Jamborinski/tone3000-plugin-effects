@@ -22,6 +22,8 @@ namespace t3k::ui {
 
 class EffectTile : public GalleryTile {
  public:
+  JUCE_DECLARE_WEAK_REFERENCEABLE(EffectTile)
+ public:
   EffectTile(Services& services, const ChainItem& block, int size);
 
   // A fresh snapshot of the same block (resync).
@@ -58,6 +60,13 @@ class EffectTile : public GalleryTile {
   // cycle button); loads that mode's default timing + threshold.
   void enterMode(int m);
   void syncCompSig(int m);  // bind the slot right of SC: KNEE (VCA) / CLIP (1-4)
+
+  // Convolution: the IR load picker (our-own, not copied from a tone tile --
+  // a tone swap vs. a kernel install are different acts, so this is a plain
+  // FileChooser here). On OK, installs the IR through the chain store and
+  // flashes the toast on success/failure.
+  void enterConvIrFile();
+  void updateConvIrLabel();
 
   ChainItem block_;
   bool enabled_ = true;  // optimistic; native converges via the resync
@@ -109,6 +118,16 @@ class EffectTile : public GalleryTile {
   // Sits right of the mode cycler; each mode remembers its own type
   // (block_.reverbType0..5, the sig-family precedent). reverb-modes.md.
   juce::TextButton typeCycle_;
+
+  // Convolution only: the IR load control + the loaded kernel's readout
+  // (name + seconds). Not a KnobScale (there's no param to write); it just
+  // surfaces the session IR and offers the picker.
+  juce::TextButton convIrButton_;
+  juce::Label convIrLabel_;
+  // The picker lives between the open and its async callback (launchAsync
+  // is the only launch in this JUCE build -- no showOKDialog), so it is a
+  // member, guarded exactly like LocalFiles' chooser.
+  std::unique_ptr<juce::FileChooser> convIrChooser_;
 
   // Delay only: the mode-set signature KNOB -- the mode's UNIQUE control.
   // PING/CHIP are continuous 0..100% (scales::fraction01), HEADS steps 1/2/3/4

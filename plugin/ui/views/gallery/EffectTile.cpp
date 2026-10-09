@@ -1,5 +1,6 @@
 #include "EffectTile.h"
 
+#include "core/Fonts.h"
 #include "core/Help.h"
 #include "core/Icons.h"
 #include "core/Paint.h"
@@ -242,6 +243,14 @@ std::vector<EffectParams> paramsFor(const ChainItem& b) {
         {&scales::reverbSize(), "reverbSize", "Size", b.reverbSize, help::Key::reverbSize},
         {&scales::reverbWidth(), "reverbWidth", "Width", b.reverbWidth, help::Key::reverbWidth},
     };
+  if (k == "convolution")
+    return {
+        {&scales::convGain(), "convGain", "Gain", b.convGain, help::Key::convGain},
+        {&scales::convWidth(), "convWidth", "Width", b.convWidth, help::Key::convWidth},
+        {&scales::convStart(), "convStartS", "Start", b.convStartS, help::Key::convStartS},
+        {&scales::convEnd(), "convEndS", "End", b.convEndS, help::Key::convEndS},
+        {&scales::convPitch(), "convPitch", "Length", b.convPitch, help::Key::convPitch},
+    };
   return {
       {&scales::chorusRateHz(), "chorusRateHz", "Rate", b.chorusRateHz, help::Key::effectRate},
       {&scales::chorusDepthMs(), "chorusDepthMs", "Depth", b.chorusDepthMs,
@@ -263,7 +272,8 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
       delaySynced_(block.effectKind == "delay" && block.delaySynced),
       numParams_(block.effectKind == "compressor" ? 7
                  : (block.effectKind == "delay" || block.effectKind == "reverb" ||
-                    block.effectKind == "chorus" || block.effectKind == "tremolo" ? 5
+                    block.effectKind == "chorus" || block.effectKind == "tremolo" ||
+                    block.effectKind == "convolution" ? 5
                     : 3)),
       compact_(size <= gallery::kStereoTileSize),
       mix_(knob("Mix", scales::percent(), 1.0f, help::Key::effectMix,
@@ -556,17 +566,36 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
     }
   }
 
+  // Convolution only: the IR picker + the loaded kernel's readout. Our own
+  // control set (not the tone-tile load menu) -- installing a kernel onto an
+  // effect block is a different act from swapping a model tone, so a plain
+  // FileChooser here, wired to the block's loadConvIr, and a live name/length
+  // readout. The five knobs (Gain/Width/Start/End/Length) come from knobs().
+  if (block_.effectKind == "convolution") {
+    convIrButton_.setButtonText(block_.convIrName.isNotEmpty() ? "Change IR" : "Load IR");
+    convIrButton_.setHelpText(help::text(help::Key::convIrLoad));
+    convIrButton_.onClick = [this] { this->enterConvIrFile(); };
+    addAndMakeVisible(convIrButton_);
+
+    convIrLabel_.setFont(Fonts::sans(11));
+    convIrLabel_.setColour(juce::Label::textColourId, theme::kGray);
+    addAndMakeVisible(convIrLabel_);
+    updateConvIrLabel();
+  }
+
   const bool isDelay = block_.effectKind == "delay";
   const bool isTrem = block_.effectKind == "tremolo";
   const bool isComp = block_.effectKind == "compressor";
   const bool isReverb = block_.effectKind == "reverb";
+  const bool isConv = block_.effectKind == "convolution";
   setTitle(isDelay ? "Delay"
-           : isTrem ? "Tremolo" : (isComp ? "Compressor" : (isReverb ? "Reverb" : "Chorus")));
+           : isTrem ? "Tremolo" : (isComp ? "Compressor" : (isReverb ? "Reverb" : (isConv ? "Convolver" : "Chorus"))));
   setHelpText(help::text(isDelay ? help::Key::effectDelay
                   : isTrem ? help::Key::effectTremolo
                   : isComp ? help::Key::effectCompressor
                   : isReverb ? help::Key::effectReverb
-                             : help::Key::effectChorus));
+                  : isConv ? help::Key::effectConvolution
+                           : help::Key::effectChorus));
 
   syncKnobs();
   applySync();
@@ -579,6 +608,8 @@ void EffectTile::setBlock(const ChainItem& block) {
   power_.setOn(enabled_);
   if (block_.effectKind == "compressor")
     mbcToggle_.setToggleState(block_.compMbc, juce::dontSendNotification);
+  if (block_.effectKind == "convolution")
+    updateConvIrLabel();  // pick up the loaded-kernel name / button caption
   syncKnobs();
   applySync();
   updateSyncLabel();
@@ -901,6 +932,60 @@ void EffectTile::syncReverbMode() {
   resized();
 }
 
+void EffectTile::enterConvIrFile() {
+  if (block_.effectKind != "convolution")
+    return;
+  // Re-entry guard: one picker at a time (a request while a dialog is up is
+  // resolved as cancelled), exactly like LocalFiles. launchAsync is the only
+  // launch in this JUCE build (no showOkDialog), so the chooser is a member
+  // outliving the callback and a WeakReference guards it against us vanishing.
+  if (convIrChooser_ != nullptr)
+    return;
+  // Mono / stereo / quad wav (the quad law folds the rear pair on load);
+  // aiff too - both decode through the house basic-formats reader.
+  convIrChooser_ = std::make_unique<juce::FileChooser>("Load IR", juce::File{},
+                                                       juce::String("*.wav;*.wave;*.aiff;*.aif"));
+  const auto target = blockId();
+  juce::WeakReference<EffectTile> self(this);
+  convIrChooser_->launchAsync(juce::FileBrowserComponent::openMode |
+                                  juce::FileBrowserComponent::canSelectFiles,
+                              [self, target](const juce::FileChooser& chooser) {
+                                if (self == nullptr)
+                                  return;
+                                // Release the chooser once its callback unwinds (it is the caller).
+                                juce::MessageManager::callAsync([self] {
+                                  if (self != nullptr)
+                                    self->convIrChooser_.reset();
+                                });
+                                const auto results = chooser.getResults();
+                                if (results.isEmpty())
+                                  return;
+                                const juce::var res =
+                                    self->services().chain.loadConvIr(target, results.getReference(0));
+                                const juce::String error = res["error"].toString();
+                                if (error.isNotEmpty()) {
+                                  self->services().toast.show(error);
+                                  return;
+                                }
+                                const juce::String name = res["irName"].toString();
+                                self->services().toast.show(
+                                    name.isEmpty() ? juce::String("IR loaded") : name + juce::String(" loaded"));
+                                // A load resyncs the chain (it bumps the revision); pull the
+                                // readout forward so the tile shows the kernel at once.
+                                self->updateConvIrLabel();
+                              });
+}
+
+void EffectTile::updateConvIrLabel() {
+  if (block_.effectKind != "convolution")
+    return;
+  convIrLabel_.setText(block_.convIrName.isNotEmpty()
+                           ? block_.convIrName
+                           : juce::String("No IR loaded"),
+                       juce::dontSendNotification);
+  convIrButton_.setButtonText(block_.convIrName.isNotEmpty() ? "Change IR" : "Load IR");
+}
+
 void EffectTile::applySync() {
   if (block_.effectKind != "delay")
     return;
@@ -946,6 +1031,11 @@ void EffectTile::resized() {
   if (block_.effectKind == "reverb" && compact_) {
     modeCycle_.setBounds(28, 4, 34, 20);  // the icon slot (reverb has no Sync): the mode cycler (34px, the comp/delay width so the title clears)
     typeCycle_.setBounds(66, 4, 34, 20); // the per-mode TYPE cycler (3-char id), right of it
+  } else if (block_.effectKind == "convolution") {
+    // The y=44 band: the loaded-kernel readout on the left, the Load IR
+    // button right-aligned. (Same band the mode selector uses.)
+    convIrLabel_.setBounds(4, 44, W - 4 - 84 - 12, 16);
+    convIrButton_.setBounds(W - 4 - 80, 42, 80, 22);
   }
 
   const int knobH =
@@ -955,7 +1045,7 @@ void EffectTile::resized() {
   const int row2Y = row1Y + knobH + rowGap;
   const bool reverb = block_.effectKind == "reverb";
   const bool chorus = block_.effectKind == "chorus";
-  const bool five = delay || compressor || reverb || chorus || (block_.effectKind == "tremolo");
+  const bool five = delay || compressor || reverb || chorus || (block_.effectKind == "tremolo") || (block_.effectKind == "convolution");
   // The full delay tile carries a seventh and eighth knob (the shared Mod +
   // the mode's unique sig), so it runs a 5-column grid: row 1 =
   // Mix/Time/BPM/Div/Fb, row 2 = In/Width/Mod/[unique]/Out (the unique

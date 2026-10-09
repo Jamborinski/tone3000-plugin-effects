@@ -118,6 +118,9 @@ bool ProcessorBackend::setBlockParam(const std::string& blockId, const juce::Str
                                      double value) {
   return processor_.setBlockParam(blockId, param, value);
 }
+juce::var ProcessorBackend::loadConvIr(const std::string& blockId, const juce::File& file) {
+  return processor_.loadConvIr(blockId, file);
+}
 bool ProcessorBackend::setBlockSlimSize(const std::string& blockId, double slimSize) {
   return processor_.setBlockSlimSize(blockId, slimSize);
 }

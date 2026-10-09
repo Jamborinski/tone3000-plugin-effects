@@ -192,6 +192,15 @@ std::map<Key, String> buildTable() {
       U("Add Compressor: insert a built-in multi-mode compressor in this slot. Right-click to tune ratio, attack, release, tone and mode.");
   t[Key::addEffectReverb] =
       U("Add Reverb: insert a digital comb-bank reverb in this slot. Right-click to tune decay, pre-delay, tone, size and modulation.");
+  t[Key::addEffectConvolution] =
+      U("Add Convolver: insert a true-conversion reverb block. Load an IR (mono/stereo/quad wav) to tune trim, length scale, width and gain.");
+  t[Key::effectConvolution] = U("Convolution setting: adjust the value for this block.");
+  t[Key::convGain] = knobDesktop("Gain", "convolver output level, -24..+24 dB (0.5 = unity). The IR is energy-normalised on load.");
+  t[Key::convWidth] = knobDesktop("Width", "stereo width - 0 = mono (L == R), 1 = full stereo fold.");
+  t[Key::convStartS] = knobDesktop("Start", "trim window start, in seconds of the raw IR (0 = from the top). Rebuilds the kernel.");
+  t[Key::convEndS] = knobDesktop("End", "trim window end, in seconds of the raw IR (0 = to the end). Rebuilds the kernel.");
+  t[Key::convPitch] = knobDesktop("Length", "time-scale of the IR, 0.25x..4x log (1.0x = the IR's native length). Pitched down = longer, darker tail.");
+  t[Key::convIrLoad] = knobDesktop("Load IR", "pick a wav/aiff impulse response (mono, stereo or quad). The quad law folds L=(c0+c2)/sqrt(2), R=(c1+c3)/sqrt(2).");
   t[Key::effectReverb] = U("Reverb setting: adjust the value for this block.");
   t[Key::reverbDecay] = knobDesktop("Decay", "reverb tail length, 50-3000 ms.");
   t[Key::reverbPre] = knobDesktop("Pre", "reverb pre-delay, 0-60 ms (echoes the dry before the tail).");
