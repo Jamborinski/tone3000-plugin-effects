@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "GalleryTile.h"
+#include "KernelPlot.h"
 #include "core/KnobScale.h"
 #include "Delay.h"
 #include "model/ChainState.h"
@@ -36,6 +37,8 @@ class EffectTile : public GalleryTile {
  protected:
   void open() override;
   std::vector<ContextMenu::Item> menuItems() override;
+  // Pull the currently-serving kernel's strip data (empty before any load).
+  void pullConvPreview();
 
  private:
   void syncKnobs();
@@ -83,6 +86,9 @@ class EffectTile : public GalleryTile {
   // Two extra grid slots (the convolver's 9-knob surface is the only
   // one that needs them; every other block uses at most A..E + sig + mod).
   Knob knobF_, knobG_;
+  // Waveform strip (Phase C): edited-kernel envelope + fade curves.
+  // FConv2's "Show Fade Curves". Full tile only.
+  KernelPlot convPlot_;
   const KnobScale* scaleA_ = nullptr;
   const KnobScale* scaleB_ = nullptr;
   const KnobScale* scaleC_ = nullptr;
@@ -127,6 +133,7 @@ class EffectTile : public GalleryTile {
   // surfaces the session IR and offers the picker.
   juce::TextButton convIrButton_;
   juce::Label convIrLabel_;
+  juce::Label convIrSeconds_;  // E-2: the engine's real length, its own line under the name
   // The picker lives between the open and its async callback (launchAsync
   // is the only launch in this JUCE build -- no showOKDialog), so it is a
   // member, guarded exactly like LocalFiles' chooser.

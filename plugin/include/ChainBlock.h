@@ -439,6 +439,11 @@ struct ChainBlock {
   Reverb reverb;
   ConvolutionReverb conv;
 
+  // E-2: the kernel's bytes live in the user's IR library; this is the path
+  // the engine was (re)built from, so presets/app-restart/copy can
+  // re-hydrate it (TONE3000Processor::restoreConvIrsLocked). Empty = none.
+  juce::String convIrPath;
+
   /** Spread-family lane hint (see Delay::setLane): tells the L/R engines
       which side of the pair this block's signal is, so the split is the same
       whether the block runs on a stereo buffer (mono-chain mode) or on a

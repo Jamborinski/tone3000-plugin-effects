@@ -429,6 +429,9 @@ juce::var TONE3000Processor::loadConvIr(const std::string& blockId,
                               file.getFileName()))
     return err(loadError);
 
+  // E-2: record the source path so restoration can re-hydrate.
+  block->convIrPath = file.getFullPathName();
+
   // The engine was built + installed synchronously inside loadBuffer (JUCE
   // runs its background build to completion when a prepared rate is already
   // set), so the block is live right now. Ship the loaded IR's name to the
@@ -438,7 +441,71 @@ juce::var TONE3000Processor::loadConvIr(const std::string& blockId,
   auto* obj = new juce::DynamicObject();
   obj->setProperty("blockId", juce::String(blockId));
   obj->setProperty("irName", block->conv.irName());
+  obj->setProperty("irPath", block->convIrPath);
+  obj->setProperty("irLoaded", true);
   obj->setProperty("seconds", static_cast<double>(block->conv.editedSeconds()));
+  return juce::var(obj);
+}
+// E-2 (kernel persists with presets/app restart): rebuild ONE convolution
+// block's engine from the IR path carried by its block settings. No-op
+// unless the block is a Convolution with a persisted path and no live
+// engine. Missing/undecodable file: identity + path stay in state, so the
+// UI shows the IR-missing recovery state and Load-IR re-hydrates.
+namespace {
+void restoreConvIrInBlock(ChainBlock& b) {
+  if (b.type != ChainBlockType::EFFECT || b.effectKind != EffectKind::Convolution ||
+      b.convIrPath.isEmpty() || b.conv.hasIr())
+    return;
+  const juce::File f(b.convIrPath);
+  if (!f.existsAsFile())
+    return;
+  juce::AudioFormatManager formatManager;
+  formatManager.registerBasicFormats();
+  std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(f));
+  if (reader == nullptr)
+    return;
+  const int ch = juce::jlimit(1, 4, static_cast<int>(reader->numChannels));
+  juce::AudioBuffer<float> buf(ch, static_cast<int>(reader->lengthInSamples));
+  if (!reader->read(&buf, 0, buf.getNumSamples(), 0, true, true))
+    return;
+  juce::String loadError;
+  b.conv.loadBuffer(buf, reader->sampleRate, &loadError, f.getFileName());
+}
+}  // namespace
+
+void TONE3000Processor::restoreConvIrsLocked() {
+  // Called while the caller still holds chainMutex — every restore site
+  // (app start, preset, duplicate, paste) is already locked.
+  for (Lane& l : lanes)
+    for (auto& b : l)
+      if (b != nullptr)
+        restoreConvIrInBlock(*b);
+}
+
+
+// Phase C: the convolver block's CURRENT kernel as waveform-strip data
+// (envelope windows + geometry) for the UI strip. Message thread; the
+// shared_ptr copy keeps the payload alive no matter what rebuilds follow.
+juce::var TONE3000Processor::getConvPreview(const std::string& blockId) {
+  juce::ScopedLock lock(chainMutex);
+  ChainBlock* block = findBlockById(blockId);
+  if (block == nullptr || block->type != ChainBlockType::EFFECT ||
+      block->effectKind != EffectKind::Convolution)
+    return juce::var();
+  auto pv = block->conv.kernelPreview();
+  if (pv == nullptr)
+    return juce::var();
+  juce::Array<juce::var> envL, envR;
+  for (float v : pv->envL)
+    envL.add(v);
+  for (float v : pv->envR)
+    envR.add(v);
+  auto* obj = new juce::DynamicObject();
+  obj->setProperty("sampleRate", pv->sampleRate);
+  obj->setProperty("length", pv->length);
+  obj->setProperty("channels", pv->channels);
+  obj->setProperty("envL", juce::var(envL));
+  obj->setProperty("envR", juce::var(envR));
   return juce::var(obj);
 }
 
@@ -471,6 +538,7 @@ std::string TONE3000Processor::duplicateChainBlock(const std::string& sourceBloc
   const std::string newId = juce::Uuid().toString().toStdString();
   auto clone = std::make_unique<ChainBlock>(newId, source->type);
   applyBlockSettings(*clone, serializeBlockSettings(*source));
+  restoreConvIrInBlock(*clone);  // E-2: a copy re-hydrates its IR
   setToneOnBlock(*clone, source->toneId, source->toneJson, source->toneVar);
   clone->activeModelId = source->activeModelId;
   clone->modelCache = source->modelCache;
@@ -531,6 +599,7 @@ std::string TONE3000Processor::pasteChainBlock(const juce::String& side, int ind
       chainBlockTypeFromString(blockClipboardSettings.getProperty("type").toString());
   auto block = std::make_unique<ChainBlock>(newId, type);
   applyBlockSettings(*block, blockClipboardSettings);
+  restoreConvIrInBlock(*block);  // E-2: a paste re-hydrates its IR
   const juce::String toneJson = blockClipboardSettings.getProperty("toneJson").toString();
   setToneOnBlock(*block, blockClipboardSettings.getProperty("toneId", 0), toneJson,
                  juce::JSON::parse(toneJson));

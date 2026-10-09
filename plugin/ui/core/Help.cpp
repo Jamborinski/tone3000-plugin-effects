@@ -196,7 +196,7 @@ std::map<Key, String> buildTable() {
       U("Add Convolver: insert a true-conversion reverb block. Load an IR (mono/stereo/quad wav) to tune trim, length scale, width and gain.");
   t[Key::effectConvolution] = U("Convolution setting: adjust the value for this block.");
   t[Key::convGain] = knobDesktop("Gain", "convolver output level, -24..+24 dB (0.5 = unity). The IR is energy-normalised on load.");
-  t[Key::convWidth] = knobDesktop("Width", "stereo width - 0 = mono (L == R), 1 = full stereo fold.");
+  t[Key::convWidth] = knobDesktop("Width", "Stereo width. Stereo IR: 0 = mono (L == R), 1 = full fold. Mono IR: WIDENS the output with a Haas delay difference (0 = centre, 1 = wide).");
   t[Key::convStartS] = knobDesktop("Start", "trim window start, in seconds of the raw IR (0 = from the top). Rebuilds the kernel.");
   t[Key::convEndS] = knobDesktop("End", "trim window end, in seconds of the raw IR (0 = to the end). Rebuilds the kernel.");
   t[Key::convPitch] = knobDesktop("Length", "time-scale of the IR, 0.25x..4x log (1.0x = the IR's native length). Pitched down = longer, darker tail.");

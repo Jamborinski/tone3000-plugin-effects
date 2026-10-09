@@ -489,3 +489,540 @@ TEST(ConvolutionReverb, ToneSchedulingNoRebuild) {
   PumpSettle(fx);  // if a rebuild were scheduled it would fire here
   EXPECT_EQ(fx.installs(), before) << "a Tone change must not schedule an engine rebuild";
 }
+
+// Waveform display (Phase C): the preview is 1024 peak windows of the FINAL
+// kernel, normalised so the loud window = 1.0 -- and the fades (baked at
+// build) show in it, in the musical direction: F In ramps 0 -> 1 out of the
+// onset, F Out fades 1 -> 0 into the end.
+TEST(ConvolutionReverb, KernelPreviewEnvelopeTracksFades) {
+  ConvolutionReverb fx;
+  ASSERT_TRUE(fx.loadBuffer(UnitConstantIr(4096), 48000.0));
+  fx.prepare(48000.0);
+
+  auto pv = fx.kernelPreview();
+  ASSERT_NE(pv, nullptr);
+  EXPECT_EQ(pv->channels, 2);
+  EXPECT_EQ(pv->windows, 1024);
+  EXPECT_EQ(pv->length, 4096);
+  // Constant IR, normalised: a flat 1.0 envelope end to end.
+  EXPECT_NEAR(pv->envL[100], 1.0f, 1e-3f);
+  EXPECT_NEAR(pv->envR[900], 1.0f, 1e-3f);
+
+  {
+    ConvolutionReverb::Params p;
+    p.fadeIn = 0.25f;
+    fx.setParams(p);
+    PumpSettle(fx);
+  }
+  auto pIn = fx.kernelPreview();
+  ASSERT_NE(pIn, nullptr);
+  EXPECT_LT(pIn->envL[2], 0.1f) << "F In must ramp in off the onset";
+  EXPECT_GT(pIn->envL[600], 0.9f) << "F In must not touch the rest";
+
+  {
+    ConvolutionReverb::Params p;
+    p.fadeIn = 0.0f;
+    fx.setParams(p);
+    PumpSettle(fx);
+  }
+  {
+    ConvolutionReverb::Params p;
+    p.fadeOut = 0.25f;
+    fx.setParams(p);
+    PumpSettle(fx);
+  }
+  auto pOut = fx.kernelPreview();
+  ASSERT_NE(pOut, nullptr);
+  EXPECT_LT(pOut->envL[1021], 0.1f) << "F Out must fade into the end";
+  EXPECT_GT(pOut->envL[740], 0.9f) << "F Out must not reach past its 25% region";
+}
+
+#include <fstream>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+
+
+
+
+// --- Width on a mono IR = Haas spread (0 = bit mono, 1 = full depth) ------------
+TEST(ConvolutionReverb, MonoIrWidthZeroStaysMono) {
+  ConvolutionReverb fx;
+  const int n = 96;
+  juce::AudioBuffer<float> ir(1, n);
+  for (int i = 0; i < n; ++i)
+    ir.setSample(0, i, (float) (0.5 * std::sin(0.5 * i)));
+  ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+  fx.prepare(48000.0);
+  ConvolutionReverb::Params p;
+  p.width = 0.0;
+  fx.setParams(p);
+  juce::AudioBuffer<float> b(2, 64);
+  b.clear();
+  b.setSample(0, 0, 0.7f);
+  fx.process(b);
+  for (int i = 0; i < 64; ++i)
+    EXPECT_NEAR(b.getSample(0, i), b.getSample(1, i), 1e-7);
+}
+
+TEST(ConvolutionReverb, MonoIrWidthFullDepth) {
+  ConvolutionReverb fx;
+  const int n = 96;
+  juce::AudioBuffer<float> ir(1, n);
+  for (int i = 0; i < n; ++i)
+    ir.setSample(0, i, (float) (0.5 * std::sin(0.5 * i)));
+  ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+  fx.prepare(48000.0);
+  ConvolutionReverb::Params p;
+  p.width = 1.0;
+  fx.setParams(p);
+  // Steady-state constant input: the wet is then exactly constant, so
+  // L = w(1+depth), R = w(1-depth) -> (L-R)/(L+R) = kHaasDepth.
+  juce::AudioBuffer<float> b(2, 64);
+  for (int k = 0; k < 12; ++k) {
+    for (int i = 0; i < 64; ++i) {
+      b.setSample(0, i, 0.2f);
+      b.setSample(1, i, 0.2f);
+    }
+    fx.process(b);
+  }
+  const float L = b.getSample(0, 63);
+  const float R = b.getSample(1, 63);
+  const double ratio = (double)(L - R) / (L + R);
+  EXPECT_NEAR(ratio, ConvolutionReverb::kHaasDepth, 1e-4);
+}
+
+TEST(ConvolutionReverb, StereoIrFoldLawUnchanged) {
+  ConvolutionReverb fx;
+  const int n = 96;
+  juce::AudioBuffer<float> ir(2, n);
+  for (int i = 0; i < n; ++i) {
+    ir.setSample(0, i, (float) (0.4 * std::sin(0.3 * i)));
+    ir.setSample(1, i, (float) (0.25 * std::cos(0.2 * i)));
+  }
+  ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+  fx.prepare(48000.0);
+  ConvolutionReverb::Params p;
+  p.width = 0.0;   // mono center: L == R == mid
+  fx.setParams(p);
+  juce::AudioBuffer<float> b(2, 64);
+  b.clear();
+  b.setSample(0, 0, 0.5f);
+  b.setSample(1, 0, 0.7f);
+  fx.process(b);
+  for (int i = 0; i < 64; ++i)
+    EXPECT_NEAR(b.getSample(0, i), b.getSample(1, i), 1e-7);
+}
+// ---------------------------------------------------------------------------
+// TEMP diagnostic (remove before commit): the user hears a REPEATING ECHO +
+// sputter on the stretched long IR ("5.0s" EMT 240 = really 9.98 s, at 4x
+// = 39.9 s engine), steady-state. This probe plays a SUSTAINED 220 Hz tone
+// (the user's "whenever sound passes" scenario) through the x4 engine and
+// scans the steady wet envelope's ACF over lags up to ~10.6 s -- any
+// repeating structure at any period below ~11 s shows up as a peak.
+// (LTI check: a tone through a correct convolution is a constant-amplitude
+// decaying tone -- periodic wet amplitude = provably an artifact.)
+namespace {
+
+struct SProbe {
+  static void WetSustained(ConvolutionReverb& fx, int warmBlocks, int keepBlocks,
+                           std::vector<float>& env) {
+    env.clear();
+    juce::AudioBuffer<float> b(1, 64);
+    double ph = 0.0;
+    const double step = 2.0 * 3.141592653589793 * 220.0 / 48000.0;
+    for (int k = 0; k < warmBlocks + keepBlocks; ++k) {
+      for (int i = 0; i < 64; ++i) {
+        b.setSample(0, i, (float) (0.2 * std::cos(ph)));
+        ph += step;
+      }
+      fx.process(b);
+      if (k >= warmBlocks) {
+        double m = 0.0;
+        for (int i = 0; i < 64; ++i) {
+          const float v = b.getSample(0, i);
+          m += (double) v * v;
+        }
+        env.push_back((float) std::sqrt(m / 64.0));
+      }
+    }
+  }
+  static void AcfScan(const std::vector<float>& E, int dec) {
+    const int n = (int) E.size();
+    double s2 = 0.0, sm = 0.0;
+    for (float e : E) {
+      s2 += (double) e * e;
+      sm += e;
+    }
+    const double mean = sm / n;
+    const int step = std::max(1, n / 400);  // ACF at ~400 scan points
+    std::cout << "  n=" << n << "  (each lag = " << (double) dec * 64 / 48000.0 << " s, dec=" << dec << ")" << std::endl;
+    for (int lag = 16; lag < n / 2; lag += step) {
+      double acc = 0.0;
+      int cnt = 0;
+      for (int i = 0; i + lag < n; i += 4) {
+        acc += (double) (E[i] - mean) * (E[i + lag] - mean);
+        ++cnt;
+      }
+      const double r = (cnt > 0) ? acc / (cnt * s2) : 0.0;
+      if (std::abs(r) > 0.05)
+        std::cout << "  ** lag " << lag << " (" << (double) lag * dec * 64 / 48000.0
+                  << " s)  ACF " << r << std::endl;
+    }
+    std::cout << "  (only ACF > 0.05 printed)" << std::endl;
+  }
+};
+
+}  // namespace
+
+TEST(ConvolutionReverb, LongIrSustainedEchoProbe) {
+  const char* path = "/tmp/t3kprobe/EMT240_50_raw";
+  std::ifstream rf(path, std::ios::binary);
+  ASSERT_TRUE((bool) rf);
+  std::vector<float> blob;
+  rf.seekg(0, std::ios::end);
+  const long sz = rf.tellg();
+  rf.seekg(0, std::ios::beg);
+  blob.resize((size_t)sz / 4);
+  rf.read(reinterpret_cast<char*>(blob.data()), sz);
+  ASSERT_GE(blob.size(), 2);
+  const int ns = (int) blob[0];
+  const float* L = blob.data() + 2;
+  const float* R = blob.data() + 2 + ns;
+  juce::AudioBuffer<float> ir(2, ns);
+  for (int i = 0; i < ns; ++i) {
+    ir.setSample(0, i, L[i]);
+    ir.setSample(1, i, R[i]);
+  }
+
+  // Control: x1 (9.98 s engine)
+  {
+    ConvolutionReverb fx;
+    ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+    fx.prepare(48000.0);
+    std::vector<float> env;
+    SProbe::WetSustained(fx, 500, 700, env);  // 500 warm + 700 kept (~7 s)
+    std::cout << "x1 sustained tone:" << std::endl;
+    SProbe::AcfScan(env, 64);
+  }
+
+  // The user's case: x4 (39.93 s engine)
+  {
+    ConvolutionReverb fx;
+    ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+    fx.prepare(48000.0);
+    ConvolutionReverb::Params pmt;
+    pmt.pitch = ConvolutionReverb::scaleToPitch(4.0);
+    fx.setParams(pmt);
+    PumpSettle(fx);
+    std::vector<float> env;
+    SProbe::WetSustained(fx, 500, 800, env);  // 800 kept (~8 s)
+    std::cout << "x4 sustained tone (" << fx.editedSeconds() << "s engine):" << std::endl;
+    SProbe::AcfScan(env, 64);
+  }
+  std::cout << "=== done ===" << std::endl;
+  SUCCEED();
+}
+
+// TEMP diagnostic 2: same sustained-tone scan but on a STEREO BUFFER --
+// the user's app always feeds both channel engines; the mono probes never
+// touched the second engine chain at all. If x4 sputters here and not in
+// mono, the artifact lives in the 2-channel path (tail/channel state).
+TEST(ConvolutionReverb, StereoSustainedEchoProbe) {
+  const char* path = "/tmp/t3kprobe/EMT240_50_raw";
+  std::ifstream rf(path, std::ios::binary);
+  ASSERT_TRUE((bool) rf);
+  std::vector<float> blob;
+  rf.seekg(0, std::ios::end);
+  const long sz = rf.tellg();
+  rf.seekg(0, std::ios::beg);
+  blob.resize((size_t)sz / 4);
+  rf.read(reinterpret_cast<char*>(blob.data()), sz);
+  ASSERT_GE(blob.size(), 2);
+  const int ns = (int) blob[0];
+  const float* L = blob.data() + 2;
+  const float* R = blob.data() + 2 + ns;
+  juce::AudioBuffer<float> ir(2, ns);
+  for (int i = 0; i < ns; ++i) {
+    ir.setSample(0, i, L[i]);
+    ir.setSample(1, i, R[i]);
+  }
+  auto run = [](ConvolutionReverb& fx, int warmBlocks, int keepBlocks,
+                std::vector<float>& eL, std::vector<float>& eR) {
+    eL.clear(); eR.clear();
+    juce::AudioBuffer<float> b(2, 64);
+    double ph = 0.0;
+    const double step = 2.0 * 3.141592653589793 * 220.0 / 48000.0;
+    for (int k = 0; k < warmBlocks + keepBlocks; ++k) {
+      for (int i = 0; i < 64; ++i) {
+        const float v = (float) (0.15 * std::cos(ph));
+        b.setSample(0, i, v);
+        b.setSample(1, i, v);
+        ph += step;
+      }
+      fx.process(b);
+      if (k >= warmBlocks) {
+        double m0 = 0.0, m1 = 0.0;
+        for (int i = 0; i < 64; ++i) {
+          const float v0 = b.getSample(0, i);
+          m0 += (double) v0 * v0;
+          const float v1 = b.getSample(1, i);
+          m1 += (double) v1 * v1;
+        }
+        eL.push_back((float) std::sqrt(m0 / 64.0));
+        eR.push_back((float) std::sqrt(m1 / 64.0));
+      }
+    }
+  };
+  auto scan = [](const char* tag, const std::vector<float>& E) {
+    const int n = (int) E.size();
+    double s2 = 0.0, sm = 0.0;
+    for (float e : E) {
+      s2 += (double) e * e;
+      sm += e;
+    }
+    const double mean = sm / n;
+    const int step = std::max(1, n / 400);
+    int hits = 0;
+    for (int lag = 16; lag < n / 2; lag += step) {
+      double acc = 0.0;
+      int cnt = 0;
+      for (int i = 0; i + lag < n; i += 4) {
+        acc += (double) (E[i] - mean) * (E[i + lag] - mean);
+        ++cnt;
+      }
+      const double r = (cnt > 0) ? acc / (cnt * s2) : 0.0;
+      if (std::abs(r) > 0.05) {
+        std::cout << "  ** " << tag << " lag " << lag << " ("
+                  << (double) lag * 64 / 48000.0 << " s) ACF " << r << std::endl;
+        ++hits;
+      }
+    }
+    if (hits == 0)
+      std::cout << "  " << tag << "  CLEAN (no ACF>0.05, lags to "
+                << (double) n / 2 * 64 / 48000.0 << " s)" << std::endl;
+  };
+
+  {
+    ConvolutionReverb fx;
+    ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+    fx.prepare(48000.0);
+    std::vector<float> eL, eR;
+    run(fx, 500, 700, eL, eR);
+    std::cout << "STEREO x1:" << std::endl;
+    scan("L", eL);
+    scan("R", eR);
+  }
+  {
+    ConvolutionReverb fx;
+    ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+    fx.prepare(48000.0);
+    ConvolutionReverb::Params pmt;
+    pmt.pitch = ConvolutionReverb::scaleToPitch(4.0);
+    fx.setParams(pmt);
+    PumpSettle(fx);
+    std::vector<float> eL, eR;
+    run(fx, 500, 800, eL, eR);
+    std::cout << "STEREO x4 (" << fx.editedSeconds() << " s):" << std::endl;
+    scan("L", eL);
+    scan("R", eR);
+  }
+  std::cout << "=== stereo done ===" << std::endl;
+  SUCCEED();
+}
+
+// TEMP diagnostic 3 (FINAL engine check): the user's exact machine (5.0s
+// Gold Plate, really 9.98 s, at Length 400% = 39.93 s engine). Capture the
+// FULL kernel (tone-free impulse) and scan its ACF across ALL lags from
+// 0.04 s to ~29 s -- any repeating structure anywhere in the 40 s kernel
+// shows up. A manual reference stretch (dup of the engine's law) is
+// ACF-scanned too: if the served kernel has peaks the reference lacks, the
+// engine built them; if both are clean, the engine is exonerated at every
+// timescale and the sputter lives outside this class.
+TEST(ConvolutionReverb, KernelFullLengthAcf) {
+  const char* path = "/tmp/t3kprobe/EMT240_50_raw";
+  std::ifstream rf(path, std::ios::binary);
+  ASSERT_TRUE((bool) rf);
+  std::vector<float> blob;
+  rf.seekg(0, std::ios::end);
+  const long sz = rf.tellg();
+  rf.seekg(0, std::ios::beg);
+  blob.resize((size_t)sz / 4);
+  rf.read(reinterpret_cast<char*>(blob.data()), sz);
+  ASSERT_GE(blob.size(), 2);
+  const int ns = (int) blob[0];
+  const float* L = blob.data() + 2;
+  const float* R = blob.data() + 2 + ns;
+  juce::AudioBuffer<float> ir(2, ns);
+  for (int i = 0; i < ns; ++i) {
+    ir.setSample(0, i, L[i]);
+    ir.setSample(1, i, R[i]);
+  }
+
+  auto peaks = [](const char* tag, const std::vector<float>& v, int dec) {
+    std::vector<double> E;
+    for (size_t i = 0; i + (size_t)dec <= v.size(); i += (size_t)dec) {
+      double m = 0.0;
+      for (int j = 0; j < dec; ++j) {
+        const double x = (double) v[i + j];
+        m += x * x;
+      }
+      E.push_back(std::sqrt(m / dec));
+    }
+    const int n = (int) E.size();
+    double s2 = 0.0, sm = 0.0;
+    for (double e : E) {
+      s2 += e * e;
+      sm += e;
+    }
+    if (s2 <= 1e-18) {
+      std::cout << tag << " silent" << std::endl;
+      return;
+    }
+    const double mean = sm / n;
+    std::vector<std::pair<double, int>> P;
+    const int step = std::max(2, n / 4000);
+    for (int lag = 25; lag < n / 2; lag += step) {
+      double acc = 0.0;
+      int cnt = 0;
+      for (int i = 0; i + lag < n; i += 8) {
+        acc += (E[i] - mean) * (E[i + lag] - mean);
+        ++cnt;
+      }
+      const double r = (cnt > 0) ? acc / (cnt * s2) : 0.0;
+      if (std::abs(r) > 0.02)
+        P.push_back({ std::abs(r), lag });
+    }
+    std::sort(P.begin(), P.end(),
+              [](const auto& a, const auto& b) { return a.first > b.first; });
+    std::cout << tag << " top peaks:";
+    for (int i = 0; i < std::min(5, (int) P.size()); ++i)
+      std::cout << "  [" << (double) P[i].second * dec / 48000.0 << " s: "
+                << P[i].first << "]";
+    if (P.empty())
+      std::cout << "  (none above 0.02 across all lags)";
+    std::cout << std::endl;
+  };
+
+  {
+    ConvolutionReverb fx;
+    ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+    fx.prepare(48000.0);
+    ConvolutionReverb::Params pmt;
+    pmt.pitch = ConvolutionReverb::scaleToPitch(4.0);
+    fx.setParams(pmt);
+    PumpSettle(fx);
+    const int outLen = std::max(1, (int) std::llround((double) ns * 4.0));
+    std::vector<float> wet;
+    wet.reserve(outLen + 64);
+    juce::AudioBuffer<float> b(2, 64);
+    for (int k = 0; k * 64 < outLen + 64; ++k) {
+      b.clear();
+      if (k == 0)
+        b.setSample(0, 0, 0.70710678f);
+      fx.process(b);
+      for (int i = 0; i < 64 && (int) wet.size() < outLen + 64; ++i)
+        wet.push_back(b.getSample(0, i));
+    }
+    std::cout << "served " << wet.size() << " samples ("
+              << (double) wet.size() / 48000.0 << " s)" << std::endl;
+    peaks("x4 kernel LL", wet, 256);
+  }
+
+  {
+    const int outLen = std::max(1, (int) std::llround((double) ns * 4.0));
+    std::vector<float> ref(outLen);
+    for (int i = 0; i < outLen; ++i) {
+      const double t = (double) i / 4.0;
+      const int base = std::min(ns - 1, (int) t);
+      const double frac = t - base;
+      const int b1 = std::min(ns - 1, base + 1);
+      ref[i] = (float) (L[base] + (L[b1] - L[base]) * frac);
+    }
+    peaks("x4 manual-ref LL", ref, 256);
+  }
+  std::cout << "=== done ===" << std::endl;
+  SUCCEED();
+}
+
+
+TEST(ConvolutionReverb, CostSpikeCadence) {
+  const char* path = "/tmp/t3kprobe/EMT240_50_raw";
+  std::ifstream rf(path, std::ios::binary);
+  ASSERT_TRUE((bool) rf);
+  std::vector<float> blob;
+  rf.seekg(0, std::ios::end);
+  const long sz = rf.tellg();
+  rf.seekg(0, std::ios::beg);
+  blob.resize((size_t)sz / 4);
+  rf.read(reinterpret_cast<char*>(blob.data()), sz);
+  ASSERT_GE(blob.size(), 2);
+  const int ns = (int) blob[0];
+  const float* L = blob.data() + 2;
+  const float* R = blob.data() + 2 + ns;
+  juce::AudioBuffer<float> ir(2, ns);
+  for (int i = 0; i < ns; ++i) {
+    ir.setSample(0, i, L[i]);
+    ir.setSample(1, i, R[i]);
+  }
+  ConvolutionReverb fx;
+  ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+  fx.prepare(48000.0);
+  ConvolutionReverb::Params pmt;
+  pmt.pitch = ConvolutionReverb::scaleToPitch(4.0);
+  fx.setParams(pmt);
+  PumpSettle(fx);
+  juce::AudioBuffer<float> b(2, 64);
+  double ph = 0.0;
+  const double step = 2.0 * 3.141592653589793 * 220.0 / 48000.0;
+  for (int i = 0; i < 64; ++i) {
+    b.setSample(0, i, (float) (0.15 * std::cos(ph)));
+    b.setSample(1, i, (float) (0.15 * std::cos(ph)));
+    ph += step;
+  }
+  for (int k = 0; k < 400; ++k) {
+    fx.process(b);
+    for (int i = 0; i < 64; ++i) {
+      ph += step;
+      const float v = (float) (0.15 * std::cos(ph));
+      b.setSample(0, i, v);
+      b.setSample(1, i, v);
+    }
+  }
+  std::vector<int64_t> cost;
+  cost.reserve(4000);
+  for (int k = 0; k < 4000; ++k) {
+    const auto t0 = std::chrono::steady_clock::now();
+    fx.process(b);
+    const auto t1 = std::chrono::steady_clock::now();
+    cost.push_back(std::chrono::duration<int64_t, std::nano>(t1 - t0).count());
+    for (int i = 0; i < 64; ++i) {
+      ph += step;
+      const float v = (float) (0.15 * std::cos(ph));
+      b.setSample(0, i, v);
+      b.setSample(1, i, v);
+    }
+  }
+  double sum = 0;
+  for (auto c : cost) sum += (double) c;
+  const double avg = sum / cost.size();
+  std::cout << "avg " << avg << " ns over " << cost.size() << " blocks" << std::endl;
+  std::vector<std::pair<double, int>> spikes;
+  for (int i = 0; i < (int) cost.size(); ++i)
+    if ((double) cost[i] > 8.0 * avg)
+      spikes.push_back({ (double) cost[i], i });
+  std::sort(spikes.begin(), spikes.end(),
+            [](const auto& a, const auto& b) { return a.second < b.second; });
+  std::cout << "spikes (>8x avg): " << spikes.size() << "  first positions:";
+  for (int i = 0; i < std::min(12, (int) spikes.size()); ++i)
+    std::cout << " " << spikes[i].second;
+  std::cout << "  (ns:";
+  for (int i = 0; i < std::min(12, (int) spikes.size()); ++i)
+    std::cout << " " << spikes[i].first;
+  std::cout << ")" << std::endl;
+  std::cout << "gaps between spike positions:";
+  for (int i = 1; i < std::min(10, (int) spikes.size()); ++i)
+    std::cout << " " << spikes[i].second - spikes[i - 1].second;
+  std::cout << std::endl;
+  SUCCEED();
+}

@@ -67,6 +67,61 @@ void RebuildSettleTimer::timerCallback() {
   owner_.onSettleTimedOut();  // message thread (juce::Timer delivery)
 }
 
+std::shared_ptr<const KernelPreview> ConvolutionReverb::kernelPreview() const {
+  std::shared_ptr<State> st;
+  {
+    const juce::ScopedLock lock(stateLock_);
+    st = state_;
+  }
+  return st != nullptr ? st->preview : nullptr;
+}
+
+// Waveform display (Phase C): 1024 per-channel peak windows of the FINAL
+// edited kernel (trim + stretch + fades already applied), normalised by the
+// single loudest window overall so 1.0 = the kernel's loudest sample (per
+// kernel, not per channel, so the L/R balance stays visible). Message thread;
+// O(kernel) once per rebuild.
+std::shared_ptr<const KernelPreview> makeKernelPreview(const std::vector<float>& eL,
+                                                       const std::vector<float>& eR,
+                                                       int channels, int sampleRate,
+                                                       int length) {
+  constexpr int kWindows = 1024;
+  auto pv = std::make_shared<KernelPreview>();
+  pv->channels = channels;
+  pv->sampleRate = sampleRate;
+  pv->length = length;
+  pv->windows = kWindows;
+  pv->envL.assign(kWindows, 0.0f);
+  if (channels >= 2) pv->envR.assign(kWindows, 0.0f);
+  const int n = std::max(1, length);
+  for (int w = 0; w < kWindows; ++w) {
+    const int a = n * w / kWindows;
+    const int b = n * (w + 1) / kWindows;
+    float pL = 0.0f, pR = 0.0f;
+    for (int i = a; i < b; ++i) {
+      float v = std::abs(eL[i]);
+      if (v > pL) pL = v;
+      if (channels >= 2) {
+        float u = std::abs(eR[i]);
+        if (u > pR) pR = u;
+      }
+    }
+    pv->envL[w] = pL;
+    if (channels >= 2) pv->envR[w] = pR;
+  }
+  float mx = 0.0f;
+  for (int w = 0; w < kWindows; ++w) {
+    if (pv->envL[w] > mx) mx = pv->envL[w];
+    if (channels >= 2 && pv->envR[w] > mx) mx = pv->envR[w];
+  }
+  if (mx > 0.0f)
+    for (int w = 0; w < kWindows; ++w) {
+      pv->envL[w] /= mx;
+      if (channels >= 2) pv->envR[w] /= mx;
+    }
+  return pv;
+}
+
 std::shared_ptr<ConvolutionReverb::State> ConvolutionReverb::makeEditedState() {
   lastError_.clear();
 
@@ -141,9 +196,11 @@ std::shared_ptr<ConvolutionReverb::State> ConvolutionReverb::makeEditedState() {
     const double e = fadeExponent(params_.fadeOutCurve);
     const int off = outLen - nO;
     for (int i = off; i < outLen; ++i) {
-      // progress 1 -> 0 across the ramped region
+      // Fade-Out law (FConv2): the decay fades 1 -> 0 into the end.  is
+      // the fraction of the ramp still to go: 1 at the region's entry,
+      // 0 at the very last sample.
       const double p = static_cast<double>(outLen - 1 - i) / (nO - 1);
-      const float g = static_cast<float>(1.0 - std::pow(p, e));
+      const float g = static_cast<float>(std::pow(p, e));
       eL[i] *= g;
       eR[i] *= g;
     }
@@ -188,6 +245,7 @@ std::shared_ptr<ConvolutionReverb::State> ConvolutionReverb::makeEditedState() {
   st->conv = std::move(conv);
   st->uniform = !longIr;
   st->blockSize = blockSize;
+  st->preview = makeKernelPreview(eL, eR, irCh >= 2 ? 2 : 1, rate_, outLen);
   return st;
 }
 
@@ -333,6 +391,12 @@ void ConvolutionReverb::prepare(double rate) {
   gainSmoother_.reset(rate, 5.0e-3);
   gainSmoother_.setCurrentAndTargetValue(1.0f);
 
+  // Haas ring (mono-IR Width): a 3.5 ms history of the wet, audio-owned.
+  const int hCap = std::max(1, static_cast<int>(std::llround(kHaasDelayMs * rate / 1000.0)));
+  haasCap_ = hCap;
+  haasBuf_.assign(static_cast<size_t>(hCap), 0.0f);
+  haasPos_ = 0;
+
   const int cap = static_cast<int>(std::llround(kMaxPreMs * rate / 1000.0)) + 8;
   preCap_ = cap;
   preBuf_[0].assign(static_cast<size_t>(cap), 0.0f);
@@ -457,18 +521,34 @@ void ConvolutionReverb::process(juce::AudioBuffer<float>& buffer) {
     const float fadeW = fading ? fade : 1.0f;
     float* w0 = buffer.getWritePointer(0);
     float* w1 = (ch > 1) ? buffer.getWritePointer(1) : nullptr;
-    for (int i = 0; i < n; ++i) {
-      const float g = gainSmoother_.getNextValue() * fadeW;
-      if (w1 != nullptr) {
+    if (w1 != nullptr && rawCh_ <= 1 && haasCap_ > 0) {
+      // Mono IR: the wet is identical both ears, so the M/S fold folds
+      // nothing -- instead Width SPREADS the output (Haas pair): a fixed
+      // interaural difference of the wet, depth = Width * kHaasDepth
+      // (0 = mono center, 1 = full spread). The ring persists across blocks.
+      for (int i = 0; i < n; ++i) {
+        const float g = gainSmoother_.getNextValue() * fadeW;
+        const float v = w0[i];
+        const float delayed = haasBuf_[haasPos_];
+        haasBuf_[haasPos_] = v;
+        haasPos_ = (haasPos_ + 1) % (size_t) haasCap_;
+        const float side = static_cast<float>(width * kHaasDepth) * delayed;
+        w0[i] = (v + side) * g;
+        w1[i] = (v - side) * g;
+      }
+    } else if (w1 != nullptr) {
+      for (int i = 0; i < n; ++i) {
+        const float g = gainSmoother_.getNextValue() * fadeW;
         const float l = w0[i];
         const float r = w1[i];
         const float m = 0.5f * (l + r);
         const float s = 0.5f * (l - r);
         w0[i] = (m + width * s) * g;
         w1[i] = (m - width * s) * g;
-      } else {
-        w0[i] = w0[i] * g;
       }
+    } else {
+      for (int i = 0; i < n; ++i)
+        w0[i] = w0[i] * gainSmoother_.getNextValue() * fadeW;
     }
     // 3b. Tone (peaking biquad on the wet). 0 dB = exactly flat: the
     //     filter is not even run, so a tone-less wet stays bit-identical.
@@ -504,13 +584,25 @@ void ConvolutionReverb::process(juce::AudioBuffer<float>& buffer) {
     if (ch > 1) {
       float* d1 = fadeOutBuf_.getWritePointer(1);
       float* o1 = buffer.getWritePointer(1);
-      for (int i = 0; i < n; ++i) {
-        const float l = d0[i];
-        const float r = d1[i];
-        const float m = 0.5f * (l + r);
-        const float s = 0.5f * (l - r);
-        o0[i] += (m + widthD * s) * gainD;
-        o1[i] += (m - widthD * s) * gainD;
+      if (rawCh_ <= 1 && haasCap_ > 0) {
+        // mono-IR dying tail: same Haas spread at the frozen width (the
+        // serving ring carries ~the same wet history during the fade).
+        for (int i = 0; i < n; ++i) {
+          const float v = d0[i];
+          const float delayed = haasBuf_[haasPos_];
+          const float side = static_cast<float>(widthD * kHaasDepth) * delayed;
+          o0[i] += (v + side) * gainD;
+          o1[i] += (v - side) * gainD;
+        }
+      } else {
+        for (int i = 0; i < n; ++i) {
+          const float l = d0[i];
+          const float r = d1[i];
+          const float m = 0.5f * (l + r);
+          const float s = 0.5f * (l - r);
+          o0[i] += (m + widthD * s) * gainD;
+          o1[i] += (m - widthD * s) * gainD;
+        }
       }
     } else {
       for (int i = 0; i < n; ++i)

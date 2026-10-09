@@ -80,6 +80,9 @@ public:
   virtual bool setBlockParam(const std::string& blockId, const juce::String& param, double value) = 0;
   // Convolution block: install an IR file (see TONE3000Processor::loadConvIr).
   virtual juce::var loadConvIr(const std::string& blockId, const juce::File& file) = 0;
+  // Convolution kernel waveform display (Phase C): { sampleRate, length,
+  // channels, envL, envR } or {} when the block has no built kernel.
+  virtual juce::var getConvPreview(const std::string& blockId) { return {}; }
   virtual bool setBlockSlimSize(const std::string& blockId, double slimSize) = 0;
   virtual bool setBlockEqBand(const std::string& blockId, int bandIndex, const juce::var& band) = 0;
   virtual bool setBlockEqEnabled(const std::string& blockId, bool enabled) = 0;

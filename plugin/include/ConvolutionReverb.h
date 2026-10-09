@@ -92,6 +92,38 @@ class RebuildSettleTimer final : public juce::Timer {
   ConvolutionReverb& owner_;
 };
 
+// The kernel the waveform display (Phase C) draws: per-channel peak
+// windows of the FINAL edited kernel (trim + stretch + fades applied),
+// normalised so 1.0 = the kernel's loudest sample (per kernel, so the
+// L/R balance stays visible). Built in-RAM at rebuild time; shared
+// (immutable) so any reader (UI, tests) can copy the pointer freely.
+struct KernelPreview {
+  int channels = 0;
+  int sampleRate = 0;
+  int length = 0;      // samples
+  int windows = 0;
+  std::vector<float> envL; // window w covers [w*length/windows, (w+1)*...)
+  std::vector<float> envR; // mono: envR is empty
+};
+
+// The kernel the waveform display (Phase C) draws: per-channel peak
+// windows of the FINAL edited kernel (trim + stretch + fades applied),
+// normalised so 1.0 = the kernel's loudest sample (per kernel, so the
+// L/R balance stays visible). Built in-RAM at rebuild time; shared
+// (immutable) so any reader (UI, tests) can copy the pointer freely.
+
+// The kernel the waveform display (Phase C) draws: per-channel peak
+// windows of the FINAL edited kernel (trim + stretch + fades applied),
+// normalised so 1.0 = the kernel's loudest sample (per kernel, so the
+// L/R balance stays visible). Built in-RAM at rebuild time; shared
+// (immutable) so any reader (UI, tests) can copy the pointer freely.
+
+// The kernel the waveform display (Phase C) draws: per-channel peak
+// windows of the FINAL edited kernel (trim + stretch + fades applied),
+// normalised so 1.0 = the kernel's loudest sample (per kernel, so the
+// L/R balance stays visible). Built in-RAM at rebuild time; shared
+// (immutable) so any reader (UI, tests) can copy the pointer freely.
+
 class ConvolutionReverb {
  public:
   // Mirror of the house IR laws (ProcessorModelLoader.cpp anonymous
@@ -118,6 +150,11 @@ class ConvolutionReverb {
   static constexpr double kToneHz = 2500.0;
   static constexpr double kToneQ = 0.7;
   static constexpr double kMinToneDb = -12.0, kMaxToneDb = 12.0;
+  // Width on a MONO IR (whose wet is identical both ears, so the M/S fold
+  // has no material): a Haas pair -- a fixed interaural difference whose
+  // depth scales with Width (0 = mono center, 1 = full spread).
+  static constexpr double kHaasDelayMs = 3.5;
+  static constexpr double kHaasDepth = 0.55;
   // Engine-SWAP crossfade (the house swap law; the model path rides
   // swapWetMuteGain, the conv path rides this): on install the dying engine
   // keeps tailing out and its wet fades over this window while the new
@@ -226,10 +263,15 @@ class ConvolutionReverb {
   // True zero latency by construction (both JUCE engines are zero-latency).
   int wetLatencySamples() const { return 0; }
   juce::String lastError() const { return lastError_; }
+  // Waveform-display data for the currently-serving kernel (null before
+  // the first successful load+prepare). Message-thread readers; the
+  // shared_ptr copy keeps the payload alive regardless of later rebuilds.
+  std::shared_ptr<const KernelPreview> kernelPreview() const;
 
  private:
   struct State {
     std::unique_ptr<juce::dsp::Convolution> conv;
+    std::shared_ptr<const KernelPreview> preview; // the waveform strip's data
     bool uniform = true;
     int blockSize = 1; // the convolver's prepared maximum block (house cap)
   };
@@ -274,6 +316,12 @@ class ConvolutionReverb {
   std::vector<float> preBuf_[2];
   int preCap_ = 0, preW_ = 0;
   size_t ringPos_[2] = {0, 0};  // persistent rotation (audio thread)
+
+  // Haas ring for the mono-IR Width spread (audio-owned once sized in
+  // prepare()); the delayed wet sample the cross-feed reads.
+  std::vector<float> haasBuf_;
+  int haasCap_ = 0;
+  size_t haasPos_ = 0;
 
   // House gain law (Processor.h:967 SmoothedValue idiom): message-thread
   // target plus per-sample audio-thread advance at ~5 ms.

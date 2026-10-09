@@ -1,4 +1,5 @@
 #include "EffectTile.h"
+#include "KernelPlot.h"
 
 #include "core/Fonts.h"
 #include "core/Help.h"
@@ -295,37 +296,37 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
                        : 3))),
       compact_(size <= gallery::kStereoTileSize),
       mix_(knob("Mix", scales::percent(), 1.0f, help::Key::effectMix,
-                compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       input_(knob("In", scales::gainDb(), 0.5f, help::Key::effectInput,
-                  compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       output_(knob("Out", scales::gainDb(), 0.5f, help::Key::effectOutput,
-                   compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                   (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobA_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
-                  compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobB_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
-                  compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobC_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
-                  compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobD_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
-                  compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobE_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
-                  compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobF_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
-                  compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobG_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
-                  compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       power_(Icon::Power, ChromeIconButton::Tone::power, help::Key::blockPower),
       remove_(Icon::Trash2, ChromeIconButton::Tone::plain, help::Key::removeBlock),
       // Delay only (built here like the P placeholders; the delay branch
       // wires it and syncDelayMode swaps in the current mode's identity):
       sigKnob_(knob("Sig", scales::fraction01(), 0.0f, help::Key::delayPing,
-                    compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                    (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       // Delay only: the SHARED Mod knob (delayMod) -- a modulation on the
       // repeat path in EVERY mode (each mode's own law, Delay::modWobbleHz/Ms).
       // Neutral 0 = a straight tap (bit-identical read); in Mod mode (3) it
       // IS the mode's signature control.
       modKnob_(knob("Mod", scales::fraction01(), 0.0f, help::Key::delayMod,
-                    compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)) {
+                    (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)) {
   // Conv tile: the shared In knob reads as "Dwell" on this block.
   if (block_.effectKind == "convolution")
     input_.setLabel("Dwell");
@@ -381,6 +382,12 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
   addAndMakeVisible(output_);
   for (int i = 0; i < numParams_ && i < (int)ps.size(); ++i)
     addAndMakeVisible(*knobAt(i));  // comp row 2: SC + PUNCH ride sigKnob_/modKnob_
+  // Waveform strip (Phase C): full conv tiles only. Refreshed on every
+  // tile re-sync (the chain resync lands here after any rebuild/load).
+  if (block_.effectKind == "convolution" && !compact_) {
+    addAndMakeVisible(convPlot_);
+    pullConvPreview();
+  }
 
   // Power + remove chrome (declared but previously never shown / wired).
   addAndMakeVisible(power_);
@@ -606,6 +613,12 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
     convIrLabel_.setFont(Fonts::sans(11));
     convIrLabel_.setColour(juce::Label::textColourId, theme::kGray);
     addAndMakeVisible(convIrLabel_);
+
+    // E-2: the engine's real length gets its own line under the filename
+    // (the NEVO plates are mis-labelled — a "5.0 s" file is ~10 s).
+    convIrSeconds_.setFont(Fonts::sans(10));
+    convIrSeconds_.setColour(juce::Label::textColourId, theme::kGray);
+    addAndMakeVisible(convIrSeconds_);
     updateConvIrLabel();
   }
 
@@ -640,6 +653,33 @@ void EffectTile::setBlock(const ChainItem& block) {
   applySync();
   updateSyncLabel();
   repaint();
+}
+
+void EffectTile::pullConvPreview() {
+  if (block_.effectKind != "convolution") return;
+  const juce::var v = services().chain.convPreview(blockId());
+  auto* obj = v.getDynamicObject();
+  const float fi = (float)block_.convFadeIn, fo = (float)block_.convFadeOut;
+  const double ei = KernelPlot::fadeExponent(block_.convInCurve);
+  const double eo = KernelPlot::fadeExponent(block_.convOutCurve);
+  if (obj == nullptr) {
+    convPlot_.clearEnvelope();
+    convPlot_.setFades(fi, fo, ei, eo);
+    return;
+  }
+  // NOTE: const locals keep the array pointers (into these vars) alive.
+  const juce::var lVar = obj->getProperty("envL");
+  const juce::var rVar = obj->getProperty("envR");
+  std::vector<float> L, R;
+  if (auto* a = lVar.getArray())
+    for (int i = 0; i < a->size(); ++i)
+      L.push_back((float)a->getReference(i));
+  if (auto* a = rVar.getArray())
+    for (int i = 0; i < a->size(); ++i)
+      R.push_back((float)a->getReference(i));
+  const double sr = std::max(1.0, (double)obj->getProperty("sampleRate"));
+  convPlot_.setEnvelope(L, R, (double)obj->getProperty("length") / sr);
+  convPlot_.setFades(fi, fo, ei, eo);
 }
 
 void EffectTile::open() {}  // built-in effects have no detail view
@@ -1008,11 +1048,33 @@ void EffectTile::enterConvIrFile() {
 void EffectTile::updateConvIrLabel() {
   if (block_.effectKind != "convolution")
     return;
-  convIrLabel_.setText(block_.convIrName.isNotEmpty()
-                           ? block_.convIrName
-                           : juce::String("No IR loaded"),
-                       juce::dontSendNotification);
-  convIrButton_.setButtonText(block_.convIrName.isNotEmpty() ? "Change IR" : "Load IR");
+  const bool hasName = block_.convIrName.isNotEmpty();
+  if (block_.convIrLoaded && hasName) {
+    // E-2 + length readout UNDER THE filename: the file's own label is not the
+    // truth (a "5.0 s" NEVO plate renders ~10 s), so the engine's real length
+    // carries its own line directly below the name.
+    convIrLabel_.setText(block_.convIrName, juce::dontSendNotification);
+    if (block_.convSeconds > 0.0005) {
+      convIrSeconds_.setText(juce::String(block_.convSeconds, 2) + juce::String(" s"),
+                              juce::dontSendNotification);
+      convIrSeconds_.setVisible(true);
+    } else {
+      convIrSeconds_.setVisible(false);
+    }
+    convIrButton_.setButtonText("Change IR");
+  } else if (hasName) {
+    // E-2: identity persisted but engine not hydrated (file missing on this
+    // machine) — the Load-IR button re-hydrates. No length (engine empty).
+    convIrLabel_.setText("IR FILE MISSING — " + block_.convIrName,
+                         juce::dontSendNotification);
+    convIrSeconds_.setVisible(false);
+    convIrButton_.setButtonText("Load IR");
+  } else {
+    convIrLabel_.setText("No IR loaded", juce::dontSendNotification);
+    convIrSeconds_.setVisible(false);
+    convIrButton_.setButtonText("Load IR");
+  }
+  convIrButton_.setHelpText(help::text(help::Key::convIrLoad));
 }
 
 void EffectTile::applySync() {
@@ -1061,16 +1123,21 @@ void EffectTile::resized() {
     modeCycle_.setBounds(28, 4, 34, 20);  // the icon slot (reverb has no Sync): the mode cycler (34px, the comp/delay width so the title clears)
     typeCycle_.setBounds(66, 4, 34, 20); // the per-mode TYPE cycler (3-char id), right of it
   } else if (block_.effectKind == "convolution") {
-    // The y=44 band: the loaded-kernel readout on the left, the Load IR
-    // button right-aligned. (Same band the mode selector uses.)
-    convIrLabel_.setBounds(4, 44, W - 4 - 84 - 12, 16);
-    convIrButton_.setBounds(W - 4 - 80, 42, 80, 22);
+    // Full conv tile: the Load/Change IR button sits in the CHROME icon slot
+    // (where the effect glyph would be). The y=26 band is the kernel
+    // readout — filename on line 1, the engine's real length on line 2
+    // (E-2) — and the y=50 band the waveform strip.
+    convIrButton_.setBounds(28, 4, 68, 20);
+    convIrLabel_.setBounds(4, 25, W - 8, 14);
+    convIrSeconds_.setBounds(4, 38, W - 8, 12);
   }
 
   const int knobH =
-      Knob::heightFor(compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary);
+      Knob::heightFor((compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary);
+  const bool convFullTile = (block_.effectKind == "convolution") && !compact_;
   const int rowGap = compact_ ? 6 : 8;
-  const int row1Y = compact_ ? 30 : 92;
+  // Full conv: the waveform strip owns y=46..90, so the knob rows start lower.
+  const int row1Y = convFullTile ? 94 : (compact_ ? 30 : 92);
   const int row2Y = row1Y + knobH + rowGap;
   const bool reverb = block_.effectKind == "reverb";
   const bool chorus = block_.effectKind == "chorus";
@@ -1164,6 +1231,8 @@ void EffectTile::resized() {
     knobC_.setBounds(x, row2Y, colW, knobH); x += colW;
   }
   output_.setBounds(x, row2Y, colW, knobH);
+  if (convFullTile)
+    convPlot_.setBounds(4, 50, W - 8, 40);
 }
 
 void EffectTile::paint(juce::Graphics& g) {
@@ -1182,7 +1251,7 @@ void EffectTile::paint(juce::Graphics& g) {
   // Effect-type icon: right of the power button, power-button sized (20x20). The
   // compressor has no drawn glyph -- its icon slot is the PUNCH toggle button.
   // The compact reverb likewise puts its mode cycler in the icon slot.
-  if (!compressor && !delay && !(reverb && compact_)) {
+  if (!compressor && !delay && !(reverb && compact_) && !convolution) {
     const float gs = 20.0f;
     const float iconX = 28.0f;
     const float iconY = 4.0f;
@@ -1196,7 +1265,8 @@ void EffectTile::paint(juce::Graphics& g) {
   // the compressor is abbreviated to fit.
   const int chrome = theme::kIconBoxSize;
   const int titleX0 =
-      compact_ ? (compressor ? 100 : (delay ? 100 : (reverb ? 106 : 50))) : (28 + 36 + 6);
+      compact_ ? (compressor ? 100 : (delay ? 100 : (reverb ? 106 : 50)))
+                : (convolution ? (28 + 68 + 6) : (28 + 36 + 6));
   juce::Font font(compact_ ? 13.0f : 16.0f, juce::Font::bold);
   const juce::String title =
       compact_ && compressor ? "Comp" : (compact_ && reverb ? "Rev"

@@ -22,30 +22,39 @@
 // a host would (the live-toggle path is an AsyncUpdater that needs a running
 // message pump; prepareToPlay resolves the same parameters synchronously).
 #include "Processor.h"
+#include <juce_audio_formats/juce_audio_formats.h>
 #include "test_helpers.h"
 #include "chain_test_helpers.h"
 
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <cstddef>
+#include <string_view>
 #include <vector>
 
 namespace {
 
 // Drives the processor like a host: identical audio into both channels in
-// fixed-size blocks (in.size() must be a multiple of blockSize). Returns
-// channel 0 of the output.
+// fixed-size blocks; a trailing partial block (in.size() not a multiple of
+// blockSize) is driven with exactly its remaining samples. Returns channel 0
+// of the output.
 std::vector<float> processThrough(TONE3000Processor& proc, const std::vector<float>& in,
                                   int blockSize) {
   const int total = static_cast<int>(in.size());
-  std::vector<float> out(in.size(), 0.0f);
-  juce::AudioBuffer<float> buffer(2, blockSize);
+  std::vector<float> out(total, 0.0f);
   juce::MidiBuffer midi;
   for (int off = 0; off < total; off += blockSize) {
-    buffer.copyFrom(0, 0, in.data() + off, blockSize);
-    buffer.copyFrom(1, 0, in.data() + off, blockSize);
+    // Clamp the final partial block: in.size() need not be a multiple of
+    // blockSize, and the old flat blockSize copy read past `in` and wrote
+    // past `out` on that trailing chunk (heap corruption detected on a
+    // later free). Drive exactly the remaining samples.
+    const int n = std::min(blockSize, total - off);
+    juce::AudioBuffer<float> buffer(2, n);
+    buffer.copyFrom(0, 0, in.data() + off, n);
+    buffer.copyFrom(1, 0, in.data() + off, n);
     proc.processBlock(buffer, midi);
-    std::copy(buffer.getReadPointer(0), buffer.getReadPointer(0) + blockSize,
+    std::copy(buffer.getReadPointer(0), buffer.getReadPointer(0) + n,
               out.begin() + off);
   }
   return out;
@@ -614,4 +623,130 @@ TEST(ProcessorTest, ConvolutionBlockRoundTripsAllParams) {
   EXPECT_NEAR(static_cast<double>(row2["convToneDb"]), 3.5, 1e-9);
 }
 
+
 }  // namespace
+
+namespace {
+// Deterministic fixture IR (2 ch, 4096 samples, decaying tones) written to a
+// stable temp path so the round-trip tests restore FROM DISK, as app start
+// does.
+juce::File makeFixedIrWav() {
+  const juce::File wav(juce::File::getSpecialLocation(juce::File::tempDirectory)
+                           .getChildFile("t3k-ir-fixture.wav"));
+  wav.deleteFile();
+  juce::WavAudioFormat fmt;
+  auto stream = wav.createOutputStream();
+  if (stream == nullptr)
+    return {};
+  // This JUCE build's WavAudioFormat writer takes OWNERSHIP of the stream
+  // (unique_ptr<OutputStream>&, consumed on success), so hand it a base-type
+  // owning pointer rather than the derived FileOutputStream wrapper.
+  auto base = std::unique_ptr<juce::OutputStream>(stream.release());
+  juce::AudioFormatWriterOptions opts;
+  opts = opts.withSampleRate(48000.0).withNumChannels(2).withBitsPerSample(24);
+  if (auto writer = fmt.createWriterFor(base, opts); writer != nullptr) {
+    juce::AudioBuffer<float> buf(2, 4096);
+    for (int i = 0; i < 4096; ++i) {
+      const float env = std::exp(-0.003f * i);
+      buf.setSample(0, i, 0.4f * std::sin(0.02f * i) * env);
+      buf.setSample(1, i, 0.3f * std::sin(0.023f * i) * env);
+    }
+    writer->writeFromAudioSampleBuffer(buf, 0, 4096);
+    return wav;
+  }
+  return {};
+}
+}  // namespace
+
+TEST(ProcessorTest, ConvIrReferenceSurvivesStateRoundTrip) {
+  // E-2: a loaded kernel must survive the preset/app-restart round trip.
+  // proc1 loads from disk; full state moves to a FRESH proc2, which must
+  // come up with the engine re-hydrated from the persisted path.
+  const juce::File irWav = makeFixedIrWav();
+  ASSERT_TRUE(irWav.existsAsFile()) << "fixture WAV could not be written";
+
+  TONE3000Processor proc1;
+  proc1.setPlayConfigDetails(2, 2, 48000, 512);
+  proc1.prepareToPlay(48000, 512);
+  const auto id = proc1.addEffectBlock(EffectKind::Convolution, "left", 0);
+  ASSERT_FALSE(id.empty());
+  juce::var resp = proc1.loadConvIr(id, irWav);
+  ASSERT_TRUE(resp.getDynamicObject() == nullptr ||
+              !resp.getDynamicObject()->hasProperty("error"));
+
+  juce::MemoryBlock stateBytes;
+  proc1.getStateInformation(stateBytes);
+  // The state is a BINARY ValueTree stream (magic prefix + raw bytes, embedded
+  // NULs): never route it through juce::String (this JUCE's String
+  // constructor is a Unicode decoder, not a byte container). Byte-wise search
+  // of the raw buffer instead.
+  const std::string_view state1(reinterpret_cast<const char*>(stateBytes.getData()),
+                                stateBytes.getSize());
+  EXPECT_TRUE(state1.find(irWav.getFullPathName().toRawUTF8()) != std::string_view::npos)
+      << "state must carry the IR path (E-2 persistence)";
+  EXPECT_TRUE(state1.find("t3k-ir-fixture.wav") != std::string_view::npos)
+      << "state must carry the name";
+
+  TONE3000Processor proc2;
+  proc2.setPlayConfigDetails(2, 2, 48000, 512);
+  proc2.prepareToPlay(48000, 512);
+  proc2.setStateInformation(stateBytes.getData(), static_cast<int>(stateBytes.getSize()));
+
+  // Functional proof the engine re-hydrated: 1.0 s of tone then silence —
+  // ONLY a live convolver produces energy in the wet-tail window right
+  // after the tone stops.
+  {
+    std::vector<float> tone; // scoped: torn down before the processors below
+    const int rate = 48000;
+    const int total = 3 * rate;
+    tone.assign(static_cast<size_t>(total), 0.0f);
+    const double w = 2.0 * 3.14159265358979 * 440.0 / rate;
+    for (int i = 0; i < rate; ++i)
+      tone[i] = 0.5f * static_cast<float>(std::sin(w * i));
+    const auto out = processThrough(proc2, tone, 512);
+    const int ws = (int) (1.01 * rate), we = (int) (1.08 * rate);
+    double rms = 0.0;
+    for (int i = ws; i < we; ++i)
+      rms += (double) out[i] * out[i];
+    rms = std::sqrt(rms / (we - ws));
+    EXPECT_GT(rms, 1e-5) << "restored engine produced no wet tail (IR was not re-hydrated)";
+  }
+}
+
+TEST(ProcessorTest, ConvIrMissingFileRestoresGracefully) {
+  // E-2: a preset whose IR file is not on this machine must restore without
+  // losing the identity — the tile's IR-missing recovery state depends on
+  // name + path surviving while the engine stays empty. (The state is a
+  // binary ValueTree, so we DROP the file rather than edit the bytes.)
+  const juce::File irWav = makeFixedIrWav();
+  ASSERT_TRUE(irWav.existsAsFile());
+
+  TONE3000Processor proc1;
+  proc1.setPlayConfigDetails(2, 2, 48000, 512);
+  proc1.prepareToPlay(48000, 512);
+  const auto id = proc1.addEffectBlock(EffectKind::Convolution, "left", 0);
+  ASSERT_FALSE(id.empty());
+  proc1.loadConvIr(id, irWav);
+
+  juce::MemoryBlock stateBytes;
+  proc1.getStateInformation(stateBytes);
+  ASSERT_TRUE(irWav.deleteFile()) << "the file must exist to disappear";
+
+  TONE3000Processor proc2;
+  proc2.setPlayConfigDetails(2, 2, 48000, 512);
+  proc2.prepareToPlay(48000, 512);
+  proc2.setStateInformation(stateBytes.getData(), static_cast<int>(stateBytes.getSize()));
+
+  // No crash; the chain still processes (dry path only).
+  std::vector<float> in(512, 0.0f);
+  for (int i = 0; i < 512; ++i)
+    in[i] = 0.3f * std::sin(0.02f * i);
+  (void) processThrough(proc2, in, 512);
+
+  juce::MemoryBlock state2;
+  proc2.getStateInformation(state2);
+  const std::string_view out2(reinterpret_cast<const char*>(state2.getData()),
+                              state2.getSize());
+  EXPECT_TRUE(out2.find(irWav.getFullPathName().toRawUTF8()) != std::string_view::npos)
+      << "the missing-file identity must persist for the IR-missing UI state";
+}

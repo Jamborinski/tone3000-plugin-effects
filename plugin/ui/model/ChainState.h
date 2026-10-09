@@ -202,6 +202,12 @@ struct ChainItem {
   double convToneDb = 0.0;  // -12..+12 peaking @ 2.5 kHz -- Tone (0 = flat)
   juce::String convIrName;
 
+  // E-2: identity a block may carry without a live engine (file missing
+  // here) — path feeds Load-IR recovery; seconds feed the time readout.
+  juce::String convIrPath;
+  bool convIrLoaded = false;
+  double convSeconds = 0.0;
+
   bool isTone() const { return !isInsert && !isEffect; }
 };
 

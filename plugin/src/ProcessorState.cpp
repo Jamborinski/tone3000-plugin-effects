@@ -286,6 +286,15 @@ juce::ValueTree TONE3000Processor::serializeBlockSettings(const ChainBlock& bloc
       blockState.setProperty("convInCurve", block.convInCurve, nullptr);
       blockState.setProperty("convOutCurve", block.convOutCurve, nullptr);
       blockState.setProperty("convToneDb", block.convToneDb, nullptr);
+      // E-2 (+time readout): the kernel is referenced by path (bytes stay in
+      // the user's IR library, out of state); name/loaded/seconds give the
+      // tile the honest kernel state incl. the IR-missing recovery.
+      blockState.setProperty("convIrPath", block.convIrPath, nullptr);
+      blockState.setProperty("convIrName", block.conv.irName(), nullptr);
+      blockState.setProperty("convIrLoaded", block.conv.hasIr(), nullptr);
+      blockState.setProperty(
+          "convSeconds", block.conv.hasIr() ? block.conv.editedSeconds() : 0.0,
+          nullptr);
     }
   }
 
@@ -448,6 +457,10 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
       block.convInCurve = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convInCurve", 0.5)));
       block.convOutCurve = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convOutCurve", 0.5)));
       block.convToneDb = juce::jlimit(ConvolutionReverb::kMinToneDb, ConvolutionReverb::kMaxToneDb, static_cast<double>(blockState.getProperty("convToneDb", 0.0)));
+      // E-2: the persisted IR reference (identity + path). Engine bytes are
+      // restored separately via restoreConvIrsLocked at the restore site.
+      block.convIrPath =
+          blockState.getProperty("convIrPath", juce::String()).toString();
       block.delay.setParams({block.delayTimeMs, block.delayFeedback, block.delayDamping});
       block.chorus.setParams({block.chorusRateHz, block.chorusDepthMs, block.chorusSpread,
                               block.chorusTone, block.chorusWave});
@@ -606,7 +619,10 @@ void TONE3000Processor::setStateInformation(const void* data, int sizeInBytes) {
   {
     juce::ScopedLock lock(chainMutex);
 
-    retired = restoreChainSnapshot(snapshot);  // updates latency, bumps revision
+    retired = restoreChainSnapshot(snapshot);
+    // E-2: re-hydrate convolver engines from their persisted IR paths (the
+    // state carries the reference, not the bytes). No-op without one.
+    restoreConvIrsLocked();  // updates latency, bumps revision
 
     pendingAddSide = ChainSide::Left;
     activePresetId = state.getProperty("activePresetId").toString();

@@ -118,6 +118,10 @@ bool ProcessorBackend::setBlockParam(const std::string& blockId, const juce::Str
                                      double value) {
   return processor_.setBlockParam(blockId, param, value);
 }
+juce::var ProcessorBackend::getConvPreview(const std::string& blockId) {
+  return processor_.getConvPreview(blockId);
+}
+
 juce::var ProcessorBackend::loadConvIr(const std::string& blockId, const juce::File& file) {
   return processor_.loadConvIr(blockId, file);
 }

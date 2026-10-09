@@ -234,6 +234,17 @@ public:
       which the block owns. */
   juce::var loadConvIr(const std::string& blockId, const juce::File& file);
 
+  // E-2: after any state restore, re-hydrate convolver engines from
+  // their persisted IR paths (app start / presets / duplicate / paste).
+  // Caller keeps holding chainMutex (every restore site already does).
+  // Missing or undecodable file: identity stays in state for the UI's
+  // IR-missing recovery state.
+  void restoreConvIrsLocked();
+  // Waveform-strip data (Phase C) for a convolver block's CURRENT kernel:
+  // { sampleRate, length, channels, envL, envR } or {} when none built.
+  // Message thread; safe to call from the editor at any time.
+  juce::var getConvPreview(const std::string& blockId);
+
   // TONE3000 OAuth access token. Updated by the UI after the Select flow and
   // again on every refresh. `fetchModelFromUrl` attaches it as a Bearer header
   // because the new TONE3000 model_url endpoints reject anonymous requests.
