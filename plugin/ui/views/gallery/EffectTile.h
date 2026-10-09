@@ -80,6 +80,9 @@ class EffectTile : public GalleryTile {
   // to the stored real units; the readout is the scale's format().
   Knob mix_, input_, output_;
   Knob knobA_, knobB_, knobC_, knobD_, knobE_;
+  // Two extra grid slots (the convolver's 9-knob surface is the only
+  // one that needs them; every other block uses at most A..E + sig + mod).
+  Knob knobF_, knobG_;
   const KnobScale* scaleA_ = nullptr;
   const KnobScale* scaleB_ = nullptr;
   const KnobScale* scaleC_ = nullptr;

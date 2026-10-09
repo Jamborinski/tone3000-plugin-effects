@@ -184,7 +184,7 @@ static double reverbSigRaw(const ChainItem& b, int mode, int localSlot) {
   }
 }
 
-std::vector<EffectParams> paramsFor(const ChainItem& b) {
+std::vector<EffectParams> paramsFor(const ChainItem& b, bool compact) {
   const juce::String k = b.effectKind;
   if (k == "delay")
     return {
@@ -243,14 +243,31 @@ std::vector<EffectParams> paramsFor(const ChainItem& b) {
         {&scales::reverbSize(), "reverbSize", "Size", b.reverbSize, help::Key::reverbSize},
         {&scales::reverbWidth(), "reverbWidth", "Width", b.reverbWidth, help::Key::reverbWidth},
     };
-  if (k == "convolution")
-    return {
-        {&scales::convGain(), "convGain", "Gain", b.convGain, help::Key::convGain},
-        {&scales::convWidth(), "convWidth", "Width", b.convWidth, help::Key::convWidth},
-        {&scales::convStart(), "convStartS", "Start", b.convStartS, help::Key::convStartS},
-        {&scales::convEnd(), "convEndS", "End", b.convEndS, help::Key::convEndS},
+  if (k == "convolution") {
+    // Full 6x2 surface (FogConvolver-2 parity): 12 knobs = the fixed
+    // Mix/In/Out trio + these nine, in slot order (A..E, sig, mod, F, G).
+    // "Dry" is the wet level (the engine's gain rides the wet path); the
+    // shared In knob is re-labelled "Dwell" on the conv tile.
+    const std::vector<EffectParams> full = {
         {&scales::convPitch(), "convPitch", "Length", b.convPitch, help::Key::convPitch},
+        {&scales::convPre(), "convPreMs", "Pre", b.convPreMs, help::Key::convPre},
+        {&scales::convFade(), "convFadeIn", "F In", b.convFadeIn, help::Key::convFadeIn},
+        {&scales::convFade(), "convFadeOut", "F Out", b.convFadeOut, help::Key::convFadeOut},
+        {&scales::convTone(), "convToneDb", "Tone", b.convToneDb, help::Key::convTone},
+        {&scales::convGain(), "convGain", "Dry", b.convGain, help::Key::convGain},
+        {&scales::convWidth(), "convWidth", "Width", b.convWidth, help::Key::convWidth},
+        {&scales::convFade(), "convInCurve", "InCrv", b.convInCurve, help::Key::convInCurve},
+        {&scales::convFade(), "convOutCurve", "OutCrv", b.convOutCurve, help::Key::convOutCurve},
     };
+    if (compact) {
+      // 4x2: Mix/Length/Pre/Tone over Dwell/Dry/Width/Out.
+      const int sel[5] = {0, 1, 4, 5, 6};
+      std::vector<EffectParams> c;
+      for (int j = 0; j < 5; ++j) c.push_back(full[sel[j]]);
+      return c;
+    }
+    return full;
+  }
   return {
       {&scales::chorusRateHz(), "chorusRateHz", "Rate", b.chorusRateHz, help::Key::effectRate},
       {&scales::chorusDepthMs(), "chorusDepthMs", "Depth", b.chorusDepthMs,
@@ -271,10 +288,11 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
       block_(block),
       delaySynced_(block.effectKind == "delay" && block.delaySynced),
       numParams_(block.effectKind == "compressor" ? 7
-                 : (block.effectKind == "delay" || block.effectKind == "reverb" ||
-                    block.effectKind == "chorus" || block.effectKind == "tremolo" ||
-                    block.effectKind == "convolution" ? 5
-                    : 3)),
+                 : (block.effectKind == "convolution"
+                    ? ((size <= gallery::kStereoTileSize) ? 5 : 9)
+                    : (block.effectKind == "delay" || block.effectKind == "reverb" ||
+                       block.effectKind == "chorus" || block.effectKind == "tremolo" ? 5
+                       : 3))),
       compact_(size <= gallery::kStereoTileSize),
       mix_(knob("Mix", scales::percent(), 1.0f, help::Key::effectMix,
                 compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
@@ -292,6 +310,10 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
                   compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobE_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
                   compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+      knobF_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
+                  compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+      knobG_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
+                  compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       power_(Icon::Power, ChromeIconButton::Tone::power, help::Key::blockPower),
       remove_(Icon::Trash2, ChromeIconButton::Tone::plain, help::Key::removeBlock),
       // Delay only (built here like the P placeholders; the delay branch
@@ -304,6 +326,9 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
       // IS the mode's signature control.
       modKnob_(knob("Mod", scales::fraction01(), 0.0f, help::Key::delayMod,
                     compact_ ? kCompactKnobFace : theme::kKnobSizeSecondary)) {
+  // Conv tile: the shared In knob reads as "Dwell" on this block.
+  if (block_.effectKind == "convolution")
+    input_.setLabel("Dwell");
   mix_.onChange = [this](float v) {
     this->services().chain.setBlockParam(blockId(), "mix", (double)v);
   };
@@ -317,9 +342,10 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
   };
 
   Knob* knobs[5] = {&knobA_, &knobB_, &knobC_, &knobD_, &knobE_};
-  const std::vector<EffectParams> ps = paramsFor(block_);
+  const std::vector<EffectParams> ps = paramsFor(block_, compact_);
   auto knobAt = [=](int i) -> Knob* {
-    return i < 5 ? knobs[i] : (i == 5 ? &sigKnob_ : &modKnob_);
+    return i < 5 ? knobs[i] : (i == 5 ? &sigKnob_ : (i == 6 ? &modKnob_
+                    : (i == 7 ? &knobF_ : &knobG_)));
   };
   for (int i = 0; i < numParams_ && i < (int)ps.size(); ++i) {
     Knob* k = knobAt(i);
@@ -640,11 +666,14 @@ void EffectTile::syncKnobs() {
   // threshold is a Thresh param knob, synced by the generic loop below.
   input_.setValue((float)block_.params.inputGain);
   output_.setValue((float)block_.params.outputGain);
-  Knob* knobs[7] = {&knobA_, &knobB_, &knobC_, &knobD_, &knobE_,
-                    &sigKnob_, &modKnob_};
-  const std::vector<EffectParams> ps = paramsFor(block_);
+  Knob* slots[9] = {&knobA_, &knobB_, &knobC_, &knobD_, &knobE_,
+                    &sigKnob_, &modKnob_, &knobF_, &knobG_};
+  // Slot order mirrors the constructor's knobAt: param i lives in slot i,
+  // with i>=5 riding sig/mod/F/G (the compact conv's Dry/Width land there,
+  // not in knobD_/E -- keep the two passes agreeing).
+  const std::vector<EffectParams> ps = paramsFor(block_, compact_);
   for (int i = 0; i < numParams_ && i < (int)ps.size(); ++i)
-    knobs[i]->setValue((float)knobFromStored(*ps[i].scale, ps[i].raw));
+    slots[i]->setValue((float)knobFromStored(*ps[i].scale, ps[i].raw));
   if (block_.effectKind == "compressor") {
     modeCombo_.setSelectedId(juce::jlimit(0, 4, block_.compMode) + 1,
                              juce::dontSendNotification);
@@ -1056,7 +1085,11 @@ void EffectTile::resized() {
   const bool compFull = compressor && !compact_;
   const bool reverbFull = reverb && !compact_;
   const bool reverbCompact = reverb && compact_;
-  const int cols = (delayFull || compFull || reverbFull) ? 5 : (five ? 4 : 3);
+  const bool conv = (block_.effectKind == "convolution");
+  const bool convFull = conv && !compact_;
+  const bool convCompact = conv && compact_;
+  const int cols = convFull ? 6
+                            : ((delayFull || compFull || reverbFull) ? 5 : (five ? 4 : 3));
   const int colW = (W - 8) / cols;
 
   // Row 1: Mix, p0, p1, p2 [p3 on the full delay tile]. Reverb: full =
@@ -1078,6 +1111,10 @@ void EffectTile::resized() {
   }
   if (compFull) {
     knobD_.setBounds(x, row1Y, colW, knobH);  // Tone sits right of Release
+  }
+  if (convFull) {
+    knobD_.setBounds(x, row1Y, colW, knobH);  // F Out
+    knobE_.setBounds(x, row1Y, colW, knobH);  // Tone
   }
 
   // Row 2: In, [Width, Mod, (unique unless Mod mode), (sig slot always,
@@ -1112,6 +1149,14 @@ void EffectTile::resized() {
     else
       sigKnob_.setBounds(x, row2Y, colW, knobH);           // the mode's unique
     x += colW;
+  } else if (convFull) {
+    sigKnob_.setBounds(x, row2Y, colW, knobH); x += colW;  // Dry (wet level)
+    modKnob_.setBounds(x, row2Y, colW, knobH); x += colW;  // Width
+    knobF_.setBounds(x, row2Y, colW, knobH); x += colW;    // InCrv
+    knobG_.setBounds(x, row2Y, colW, knobH);               // OutCrv
+  } else if (convCompact) {
+    sigKnob_.setBounds(x, row2Y, colW, knobH); x += colW;  // Dry (wet level)
+    modKnob_.setBounds(x, row2Y, colW, knobH);             // Width
   } else if (five) {
     knobD_.setBounds(x, row2Y, colW, knobH); x += colW;
     knobE_.setBounds(x, row2Y, colW, knobH); x += colW;
@@ -1128,6 +1173,7 @@ void EffectTile::paint(juce::Graphics& g) {
   const bool tremolo = block_.effectKind == "tremolo";
   const bool compressor = block_.effectKind == "compressor";
   const bool reverb = block_.effectKind == "reverb";
+  const bool convolution = block_.effectKind == "convolution";
   paint::fill(g, juce::Rectangle<float>(0, 0, W, H), gallery::kTileCorner,
               enabled_ ? theme::kSurfaceRaised : theme::kSurface);
   if (!enabled_)
@@ -1153,10 +1199,11 @@ void EffectTile::paint(juce::Graphics& g) {
       compact_ ? (compressor ? 100 : (delay ? 100 : (reverb ? 106 : 50))) : (28 + 36 + 6);
   juce::Font font(compact_ ? 13.0f : 16.0f, juce::Font::bold);
   const juce::String title =
-      compact_ && compressor ? "Comp"
-                             : (compact_ && reverb ? "Rev"
+      compact_ && compressor ? "Comp" : (compact_ && reverb ? "Rev"
+                             : (compact_ && convolution ? "Conv"
                              : (delay ? "Delay" : (tremolo ? "Tremolo"
-                               : (compressor ? "Compressor" : (reverb ? "Reverb" : "Chorus")))));
+                               : (compressor ? "Compressor" : (reverb ? "Reverb"
+                               : (convolution ? "Convolver" : "Chorus")))))));
   paint::text(g, title,
               juce::Rectangle<int>(titleX0, 4, W - titleX0 - (4 + chrome), chrome),
               font, theme::kMuted, juce::Justification::centred);

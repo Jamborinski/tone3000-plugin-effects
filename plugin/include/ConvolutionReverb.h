@@ -40,6 +40,27 @@
 // pointer then runs unlocked, so the replaced engine outlives the
 // in-flight pass (old juce::dsp::Convolution kept alive by the RT copy).
 //
+// Engine swaps crossfade (the house swap law; the model path rides
+// swapWetMuteGain): the dying engine keeps tailing out on the audio thread
+// for kInstallFadeMs while the new engine serves, so a live tail is never
+// hard-spliced (A6: the Length-drag clicks). Shape-knob drags
+// (Length/Start/End/Fades) coalesce to a single rebuild kRebuildSettleMs
+// after the last change instead of one engine build per nudge.
+//
+// Engine swaps crossfade (the house swap law; the model path rides
+// swapWetMuteGain): the dying engine keeps tailing out on the audio thread
+// for kInstallFadeMs while the new engine serves, so a live tail is never
+// hard-spliced (A6: the Length-drag clicks). Shape-knob drags
+// (Length/Start/End/Fades) coalesce to a single rebuild kRebuildSettleMs
+// after the last change instead of one engine build per nudge.
+//
+// Engine swaps crossfade (the house swap law; the model path rides
+// swapWetMuteGain): the dying engine keeps tailing out on the audio thread
+// for kInstallFadeMs while the new engine serves, so a live tail is never
+// hard-spliced (A6: the Length-drag clicks). Shape-knob drags
+// (Length/Start/End/Fades) coalesce to a single rebuild kRebuildSettleMs
+// after the last change instead of one engine build per nudge.
+//
 // process() replaces the buffer's contents with the wet (the chain does
 // the dry/wet mix and Out around it; 50% mix = house default). No IR
 // loaded -> wet is silence (the chain's mix then yields the dry path).
@@ -47,17 +68,43 @@
 #pragma once
 
 #include <cmath>
+#include <cstdint>  // uint32_t (fade generation, A6)
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "juce_dsp/juce_dsp.h"
+#include "juce_events/juce_events.h" // Timer (drag-coalescing, A6)
+
+class ConvolutionReverb;  // forward decl (RebuildSettleTimer's owner, below)
+
+class RebuildSettleTimer final : public juce::Timer {
+ public:
+  // A juce::Timer can't be a plain member (it is abstract); this concrete
+  // host bounces the settle expiry back to the owner (message thread).
+  // The owner is a lane-resident ConvolutionReverb, which is address-stable
+  // (CriticalSection makes it non-movable), so the back-reference is safe.
+  explicit RebuildSettleTimer(ConvolutionReverb& owner) : owner_(owner) {}
+  void restartSettle(int ms) { startTimer(ms); }
+
+ private:
+  void timerCallback() override;
+  ConvolutionReverb& owner_;
+};
 
 class ConvolutionReverb {
  public:
   // Mirror of the house IR laws (ProcessorModelLoader.cpp anonymous
   // namespace; stay in step with the amp-IR path).
-  static constexpr double kMaxIrSeconds = 10.0;         // kMaxIrSeconds
+  // RAW-file load cap (the house mirror of the amp-IR law).
+  static constexpr double kMaxIrSeconds = 30.0;
+  // Cap on the EDITED (trim + stretch) length. Kept separate from the raw
+  // cap: the stretch legitimately outgrows it. Set at raw x4 (30 * 4 = 120)
+  // so EVERY loadable IR builds at every Length position (DoD A5; the
+  // 3.476 s EMT-140 plate at 400 % is 13.9 s). Memory cost is on the user
+  // who chooses both: a 120 s 2-ch engine measured ~700 MB per lane.
+  static constexpr double kMaxEditedSeconds = 120.0;
+
   static constexpr double kShortIrMaxSeconds = 1.0;     // kShortIrMaxSeconds
   static constexpr int kNonUniformHeadSamples = 8192;   // kIrNonUniformHeadSamples
 
@@ -65,6 +112,23 @@ class ConvolutionReverb {
   static constexpr double kMinGain = -24.0, kMaxGain = 24.0;  // dB
   static constexpr double kMinPitchScale = 0.25, kMaxPitchScale = 4.0;
   static constexpr double kMaxFadeCurve = 7.0;  // ramp exponent = 1 + curve*7
+  // Tone (live peaking biquad on the wet path -- never baked): fixed
+  // centre + Q, gain +-kMaxToneDb; 0 dB is exactly flat (the filter is not
+  // even run, so the wet is bit-identical to a tone-less build).
+  static constexpr double kToneHz = 2500.0;
+  static constexpr double kToneQ = 0.7;
+  static constexpr double kMinToneDb = -12.0, kMaxToneDb = 12.0;
+  // Engine-SWAP crossfade (the house swap law; the model path rides
+  // swapWetMuteGain, the conv path rides this): on install the dying engine
+  // keeps tailing out and its wet fades over this window while the new
+  // engine serves, both on the audio thread. Splicing a live tail (plus the
+  // fresh long engine's empty OLA memory) reads as a click (A6: the
+  // Length-drag clicks).
+  static constexpr int kInstallFadeMs = 150;
+  // Drag coalescing (A6): Length/Start/End/Fade drags are a stream of
+  // setParams; rebuild once kRebuildSettleMs after the last one instead of
+  // per nudge (each is a full engine build on the message thread).
+  static constexpr int kRebuildSettleMs = 80;
 
   struct Params {
     double preMs = 0.0;        // 0..100 wet pre-delay (ms)
@@ -77,6 +141,7 @@ class ConvolutionReverb {
     double fadeOut = 0.0;      // 0..1 fraction of the edited IR ramped out
     double fadeInCurve = 0.5;  // 0 = linear, 1 = strongest
     double fadeOutCurve = 0.5; // 0 = linear, 1 = strongest
+    double toneDb = 0.0;       // -12..+12 peaking (kToneHz, kToneQ); 0 = flat
   };
 
   // Display/storage helpers (single source of the laws; UI scales + the
@@ -101,7 +166,10 @@ class ConvolutionReverb {
     return 1.0 + juce::jlimit(0.0, 1.0, curve) * kMaxFadeCurve;
   }
 
-  ConvolutionReverb() = default;
+  ConvolutionReverb() : settleTimer_(*this) {}  // concrete Timer host (A6)
+
+ public:
+  friend class RebuildSettleTimer;  // settles the coalesced rebuild
 
   // message thread: install IR data (1/2/4 ch, any rate) and rebuild. 4 ch
   // is folded to the documented quad->stereo law before JUCE sees it
@@ -127,7 +195,11 @@ class ConvolutionReverb {
   void reset();
 
   // audio thread: replace the buffer's contents with the wet (the chain
-  // mixes dry/wet afterwards). No IR loaded -> inert pass-through.
+  // mixes dry/wet afterwards). No IR loaded -> inert pass-through. Accepts
+  // 1- or 2-channel buffers: in dual-mono (stereo) mode each lane is a
+  // mono chain and its ConvolutionReverb is fed a 1-channel buffer (JUCE's
+  // convolution supports mono input: the L kernel runs it; Width has no
+  // image to fold there).
   void process(juce::AudioBuffer<float>& buffer);
 
   // --- introspection (UI + tests) -----------------------------------------
@@ -146,6 +218,11 @@ class ConvolutionReverb {
   // Short-IR (uniform) engine when true; two-stage (non-uniform) when the
   // edited IR is longer than kShortIrMaxSeconds.
   bool usesUniformEngine() const;
+  // Engine installs since construction (drag-coalescing diagnostics/tests).
+  int installs() const {
+    const juce::ScopedLock lock(stateLock_);
+    return installs_;
+  }
   // True zero latency by construction (both JUCE engines are zero-latency).
   int wetLatencySamples() const { return 0; }
   juce::String lastError() const { return lastError_; }
@@ -164,11 +241,30 @@ class ConvolutionReverb {
   std::shared_ptr<State> makeEditedState();
 
   // message thread: swap in the new State (see header for the lifetime
-  // hand-off).
-  void installState(std::shared_ptr<State> next);
+  // hand-off). crossfade=true: the previous engine keeps tailing out on the
+  // audio thread over kInstallFadeMs (A6). crossfade=false (prepare):
+  // the previous engine was built at a different rate and must die hard.
+  void installState(std::shared_ptr<State> next, bool crossfade);
 
   mutable juce::CriticalSection stateLock_; // const getters may lock it
   std::shared_ptr<State> state_;
+  int installs_ = 0;
+
+  // Drag-coalescing (A6): concrete settle timer + pending flag.
+  RebuildSettleTimer settleTimer_;
+  bool dirtyShape_ = false;
+  void onSettleTimedOut();  // message thread: run the coalesced rebuild
+
+  // Swap crossfade (A6), audio-owned progress, message-owned slots.
+  std::shared_ptr<State> dying_;      // the engine fading out (under stateLock_)
+  Params dyingParams_;                // its width/gain frozen at the swap
+  float fadePos_ = 1.0f;              // 0 -> 1 across kInstallFadeMs (audio advances)
+  uint32_t fadeGen_ = 0;              // bumped per install: a late fade can't
+                                      // retire a NEWER dying engine
+  // Staging for the crossfade window (sized in prepare; the chain feeds at
+  // most kIrConvolverMaxBlockSize frames, see ChainBlock.h).
+  juce::AudioBuffer<float> fadeInBuf_;   // input snapshot the dying engine eats
+  juce::AudioBuffer<float> fadeOutBuf_;  // the dying engine's wet, pre-blend
   Params params_;
   double rate_ = 0.0;
 
@@ -182,6 +278,16 @@ class ConvolutionReverb {
   // House gain law (Processor.h:967 SmoothedValue idiom): message-thread
   // target plus per-sample audio-thread advance at ~5 ms.
   juce::SmoothedValue<float> gainSmoother_;
+
+  // Tone (peaking biquad, live on the wet path). The FILTER state is audio-
+  // owned; coefficients are (re)built on the audio thread from a smoothed
+  // linear gain, so a message-thread setParams never touches it. Two
+  // instances: the serving engine's live gain, and the frozen gain of the
+  // engine fading out during a swap window (its state must not cross-talk).
+  juce::dsp::IIR::Filter<float> toneLive_, toneDying_;
+  juce::SmoothedValue<float> toneSmoother_;  // linear gain; 1.0 = flat
+  float toneLiveApplied_ = -1.0f;            // last coefficients' gain (audio)
+  float toneDyingApplied_ = -1.0f;
 
   // Raw IR (message thread only; rebuilt into the engine on demand).
   std::vector<float> rawL_, rawR_;

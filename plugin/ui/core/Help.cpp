@@ -200,6 +200,12 @@ std::map<Key, String> buildTable() {
   t[Key::convStartS] = knobDesktop("Start", "trim window start, in seconds of the raw IR (0 = from the top). Rebuilds the kernel.");
   t[Key::convEndS] = knobDesktop("End", "trim window end, in seconds of the raw IR (0 = to the end). Rebuilds the kernel.");
   t[Key::convPitch] = knobDesktop("Length", "time-scale of the IR, 0.25x..4x log (1.0x = the IR's native length). Pitched down = longer, darker tail.");
+  t[Key::convPre] = knobDesktop("Pre", "wet pre-delay, 0..100 ms: the dry signal passes first this long before the reverb starts.");
+  t[Key::convFadeIn] = knobDesktop("F In", "ramp the kernel's attack over % of its length (0..100).");
+  t[Key::convFadeOut] = knobDesktop("F Out", "ramp the kernel's tail over % of its length (0..100).");
+  t[Key::convInCurve] = knobDesktop("InCrv", "steepness of the F In ramp (0 = linear, 100 = strongest curve).");
+  t[Key::convOutCurve] = knobDesktop("OutCrv", "steepness of the F Out ramp (0 = linear, 100 = strongest curve).");
+  t[Key::convTone] = knobDesktop("Tone", "live peaking on the wet, -12..+12 dB around 2.5 kHz (0 = exactly flat).");
   t[Key::convIrLoad] = knobDesktop("Load IR", "pick a wav/aiff impulse response (mono, stereo or quad). The quad law folds L=(c0+c2)/sqrt(2), R=(c1+c3)/sqrt(2).");
   t[Key::effectReverb] = U("Reverb setting: adjust the value for this block.");
   t[Key::reverbDecay] = knobDesktop("Decay", "reverb tail length, 50-3000 ms.");

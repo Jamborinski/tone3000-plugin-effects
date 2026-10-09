@@ -405,16 +405,31 @@ struct ChainBlock {
   double convStartS = 0.0;  // trim window start, seconds of raw IR (0 = 0).
   double convEndS = 0.0;    // trim window end (0 = to the end).
   double convPitch = 0.5;   // 0..1 stored; 0.5 = unity (0.25x..4x length)
+  // The engine's live/creative params, all round-tripped (FogConvolver-2
+  // parity): wet pre-delay + the edit-window fades/ramps + the Tone
+  // peaking (0 = exactly flat).
+  double convPreMs = 0.0;   // 0..100 wet pre-delay (ms) -- the "Pre" knob
+  double convFadeIn = 0.0;  // 0..1 fraction of the edited IR ramped in -- "F In"
+  double convFadeOut = 0.0; // 0..1 fraction ramped out -- "F Out"
+  double convInCurve = 0.5; // 0 = linear, 1 = strongest -- "InCrv"
+  double convOutCurve = 0.5;// 0 = linear, 1 = strongest -- "OutCrv"
+  double convToneDb = 0.0;  // -12..+12 peaking @ 2.5 kHz -- "Tone"
   /** Mirror the convolution block's controls into the engine in one call.
       Starts from the engine's own default Params, so the non-persisted
       fields (preMs, the fades + curves) keep their documented defaults. */
   ConvolutionReverb::Params convParams() const {
-    ConvolutionReverb::Params p;  // preMs/fades/curves = class defaults
+    ConvolutionReverb::Params p;  // defaults below are overridden by state
     p.gain = convGain;
     p.width = convWidth;
     p.startS = convStartS;
     p.endS = convEndS;
     p.pitch = convPitch;
+    p.preMs = convPreMs;
+    p.fadeIn = convFadeIn;
+    p.fadeOut = convFadeOut;
+    p.fadeInCurve = convInCurve;
+    p.fadeOutCurve = convOutCurve;
+    p.toneDb = convToneDb;
     return p;
   }
   Delay delay;

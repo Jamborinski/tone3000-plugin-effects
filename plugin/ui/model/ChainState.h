@@ -193,6 +193,13 @@ struct ChainItem {
   double convStartS = 0.0;
   double convEndS = 0.0;
   double convPitch = 0.5;
+  // B-surface additions (FogConvolver-2 parity), all round-tripped.
+  double convPreMs = 0.0;   // wet pre-delay, ms (0..100) -- the Pre knob
+  double convFadeIn = 0.0;  // 0..1 fraction of the edited IR ramped in -- F In
+  double convFadeOut = 0.0; // 0..1 ramped out -- F Out
+  double convInCurve = 0.5; // 0 = linear, 1 = strongest -- InCrv
+  double convOutCurve = 0.5;// -- OutCrv
+  double convToneDb = 0.0;  // -12..+12 peaking @ 2.5 kHz -- Tone (0 = flat)
   juce::String convIrName;
 
   bool isTone() const { return !isInsert && !isEffect; }

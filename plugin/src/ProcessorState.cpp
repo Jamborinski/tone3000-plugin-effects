@@ -280,6 +280,12 @@ juce::ValueTree TONE3000Processor::serializeBlockSettings(const ChainBlock& bloc
       blockState.setProperty("convStartS", block.convStartS, nullptr);
       blockState.setProperty("convEndS", block.convEndS, nullptr);
       blockState.setProperty("convPitch", block.convPitch, nullptr);
+      blockState.setProperty("convPreMs", block.convPreMs, nullptr);
+      blockState.setProperty("convFadeIn", block.convFadeIn, nullptr);
+      blockState.setProperty("convFadeOut", block.convFadeOut, nullptr);
+      blockState.setProperty("convInCurve", block.convInCurve, nullptr);
+      blockState.setProperty("convOutCurve", block.convOutCurve, nullptr);
+      blockState.setProperty("convToneDb", block.convToneDb, nullptr);
     }
   }
 
@@ -436,6 +442,12 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
       block.convStartS = juce::jlimit(0.0, ConvolutionReverb::kMaxIrSeconds, static_cast<double>(blockState.getProperty("convStartS", 0.0)));
       block.convEndS = juce::jlimit(0.0, ConvolutionReverb::kMaxIrSeconds, static_cast<double>(blockState.getProperty("convEndS", 0.0)));
       block.convPitch = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convPitch", 0.5)));
+      block.convPreMs = juce::jlimit(0.0, ConvolutionReverb::kMaxPreMs, static_cast<double>(blockState.getProperty("convPreMs", 0.0)));
+      block.convFadeIn = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convFadeIn", 0.0)));
+      block.convFadeOut = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convFadeOut", 0.0)));
+      block.convInCurve = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convInCurve", 0.5)));
+      block.convOutCurve = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convOutCurve", 0.5)));
+      block.convToneDb = juce::jlimit(ConvolutionReverb::kMinToneDb, ConvolutionReverb::kMaxToneDb, static_cast<double>(blockState.getProperty("convToneDb", 0.0)));
       block.delay.setParams({block.delayTimeMs, block.delayFeedback, block.delayDamping});
       block.chorus.setParams({block.chorusRateHz, block.chorusDepthMs, block.chorusSpread,
                               block.chorusTone, block.chorusWave});

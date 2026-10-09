@@ -529,24 +529,89 @@ TEST(ProcessorTest, ConvolutionParamsAreAcceptedBySetBlockParam) {
   EXPECT_TRUE(proc.setBlockParam(id, "convStartS", 1.5)) << "convStartS rejected";
   EXPECT_TRUE(proc.setBlockParam(id, "convEndS", 4.0)) << "convEndS rejected";
   EXPECT_TRUE(proc.setBlockParam(id, "convPitch", 0.9)) << "convPitch rejected";
+  // The B-surface additions (Pre / F In / F Out / InCrv / OutCrv / Tone)
+  // must survive the allow-list too, with clamped-but-distinct values.
+  EXPECT_TRUE(proc.setBlockParam(id, "convPreMs", 25.0)) << "convPreMs rejected";
+  EXPECT_TRUE(proc.setBlockParam(id, "convFadeIn", 0.18)) << "convFadeIn rejected";
+  EXPECT_TRUE(proc.setBlockParam(id, "convFadeOut", 0.33)) << "convFadeOut rejected";
+  EXPECT_TRUE(proc.setBlockParam(id, "convInCurve", 0.22)) << "convInCurve rejected";
+  EXPECT_TRUE(proc.setBlockParam(id, "convOutCurve", 0.66)) << "convOutCurve rejected";
+  EXPECT_TRUE(proc.setBlockParam(id, "convToneDb", 3.5)) << "convToneDb rejected";
 }
 
-TEST(ProcessorTest, ConvolutionBlockRunsDryUntilAnIrIsLoaded) {
-  // With no kernel installed the wet path is silence, so the house mix
-  // (dry(1-m) + wet*m at the balanced 0.5 default) yields 0.5x the input:
-  // the block is inaudible-on-its-own but still live in the chain, exactly
-  // like a tone block with no model. (A flat pass-through would read 0 dB.)
+TEST(ProcessorTest, ConvolutionBlockRoundTripsAllParams) {
+  // Every conv knob must survive BOTH round-trips: setBlockParam ->
+  // getChainState (the UI's read path) and getStateInformation ->
+  // setStateInformation (the persistence path). Regression guard for the
+  // B-surface additions; the five original knobs ride along.
   TONE3000Processor proc;
   proc.setPlayConfigDetails(2, 2, 48000, 512);
   proc.prepareToPlay(48000, 512);
   const auto id = proc.addEffectBlock(EffectKind::Convolution, "left", 0);
-  ASSERT_FALSE(id.empty());
-  const int total = 93 * 512;
-  const auto in = makeSine(total, 997.0, 0.5f, 48000.0);
-  const auto out = processThrough(proc, in, 512);
-  EXPECT_NEAR(settledGainDb(out, in, 997.0, 48000.0), -6.0, 0.3)
-      << "a Convolution block without an IR must sit at its dry/wet mix (0.5) -- "
-         "0 dB means it leaked dry as wet, +inf/nan means it went silent or died";
+  ASSERT_FALSE(id.empty()) << "addEffectBlock(Convolution) was rejected";
+  const auto set = [&](const char* name, double v) {
+    EXPECT_TRUE(proc.setBlockParam(id, name, v)) << name << " rejected";
+  };
+  set("convGain", 0.63);
+  set("convWidth", 0.44);
+  set("convStartS", 0.75);
+  set("convEndS", 2.5);
+  set("convPitch", 0.78);
+  set("convPreMs", 25.0);
+  set("convFadeIn", 0.18);
+  set("convFadeOut", 0.33);
+  set("convInCurve", 0.22);
+  set("convOutCurve", 0.66);
+  set("convToneDb", 3.5);
+
+  // (1) the UI's read path: getChainState must expose every knob.
+  auto convRow = [](TONE3000Processor& prc) {
+    juce::var row;
+    const juce::var state = prc.getChainState(-1);  // keep alive (getArray points into it)
+    const juce::var chainVar = state["chain"];     // stable copy
+    auto* const chain = chainVar.getArray();
+    for (int i = 0; chain != nullptr && i < chain->size(); ++i) {
+      const juce::var item = (*chain)[i];
+      const juce::var params = item["params"];
+      if (params.isObject() && params.hasProperty("convGain"))
+        row = params;
+    }
+    return row;
+  };
+  const auto row = convRow(proc);
+  EXPECT_TRUE(row.isObject()) << "the conv block's state row is not published";
+  EXPECT_NEAR(static_cast<double>(row["convGain"]), 0.63, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row["convWidth"]), 0.44, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row["convStartS"]), 0.75, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row["convEndS"]), 2.5, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row["convPitch"]), 0.78, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row["convPreMs"]), 25.0, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row["convFadeIn"]), 0.18, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row["convFadeOut"]), 0.33, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row["convInCurve"]), 0.22, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row["convOutCurve"]), 0.66, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row["convToneDb"]), 3.5, 1e-9);
+
+  // (2) the persistence path: save, restore into a fresh processor.
+  juce::MemoryBlock saved;
+  proc.getStateInformation(saved);
+  TONE3000Processor restored;
+  restored.setPlayConfigDetails(2, 2, 48000, 512);
+  restored.prepareToPlay(48000, 512);
+  restored.setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
+  const auto row2 = convRow(restored);
+  EXPECT_TRUE(row2.isObject()) << "the conv block did not survive the state round-trip";
+  EXPECT_NEAR(static_cast<double>(row2["convGain"]), 0.63, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row2["convWidth"]), 0.44, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row2["convStartS"]), 0.75, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row2["convEndS"]), 2.5, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row2["convPitch"]), 0.78, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row2["convPreMs"]), 25.0, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row2["convFadeIn"]), 0.18, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row2["convFadeOut"]), 0.33, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row2["convInCurve"]), 0.22, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row2["convOutCurve"]), 0.66, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row2["convToneDb"]), 3.5, 1e-9);
 }
 
 }  // namespace

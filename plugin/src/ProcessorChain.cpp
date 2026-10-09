@@ -1117,6 +1117,8 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
     double convGain = 0.5, convWidth = 1.0;
     double convStartS = 0.0, convEndS = 0.0;
     double convPitch = 0.5;
+    double convPreMs = 0.0, convFadeIn = 0.0, convFadeOut = 0.0;
+    double convInCurve = 0.5, convOutCurve = 0.5, convToneDb = 0.0;
     juce::String convIrName;  // the IR this block is running (session data; display only)
   };
 
@@ -1222,6 +1224,12 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
           row.convStartS = block->convStartS;
           row.convEndS = block->convEndS;
           row.convPitch = block->convPitch;
+          row.convPreMs = block->convPreMs;
+          row.convFadeIn = block->convFadeIn;
+          row.convFadeOut = block->convFadeOut;
+          row.convInCurve = block->convInCurve;
+          row.convOutCurve = block->convOutCurve;
+          row.convToneDb = block->convToneDb;
           row.convIrName = block->conv.irName();
           row.enabled = block->enabled;
           row.inputGain = block->inputGainNormalized;
@@ -1376,6 +1384,17 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
         params->setProperty("convStartS", row.convStartS);
         params->setProperty("convEndS", row.convEndS);
         params->setProperty("convPitch", row.convPitch);
+        params->setProperty("convPreMs", row.convPreMs);
+        params->setProperty("convFadeIn", row.convFadeIn);
+        params->setProperty("convFadeOut", row.convFadeOut);
+        params->setProperty("convInCurve", row.convInCurve);
+        params->setProperty("convOutCurve", row.convOutCurve);
+        params->setProperty("convToneDb", row.convToneDb);
+        // Convolution block's loaded IR (display only; the IR data itself
+        // is session and does not persist). Item-level, like parseItem
+        // reads it.
+        if (row.convIrName.isNotEmpty())
+          item->setProperty("convIrName", row.convIrName);
         item->setProperty("params", juce::var(params.get()));
         chainArray.add(juce::var(item.get()));
         continue;
@@ -1405,10 +1424,6 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
       // Long (reverb-like) IR: drives the UI's Mix knob default/Alt-click
       // reset and the Out knob help (long IRs carry no -18 dB pad).
       item->setProperty("irLong", row.irLong);
-      // Convolution block's loaded IR (display only; the IR data itself is
-      // session and does not persist).
-      if (row.convIrName.isNotEmpty())
-        item->setProperty("convIrName", row.convIrName);
 
       if (row.hasInputDbu)
         item->setProperty("inputLevelDbu", row.inputDbu);
@@ -1792,7 +1807,7 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
                              param == "tremoloSpread" || param == "tremoloWave" ||
                              param == "compRatio" || param == "compAttackMs" ||
                              param == "compReleaseMs" || param == "compToneDb" ||
-                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbType0" || param == "reverbType1" || param == "reverbType2" || param == "reverbType3" || param == "reverbType4" || param == "reverbType5" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace" || param == "convGain" || param == "convWidth" || param == "convStartS" || param == "convEndS" || param == "convPitch";
+                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbType0" || param == "reverbType1" || param == "reverbType2" || param == "reverbType3" || param == "reverbType4" || param == "reverbType5" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace" || param == "convGain" || param == "convWidth" || param == "convStartS" || param == "convEndS" || param == "convPitch" || param == "convPreMs" || param == "convFadeIn" || param == "convFadeOut" || param == "convInCurve" || param == "convOutCurve" || param == "convToneDb";
   const bool isContinuous = param == "inputGain" || param == "outputGain" || param == "mix" ||
                             isEffectParam;
   const bool isKnown = isContinuous || param == "enabled" || param == "normalize";
@@ -2082,6 +2097,24 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
     block->conv.setParams(block->convParams());
   } else if (param == "convPitch") {
     block->convPitch = juce::jlimit(0.0, 1.0, value);
+    block->conv.setParams(block->convParams());
+  } else if (param == "convPreMs") {
+    block->convPreMs = juce::jlimit(0.0, ConvolutionReverb::kMaxPreMs, value);
+    block->conv.setParams(block->convParams());
+  } else if (param == "convFadeIn") {
+    block->convFadeIn = juce::jlimit(0.0, 1.0, value);
+    block->conv.setParams(block->convParams());
+  } else if (param == "convFadeOut") {
+    block->convFadeOut = juce::jlimit(0.0, 1.0, value);
+    block->conv.setParams(block->convParams());
+  } else if (param == "convInCurve") {
+    block->convInCurve = juce::jlimit(0.0, 1.0, value);
+    block->conv.setParams(block->convParams());
+  } else if (param == "convOutCurve") {
+    block->convOutCurve = juce::jlimit(0.0, 1.0, value);
+    block->conv.setParams(block->convParams());
+  } else if (param == "convToneDb") {
+    block->convToneDb = juce::jlimit(ConvolutionReverb::kMinToneDb, ConvolutionReverb::kMaxToneDb, value);
     block->conv.setParams(block->convParams());
   }
 

@@ -42,6 +42,16 @@ juce::AudioBuffer<float> UnitConstantIr(int n) {
   return ir;
 }
 
+// Message-thread pump for the coalesced-rebuild settle timer (A6):
+// setParams on shape knobs SCHEDULES the rebuild kRebuildSettleMs after the
+// last change (a drag must not rebuild per nudge); tests advance the same
+// clock the UI does.
+void PumpSettle(ConvolutionReverb& fx) {
+  (void)fx;
+  juce::MessageManager::getInstance()->runDispatchLoopUntil(
+      ConvolutionReverb::kRebuildSettleMs + 50);
+}
+
 } // namespace
 
 // No IR: inert block — wet is silence, so the chain's 50% default mix reads
@@ -190,6 +200,7 @@ TEST(ConvolutionReverb, TrimWindowLaw) {
   p.startS = 0.1;
   p.endS = 0.4; // 0.3 s window
   fx.setParams(p);
+  PumpSettle(fx); // A6 settle (trim is a rebuilt shape)
   EXPECT_NEAR(fx.editedSeconds(), 0.3, 0.01);
 }
 
@@ -205,6 +216,7 @@ TEST(ConvolutionReverb, PitchStretchLaw) {
   ConvolutionReverb::Params p;
   p.pitch = ConvolutionReverb::scaleToPitch(2.0);
   fx.setParams(p);
+  PumpSettle(fx); // drag coalescing (A6): the rebuild lands after the settle
   EXPECT_NEAR(fx.editedSeconds(), 0.5, 0.01);
 }
 
@@ -221,6 +233,16 @@ TEST(ConvolutionReverb, FadeInRampLaw) {
   p.fadeIn = 0.5;
   p.fadeInCurve = 0.0; // linear ramp
   fx.setParams(p);
+  PumpSettle(fx); // A6 settle (fade-in is a rebuilt shape)
+
+  // Retire the swap crossfade (A6) with silent passes so the measurement
+  // below sees the new engine alone: the old engine (built without the
+  // ramp) would otherwise bleed in for kInstallFadeMs of real time.
+  juce::AudioBuffer<float> sil(2, 4096);
+  sil.clear();
+  for (int i = 0; i < 6; ++i)
+    fx.process(sil);
+
 
   const int nF = 600;
   float prev = 0.0f;
@@ -268,4 +290,202 @@ TEST(ConvolutionReverb, RateChangeRebuild) {
   Fill(buf, 0.5f);
   fx.process(buf);
   EXPECT_NEAR(buf.getSample(0, 0), 0.0625f, 1e-4);  // 0.125 law * 0.5 input
+}
+
+// --- Regression tests for the A-phase fixes ---------------------------------
+
+// A3: dual-mono (stereo) mode feeds each lane's ConvolutionReverb a
+// 1-channel buffer (Lane::process, Processor.cpp). The lane MUST have wet.
+// Regression: a 2-ch-only early return in process() read ch < 2 -> silence,
+// killing the stereo mode's wet entirely.
+TEST(ConvolutionReverb, MonoLaneBufferHasWet) {
+  ConvolutionReverb fx;
+  ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
+  fx.prepare(48000.0);
+
+  juce::AudioBuffer<float> buf(1, 16);
+  Fill(buf, 0.5f);
+  fx.process(buf);
+  EXPECT_NEAR(buf.getSample(0, 0), 0.125f * 0.5f, 1e-6);
+}
+
+// A5: a FAILED rebuild (empty trim window) must never silence the engine
+// that was serving: the previous engine keeps working, lastError_ carries
+// the message for the readout.
+TEST(ConvolutionReverb, FailedRebuildKeepsServingEngine) {
+  ConvolutionReverb fx;
+  ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
+  fx.prepare(48000.0);
+
+  auto wetOf = [&] {
+    juce::AudioBuffer<float> b(2, 8);
+    Fill(b, 0.5f);
+    fx.process(b);
+    return b.getSample(0, 0);
+  };
+  const float serving = wetOf();
+  ASSERT_NEAR(serving, 0.125f * 0.5f, 1e-6);
+
+  ConvolutionReverb::Params p;
+  p.startS = 1.0;  // after End -> empty window, the rebuilt engine can't exist
+  p.endS = 0.1;
+  fx.setParams(p);
+  PumpSettle(fx);
+  EXPECT_FALSE(fx.lastError().isEmpty());
+  EXPECT_NEAR(wetOf(), serving, 1e-6);  // the serving engine is still serving
+}
+
+// A6: a Length/drag is a burst of shape changes and must rebuild exactly
+// ONCE after it settles (installs() counts engine builds) -- not one engine
+// build per nudge -- and the engine that ships is the FINAL position.
+TEST(ConvolutionReverb, DragSettlesToOneRebuild) {
+  ConvolutionReverb fx;
+  const int n = 48000;  // 1.0 s raw
+  juce::AudioBuffer<float> ir(2, n);
+  Fill(ir, 0.02f);
+  ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+  fx.prepare(48000.0);
+  const int installsAtRest = fx.installs();
+
+  ConvolutionReverb::Params p;
+  for (int i = 1; i <= 20; ++i) {  // a drag: 20 rapid shape changes
+    p.pitch = 0.25 + 0.01 * i;
+    fx.setParams(p);
+  }
+  EXPECT_EQ(fx.installs(), installsAtRest);  // coalesced: nothing yet
+
+  PumpSettle(fx);
+  EXPECT_EQ(fx.installs(), installsAtRest + 1);
+  // The engine that shipped matches the final knob position.
+  EXPECT_NEAR(fx.editedSeconds(),
+              static_cast<double>(n) / 48000.0 *
+                  static_cast<double>(ConvolutionReverb::pitchToScale(p.pitch)),
+              0.02);
+}
+
+// A6 (click regression): a shape change mid-signal crossfades the engines
+// (dying tails out over kInstallFadeMs while the new one tails in). The wet
+// envelope must stay above a floor for every 64-frame block of the window
+// after the swap -- a hard splice of the tail would collapse it.
+TEST(ConvolutionReverb, SwapCrossfadeKeepsWetAlive) {
+  ConvolutionReverb fx;
+  const int n = 96000;  // 2.0 s -> long / two-stage engine (the click path)
+  juce::AudioBuffer<float> ir(2, n);
+  Fill(ir, 0.02f);
+  ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+  fx.prepare(48000.0);
+
+  const int frame = 64;
+  const double rate = 48000.0;
+  auto rms = [&](const juce::AudioBuffer<float>& b) {
+    double e = 0.0;
+    for (int i = 0; i < b.getNumSamples(); ++i)
+      e += b.getSample(0, i) * b.getSample(0, i);
+    return std::sqrt(e / b.getNumSamples());
+  };
+
+  juce::AudioBuffer<float> block(2, frame);
+  long ph = 0;  // running phase (samples), continuous through the swap
+  auto feed = [&] {
+    for (int i = 0; i < frame; ++i) {
+      const float v =
+          0.1f * static_cast<float>(std::sin(2.0 * M_PI * 440.0 * ph / rate));
+      block.setSample(0, i, v);
+      block.setSample(1, i, v);
+      ++ph;
+    }
+    fx.process(block);
+  };
+
+  for (int b = 0; b < 24; ++b)
+    feed();
+  const double steady = rms(block);
+  ASSERT_GT(steady, 1e-6);
+
+  // Mid-signal shape change -> the crossfading install.
+  ConvolutionReverb::Params p;
+  p.pitch = 0.8;
+  fx.setParams(p);
+  PumpSettle(fx);
+
+  double worst = 1e300;
+  for (int b = 0; b < 300 * 48000 / 1000 / frame; ++b) {  // 300 ms window
+    feed();
+    worst = std::min(worst, rms(block));
+  }
+  EXPECT_GT(worst, 0.25 * steady);
+}
+
+// Tone: a live peaking biquad on the wet path (kToneHz, Q 0.7). At 0 dB it
+// must be exactly flat (the filter is not even run, so the bit-identical
+// law holds); at the centre frequency the settled level shifts by the knob.
+TEST(ConvolutionReverb, ToneCentreLaw) {
+  ConvolutionReverb fx;
+  ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
+  fx.prepare(48000.0);
+
+  auto fill2500 = [](juce::AudioBuffer<float>& b) {
+    for (int i = 0; i < b.getNumSamples(); ++i) {
+      const float v = 0.5f * static_cast<float>(std::sin(2.0 * M_PI * 2500.0 * i / 48000.0));
+      b.getWritePointer(0)[i] = v;
+      b.getWritePointer(1)[i] = v;
+    }
+  };
+  auto rms = [](const juce::AudioBuffer<float>& b, int from, int to) {
+    double sum = 0.0;
+    for (int i = from; i < to; ++i) sum += b.getSample(0, i) * b.getSample(0, i);
+    return std::sqrt(sum / std::max(1, to - from));
+  };
+  // The smoother advances on wall time (house law), so settle by pumping
+  // passes until the measurement converges within 0.05 dB.
+  auto settled = [&](int n = 4096) {
+    juce::AudioBuffer<float> buf(2, n);
+    fill2500(buf);
+    fx.process(buf);
+    const int skip = n / 2;
+    return rms(buf, skip, n);
+  };
+  auto converged = [](float got, float want, double tolDb) {
+    return std::abs(20.0 * std::log10(got / want) - tolDb) < 0.05;
+  };
+  auto pumpTo = [&](float want, double tolDb) {
+    float cur = 0.0f;
+    for (int i = 0; i < 400; ++i) {
+      cur = settled();
+      if (converged(cur, want, tolDb))
+        break;
+    }
+    return cur;
+  };
+
+  float flat = settled();
+  ConvolutionReverb::Params p;
+  p.toneDb = 12.0;
+  fx.setParams(p);  // live: the smoother re-targets, NO engine rebuild
+  const float boost = pumpTo(flat, 12.0);
+  ConvolutionReverb::Params pmin;
+  pmin.toneDb = -12.0;
+  fx.setParams(pmin);
+  const float cut = pumpTo(flat, -12.0);
+
+  EXPECT_NEAR(20.0 * std::log10(boost / flat), 12.0, 0.25)
+      << "a +12 dB Tone at its centre must read +12 dB settled (got "
+         << 20.0 * std::log10(boost / flat) << " dB)";
+  EXPECT_NEAR(20.0 * std::log10(flat / cut), 12.0, 0.25)
+      << "a -12 dB Tone at its centre must read -12 dB settled (got "
+         << 20.0 * std::log10(flat / cut) << " dB)";
+}
+
+// Tone must never schedule a rebuild: it is a live biquad, not a baked
+// shape, so setParams(tone) must not touch the settle timer.
+TEST(ConvolutionReverb, ToneSchedulingNoRebuild) {
+  ConvolutionReverb fx;
+  ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
+  fx.prepare(48000.0);
+  const int before = fx.installs();
+  ConvolutionReverb::Params p;
+  p.toneDb = 8.0;
+  fx.setParams(p);
+  PumpSettle(fx);  // if a rebuild were scheduled it would fire here
+  EXPECT_EQ(fx.installs(), before) << "a Tone change must not schedule an engine rebuild";
 }

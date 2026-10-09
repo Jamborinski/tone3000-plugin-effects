@@ -654,6 +654,46 @@ inline const KnobScale& convEnd() {
   static const KnobScale s = linear(0.0, 10.0, "s", 2);
   return s;
 }
+// PRE: wet pre-delay in ms (0..100). Stored domain == display domain.
+inline const KnobScale& convPre() {
+  static const KnobScale s = linear(0.0, 100.0, "ms", 0);
+  return s;
+}
+
+// FADE / CURVE family: all four stored 0..1; shown as 0..100 % (a single
+// scale serves F In / F Out and InCrv / OutCrv).
+inline const KnobScale& convFade() {
+  static const KnobScale s = [] {
+    KnobScale c;
+    c.toDisplay = [](double n) { return n; };
+    c.fromDisplay = [](double d) { return d; };
+    c.toStored = [](double n) { return n; };
+    c.fromStored = [](double d) { return d; };
+    c.format = [](double n) { return juce::String(juce::roundToInt(n * 100.0)) + "%"; };
+    c.editText = [](double n) { return juce::String(juce::roundToInt(n * 100.0)); };
+    return c;
+  }();
+  return s;
+}
+
+// TONE: live peaking on the wet, -12..+12 dB (same shape as convGain at a
+// shorter span; 0 dB = exactly flat).
+inline const KnobScale& convTone() {
+  static const KnobScale s = [] {
+    KnobScale c;
+    c.toDisplay = [](double n) { return juce::jmap(n, 0.0, 1.0, -12.0, 12.0); };
+    c.fromDisplay = [](double d) { return juce::jmap(d, -12.0, 12.0, 0.0, 1.0); };
+    c.toStored = [](double n) { return n; };
+    c.fromStored = [](double d) { return d; };
+    c.format = [](double n) {
+      const double db = juce::jmap(n, 0.0, 1.0, -12.0, 12.0);
+      return juce::String(db, std::abs(db) - std::trunc(db) < 0.05 ? 0 : 1) + " dB";
+    };
+    c.editText = [](double n) { return juce::String(juce::jmap(n, 0.0, 1.0, -12.0, 12.0), 1); };
+    return c;
+  }();
+  return s;
+}
 
 // PITCH: stored 0..1 (0.5 = unity), shown as a length scale 0.25x..4x
 // (log-uniform, same law as the engine). toStored is the identity (knob 0..1
