@@ -425,32 +425,37 @@ TEST(PlateTexture, DecayTracksTheReferenceFamilyLaw) {
   // captured baseline (+1 dB tolerance; the EMT 140 itself is 14.7).
   const double comb = combDepth(peakNorm(plateRun(plateDefaults(), clk)), 1.15, 1.80);
   std::cout << "  [comb] click 1.15-1.8s = " << comb << " dB (model baseline "
-            << "20.31, pre-model 16.7, EMT 14.7; guard baseline+1 dB)"
+            << "19.39 (final pass 2026-10-13; pre-final 20.31), pre-model 16.7, EMT 14.7; "
+            << "guard baseline+1 dB)"
             << std::endl;
-  // Plate/"140" model baseline (2026-10-13, measured at the final model
-  // state, 50% dials + the air law, width 1.0): 20.31. The air law (the
-  // ticket's own band-balance fix) concentrates the click's energy into the
-  // dark low-mid comb band, so the PEAKINESS-RATIO metric rises 16.7 ->
-  // 20.31 even though the tap-peak AMPLITUDES do not grow (the overall
-  // level is the baseline itself, see LevelLawWithinOneDbOfBaseline). The
-  // EMT 140's 14.7 is physical-cavity comb (distributed reflections, not
-  // N discrete lines). Guard: no growth past the model baseline + 1 dB.
-  constexpr double kModelComb = 20.31;
+  // Plate/"140" model baseline (RE-PINNED 2026-10-13 final pass, 50% dials +
+  // the air law + sparse-over-quiet-floor onset C, width 1.0): 19.39 (the
+  // pre-final pass was 20.31). The air law concentrates the click's energy
+  // into the dark low-mid comb band, so the PEAKINESS-RATIO metric rose
+  // above the pre-model 16.7 even though the tap-peak AMPLITUDES do not
+  // grow. The EMT 140's 14.7 is physical-cavity comb (distributed
+  // reflections, not N discrete lines) -- different construction, not the
+  // target (the ticket's "re-pin to measured, document the law, no forced
+  // match"). Guard: no growth past the model baseline + 1 dB.
+  constexpr double kModelComb = 19.39;
   EXPECT_LE(comb, kModelComb * std::pow(10.0, 1.0 / 20.0))
       << "no comb regression: the click comb must not grow past the "
          "140-model baseline + 1 dB (see comment above)";
 }
 
 TEST(PlateTexture, LevelLawWithinOneDbOfBaseline) {
-  // LEVEL LAW: <= +/-1 dB vs the captured baseline at the default. The
-  // baseline (2026-10-13, the pre-retune as-shipped plate, 2.5 s click,
-  // raw sum-abs): 83.5977. A texture retune that hides behind level change
-  // (a "flatter" = quieter tail) is rejected by this.
+  // LEVEL LAW: <= +/-1 dB vs the CURRENT model baseline at the default.
+  // The baseline was RE-PINNED by the final pass (2026-10-13): the onset
+  // C re-attack (sparse pings over a QUIETER incoherent floor -- see the
+  // CONSIDERED & DECLINED block in plugin/include/Reverb.h) lowered the raw
+  // sum-abs from the pre-final as-shipped plate 83.5977 to 78.23 (that IS
+  // the level cost of sparser, quieter-floor onset, not a hidden tail cut:
+  // body 7.50 dB -- the low-mid body is intact and the comb law still holds).
   const int n = static_cast<int>(2.5 * kFs);
   const double lvl = sumAbs(plateRun(plateDefaults(), click(n)));
-  std::cout << "  [level] rawAbs=" << lvl << " (baseline 83.5977, +/-1 dB)"
+  std::cout << "  [level] rawAbs=" << lvl << " (final-pass baseline 78.23, +/-1 dB)"
             << std::endl;
-  const double base = 83.5977;
+  const double base = 78.23;
   EXPECT_GE(lvl, base * std::pow(10.0, -1.0 / 20.0))
       << "plate level must not drop more than 1 dB below the baseline";
   EXPECT_LE(lvl, base * std::pow(10.0, 1.0 / 20.0))

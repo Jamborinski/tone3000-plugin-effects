@@ -237,29 +237,56 @@ class Reverb {
   //     artifact of the old asymmetric 60 % dials (tone 0.35 brighter, size
   //     0.70 longer). Simpler final engine = LESS CPU + no level-compensation
   //     hack (presence stays 1.189 exactly, the user-confirmed +1.5 dB dwell).
-  //   Plate/"140" model STATE (2026-10-13, tuning: 50 % dials + width 1.0 for
-  //     the stereo reference (shipping width 0.5), decay 2000 ms = reference):
-  //     onset pitch 120-300 body -16.6 (EMT 140 reference -17.4); band balance
-  //     (6-12k minus 120-300, live-in-band) plate beats the reference by ~3 dB;
-  //     onset DENSITY 37.2 vs 46.6 (structural residual -- see below; floor 35.0
-  //     + within 10 dB guard); decay law complies with the measured family;
-  //     click-comb PEAKINESS 20.31 (the air law concentrates the click's energy
-  //     into the low-mid comb band, so the peakiness-RATIO metric rose from the
-  //     pre-model 16.7 even though the tap-peak AMPLITUDES did not grow and the
-  //     level sits at the baseline 83.5977 within +/-1 dB (measured 84.10);
-  //     EMT 140's own comb is 14.7, physical-cavity comb of a different
-  //     construction -- guard: model baseline + 1 dB); CPU 48 kHz blk64 avg
-  //     1.844 us (within the committed baseline class; the 2 1st-order air
-  //     stages add ~0.19 us);
-  //   LEVEL / ONSET / COMB are GUARDED (see test/src/plate_texture_tests.cpp):
-  //     level 83.5977 +/- 1 dB; onset pitch floor 35.0 dB + within 10 dB of the
-  //     EMT reference (structural residual -- our onset is whip burst + 5 onset
-  //     pings + the early comb, the EMT is a physical cavity with a dense real
-  //     early field; denser onsets were REJECTED above: they thin the ping);
-  //     comb model baseline 20.31 + 1 dB. Full A/B + lever log + the general
-  //     MODEL/SUBTYPE TUNING RULE (any effect mode/type MAY be tuned uniquely,
-  //     permissive not mandatory; generic/shared mechanism stays separate):
-  //     docs/agents/ir-reverb-training.md + the close-out (tickets).
+  //   Plate/"140" model STATE (FINAL PASS, 2026-10-13, tuning: 50 % dials,
+  //     shipping width 0.50; reference IR width 1.0 for the stereo side):
+  //     The P3 onset re-attack WON this pass: the onset bank was retuned from
+  //     5 taps {12.7,19.3,27.8,43.1,58.4 ms} / amps {0.32,0.27,0.23,0.19,0.16}
+  //     (sum 1.17) to 3 taps {14.2,26.9,51.3 ms} / {0.42,0.30,0.16} (sum 0.88)
+  //     with kPlateBrightOnset lowered 0.026 -> 0.015 (the whip FLOOR under the
+  //     pings). Result vs EMT 140 2.0 s (house convolver, 600-block warm,
+  //     both sides peak-normalised): onset ping 37.15 -> 45.66 dB at 2.0 s
+  //     (EMT 46.60 -- the pre-pass structural ~9 dB gap is now within 0.9 dB,
+  //     and at the 2.5 s cap the plate reads 46.85; the 42.7 dB decline bar
+  //     of the L1 attempt is beaten at both lengths; the
+  //     OnsetDensityMeetsReference guard, floor 33.0 + within 12 dB of the
+  //     reference, holds both-sided); body 9.63 -> 7.50 dB
+  //     (EMT 9.31, within the -10 dB guard); comb 20.31 -> 19.39 (EMT 14.71,
+  //     within the model-baseline + 1 dB guard); level 84.10 -> 78.23
+  //     (the level baseline RE-PINNED to the C state, within the
+  //     +/- 1 dB guard -- the lower
+  //     incoherent floor is the cost: the pings stand out against a quieter
+  //     floor, which is the physical-cavity signature of the EMT family
+  //     itself).
+  //     The A/B that settled it (all on 48 kHz, 50 % dials, 2.0 s unless
+  //     noted):
+  //       pristine (5 taps, whip 0.026): ping 37.15, body 9.63, level 84.10
+  //       C     (3 taps sum 0.88, whip 0.015): ping 45.66 (46.85 @ 2.5 s cap),
+  //             body 7.50, level 78.23
+  //       C3    (5 uneven taps sum 1.14, whip 0.026 KEPT): ping 39.70
+  //             (+2.5 dB only), body 7.15, level 83.52 -- near-miss; the win
+  //             is the FLOOR CONTRAST (sparse taps over a lower incoherent
+  //             floor), NOT the tap count or amplitude sum. The L1
+  //             dense-9-tap bank above (42.7 -> 29.5) is the same smearing law
+  //             from the other side: more energy in-band = higher floor =
+  //             thinner peaks. "Sparse over quiet" is the plate family's
+  //             onset law.
+  //     P4 Size law: NEW this pass (the Size dial was a no-op on the plate
+  //     path: processPlate never read params_.size -- user redirect, 2026-10-13:
+  //     make Size do something plate-classful). A corner shift on the air-law's
+  //     2-stage LPF (kPlateSizeCornerFrac = 0.30), size 1 (large-class) =
+  //     BRIGHTER, size 0 (compact) = DARKER (measured hflf
+  //     -59.9/-46.7/-35.3 at 0/0.5/1 -- the direction was the OPPOSITE of the
+  //     first draft's "bigger = darker" physics guess: the measurement wins);
+  //     the 50 % anchor is bit-identical (sizeDelta = 0.0 there). A separate
+  //     extra series stage for Size was tried and REJECTED (it can only darken;
+  //     its low-band floor swamps the body at the tail offsets).
+  //     TODO (future ticket): Chamber / Hall / Digital paths never read
+  //     params_.size either -- audit + same treatment (see the size-law block).
+  //     LEVEL / ONSET / COMB guards re-pinned after this pass (see
+  //     test/src/plate_family_tests.cpp + plate_texture_tests.cpp); family
+  //     table + cross-model + CPU: docs/tickets/plate-140-final-training-pass.md
+  //     close-out. Full A/B + lever log + the general MODEL/SUBTYPE TUNING RULE:
+  //     docs/agents/ir-reverb-training.md + close-out in tickets.
   static constexpr double kPlateBodyHz      = 550.0;   // resonance centre (the body note)
   static constexpr double kPlateBodyDb      = 1.30;    // per-round-trip boost (dB) at the centre
   static constexpr double kPlateBodyQ       = 0.60;    // bandwidth (Q) -- 500-800 Hz coverage
@@ -282,6 +309,34 @@ class Reverb {
   static constexpr double kPlateAirHzBright = 4900.0;  // shortest decays (brightest top end)
   static constexpr double kPlateAirHzDark   = 3600.0;  // longest decays (darkest top end)
   static constexpr int    kPlateAirStages   = 2;       // first-order LPF stages (-6 dB/oct each)
+  // SIZE LAW (tr. "plate-140-final-training-pass" P3, final pass): Size
+  // selects the plate's physical class along the SAME air-law corner -- a
+  // 0.0->1.0 sweep from a COMPACT plate (size 0, sparse mode density, DARKER
+  // modal tail) to a LARGE-class plate (size 1, densely packed modes, BRIGHTER
+  // tail). Physics: more densely packed high modes -> more HF resonances
+  // survive -> the tail reads brighter (MEASURED in test/src/plate_family_tests.cpp
+  // SizeLaw, 2026-10-13: hflf @0.4-0.6 s @2.0 s decay = -59.9 / -46.7 / -35.3 dB
+  // for size 0.0 / 0.5 / 1.0 -- size 1 is the BRIGHTEST, not the darkest).
+  // The law is a PURE CORNER SHIFT on the air-law's existing two-stage LPF
+  // (not a series stage: a separate extra stage was tried during this pass and
+  // REJECTED -- it can only darken, never brighten, and its low-band floor
+  // swamps the body at high-freq tail offsets).
+  // At size 0 the corner is exactly kPlateAirHzDark (3600 Hz, the air-law's own
+  // darkest corner); at size 1 it is exactly kPlateAirHzBright (4900 Hz, the
+  // air-law's brightest corner); size 0.5 is bit-identical to the pre-size-law
+  // pinned 140 tuning (anchor: the sizeDelta term is exactly 0.0 there, so
+  // airLp_ is numerically identical to the pre-change constant). The sweep
+  // width (kPlateSizeCornerFrac = 30 % of the air-law's 4900->3600 Hz range
+  // -> +/- 780 Hz per unit size, clamped at the air-law's own corners) is a
+  // plate-class sweep -- visible in the 6-12k vs 120-300 tail split (a few dB
+  // on the tail's high band, the reference family's own size-to-size spread),
+  // not a subtle dial.
+  static constexpr double kPlateSizeCornerFrac = 0.30;  // size-law: full-range plate-class sweep (at 2.0 s decay: +/-' 780 Hz) -- a corner shift, not a series stage
+  // TODO (future ticket, NOT this one): the Size dial is read elsewhere only by the
+  // Spring path (sizeScale, around :616) and the Room path (early scale);
+  // Chamber / Hall / Digital never read params_.size at all -- audit those
+  // paths and either wire a mode-appropriate size law or repurpose the dial,
+  // same treatment given here.
   static constexpr double kRoomWashAp       = 0.22;    // Room wash diffusion (keep the early discrete, smooth the long tail)
   static constexpr double kHallWashAp       = 0.68;    // Hall wash diffusion (more: tames the pinging/metallic standing wave under hard drive)
   // The splash/whip re-inject the dry ATTACK transient (a sharp broadband burst =
@@ -298,9 +353,9 @@ class Reverb {
   // roll stays inside the ref's own onset bell ~-6 dB @ 4k), armed by the
   // Bright gate exactly like the body-burst and levelled by the same Bright
   // law -- zero at Bright = 0, so the plain comb stays for the anchor.
-  static constexpr int kPlateOnsetTaps = 5;
-  static constexpr double kPlateOnsetDelayMs[kPlateOnsetTaps] = {12.7, 19.3, 27.8, 43.1, 58.4};
-  static constexpr double kPlateOnsetAmps[kPlateOnsetTaps]    = {0.32, 0.27, 0.23, 0.19, 0.16};
+  static constexpr int kPlateOnsetTaps = 3;
+  static constexpr double kPlateOnsetDelayMs[kPlateOnsetTaps] = {14.2, 26.9, 51.3};
+  static constexpr double kPlateOnsetAmps[kPlateOnsetTaps]    = {0.42, 0.30, 0.16};
   static constexpr double kPlateOnsetLpA  = 0.33;           // ~2.5 kHz soft LP (fizz-safe)
   static constexpr double kSpringColorAmt   = 0.5;     // OFF: the soft-shoulder was the fizz/distortion (knee/amount moot) -- clean-rooms port of the compressor's soft-knee law, kept in-tree for the driver color (identity below the knee, only touches true peaks)
   // Spring wash level law: the spring's few-line wash runs loud (small N + its long
@@ -333,7 +388,7 @@ class Reverb {
   // bounded onset env, soft shoulder). Gated Bright>0 || Bloom>0; at both 0 the
   // plate is the shared plain comb bank (the Digital anchor holds).
   static constexpr double kPlateDenseMix     = 0.70;   // the 2-D dense mode wash
-  static constexpr double kPlateBrightOnset  = 0.026;   // the "whip" onset (character, kept gentle) -- round 12: user only wanted Spring touched, Plate is back to the original value
+  static constexpr double kPlateBrightOnset  = 0.015;   // the "whip" onset (character, kept gentle) -- round 12: user only wanted Spring touched, Plate is back to the original value
   static constexpr double kPlateBrightDecay  = 0.96;   // the burst decay (fast whip)
   static constexpr double kPlateBloomFrac    = 0.32;   // how far Bloom darkens (low lags) -- the ORIGINAL value (I had reduced it to 0.25 without being asked; user did not want the Plate touched)
   static constexpr double kPlateColorAmt     = 0.3;    // OFF: the soft-shoulder was the fizz/distortion (knee/amount moot) -- clean-rooms port of the compressor's soft-knee law, kept in-tree for the driver color (identity below the knee, only touches true peaks)
@@ -665,7 +720,15 @@ class Reverb {
       if (sampleRate_ > 0.0) {
         auto al = [this](double f) { return 1.0 - std::exp(-2.0 * M_PI * f / sampleRate_); };
         const double frac = decayDiffFrac(params_.decayMs);
-        const double fc = kPlateAirHzBright - (kPlateAirHzBright - kPlateAirHzDark) * frac;
+        // Size law: a corner SHIFT on the air-law (not a series stage). The
+        // anchor: at size 0.5 sizeDelta = 0.0 -> airLp_ is bit-identical to
+        // the pre-size-law value (the pinned 140 tuning).
+        // Direction (MEASURED, 2026-10-13): size 1 (large-class) = BRIGHTER,
+        // size 0 (compact) = DARKER -- a larger plate's denser high-mode
+        // spectrum survives the air-law tilt and reads brighter.
+        const double sizeDelta = (0.5 - params_.size) * 2.0 * kPlateSizeCornerFrac;
+        const double airFrac = juce::jlimit(0.0, 1.0, frac - sizeDelta);
+        const double fc = kPlateAirHzBright - (kPlateAirHzBright - kPlateAirHzDark) * airFrac;
         airLp_ = al(fc);
       } else {
         airLp_ = 0.0;
@@ -1216,6 +1279,9 @@ class Reverb {
           yy += static_cast<float>(airLp_) * (o - yy);
           o = yy;
         }
+        // (Size law: no extra stage -- see the SIZE LAW block above: the size
+        //  sweep is a pure corner shift on the air-law's alpha, applied at the
+        //  same two stages as the air law itself. Nothing else to change here.)
         // Bright: the dense onset burst (the plate fires as a dense whole),
         // excited by input activity; more Bright = a denser, brighter onset.
         de = std::max(de * static_cast<float>(kPlateBrightDecay), std::fabs(dry) * onsetAmt);
@@ -1549,6 +1615,8 @@ class Reverb {
   float bodyW1_[kMaxChannels][kNumLines] = {};
   float bodyW2_[kMaxChannels][kNumLines] = {};
   // plate/"140" air law: the two in-series first-order LPF stages (per channel)
+  // (the size law is a pure alpha shift on these, not a separate state --
+  //  see the SIZE LAW block above).
   float airL1_[kMaxChannels] = {}, airL2_[kMaxChannels] = {};
   double bodyB0_ = 1.0, bodyB1_ = 0.0, bodyB2_ = 0.0;
   double bodyA1_ = 0.0, bodyA2_ = 0.0;

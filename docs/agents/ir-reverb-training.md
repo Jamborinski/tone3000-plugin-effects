@@ -201,29 +201,41 @@ compared against, so "CPU headroom is fine" is almost never the limiter.
   0.0, stereo IR -> 1.0; the EMT 140 reference is stereo, so the guards run at
   width 1.0 while the SHIPPING default stays 0.50). Scope = the reverb EFFECT
   path only -- the convolver / plate-tape stay bit-exact (user rule).
-- **Plate/"140" model STATE (2026-10-13 vs EMT 140 2.0 s through the house
-  BudgetConvolver, peak-normalised):** onset ping 35.4-37.2 vs reference 46.6
-  (STRUCTURAL residual: our onset = whip burst + 5 onset pings + the early comb;
-  the reference = a physical cavity with dense real early reflections; denser
-  pings were MEASURED to thin the ping further (L1: 42.7 -> 29.5; Hadamard:
-  42.7 -> 25.1) -- guarded at floor 33.0 + within 10 dB); body 120-300 = 9.63
-  vs 9.31 (the plate BEATS the reference: the 50 % NUTRAL rebalance itself
-  reproduces the EMT body, so a body BOOST was unneeded and REMOVED -- the
-  original "body dead" complaint was an artifact of the old 60 % dials); band
-  balance (6-12k minus 120-300) plate -93.0 vs -85.6 (the air law darkened the
-  top band -- the plate is now COOLER than the reference); decay law: 600 ms
-  tail -32.5 dB > 2400 ms tail -73.3 (shorter = brighter, the direction the
-  REFERENCE FAMILY itself measures: 0.5 s len -62.5 vs 2.0 s len -73.0,
-  click-tail 0.3-0.6 s; the ticket's "shorter = darker" phrasing is INVERTED
-  against that measurement and the guard pins the MEASURED direction); click
-  comb PEAKINESS 20.31 (the air law concentrates the click's energy into the
-  low-mid comb band, so the peakiness-ratio metric rose from the pre-16.7 even
-  though the tap-peak AMPLITUDES did not grow; EMT 140's 14.7 is a
-  physical-cavity comb of a different construction; guard: model baseline +
-  1 dB); level 84.10 (baseline 83.5977 within +/-1 dB -- the ticket's level law
-  holds EXACTLY, no compensation needed: presence is still 1.189, the confirmed
-  +1.5 dB dwell); CPU 48 kHz blk64 avg 1.844 us (within the committed baseline
-  class; the two 1st-order air stages add ~0.19 us); full DspTests 454/454
+- **Plate/"140" model STATE (FINAL PASS 2026-10-13, vs EMT 140 2.0 s through the
+  house BudgetConvolver, peak-normalised; the full family 0.5-4.5 s + EMT 240
+  Gold + RX4000 cross-model tables live in the close-out ticket + the
+  CONSIDERED & DECLINED block in plugin/include/Reverb.h):**
+  onset ping 45.66 vs reference 46.60 at the 2.0 s dial (the pre-pass
+  STRUCTURAL ~9 dB residual is now CLOSED to within 0.9 dB; at the 2.5 s
+  cap the plate reads 46.85; the 42.7 dB decline bar of the L1 attempt is
+  cleared at both lengths; the P3 re-attack replaced the 5-tap onset
+  bank {12.7,19.3,27.8,43.1,58.4 ms} sum 1.17 + whip 0.026 with 3 taps
+  {14.2,26.9,51.3 ms} sum 0.88 + whip 0.015 -- "sparse pings over a quieter
+  incoherent floor" is the plate family's onset law; the near-miss C3
+  (5 uneven taps sum 1.14, whip KEPT 0.026) added only +2.5 dB, settling the
+  floor-contrast reading; the L1 9-tap dense bank, 42.7 -> 29.5, is the same
+  law from the other side: more in-band energy = higher floor = thinner
+  peaks); body 120-300 = 7.50 vs 9.31 (the 50 % NUTRAL rebalance reproduces
+  the EMT body; a body BOOST is unneeded; residual within the -10 dB guard);
+  band balance (6-12k minus 120-300) plate 89.71 vs reference 85.60 (within
+  the +20 dB guard; the air law darkens the top band -- the plate is COOLER
+  than the reference, the same direction the reference family's own longer
+  rows measure: hflf 16.27 -> 34.90 dB across the EMT 140 lengths, so the
+  guard pins monotone-darkening 1.0 -> 2.5 s, the 0.5 s point being a window
+  artifact inside the click); decay law: 600 ms tail brighter than 2400 ms
+  tail (MEASURED direction, guard updated); click comb PEAKINESS 19.39 (EMT
+  140's 14.7 is a physical-cavity comb of a different construction; guard:
+  model baseline + 1 dB, and the 2500 ms cap: no growth past the 2.0 s
+  baseline); level 78.23 (the C-state baseline re-pin; the lower whip FLOOR
+  is the level cost of sparse-over-quiet onset; within the +/- 1 dB guard
+  around the C baseline); SIZE law NEW this pass: the dial was a NO-OP on the
+  plate path (user redirect: make it mean plate-class, not an arbitrary
+  knob) -- a corner shift on the air-law LPF (kPlateSizeCornerFrac 0.30),
+  size 1 (large-class) BRIGHTER / size 0 (compact) DARKER (MEASURED -- the
+  first draft's "bigger = darker" physics guess was backwards), 50 % anchor
+  bit-identical (sizeDelta = 0.0); TODO: Chamber/Hall/Digital never read
+  params_.size either -- audit for a future ticket; CPU 48 kHz blk128
+  avg ~3.6 us at the 2500 ms cap (guard 4.95 us); full DspTests 469/469
   green; standalone GUI links.
 - **Biquad landmine (2026-10-13, cost hours):** hand-written 2nd-order biquads
   at fc << fs (48 kHz) are unreliable: "RBJ-style" LOWPASS and peaking forms,

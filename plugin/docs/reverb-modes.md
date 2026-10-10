@@ -39,17 +39,37 @@ shared dials underneath — the delay/compressor precedent. Shared with all:
 Selecting a mode resets that mode's dials + signatures to the starting row
 (the delay/compressor `enterMode` contract), then the user dials from there.
 
-**Plate model ("140")** (2026-10-13 retune decision): the plate's starting
-row was rebalanced to NEUTRAL 50 % (tone/size/width 0.50, decay 2000 ms =
-the EMT 140 reference's own length) - model/subtype tuning the user decided
-against the EMT 140 capture (its other knobs, Bright/Bloom, were already
-neutral; **Dwell** is the shared "In"/input-gain knob relabelled for the
-reverb block, a product-copy choice - it is drive, not a tone knob). The
-old 0.80/0.35/0.80 row was an unsymmetric guess, not data. The generic
-plumbing and every other mode above are untouched. See
-`docs/agents/ir-reverb-training.md` (the model/subtype tuning rule + the
-plate's final numbers) and the CONSIDERED & DECLINED block in
-`plugin/include/Reverb.h`.
+**Plate model ("140")** (FINAL PASS 2026-10-13): the plate's starting row is
+NEUTRAL 50 % (tone/size/width 0.50, decay 2000 ms = the EMT 140 reference's
+own length) - model/subtype tuning the user decided against the EMT 140
+capture (its other knobs, Bright/Bloom, were already neutral; **Dwell** is
+the shared "In"/input-gain knob relabelled for the reverb block, a
+product-copy choice - it is drive, not a tone knob). The old 0.80/0.35/0.80
+row was an unsymmetric guess, not data. The generic plumbing and every other
+mode above are untouched.
+
+The final pass (2026-10-13) landed two changes on the plate path only:
+
+1. **Onset re-attack (P3)**: the 5-tap onset bank (sum 1.17) + whip 0.026 was
+replaced by 3 taps {14.2, 26.9, 51.3 ms} sum 0.88 + whip 0.015 -- the
+"sparse pings over a quieter incoherent floor" law the EMT family itself
+shows (dense onset banks were MEASURED to thin the ping further, not
+thicken it). Result: onset ping 37.15 -> 45.66 dB at the 2.0 s dial (46.85
+at the 2.5 s cap) - within 0.9 dB of the reference's 46.60 at 2.0 s, closing
+the pre-pass ~9 dB structural gap; the level cost of the lower incoherent
+floor re-pins the level guard (84.10 -> 78.23, within the +/- 1 dB guard
+around the new baseline). Body 9.63 -> 7.50 dB (within the -10 dB guard);
+comb 20.31 -> 19.39 dB.
+2. **Size law (P4)**: the Size dial was a NO-OP on the plate path (only
+Spring and Room read `params_.size`). It now sweeps the plate's physical
+class along the air-law's own corner: size 1 (large-class plate) BRIGHTER
+/ size 0 (compact plate) DARKER (MEASURED -- the first draft's "bigger =
+darker" physics guess was backwards; the measurement wins). The 50 % anchor
+is bit-identical (the sizeDelta term is exactly 0.0 there).
+
+See `docs/agents/ir-reverb-training.md` (the model/subtype tuning rule +
+the final numbers + the family/cross-model tables) and the CONSIDERED
+& DECLINED block in `plugin/include/Reverb.h`.
 All starting decays fit the engine's 50..5000 ms range (Hall = 3000, the
 longest default; 5000 is the ceiling). The [50, 3000] region is bit-identical
 (`decayFb`) so the Digital anchor stays byte-identical. Alt-click on any knob returns it to that mode's starting
