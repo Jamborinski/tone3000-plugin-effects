@@ -305,7 +305,7 @@ TEST(StateCacheTest, ReverbTypeSetSurvivesSaveRestore) {
   reverb.setProperty("type", "effect", nullptr);
   reverb.setProperty("effectKind", "reverb", nullptr);
   reverb.setProperty("enabled", true, nullptr);
-  reverb.setProperty("reverbMode", 2, nullptr);   // Plate
+  reverb.setProperty("reverbMode", 0, nullptr);   // Plate
   reverb.setProperty("reverbType0", 1, nullptr);   // three per-mode picks
   reverb.setProperty("reverbType3", 2, nullptr);   // (beyond today's counts; the
   reverb.setProperty("reverbType5", 1, nullptr);   //  state law keeps them verbatim)

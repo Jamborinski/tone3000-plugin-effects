@@ -3163,13 +3163,12 @@ TEST(ReverbTest, AllModesBoundedAcrossDecaySweep) {
       const double a = Reverb::defaultSigForMode(m, 0);
       const double b = Reverb::defaultSigForMode(m, 1);
       switch (m) {
-        case 0: p.density = a; p.mod     = b; break;
+        case 0: p.bright  = a; p.bloom   = b; break;
         case 1: p.springs = a; p.sag     = b; break;
-        case 2: p.bright  = a; p.bloom   = b; break;
-        case 3: p.early   = a; p.air     = b; break;
-        case 4: p.volley  = a; p.bass    = b; break;
-        case 5: p.build   = a; p.space   = b; break;
-        default: break;
+        case 2: p.early   = a; p.air     = b; break;
+        case 3: p.volley  = a; p.bass    = b; break;
+        case 4: p.build   = a; p.space   = b; break;
+        case 5: p.density = a; p.mod     = b; break;
       }
       Reverb r; r.prepare(kFs); r.reset(); r.setParams(p);
       const int n = 60 * kBlock;                 // ~1.25 s (long enough for the tail)
@@ -3397,7 +3396,7 @@ static std::vector<float> digitalOut(double density, double mod, int frames = 24
   Reverb r; r.prepare(kFs);
   Reverb::Params p;
   p.decayMs = 1500.0; p.tone = 0.35; p.size = 0.5; p.width = 0.0;
-  p.mode = 0; p.density = density; p.mod = mod;
+  p.mode = 5; p.density = density; p.mod = mod;
   r.setParams(p);
   const auto in = makeSine(frames, 440.0, 0.8f);
   juce::AudioBuffer<float> buf(2, kBlock);
@@ -3449,7 +3448,7 @@ TEST(ReverbTest, DigitalModWaversAtTheLawRate) {
     Reverb r; r.prepare(kFs);
     Reverb::Params p;
     p.decayMs = 2500.0; p.tone = 0.30; p.size = 0.5; p.width = 0.0;
-    p.mode = 0; p.mod = mod;
+    p.mode = 5; p.mod = mod;
     r.setParams(p);
     const auto in = makeSine(F, 440.0, 0.8f);
     juce::AudioBuffer<float> buf(2, kBlock);
@@ -3606,7 +3605,7 @@ static std::vector<float> plateOut(const std::vector<float>& input,
   Reverb r; r.prepare(kFs);
   Reverb::Params p;
   p.decayMs = decayMs; p.tone = 0.35; p.size = 0.80; p.width = 0.0; p.preMs = 0.0;
-  p.mode = 2; p.bright = bright; p.bloom = bloom;   // arms the Plate law path
+  p.mode = 0; p.bright = bright; p.bloom = bloom;   // arms the Plate law path
   r.setParams(p);
   juce::AudioBuffer<float> buf(1, kBlock);
   std::vector<float> L(input.size());
@@ -3686,7 +3685,7 @@ static std::vector<float> roomOut(const std::vector<float>& input,
   Reverb r; r.prepare(kFs);
   Reverb::Params p;
   p.decayMs = decayMs; p.tone = 0.3; p.size = 0.3; p.width = 0.0; p.preMs = 0.0;
-  p.mode = 3; p.early = early; p.air = air;   // arms the Room law path
+  p.mode = 2; p.early = early; p.air = air;   // arms the Room law path
   r.setParams(p);
   juce::AudioBuffer<float> buf(1, kBlock);
   std::vector<float> L(input.size());
@@ -4387,7 +4386,7 @@ static std::vector<float> chamberOut(const std::vector<float>& input,
   Reverb r; r.prepare(kFs);
   Reverb::Params p;
   p.decayMs = decayMs; p.tone = 0.4; p.size = 0.5; p.width = 0.0; p.preMs = 0.0;
-  p.mode = 4; p.volley = volley; p.bass = bass;   // arms the Chamber law path
+  p.mode = 3; p.volley = volley; p.bass = bass;   // arms the Chamber law path
   r.setParams(p);
   juce::AudioBuffer<float> buf(1, kBlock);
   std::vector<float> L(input.size());
@@ -4463,7 +4462,7 @@ static std::vector<float> hallOut(const std::vector<float>& input,
   Reverb r; r.prepare(kFs);
   Reverb::Params p;
   p.decayMs = decayMs; p.tone = 0.4; p.size = 0.8; p.width = 0.0; p.preMs = 0.0;
-  p.mode = 5; p.build = build; p.space = space;   // arms the Hall law path
+  p.mode = 4; p.build = build; p.space = space;   // arms the Hall law path
   r.setParams(p);
   juce::AudioBuffer<float> buf(1, kBlock);
   std::vector<float> L(input.size());
@@ -4533,12 +4532,12 @@ static Reverb tkMode(int mode, double sA, double sB, double decay, double tone, 
   p.decayMs = decay; p.tone = tone; p.size = size; p.width = 0.0; p.preMs = 0.0;
   p.mode = mode;
   switch (mode) {
-    case 0: p.density = sA; p.mod = sB; break;
+    case 0: p.bright = sA; p.bloom = sB; break;
     case 1: p.springs = sA; p.sag = sB; break;
-    case 2: p.bright = sA; p.bloom = sB; break;
-    case 3: p.early = sA; p.air = sB; break;
-    case 4: p.volley = sA; p.bass = sB; break;
-    case 5: p.build = sA; p.space = sB; break;
+    case 2: p.early = sA; p.air = sB; break;
+    case 3: p.volley = sA; p.bass = sB; break;
+    case 4: p.build = sA; p.space = sB; break;
+    case 5: p.density = sA; p.mod = sB; break;
   }
   r.setParams(p);
   return r;
@@ -4584,12 +4583,12 @@ TEST(TEMPMeasure, AllModes) {
 TEST(TEMPMeasure, DecaySweep) {
   struct M { const char* name; int mode; double sA, sB, tone, size; };
   const M modes[] = {
-      {"DIGITAL", 0, 0.0, 0.0, 0.40, 0.60},   // anchor path (density=0/mod=0 -> plain comb)
+      {"PLATE  ", 0, 0.55, 0.55, 0.35, 0.70},
       {"SPRING ", 1, 0.40, 0.45, 0.50, 0.75},
-      {"PLATE  ", 2, 0.55, 0.55, 0.35, 0.70},
-      {"ROOM   ", 3, 0.40, 0.40, 0.40, 0.30},
-      {"CHAMBER", 4, 0.40, 0.60, 0.50, 0.45},
-      {"HALL   ", 5, 0.60, 0.70, 0.60, 0.90},
+      {"ROOM   ", 2, 0.40, 0.40, 0.40, 0.30},
+      {"CHAMBER", 3, 0.40, 0.60, 0.50, 0.45},
+      {"HALL   ", 4, 0.60, 0.70, 0.60, 0.90},
+      {"DIGITAL", 5, 0.0, 0.0, 0.40, 0.60},
   };
   const double decays[] = { 500.0, 1500.0, 3000.0, 4500.0 };
   const int n = 700 * kBlock;   // ~7.3 s -> steady even at the 5000 ms ceiling
@@ -4664,12 +4663,12 @@ TEST(TEMPMeasure, DecayInstability) {
 TEST(TEMPMeasure, DecaySweepCrest) {
   struct M { const char* name; int mode; double sA, sB, tone, size; double onset; };
   const M modes[] = {
-      {"DIGITAL", 0, 0.0, 0.0, 0.40, 0.60, 2750.0},
+      {"PLATE  ", 0, 0.55, 0.55, 0.35, 0.70, 2500.0},
       {"SPRING ", 1, 0.40, 0.45, 0.50, 0.75, 2500.0},
-      {"PLATE  ", 2, 0.55, 0.55, 0.35, 0.70, 2500.0},
-      {"ROOM   ", 3, 0.40, 0.40, 0.40, 0.30, 2000.0},
-      {"CHAMBER", 4, 0.40, 0.60, 0.50, 0.45, 3000.0},
-      {"HALL   ", 5, 0.60, 0.70, 0.60, 0.90, 3500.0},
+      {"ROOM   ", 2, 0.40, 0.40, 0.40, 0.30, 2000.0},
+      {"CHAMBER", 3, 0.40, 0.60, 0.50, 0.45, 3000.0},
+      {"HALL   ", 4, 0.60, 0.70, 0.60, 0.90, 3500.0},
+      {"DIGITAL", 5, 0.0, 0.0, 0.40, 0.60, 2750.0},
   };
   const double decays[] = { 1000.0, 2000.0, 3000.0, 4000.0, 4800.0 };
   const int n = 900 * kBlock;

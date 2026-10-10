@@ -240,11 +240,11 @@ double hfLFSplitRel(const std::vector<float>& x, double decayMs) {
 Reverb::Params plateP() {
   Reverb::Params p;
   double dms, pre, tone, size, width;
-  Reverb::defaultDialsForMode(2, dms, pre, tone, size, width);
+  Reverb::defaultDialsForMode(0, dms, pre, tone, size, width);
   p.decayMs = dms; p.preMs = pre; p.tone = tone; p.size = size; p.width = width;
-  p.mode = 2;
-  p.bright = Reverb::defaultSigForMode(2, 0);
-  p.bloom = Reverb::defaultSigForMode(2, 1);
+  p.mode = 0;
+  p.bright = Reverb::defaultSigForMode(0, 0);
+  p.bloom = Reverb::defaultSigForMode(0, 1);
   return p;
 }
 
@@ -777,7 +777,7 @@ TEST(PlateCap, StableAtCapDialGrid) {
   const int n = static_cast<int>(2.5 * kFs);
   const auto clk = click(n);
   const auto sw = sweep();
-  const double cap = Reverb::maxDecayForMode(2);
+  const double cap = Reverb::maxDecayForMode(0);
   ASSERT_DOUBLE_EQ(cap, 2500.0) << "the plate sheen cap is 2500 ms (user state)";
   int cells = 0;
   for (double tone : {0.0, 1.0}) {
@@ -813,11 +813,11 @@ TEST(PlateCap, CpuAtDecayPoints) {
     r.prepare(rate);
     Reverb::Params p = Reverb::Params();
     double dms0, pre0, tone0, size0, width0;
-    Reverb::defaultDialsForMode(2, dms0, pre0, tone0, size0, width0);
+    Reverb::defaultDialsForMode(0, dms0, pre0, tone0, size0, width0);
     p.decayMs = decayMs; p.preMs = pre0; p.tone = tone0; p.size = size0; p.width = width0;
-    p.mode = 2;
-    p.bright = Reverb::defaultSigForMode(2, 0);
-    p.bloom = Reverb::defaultSigForMode(2, 1);
+    p.mode = 0;
+    p.bright = Reverb::defaultSigForMode(0, 0);
+    p.bloom = Reverb::defaultSigForMode(0, 1);
     r.setParams(p);
     juce::AudioBuffer<float> buf(1, block);
     for (int b = 0; b < 64; ++b) {

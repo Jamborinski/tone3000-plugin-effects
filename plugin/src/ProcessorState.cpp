@@ -257,6 +257,7 @@ juce::ValueTree TONE3000Processor::serializeBlockSettings(const ChainBlock& bloc
       blockState.setProperty("reverbSize", block.reverbSize, nullptr);
       blockState.setProperty("reverbWidth", block.reverbWidth, nullptr);
       blockState.setProperty("reverbMode", block.reverbMode, nullptr);
+      blockState.setProperty("reverbModeOrderV1", 1, nullptr);  // mode-order v2 (Plate 0) marker; makes restore's remap a no-op
       blockState.setProperty("reverbType0", block.reverbType0, nullptr);
       blockState.setProperty("reverbType1", block.reverbType1, nullptr);
       blockState.setProperty("reverbType2", block.reverbType2, nullptr);
@@ -430,8 +431,18 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
       block.reverbWidth = juce::jlimit(Reverb::kMinWidth, Reverb::kMaxWidth,
                                      static_cast<double>(
                                          blockState.getProperty("reverbWidth", 1.0)));
-      block.reverbMode = juce::jlimit(0, Reverb::kNumModes - 1,
-                                      static_cast<int>(blockState.getProperty("reverbMode", 0)));
+      {
+        // Mode-order migration (2026-10-13): the reverb mode order was
+        // reordered to Plate(0), Spring(1), Room(2), Chamber(3), Hall(4),
+        // Digital(5). Presets saved under the old order (Digital 0, Spring 1,
+        // Plate 2, Room 3, Chamber 4, Hall 5) remap 0->5, 1->1, 2->0, 3->2,
+        // 4->3, 5->4; v2 saves carry the reverbModeOrderV1 marker so the
+        // remap runs exactly once (a re-saved preset is already in v2 order).
+        int raw = static_cast<int>(blockState.getProperty("reverbMode", 0));
+        if (!blockState.hasProperty("reverbModeOrderV1"))
+          raw = (raw == 0) ? 5 : (raw == 2) ? 0 : (raw == 3) ? 2 : (raw == 4) ? 3 : (raw == 5) ? 4 : raw;
+        block.reverbMode = juce::jlimit(0, Reverb::kNumModes - 1, raw);
+      }
       block.reverbType0 = static_cast<int>(blockState.getProperty("reverbType0", 0));  // state keeps the selection verbatim; the engine clamps
       block.reverbType1 = static_cast<int>(blockState.getProperty("reverbType1", 0));  // state keeps the selection verbatim; the engine clamps
       block.reverbType2 = static_cast<int>(blockState.getProperty("reverbType2", 0));  // state keeps the selection verbatim; the engine clamps

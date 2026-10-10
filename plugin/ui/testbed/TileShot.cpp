@@ -192,7 +192,7 @@ std::vector<Shot> shots() {
       {"reverb-shift", gallery::kTileSize, "reverb shifted (Springs mode, 2400 ms decay)",
        [] {
          auto i = effectItem("reverb");
-         i.reverbMode = 3;
+         i.reverbMode = 1;  // Springs (final order: Plate 0, Spring 1)
          i.reverbDecayMs = 2400.0;
          return i;
        },

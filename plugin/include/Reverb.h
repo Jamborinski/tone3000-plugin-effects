@@ -47,12 +47,12 @@ class Reverb {
   // high-decay resonance below the user's ears without touching the sound below
   // the onset. The user confirmed the modes are "solid" below these caps.
   static constexpr double kMaxDecayMsByMode[6] = {
-      2750.0,  // Digital (onset 2750) -- the slow RINGING starts here
-      2500.0,  // Spring  (onset 2500) -- the metallic build-up starts here
       2500.0,  // Plate   (onset 2500) -- the metallic sheen starts here
+      2500.0,  // Spring  (onset 2500) -- the metallic build-up starts here
       2000.0,  // Room    (onset 2000) -- a sound boundary (stable above)
       3000.0,  // Chamber (onset 3000) -- the slow RINGING starts here
       3500.0,  // Hall    (onset 3500) -- a sound boundary (stable above)
+      2750.0   // Digital (onset 2750) -- the slow RINGING starts here
   };
   static inline double maxDecayForMode(int mode) {
     return kMaxDecayMsByMode[juce::jlimit(0, 5, mode)];
@@ -80,7 +80,7 @@ class Reverb {
   static constexpr double kDefaultWidth = 1.0;
   static constexpr double kMaxWidthSpread = 0.05;  // max tap offset (fraction) at full width
 
-  // Digital mode laws (mode 0 only). Both reduce to the identity at 0, so
+  // Digital mode laws (mode 5 only). Both reduce to the identity at 0, so
   // Digital @ Density 0 @ Mod 0 is byte-identical to the plain comb bank (the
   // bit-identity anchor). Density blends each line's feedback toward the mean
   // of all lines (a convex combination -> cannot destabilise). The Mod waver
@@ -292,7 +292,7 @@ class Reverb {
   static constexpr double kPlateBodyQ       = 0.60;    // bandwidth (Q) -- 500-800 Hz coverage
 
   // PLATE TEXTURE OUT-STAGES (plate/"140" model tuning -- ir-reverb-training.md;
-  // mode 2 only, plate constants only, the generic mechanism untouched):
+  // mode 0 only, plate constants only, the generic mechanism untouched):
   //  BODY  = a low-mid band-pass ADD, 120-300 Hz (two first-order LPFs:
   //          o += G*(lp300(x) - lp120(x)) -- zero DC shift, zero HF shift,
   //          unconditionally stable; the in-loop version is fb-capped at ~+1
@@ -374,7 +374,7 @@ class Reverb {
   // Pass 7: "+1.5 dB on the wash" -> +7.0 dB total on the wash.
   static constexpr double kSpringWetLift    = 2.239;   // 10^(+7/20)
 
-  // ---- Plate laws (mode 2; the dense 2D mode wash, not a 1-D metallic line) ----
+  // ---- Plate laws (mode 0; the dense 2D mode wash, not a 1-D metallic line) ----
   // The plate is a DENSE, dispersive 2-D surface: (a) a HIGH fixed cross-coupling
   // (denseMix) blends all 8 lines into a smooth, uniform mode wash (the plate's
   // modal density ~ constant over the band -- the fact that separates plate from
@@ -488,12 +488,12 @@ class Reverb {
   static constexpr int kNumModes = 6;
   static std::string_view modeName(int mode) {
     switch (juce::jlimit(0, kNumModes - 1, mode)) {
-      case 0: return "Digital";
+      case 0: return "Plate";
       case 1: return "Spring";
-      case 2: return "Plate";
-      case 3: return "Room";
-      case 4: return "Chamber";
-      default: return "Hall";
+      case 2: return "Room";
+      case 3: return "Chamber";
+      case 4: return "Hall";
+      default: return "Digital";
     }
   }
   // Spring `Springs`: stepped 1..6 line count, default 3. Stored normalised
@@ -532,12 +532,12 @@ class Reverb {
   static void defaultDialsForMode(int mode, double& decayMs, double& preMs,
                                   double& tone, double& size, double& width) {
     switch (juce::jlimit(0, kNumModes - 1, mode)) {
+      case 0: decayMs = 2000.0; preMs = 0.5; tone = 0.50; size = 0.50; width = 0.50; break;  // Plate: NEUTRAL 50% dials incl. width; decay at the 2.0 s EMT 140 reference (the tuning target, 2026-10-13). Tuning-state rule (stereo reference IR => width 1.0 during tuning) lives in docs/agents/ir-reverb-training.md
       case 1: decayMs = 2000.0; preMs = 0.0; tone = 0.60; size = 0.60; width = 0.90; break;  // Spring (size 60%: the user's ears; tone 60% at the user's request)
-      case 2: decayMs = 2000.0; preMs = 0.5; tone = 0.50; size = 0.50; width = 0.50; break;  // Plate: NEUTRAL 50% dials incl. width; decay at the 2.0 s EMT 140 reference (the tuning target, 2026-10-13). Tuning-state rule (stereo reference IR => width 1.0 during tuning) lives in docs/agents/ir-reverb-training.md
-      case 3: decayMs = 500.0;  preMs = 0.0; tone = 0.40; size = 0.30; width = 0.70; break;  // Room (the ears: tone 40%)
-      case 4: decayMs = 1800.0; preMs = 1.0; tone = 0.50; size = 0.45; width = 0.85; break;  // Chamber
-      case 5: decayMs = 3000.0; preMs = 2.0; tone = 0.60; size = 0.90; width = 0.95; break;  // Hall (decay at the engine max: longest allowed tail)
-      default: decayMs = 1200.0; preMs = 0.0; tone = 0.40; size = 0.60; width = 1.00; break;  // Digital
+      case 2: decayMs = 500.0;  preMs = 0.0; tone = 0.40; size = 0.30; width = 0.70; break;  // Room (the ears: tone 40%)
+      case 3: decayMs = 1800.0; preMs = 1.0; tone = 0.50; size = 0.45; width = 0.85; break;  // Chamber
+      case 4: decayMs = 3000.0; preMs = 2.0; tone = 0.60; size = 0.90; width = 0.95; break;  // Hall (decay at the engine max: longest allowed tail)
+      default: decayMs = 1200.0; preMs = 0.0; tone = 0.40; size = 0.60; width = 1.00; break; // Digital
     }
   }
   static double defaultSigForMode(int mode, int localSlot) {
@@ -545,11 +545,11 @@ class Reverb {
     const int slot = (localSlot == 1) ? 1 : 0;
     double a = 0.0, b = 0.0;
     switch (m) {
+      case 0: a = 0.5; b = 0.5; break;  // Bright 50%, Bloom 50% (neutral; the texture is tuned above this, 2026-10-13)
       case 1: a = 0.4; b = 0.30; break;  // Springs 3 (normalised 0.4), Sag 30% (the user's ears)
-      case 2: a = 0.5; b = 0.5; break;  // Bright 50%, Bloom 50% (neutral; the texture is tuned above this, 2026-10-13)
-      case 3: a = 0.40; b = 0.40; break;  // Early 40%, Air 40%
-      case 4: a = 0.4; b = 0.6; break;  // Volley, Bass
-      case 5: a = 0.6; b = 0.7; break;  // Build, Space
+      case 2: a = 0.40; b = 0.40; break;  // Early 40%, Air 40%
+      case 3: a = 0.4; b = 0.6; break;  // Volley, Bass
+      case 4: a = 0.6; b = 0.7; break;  // Build, Space
       default: a = 0.0; b = 0.0; break; // Digital: Density 0, Mod 0 (the anchor)
     }
     return slot ? b : a;
@@ -734,11 +734,11 @@ class Reverb {
         airLp_ = 0.0;
       }
     }
-    // Digital Mod (mode 0 only): a sined waver on the read tap. Gated off at
+    // Digital Mod (mode 5 only): a sined waver on the read tap. Gated off at
     // Mod 0 so the plain integer read stays bit-exact (the anchor). Only the
     // depth scales with the knob (the delay's sigMod convention); the rate is
     // the Digital law. Not Digital -> off, so no other mode ever touches it.
-    modOn_ = (params_.mode == 0) && (params_.mod > 0.0) && (sampleRate_ > 0.0);
+    modOn_ = (params_.mode == 5) && (params_.mod > 0.0) && (sampleRate_ > 0.0);
     if (modOn_) {
       modDepthSamples_ = static_cast<float>(
           kDigitalModWaverMs * 0.001 * sampleRate_ * params_.mod);
@@ -776,12 +776,12 @@ class Reverb {
     // decorrelate; width = 0 keeps both banks identical (mono, L == R).
     const double widthSpread = kMaxWidthSpread * params_.width;
 
-    // Digital laws are live in mode 0 only. Density (feedback coupling toward
+    // Digital laws are live in mode 5 only. Density (feedback coupling toward
     // the per-lines mean) and Mod (sined read-tap waver) both reduce to the
     // identity at 0, so when NEITHER is on the plain comb-bank path below is
     // byte-identical to the current engine (and every other mode uses it too
     // -> the law-inert anchor).
-    const bool densityOn = (params_.mode == 0) && (params_.density > 0.0);
+    const bool densityOn = (params_.mode == 5) && (params_.density > 0.0);
     // Spring (mode 1) is law-live only when armed (springs>0 or sag>0); at both
     // 0 it runs the shared plain path (the anchor + the law-inert scaffold pin
     // stay intact). Plate/Room/Chamber/Hall are still law-inert (their sigs do
@@ -792,9 +792,9 @@ class Reverb {
       processSpring(buffer);
       return;
     }
-    // Plate (mode 2) is law-live when armed (Bright>0 or Bloom>0); at both 0 it
+    // Plate (mode 0) is law-live when armed (Bright>0 or Bloom>0); at both 0 it
     // runs the shared plain path (the anchor + the law-inert premise hold).
-    const bool plateOn = (params_.mode == 2) &&
+    const bool plateOn = (params_.mode == 0) &&
         (params_.bright > 0.0 || params_.bloom > 0.0);
     if (plateOn) {
       processPlate(buffer);
@@ -802,7 +802,7 @@ class Reverb {
     }
     // Room (mode 3) is law-live when armed (Early>0 or Air>0); at both 0 it runs
     // the shared plain path (the Digital anchor + kNumModes==6 hold).
-    const bool roomOn = (params_.mode == 3) &&
+    const bool roomOn = (params_.mode == 2) &&
         (params_.early > 0.0 || params_.air > 0.0);
     if (roomOn) {
       processRoom(buffer);
@@ -810,7 +810,7 @@ class Reverb {
     }
     // Chamber (mode 4) is law-live when armed (Volley>0 or Bass>0); at both 0 it
     // runs the shared plain path (the Digital anchor + kNumModes==6 hold).
-    const bool chamberOn = (params_.mode == 4) &&
+    const bool chamberOn = (params_.mode == 3) &&
         (params_.volley > 0.0 || params_.bass > 0.0);
     if (chamberOn) {
       processChamber(buffer);
@@ -820,7 +820,7 @@ class Reverb {
     // runs the shared plain path (the Digital anchor + kNumModes==6 hold).
     // Hall is the LONGEST RT by design (default 3000 ms, within its 50..5000
     // range); at both 0 it shares the plain path (the anchor holds at any decay).
-    const bool hallOn = (params_.mode == 5) &&
+    const bool hallOn = (params_.mode == 4) &&
         (params_.build > 0.0 || params_.space > 0.0);
     if (hallOn) {
       processHall(buffer);
@@ -1195,7 +1195,7 @@ class Reverb {
     }
   }
 
-  // Plate (mode 2) -- the dense, dispersive 2-D mode wash. A HIGH fixed cross-
+  // Plate (mode 0) -- the dense, dispersive 2-D mode wash. A HIGH fixed cross-
   // coupling (denseMix, a convex blend of each line's feedback toward the
   // all-lines mean) smooths the 8 combs into a uniform modal wash -- the plate's
   // ~constant-over-band modal density, the fact that distinguishes it from the

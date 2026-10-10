@@ -104,39 +104,39 @@ help::Key delaySigHelp(int m) {
 }
 
 // ---- Reverb mode sig slots: (mode, localSlot 0=Sig A/1=B) -> param/scale/
-// label/help. Digital Density/Mod, Spring Springs/Sag, Plate Bright/Bloom,
-// Room Early/Air, Chamber Volley/Bass, Hall Build/Space. All stored 0..1;
+// label/help. Plate Bright/Bloom, Spring Springs/Sag, Room Early/Air,
+// Chamber Volley/Bass, Hall Build/Space, Digital Density/Mod. All stored 0..1;
 // Springs is the single stepped (1..6) sig. (plugin/docs/reverb-modes.md.)
 static const char* reverbSigParam(int mode, int localSlot) {
   static const char* p[Reverb::kNumModes][2] = {
-      {"reverbDensity", "reverbMod"},  {"reverbSprings", "reverbSag"},
-      {"reverbBright", "reverbBloom"}, {"reverbEarly", "reverbAir"},
-      {"reverbVolley", "reverbBass"},  {"reverbBuild", "reverbSpace"}};
+      {"reverbBright", "reverbBloom"}, {"reverbSprings", "reverbSag"},
+      {"reverbEarly", "reverbAir"},   {"reverbVolley", "reverbBass"},
+      {"reverbBuild", "reverbSpace"}, {"reverbDensity", "reverbMod"}};
   return p[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
 }
 static const char* reverbSigLabel(int mode, int localSlot) {
   static const char* n[Reverb::kNumModes][2] = {
-      {"Density", "Mod"}, {"Springs", "Sag"}, {"Bright", "Bloom"},
-      {"Early", "Air"}, {"Volley", "Bass"}, {"Build", "Space"}};
+      {"Bright", "Bloom"}, {"Springs", "Sag"}, {"Early", "Air"},
+      {"Volley", "Bass"}, {"Build", "Space"}, {"Density", "Mod"}};
   return n[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
 }
 static const KnobScale* reverbSigScaleForMode(int mode, int localSlot) {
   if (juce::jlimit(0, Reverb::kNumModes - 1, mode) == 1 && !localSlot)
-    return &scales::springs();  // the only stepped sig (Springs 1..6)
+    return &scales::springs();  // the only stepped sig (Springs 1..6, mode 1)
   return &scales::fraction01();
 }
 static help::Key reverbSigHelp(int mode, int localSlot) {
   static const help::Key k[Reverb::kNumModes][2] = {
-      {help::Key::reverbDensity, help::Key::reverbMod},
-      {help::Key::reverbSprings, help::Key::reverbSag},
       {help::Key::reverbBright, help::Key::reverbBloom},
+      {help::Key::reverbSprings, help::Key::reverbSag},
       {help::Key::reverbEarly, help::Key::reverbAir},
       {help::Key::reverbVolley, help::Key::reverbBass},
-      {help::Key::reverbBuild, help::Key::reverbSpace}};
+      {help::Key::reverbBuild, help::Key::reverbSpace},
+      {help::Key::reverbDensity, help::Key::reverbMod}};
   return k[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
 }
 static juce::String compactReverbModeName(int m) {
-  static const char* n[6] = {"DIG", "SPR", "PLT", "RM", "CHM", "HALL"};
+  static const char* n[6] = {"PLT", "SPR", "RM", "CHM", "HALL", "DIG"};
   return n[juce::jlimit(0, 5, m)];
 }
 // ---- Reverb TYPE faces (a sub-model within a mode; Reverb::numTypes owns
@@ -145,18 +145,18 @@ static juce::String compactReverbModeName(int m) {
 // product name). A second type = a new row per mode (id + blurb + engine
 // branch + count bump; the plate pass is the reference implementation).
 static const char* compactReverbTypeName(int m, int t) {
-  static const char* n[Reverb::kNumModes] = {"DIG", "RV1", "140", "SML", "CHM", "HAL"};
+  static const char* n[Reverb::kNumModes] = {"140", "RV1", "SML", "CHM", "HAL", "DIG"};
   (void)t;  // one type per mode today
   return n[juce::jlimit(0, Reverb::kNumModes - 1, m)];
 }
 static const char* reverbTypeBlurb(int m, int t) {
   static const char* b[Reverb::kNumModes] = {
-      "clean comb field -- flat to the top, dense, even repeats",
-      "single-can spring tank -- crisp metallic boing, high bite, long shimmer tail",
       "dense flat-plate body -- deep low-mid sustain, bright early slap, huge smooth tail",
+      "single-can spring tank -- crisp metallic boing, high bite, long shimmer tail",
       "small room -- fast early set, short decay, drier than it looks",
       "open stone chamber -- tight body, long bright tail, LF blooming off",
-      "concert hall -- slow to build, long and wide, low end hangs"};
+      "concert hall -- slow to build, long and wide, low end hangs",
+      "clean comb field -- flat to the top, dense, even repeats"};
   (void)t;  // one type per mode today
   return b[juce::jlimit(0, Reverb::kNumModes - 1, m)];
 }
@@ -176,12 +176,12 @@ static double reverbSigRaw(const ChainItem& b, int mode, int localSlot) {
   const int m = juce::jlimit(0, Reverb::kNumModes - 1, mode);
   const int s = localSlot ? 1 : 0;
   switch (m) {
-    case 0: return s ? b.reverbMod : b.reverbDensity;  break;
+    case 0: return s ? b.reverbBloom : b.reverbBright; break;
     case 1: return s ? b.reverbSag : b.reverbSprings;  break;
-    case 2: return s ? b.reverbBloom : b.reverbBright; break;
-    case 3: return s ? b.reverbAir : b.reverbEarly;    break;
-    case 4: return s ? b.reverbBass : b.reverbVolley;  break;
-    default: return s ? b.reverbSpace : b.reverbBuild; break;
+    case 2: return s ? b.reverbAir : b.reverbEarly;    break;
+    case 3: return s ? b.reverbBass : b.reverbVolley;  break;
+    case 4: return s ? b.reverbSpace : b.reverbBuild;  break;
+    default: return s ? b.reverbMod : b.reverbDensity; break;
   }
 }
 

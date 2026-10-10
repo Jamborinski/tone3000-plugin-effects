@@ -192,11 +192,11 @@ double bandBalanceAt(const std::vector<float>& x, double decaySec) {
 Reverb::Params plateDefaults() {
   Reverb::Params p;
   double dms, pre, tone, size, width;
-  Reverb::defaultDialsForMode(2, dms, pre, tone, size, width);
+  Reverb::defaultDialsForMode(0, dms, pre, tone, size, width);
   p.decayMs = dms; p.preMs = pre; p.tone = tone; p.size = size; p.width = width;
-  p.mode = 2;
-  p.bright = Reverb::defaultSigForMode(2, 0);
-  p.bloom = Reverb::defaultSigForMode(2, 1);
+  p.mode = 0;
+  p.bright = Reverb::defaultSigForMode(0, 0);
+  p.bloom = Reverb::defaultSigForMode(0, 1);
   return p;
 }
 
@@ -465,7 +465,7 @@ TEST(PlateTexture, LevelLawWithinOneDbOfBaseline) {
 TEST(PlateTexture, StableAndBoundedAtCaps) {
   // Stability/bounding at the mode's ceiling (noise-driven, the worst
   // case for the feedback loop): finite and bounded.
-  for (double d : {plateDefaults().decayMs, Reverb::maxDecayForMode(2)}) {
+  for (double d : {plateDefaults().decayMs, Reverb::maxDecayForMode(0)}) {
     Reverb::Params p = plateDefWithDecay(d);
     p.bright = 1.0; p.bloom = 1.0;   // fully armed (hardest drive)
     const auto in = sweep25();

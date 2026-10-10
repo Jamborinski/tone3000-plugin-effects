@@ -169,11 +169,11 @@ double combDepth(const std::vector<float>& x, double t0, double t1) {
 Reverb::Params plateDefaults() {
   Reverb::Params p;
   double dms, pre, tone, size, width;
-  Reverb::defaultDialsForMode(2, dms, pre, tone, size, width);
+  Reverb::defaultDialsForMode(0, dms, pre, tone, size, width);
   p.decayMs = dms; p.preMs = pre; p.tone = tone; p.size = size; p.width = width;
-  p.mode = 2;
-  p.bright = Reverb::defaultSigForMode(2, 0);
-  p.bloom = Reverb::defaultSigForMode(2, 1);
+  p.mode = 0;
+  p.bright = Reverb::defaultSigForMode(0, 0);
+  p.bloom = Reverb::defaultSigForMode(0, 1);
   return p;
 }
 
@@ -392,43 +392,53 @@ TEST(PlateComb, NoGrowingCombOverTheTail) {
 // (raw-peakiness diagnostic stays available via combDepth; it is NOT an
 // invariant because the echo-to-wash ratio naturally rises as the wash decays)
 
+// ---------------------------------------------------------------------------
 // The retune moves only the plate's comb/diffusion/damping layers: the OTHER
 // five modes' tail fingerprints must stay bit-identical to the captured
 // pre-retune values. (The plate's own level is a separate pin.)
-// captured pre-retune values (2026-07-10, this build): the retune only
-// touches plate-mode (2) internals, so these five must stay bit-identical.
-struct ModePin { int mode; double sum, sumAbs, energy; };
+// Captured 2026-07-10 in the OLD mode order (Digital 0, Spring 1, Plate 2,
+// Room 3, Chamber 4, Hall 5): the helper fed each non-plate mode springs
+// 0.4 / sag 0.30 (defaultSigForMode(old 1, 0/1)) and every other sig slot 0.
+// The 2026-10-13 reorder moves Plate to mode 0 and Digital to mode 5, so the
+// pins keep their OLD-order label (pin.mode) and the helper feeds each
+// non-plate mode its ORIGINAL dial + signature values with the NEW mode index
+// (the engine's gates select the right slots, every slot is un-armed in the
+// wrong mode, so the output is bit-identical to the 2026-07-10 capture).
+struct ModePin { int mode; double sum, sumAbs, energy; };  // mode = OLD-order index
 const ModePin kModePins[] = {
-    {0, 69202.7841184139, 69202.7841184139, 202472.99315673},
-    {1, 21371.545198828, 21371.545198828, 19559.284667016},
-    {3, 87113.8745889664, 87113.8745889664, 318805.647552788},
-    {4, 91743.9036078453, 91743.9036078453, 352806.093163308},
-    {5, 229326.452632904, 229326.452632904, 2257163.84027176},
+    {0, 69202.7841184139, 69202.7841184139, 202472.99315673},   // old Digital
+    {1, 21371.545198828, 21371.545198828, 19559.284667016},    // Spring (1 -> 1)
+    {3, 87113.8745889664, 87113.8745889664, 318805.647552788},  // old Room
+    {4, 91743.9036078453, 91743.9036078453, 352806.093163308},  // old Chamber
+    {5, 229326.452632904, 229326.452632904, 2257163.84027176},  // old Hall
 };   // baked 2026-07-10 (15 digits; bit-identical across the plate retune)
+
+// OLD index -> the exact Params those pins were captured with: the mode's dials
+// (content is index-independent) + the original helper's sig slots (springs
+// 0.4 / sag 0.30 for every non-plate mode; density/mod/other-sigs = 0).
+static Reverb::Params cfgForOldMode(int oldMode) {
+  Reverb::Params p;
+  double dms, pre, tone, size, width;
+  switch (oldMode) {
+    case 0: Reverb::defaultDialsForMode(5, dms, pre, tone, size, width); p.mode = 5; break;  // Digital (springs/sag stay 0)
+    case 1: Reverb::defaultDialsForMode(1, dms, pre, tone, size, width); p.mode = 1; p.springs = 0.4; p.sag = 0.30; break;  // Spring (its own sigs)
+    case 3: Reverb::defaultDialsForMode(2, dms, pre, tone, size, width); p.mode = 2; p.early = 0.40; p.air = 0.40; p.springs = 0.4; p.sag = 0.30; break;  // Room
+    case 4: Reverb::defaultDialsForMode(3, dms, pre, tone, size, width); p.mode = 3; p.volley = 0.4; p.bass = 0.6; p.springs = 0.4; p.sag = 0.30; break;  // Chamber
+    case 5: Reverb::defaultDialsForMode(4, dms, pre, tone, size, width); p.mode = 4; p.build = 0.6; p.space = 0.7; p.springs = 0.4; p.sag = 0.30; break;  // Hall
+    default: Reverb::defaultDialsForMode(5, dms, pre, tone, size, width); p.mode = 5; break; // unreachable (plate old 2 excluded)
+  }
+  p.decayMs = dms; p.preMs = pre; p.tone = tone; p.size = size; p.width = width;
+  p.density = 0.0; p.mod = 0.0;  // Digital sigs off (the original helper fed defaultSigForMode(old 0)=0/0)
+  p.bright = 0.0; p.bloom = 0.0;  // plate sigs off (mode 2 is excluded by the pin table)
+  return p;
+}
 
 TEST(PlateComb, OtherModesStayBitIdentical) {
   const auto in = noise(48000, 0.25);
-  auto finger = [&](int mode) {
+  auto finger = [&](const Reverb::Params& p) {
     Reverb r;
     r.prepare(kFs);
     r.reset();
-    Reverb::Params p;
-    double dms, pre, tone, size, width;
-    Reverb::defaultDialsForMode(mode, dms, pre, tone, size, width);
-    p.decayMs = dms; p.preMs = pre; p.tone = tone; p.size = size; p.width = width;
-    p.mode = mode;
-    p.density = Reverb::defaultSigForMode(mode, 0);
-    p.mod = Reverb::defaultSigForMode(mode, 1);
-    p.springs = Reverb::defaultSigForMode(mode, 0);
-    p.sag = Reverb::defaultSigForMode(mode, 1);
-    p.bright = Reverb::defaultSigForMode(mode, 0);
-    p.bloom = Reverb::defaultSigForMode(mode, 1);
-    p.early = Reverb::defaultSigForMode(mode, 0);
-    p.air = Reverb::defaultSigForMode(mode, 1);
-    p.volley = Reverb::defaultSigForMode(mode, 0);
-    p.bass = Reverb::defaultSigForMode(mode, 1);
-    p.build = Reverb::defaultSigForMode(mode, 0);
-    p.space = Reverb::defaultSigForMode(mode, 1);
     r.setParams(p);
     juce::AudioBuffer<float> buf(1, kBlock);
     double sum = 0, sumAbs = 0, energy = 0;
@@ -446,7 +456,7 @@ TEST(PlateComb, OtherModesStayBitIdentical) {
     return std::array<double, 3>{sum, sumAbs, energy};
   };
   for (const ModePin& pin : kModePins) {
-    const auto f2 = finger(pin.mode);
+    const auto f2 = finger(cfgForOldMode(pin.mode));
     std::cout << "  [mode " << pin.mode << "] sum=" << std::setprecision(15)
               << f2[0] << " sumAbs=" << f2[1] << " energy=" << f2[2]
               << std::setprecision(6) << std::endl;
