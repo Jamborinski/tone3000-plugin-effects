@@ -29,3 +29,7 @@ build-ui-release/
 # Local scratch + vendored deps
 .sp.py
 third_party/
+
+# OpenWiki tooling: we use the local pi openwiki tools, not this generated
+# GitHub Actions workflow (needs OPENAI_API_KEY; see AGENTS.md OpenWiki section)
+.github/workflows/openwiki-update.yml
