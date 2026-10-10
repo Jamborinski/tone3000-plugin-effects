@@ -661,6 +661,31 @@ juce::File makeFixedIrWav() {
   }
   return {};
 }
+
+// 1-channel (mono) IR fixture, the same envelope as makeFixedIrWav, so a live
+// load exercises the mono branch (rawChannelCount == 1) distinctly from stereo.
+juce::File makeMonoIrWav() {
+  const juce::File wav(juce::File::getSpecialLocation(juce::File::tempDirectory)
+                           .getChildFile("t3k-ir-mono-fixture.wav"));
+  wav.deleteFile();
+  juce::WavAudioFormat fmt;
+  auto stream = wav.createOutputStream();
+  if (stream == nullptr)
+    return {};
+  auto base = std::unique_ptr<juce::OutputStream>(stream.release());
+  juce::AudioFormatWriterOptions opts;
+  opts = opts.withSampleRate(48000.0).withNumChannels(1).withBitsPerSample(24);
+  if (auto writer = fmt.createWriterFor(base, opts); writer != nullptr) {
+    juce::AudioBuffer<float> buf(1, 4096);
+    for (int i = 0; i < 4096; ++i) {
+      const float env = std::exp(-0.003f * i);
+      buf.setSample(0, i, 0.4f * std::sin(0.02f * i) * env);
+    }
+    writer->writeFromAudioSampleBuffer(buf, 0, 4096);
+    return wav;
+  }
+  return {};
+}
 }  // namespace
 
 TEST(ProcessorTest, ConvDryMigratesOldGainOnLoad) {
@@ -792,6 +817,50 @@ TEST(ProcessorTest, ConvDryScalesOnlyTheDryPath) {
   EXPECT_GT(wetA, 1e-6) << "wet path must produce output (loaded IR)";
   EXPECT_NEAR(wetA, wetB, std::max(1e-6, 1e-3 * wetA))
       << "convDry must not change the wet (mix=1) output";
+}
+
+TEST(ProcessorTest, ConvIrTypeSeededOnLiveLoad) {
+  // Loading a mono IR must seed convIrChannels==1 and a mono width default;
+  // a stereo IR convIrChannels==2 and a stereo width default. This is what the
+  // label's Mono/Stereo text and the Width knob key off; the live Change-IR
+  // path previously never set it, so a mono file showed as stereo.
+  auto convRow = [](TONE3000Processor& prc) -> juce::var {
+    juce::var row;
+    const juce::var state = prc.getChainState(-1);
+    const juce::var chainVar = state["chain"];
+    auto* const chain = chainVar.getArray();
+    for (int i = 0; chain != nullptr && i < chain->size(); ++i) {
+      const juce::var params = (*chain)[i]["params"];
+      if (params.isObject() && params.hasProperty("convGain"))
+        row = params;
+    }
+    return row;
+  };
+  auto loadAndCheck = [ &convRow ](const juce::File& ir, int expCh, double expWidth) {
+    TONE3000Processor proc;
+    proc.setPlayConfigDetails(2, 2, 48000, 512);
+    proc.prepareToPlay(48000, 512);
+    const auto cid = proc.addEffectBlock(EffectKind::Convolution, "left", 0);
+    ASSERT_FALSE(cid.empty());
+    const juce::var resp = proc.loadConvIr(cid, ir);
+    ASSERT_FALSE(resp.getDynamicObject() != nullptr &&
+                 resp.getDynamicObject()->hasProperty("error"))
+        << "IR load should succeed";
+    const juce::var row = convRow(proc);
+    ASSERT_TRUE(row.isObject());
+    EXPECT_EQ(static_cast<int>(static_cast<double>(row["convIrChannels"])), expCh)
+        << "convIrChannels must reflect the file's channel type (1 mono / 2 stereo)";
+    EXPECT_NEAR(static_cast<double>(row["convWidth"]), expWidth, 1e-9)
+        << "convWidth must be seeded from the matching stored slot on load";
+  };
+
+  const juce::File mono = makeMonoIrWav();  // 1 channel
+  ASSERT_TRUE(mono.existsAsFile());
+  loadAndCheck(mono, 1, 0.0);  // mono  -> width off  (convWidthMono default)
+
+  const juce::File stereo = makeFixedIrWav();  // 2 channels
+  ASSERT_TRUE(stereo.existsAsFile());
+  loadAndCheck(stereo, 2, 1.0);  // stereo -> width full (convWidthStereo default)
 }
 
 

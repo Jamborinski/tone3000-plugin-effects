@@ -1063,9 +1063,9 @@ void EffectTile::updateConvIrLabel() {
   // via a Haas pair; stereo IR: width FOLDS the M/S spread).
   const juce::String irTypeText =
       (block_.convIrChannels == 1)
-          ? juce::String(" mono")
+          ? juce::String(" Mono")
       : (block_.convIrChannels == 2)
-          ? juce::String(" stereo")
+          ? juce::String(" Stereo")
           : juce::String();
   if (block_.convIrLoaded && hasName) {
     // E-2 + length readout. Full tile: the length gets its OWN line under the

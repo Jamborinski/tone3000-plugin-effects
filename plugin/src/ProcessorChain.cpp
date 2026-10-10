@@ -429,6 +429,16 @@ juce::var TONE3000Processor::loadConvIr(const std::string& blockId,
                               file.getFileName()))
     return err(loadError);
 
+  // Seed the IR type (mono vs stereo) and the active width from the matching
+  // stored slot, and push the width to the engine -- mirroring the restore
+  // path. The label's mono/stereo text and the Width knob's per-IR-type
+  // default both key off convIrChannels; the live path never set them before,
+  // so a mono IR showed as stereo with the stereo width.
+  if (block->conv.hasIr()) {
+    block->convApplyIrType(block->conv.rawChannelCount());
+    block->conv.setParams(block->convParams());
+  }
+
   // E-2: record the source path so restoration can re-hydrate.
   block->convIrPath = file.getFullPathName();
 
@@ -473,8 +483,10 @@ void restoreConvIrInBlock(ChainBlock& b) {
   // Seed the active width from the IR type (the restore path mirrors the UI
   // load path, so the block's convWidthMono / convWidthStereo slots stay
   // coherent after a duplicate, paste, or app-restart re-hydrate).
-  if (b.conv.hasIr())
+  if (b.conv.hasIr()) {
     b.convApplyIrType(b.conv.rawChannelCount());
+    b.conv.setParams(b.convParams());
+  }
 }
 }  // namespace
 
