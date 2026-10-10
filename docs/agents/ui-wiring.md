@@ -6,6 +6,10 @@
 > **all four** state places, and a knob whose stored domain is 0..1 but shows
 > a human unit MUST declare `toStored`/`fromStored` — missing either = "works
 > sonically, snaps back on resync."
+> **OpenWiki mirrors (descriptive):**
+> [`openwiki/systems/param-chain-wiring.md`](../../openwiki/systems/param-chain-wiring.md) (KnobScale split, the four state places,
+> MidiMapper) and [`openwiki/systems/ui/`](../../openwiki/systems/ui/page.md) (design space, Services, view tree, testbed
+> modes) — this file stays the authoritative RULE set.
 
 (AGENTS.md sub-rule — the index is the repo-root `AGENTS.md`.)
 
@@ -52,7 +56,7 @@ missing kind silently caps the tile at 3 (a new 5-knob kind regresses to 3).
 The layout's `five`/`cols` flag is a SEPARATE gate — update both.
 
 ## Build/gate notes
-- **DspTests never compiles `plugin/ui`** — verify UI changes with a GUI build
+- **DspTests pulls in only `plugin/ui/core/Labels.cpp`** (the KnobScale readout formatter) — verify UI changes with a GUI build
   (`ninja -C build TONE3000_Standalone` or the VST3 target) before committing.
 - **This JUCE's API:** `ValueTree::isValid()` (not `isObject()`); read a
   number from `juce::var` via `.toString().getDoubleValue()` (no `toDouble`);

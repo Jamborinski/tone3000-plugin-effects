@@ -5,6 +5,9 @@
 > `Downloads\TONE3000-win-YYYYMMDD-HHMMSS` (**run-timestamp only, never
 > descriptive suffixes**); **ASIO is a HARD user requirement**; keep the two
 > `T3K_MINGW_*` CMake patches.
+> **OpenWiki mirror (descriptive):** [`openwiki/build-and-ops/windows-release.md`](../../openwiki/build-and-ops/windows-release.md)
+> — the cross-build/staging/verification steps as evidence-linked claims; this file
+> stays the authoritative RULE set.
 
 (AGENTS.md sub-rule — the index is the repo-root `AGENTS.md`.)
 

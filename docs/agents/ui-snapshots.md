@@ -5,6 +5,8 @@
 > **The one line that matters:** a golden is a **deliberately approved**
 > pixel baseline — `--regen` is a human act, never CI; a changed look gets
 > re-shot and **human-reviewed** before it commits.
+> **OpenWiki mirror (descriptive):** [`openwiki/systems/ui/`](../../openwiki/systems/ui/page.md) Testbed section (modes / selftest / capture / bench) — this
+> file stays the golden-workflow RULE set.
 
 (AGENTS.md sub-rule — the index is the repo-root `AGENTS.md`.)
 

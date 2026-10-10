@@ -7,6 +7,8 @@
 > (`stage/usr/bin/pkg-config` is a *shim* — **do NOT revert it**), `FindX11`
 > needs explicit `-DX11_X11_*`, and the VST3 **helper** is a separate CMake
 > project that must be reconfigured with `--sysroot` itself.
+> **OpenWiki mirrors (descriptive):** [`openwiki/build-and-ops/dsp-test-suite.md`](../../openwiki/build-and-ops/dsp-test-suite.md) (run loop, real-source rule,
+> silent-0 trap, fixtures) — this file keeps the link-dep / configure / helper RULES.
 
 (AGENTS.md sub-rule — the index is the repo-root `AGENTS.md`.)
 

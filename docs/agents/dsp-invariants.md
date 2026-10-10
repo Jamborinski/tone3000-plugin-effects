@@ -5,6 +5,9 @@
 > **The one line that matters:** the per-mode ratio/detent/colouration law +
 > every **CONSIDERED & DECLINED** item below is a contract, not a suggestion.
 > Delay design/provenance lives deeper at `plugin/docs/delay-modes.md`.
+> **OpenWiki mirror (descriptive):** [`openwiki/systems/effects-invariants.md`](../../openwiki/systems/effects-invariants.md) — the per-mode laws + the
+> CONSIDERED & DECLINED ledger as a coherent page of evidence-linked claims; this
+> file stays the authoritative RULE set.
 
 ## If you're also touching…
 - Adding/renaming a knob, scale, or param's plumbing alongside a DSP change →

@@ -5,6 +5,7 @@
 > `tone-3000/tone3000-plugin`; `origin` = our fork — "merge upstream" means
 > `git fetch upstream`, then resolve **per function**, then DspTests + a
 > Windows link **before** committing the merge.
+> **Repo reference:** [`openwiki/quickstart.md`](../../openwiki/quickstart.md) (what the fork is and how it builds/tests) — the merge-process rules below stay authoritative.
 
 (AGENTS.md sub-rule — the index is the repo-root `AGENTS.md`.)
 

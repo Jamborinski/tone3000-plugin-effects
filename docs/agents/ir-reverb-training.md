@@ -11,6 +11,9 @@
 > are measured first** — those become the guard's guardrail, because the
 > reference will violate whatever ideal you assume (the EMT 140 itself drifts
 > +4.85 dB and carries 4.3 dB of steady comb).
+> **OpenWiki mirrors (descriptive):** [`openwiki/systems/effects-invariants.md`](../../openwiki/systems/effects-invariants.md)
+> (the plate/"140" law + CONSIDERED & DECLINED ledger) and
+> [`openwiki/systems/ir-convolution.md`](../../openwiki/systems/ir-convolution.md) (the house BudgetConvolver the reference is run through) — this file stays the TRAINING-PROTOCOL rule set.
 
 (AGENTS.md sub-rule — the index is the repo-root `AGENTS.md`. The plate
 instance of this training is documented in `docs/tickets/complete/plate-combing.md`
@@ -148,10 +151,13 @@ compared against, so "CPU headroom is fine" is almost never the limiter.
   one mode.
 - **CPU table** (per-lever + final) recorded in the close-out.
 - **Full DspTests green** (never trust a "green" unless the "Running N tests"
-  line is non-zero — see the silent-0 trap) **and** the GUI links (DspTests
-  never compiles `plugin/ui`; build `TONE3000_Standalone`).
+  line is non-zero — see the silent-0 trap) **and** the GUI links (DspTests pulls in only
+  `plugin/ui/core/Labels.cpp`; build `TONE3000_Standalone`).
 - Close-out written (A/B matrix + CONSIDERED & DECLINED + CPU); commit the
   guard tests, keep the close-out untracked unless asked.
+- **AGENTS.md “On ticket completion”:** on close-out, also run the OpenWiki
+  UPDATE (`openwiki_begin` mode="update") so `openwiki/` reflects the change —
+  the update path is still UNDER CONSTRUCTION as of 2026-10-10.
 
 ## Harness landmines (hit in the plate session — each cost time)
 - **gtest silent-0:** `--gtest_filter='A*,B*'` (comma list) can run **0 tests

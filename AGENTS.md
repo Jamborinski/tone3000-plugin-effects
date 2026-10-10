@@ -1,8 +1,41 @@
 # TONE3000 Plugin — AGENTS.md (INDEX)
 
 For AI agents (pi, Cline) working in this repo. **This file is the always-loaded
-index — task-specific rules live in `docs/agents/`.** Each sub-file carries the
-genuine detail; the danger summaries below are the safety net, not a substitute.
+index — task-specific rules live in `docs/agents/`, and the persistent
+architecture/overview of the repo lives in `openwiki/`.** Each sub-file carries the
+genuine rule detail; the danger summaries below are the safety net, not a substitute.
+
+## OpenWiki — the persistent reference
+`openwiki/` is a generated, evidence-backed architecture index of the repo
+(every page's claims cite the files and line ranges that back them). It is the
+preferred starting point when you need to *understand* a subsystem — read it
+before opening source, to save round-trips and to surface the load-bearing
+invariants (the CONSIDERED & DECLINED items, the per-mode laws, the four
+state places, the 256-sample convolver cap, etc.) as a coherent page before you
+even know which file to open. It is **descriptive**, not prescriptive — the
+`docs/agents/*` files above remain the load-bearing RULES. Open
+[`openwiki/quickstart.md`](openwiki/quickstart.md) for the entry point, then
+follow the links into:
+
+- **[`openwiki/architecture/audio-path.md`](openwiki/architecture/audio-path.md)** — 48 k chain domain, lanes, block types,
+  256-sample convolver cap, worker pool, zero-latency contract.
+- **[`openwiki/systems/nam-engine.md`](openwiki/systems/nam-engine.md)** — phase interleave identity, voices,
+  multi-core, A2 gate, clean-room rule.
+- **[`openwiki/systems/ir-convolution.md`](openwiki/systems/ir-convolution.md)** — `BudgetConvolver` vs JUCE OLA, the 256-sample
+  block cap, amplitude law, ConvolutionReverb.
+- **[`openwiki/systems/effects-invariants.md`](openwiki/systems/effects-invariants.md)** — all 6 reverb modes, plate/"140" law, CONSIDERED
+  & DECLINED, mode/subtype (type) rule.
+- **[`openwiki/systems/param-chain-wiring.md`](openwiki/systems/param-chain-wiring.md)** — KnobScale storage split, four state places block, MidiMapper target kinds.
+- **[`openwiki/systems/presets-persistence.md`](openwiki/systems/presets-persistence.md)** — T3KB/T3KH, PresetManager 3-tier, ChainHistory, UiPrefs.
+- **[`openwiki/systems/cloud-services.md`](openwiki/systems/cloud-services.md)** — OAuth triple sign-in paths, token rotation, ConnectionGate.
+- **[`openwiki/systems/ui/`](openwiki/systems/ui/page.md)** — design space, Services, view tree, testbed modes.
+- **[`openwiki/build-and-ops/dsp-test-suite.md`](openwiki/build-and-ops/dsp-test-suite.md)** — test-dsp.sh loop, the gtest silent-0 trap, the real-source-compile rule, fixtures.
+- **[`openwiki/build-and-ops/windows-release.md`](openwiki/build-and-ops/windows-release.md)** — MinGW cross-build, ASIO, the two `T3K_MINGW_*` patches, staging.
+
+Retrieval: local `openwiki` v0.7.2 (pi tools `openwiki_begin` / `submit_plan`
+/ `next_page` / `submit_page` / `finish`); see the note below the hard-rules
+section. Source code and tests remain authoritative over the wiki; a wiki
+statement is a claim to be verified, not a fact to be believed.
 
 ## Protocol (mandatory, not a suggestion)
 1. **Match by PATH, not by vibes, before you edit anything:**
@@ -49,9 +82,14 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
 - **gtest silent-0 trap:** a comma list like `--gtest_filter='A*,B*'` can run
   **0 tests with exit 0** (a green lie); a single `A*` works. Always confirm the
   "Running N tests" line is non-zero before trusting the run.
-- **DspTests never compiles `plugin/ui`** — a green DspTests does NOT prove
-  the UI links: verify UI changes with a GUI build
-  (`cmake --build build --target TONE3000_Standalone` or `_VST3`) before committing.
+- **The suite has a UI exception** — `DspTests` compiles the real DSP and
+  exactly one UI file (`plugin/ui/core/Labels.cpp`, the KnobScale readout
+  formatter for the scale-contract tests); everything else in `plugin/ui`
+  (views, widgets, services) is excluded. A green DspTests does NOT prove the
+  UI links — verify UI changes with a GUI build
+  (`cmake --build build --target TONE3000_Standalone` or `_VST3`) or the
+  testbed (`UiTestbed --selftest`) before committing.
+  (See [`openwiki/build-and-ops/dsp-test-suite.md`](openwiki/build-and-ops/dsp-test-suite.md).)
 - **9p mtime:** after a Windows-side edit of a WSL repo file, `touch` it before
   building (`no work to do` otherwise); if a header edit didn't recompile,
   `rm -f build/test/CMakeFiles/DspTests.dir/src/<t>.cpp.o` and rebuild.
@@ -86,3 +124,33 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   long-job patterns): pi → `/home/jambo/.pi/agent/AGENTS.md` (pi runs
   natively inside WSL); Cline → `C:\Users\jambo\Documents\Cline\Rules\global.md`
   (Cline is Windows-side; its shell is this same WSL).
+
+<!-- OPENWIKI:START -->
+
+## OpenWiki — local setup (this repo)
+- The `openwiki/` tree is generated locally by pi's `openwiki` integration
+  (v0.7.2) — **there is no scheduled GitHub Actions workflow for it** in this
+  setup; refreshes are manual (see the close-out rule below).
+- Do not hand-edit generated `openwiki/*.md` pages or `openwiki/.claims/` unless
+  explicitly asked — the durable fix is to update the source and re-run the
+  OpenWiki update flow, which re-derives the claims from the evidence.
+- `openwiki/.run.json` is the run-state file; a stale/stuck plan can be reset
+  by backing up the folder, deleting `openwiki/.run.json`, and
+  `openwiki_begin(mode="init", force=true)` (pages + `.claims` survive — the
+  quickstart page and its claims are persistent on disk).
+- Evidence contract when submitting page claims: whole-file
+  `repo://<path>` resources only (no line anchors, no `openwiki/` paths,
+  no bare `repo:`); submit under the **most recent** `next_page` jobId;
+  after a long idle the run needs `openwiki_begin(mode="init")` to resume.
+
+<!-- OPENWIKI:END -->
+
+## On ticket completion (docs/tickets close-out)
+- **When closing a ticket in `docs/tickets/` (or a session that landed
+  user-visible behavior / API / param / mode changes), RUN the OpenWiki
+  UPDATE — `openwiki_begin(root, mode="update")` → plan per the changed
+  pages (or `pages: []` if no page needs edits — but never delete
+  `openwiki/quickstart.md`) → process the page jobs → `openwiki_finish` —
+  so the `openwiki/` evidence index reflects what just shipped.
+  When in doubt which pages need rewriting, the page job's `seedPaths` +
+  `instructions` are the ground truth.
