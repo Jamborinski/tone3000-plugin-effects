@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:68395e34666f9647521ff16362fbbc9a187744fc189de010309a9217cbdd78bd",
+  "claims": [
+    {
+      "id": "claim_85d7c01917814cdd8ed3b245b004829d",
+      "statement": "The block chains run in a 48 kHz chain domain: kChainBaseSampleRate = 48000.0 in ChainDomain.h, and the effective chain rate is that times the current oversampling factor (TONE3000Processor::chainSampleRate).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/ChainDomain.h",
+          "version": "repo-file-v1:sha256:47cc5bba96453593701e7eef7697e54a37ff0ebf2fab6bcfeb7921d3514b2808"
+        }
+      ]
+    },
+    {
+      "id": "claim_910b1d604b3746ab89dcc14253b20691",
+      "statement": "The host-rate to chain-rate boundary is a stereo Lanczos resampler (filter size 12, dsp::ResamplingContainer<float,2,12>) that is only instantiated when the host rate differs from 48 kHz, so 48 kHz hosts see a passthrough.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/ChainDomain.h",
+          "version": "repo-file-v1:sha256:47cc5bba96453593701e7eef7697e54a37ff0ebf2fab6bcfeb7921d3514b2808"
+        }
+      ]
+    },
+    {
+      "id": "claim_08d024a4de9d4b79a877c77af043ea52",
+      "statement": "Boundary plus oversampler/pitch-shift latency is reported to the host on the message thread; a powered-off plugin stays bit-exact and zero-latency; a mono host buffer gets a second silent channel since the boundary is a fixed 2-channel container.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/Processor.h",
+          "version": "repo-file-v1:sha256:485eae03699ec5059bd0c6b59c483cd62759677e452036359d400c5a62d50cb9"
+        }
+      ]
+    },
+    {
+      "id": "claim_e93cc2e5d62445e785f7d405836b3403",
+      "statement": "ChainBlock.h defines the block universe: ChainBlockType { NAM, IR, INSERT, EFFECT }, EffectKind { Delay, Chorus, Tremolo, Compressor, Reverb, Convolution }, ChainSide { Left, Right }, plus kMinLaneSlots=5 (an empty lane shows 5 slots), kWetFadeSeconds=0.025, and kIrConvolverMaxBlockSize=256.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/ChainBlock.h",
+          "version": "repo-file-v1:sha256:61ab9bd407dc8638563d1a21b8685bf7a6baeda00c4a664a3f882b310ba84182"
+        }
+      ]
+    },
+    {
+      "id": "claim_ab6a260d26634c54be916240657e0fe9",
+      "statement": "processConvolverInChunks splits the host stream into <=256-frame chunks to feed the JUCE convolver, bounding the per-call cost of its non-uniform OLA tail; hosts at or below the cap get exactly the raw block.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/ChainBlock.h",
+          "version": "repo-file-v1:sha256:61ab9bd407dc8638563d1a21b8685bf7a6baeda00c4a664a3f882b310ba84182"
+        }
+      ]
+    },
+    {
+      "id": "claim_a75e2667417e4b0d839c1ea062ab59b6",
+      "statement": "RtWorkerPool is a realtime fork/join pool with nesting depth 1 (a lane job can fork its NAM block's phases); it is deadlock-free by construction because a joiner never parks — it claims and runs its jobs inline, stealing work back if every worker is descheduled or busy.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/RtWorkerPool.h",
+          "version": "repo-file-v1:sha256:f59ec93376551f87ebfc10e0450f5db631d7303de36a6e6bfe9f8a79ee4f0eec"
+        }
+      ]
+    },
+    {
+      "id": "claim_2c3712e278af45d9b8ed0e16afcdc9fc",
+      "statement": "RtWorkerPool workers run at realtime priority (falling back to normal highest-priority threads if RT start is refused) and, when the host provides one, join the audio thread's workgroup context, re-joining whenever it changes (tokens are thread-affine) to stay off efficiency cores; wakeups are precise (parked workers advertise themselves), not broadcast.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/RtWorkerPool.h",
+          "version": "repo-file-v1:sha256:f59ec93376551f87ebfc10e0450f5db631d7303de36a6e6bfe9f8a79ee4f0eec"
+        }
+      ]
+    },
+    {
+      "id": "claim_8e1d6a15f5b7466d95ca8d720c5d9eb0",
+      "statement": "Block swaps, model downloads and preset splices are audio-thread splices: ProcessorChain fades with the 25 ms wet fade where a single block can fade, or performs a mute-splice of the whole chain output where no single block can fade (e.g. removing a running chain).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/src/ProcessorChain.cpp",
+          "version": "repo-file-v1:sha256:8068a8f00f0164a3a0262ed880071b4d8d42205ad9c49632acd6368b75f6cafa"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-10T18:58:45.842Z"
+  }
+}

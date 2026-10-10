@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:2833a8c1ec0a6cd2c6993ed22f7731ca5997372341dde4e7bcdbbe0bc72aa73a",
+  "claims": [
+    {
+      "id": "claim_92d3f7ded5004c4e86efe41c764d8b9d",
+      "statement": "NamEngine (t3k::nam) hosts the in-tree NeuralAmpModelerCore nam::DSP engine (plugin/NeuralAmpModelerCore, compiled with the TONED_PLUGIN define; NAM_SAMPLE = double — the engine runs float64) as a JUCE::AudioProcessor — it is a NAM model, not an effect. prepare/apply is split: prepare() builds the engine on the message thread (NAM engine construction is NOT audio-thread safe), apply() sets parameters; the swap is done with a wet fade-in and a 125 dB floor so there is no audible pop on model swap (see ChainBlock.h::kWetFadeSeconds on the chain-side fade law).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/NeuralAmpModelerCore/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:0ee1f31ac3b73dad755c74bd8218cd8b5c2173713d2527413788be1044d14144"
+        },
+        {
+          "resource": "repo://plugin/include/NamEngine.h",
+          "version": "repo-file-v1:sha256:05e1e9b16c228c74e1a4c79ceae2de8199a505b17fac8cc6217b3a5bbfdd4eb6"
+        },
+        {
+          "resource": "repo://plugin/src/NamEngine.cpp",
+          "version": "repo-file-v1:sha256:efd5de21ee9cbb5333f005c9f3a8f6f471dd42d9c656b30b9289110729747b6a"
+        }
+      ]
+    },
+    {
+      "id": "claim_c7119eb50bda4710be5f80d566cda307",
+      "statement": "NAM model loading is gated by the engine's own A2/A3 tier check (namConfigIsA2 / namConfigIsA3 via nam::DSP::create — the A3 path is the slower A2-fast container; A2 is the fast path). Slimmable models expose a setSlimmableSize(0.0..1.0) — TONE3000 fans this through to every NamPhase (each phase's DSP owns its own slim state), so a single knob controls every phase in the phase-interleave group. The engine does NOT accept float32; NAM_SAMPLE is double and the TONE3000 side does float↔double conversion at the processor/chain boundary (processor float32, engine float64) — a bit-exactness contract.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/NamEngine.h",
+          "version": "repo-file-v1:sha256:05e1e9b16c228c74e1a4c79ceae2de8199a505b17fac8cc6217b3a5bbfdd4eb6"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-10T18:58:45.842Z"
+  }
+}

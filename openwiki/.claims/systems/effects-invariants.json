@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:427091cd4979af8171a894ea96eda4e2b7853d7913c9c01923a3ea576e9577b8",
+  "claims": [
+    {
+      "id": "claim_bcd3a636e7fe47c7aba00662347b2681",
+      "statement": "The Reverb engine has kNumModes = 6 (Digital/Spring/Plate/Room/Chamber/Hall, Reverb.h case 0..5). Decay caps kMaxDecayMsByMode[6] = {2750, 2500, 2500, 2000, 3000, 3500} ms, clamped EXACTLY at the user's stated onset (stabilised above by a decay-gated HF softener kSoftenerAmt = 0.12). The 2000 ms Neutral default dials: Plate (mode 2) has NEUTRAL 50% tone/size/width, decay 2000 ms = the EMT 140 2.0 s reference length (the tuning target, 2026-10-13), while Spring is decay 2000 / tone 0.60 / size 0.60 / width 0.90 (the user's ears), Room 500 ms / 0.40 / 0.30 / 0.70, Chamber 1800 / 1.0 pre / 0.50 / 0.45 / 0.85, Hall 3000 / 2.0 pre / 0.60 / 0.90 / 0.95.",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/dsp-invariants.md",
+          "version": "repo-file-v1:sha256:93a1a5d76e4eb20c14ee3e78f3398aeadd9164974f5cdd43971d08569cd6489a"
+        },
+        {
+          "resource": "repo://plugin/include/Reverb.h",
+          "version": "repo-file-v1:sha256:584e35e81e124aec2543962a3f072053aba8eeaafe315a3c9de2fafa84457bdf"
+        }
+      ]
+    },
+    {
+      "id": "claim_1dfb12e654c64440b63e7990539c3d2b",
+      "statement": "Plate/'140' (mode 2, type 0 = EMT 140 model) is tuned against the EMT 140 2.0 s IR convolved through the house BudgetConvolver, BOTH sides peak-normalised, with the reference's OWN numbers measured first (the reference itself drifts +4.85 dB and carries 4.3 dB of steady comb — the guard must pass for the reference). SHIPPED constants: air law kPlateAirHzBright = 4900, kPlateAirHzDark = 3600, kPlateAirStages = 2 (two 1st-order OUT-stage LPF stages, -6 dB/oct each; LONGER = DARKER — the direction the EMT family itself measures 0.5 s len -62.5 vs 2.0 s len -73.0, the ticket's 'shorter = darker' phrasing was INVERTED against the measurement); body kPlateBodyHz = 550, kPlateBodyDb = 1.30, kPlateBodyQ = 0.60; onset kPlateOnsetTaps = 5, kPlateOnsetDelayMs = {12.7, 19.3, 27.8, 43.1, 58.4}, kPlateOnsetAmps = {0.32, 0.27, 0.23, 0.19, 0.16}, kPlateOnsetLpA = 0.33; dwell kPlatePresence = 1.189 (+1.5 dB wet dwell, the user-confirmed LOWER-dwell member of the Plate/Spring pair); wash kPlateWashAp = 0.62 / kPlateWashRef = 0.244 (1-fb at Plate's 2000 ms default); bloom kPlateBloomFrac = 0.32, kPlateColorAmt = 0.3 (OFF — the soft-shoulder fizz was removed).",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/ir-reverb-training.md",
+          "version": "repo-file-v1:sha256:9f5afbe9ba94a83e8dc2f81b059e09fdfd7bc8417014e0f0685d592446ee0d8b"
+        },
+        {
+          "resource": "repo://plugin/include/Reverb.h",
+          "version": "repo-file-v1:sha256:584e35e81e124aec2543962a3f072053aba8eeaafe315a3c9de2fafa84457bdf"
+        }
+      ]
+    },
+    {
+      "id": "claim_d06bebb1fc8240ed89b0e90b38ec662c",
+      "statement": "CONSIDERED & DECLINED (2026-10-13, keep the block; do NOT re-try blind): (1) in-loop darkening/body (comb +4.7 to +10 dB, fb-capped gain, one unstable); (2) 2nd-order biquad out-stages at low fc — measured UNSTABLE (unnormalised peaking; pole radius 1.127 → NaN), DC-DEAD (lowpass form's DC gain is 0.035 — a resonator, not a lowpass; 6–12 kHz passed uncut while level swung +14 dB), or wrong-shape (a '240 Hz peaking' peaking at 600–1.2 kHz) — ONLY 1st-order stages (y += a*(x-y), a = 1-exp(-2*pi*fc/fs)) are provably stable and DC-exact; if a 2nd-order stage is ever required: coefficients from a verified library (JUCE BiquadCoefficients) AND a numeric check of pole radius < 1 and DC gain before it ships; (3) a body-ADD out-stage (worked +4 dB but the 50 % NEUTRAL rebalance already reproduces the EMT body — REMOVED; the original 'body dead' complaint was an artifact of the old 60 % dials); (4) denser onset pings (L1: 42.7 → 29.5, Hadamard: 42.7 → 25.1) — denser pings were measured to thin the ping further; guard is floor 33.0 + within 10 dB of the reference's 46.6.",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/ir-reverb-training.md",
+          "version": "repo-file-v1:sha256:9f5afbe9ba94a83e8dc2f81b059e09fdfd7bc8417014e0f0685d592446ee0d8b"
+        },
+        {
+          "resource": "repo://plugin/include/Reverb.h",
+          "version": "repo-file-v1:sha256:584e35e81e124aec2543962a3f072053aba8eeaafe315a3c9de2fafa84457bdf"
+        }
+      ]
+    },
+    {
+      "id": "claim_2a36822c531e4da7bc5e4ea32b8d8f85",
+      "statement": "MODE/SUBTYPE (type) tuning rule — GENERAL across all effects (plate/'140' is the instance): a mode + model/subtype (Params::type[mode] axis, numTypes(), defaultDialsForType(), UI type chip e.g. the '140' Plate chip = mode 2 type 0) MAY carry its own knob defaults and its own tone law tuned against its own reference IR — permissive (CAN, not MUST) — but it must NEVER override the generic/shared path or the OTHER modes (bit-identical pins keep them separate: shared comb lines, norm/wash, convolver, and 15-digit pins for every other mode). The same rule applies to delay subtypes (Straight/Mod/BBD/Mem), compressor subtypes, chorus/tape subtypes — each may have its own defaults and law (tuned to ITS reference) provided the generic path stays separate.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/Reverb.h",
+          "version": "repo-file-v1:sha256:584e35e81e124aec2543962a3f072053aba8eeaafe315a3c9de2fafa84457bdf"
+        }
+      ]
+    },
+    {
+      "id": "claim_3a4ba30b11724d0b9007c9bf8ff7edf4",
+      "statement": "Spring (mode 1) metallic body + boing: the incommensurate resonator cluster (kSpringR1..R3* gains, IR-driven ears-pass — the 1.3–2.8 kHz pings lifted ~+4 dB RELATIVE to the 220–900 Hz body modes, ping + sparkle) replaces the old single-2-kHz boing ring, which is DISABLED (kSpringBoingGain = 0.000, 'replaced by the R1/R2/R3 cluster'; earlier value 0.028). Body gain kSpringBodyGain = 0.018 (modest — 'body is under the metal, not over it').",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/Reverb.h",
+          "version": "repo-file-v1:sha256:584e35e81e124aec2543962a3f072053aba8eeaafe315a3c9de2fafa84457bdf"
+        }
+      ]
+    },
+    {
+      "id": "claim_94cfc041b3954106b5e7bd62da668123",
+      "statement": "Each effect mode is a distinct DSP engine, not a preset, and its per-mode law + every CONSIDERED-&-DECLINED item in docs/agents/dsp-invariants.md is a user-eared CONTRACT (pinned by tests in test/src/*effect_tests.cpp, convolution_reverb_tests.cpp, plate_comb_tests.cpp, plate_texture_tests.cpp, budget_convolver_cost_tests.cpp, etc.) — do NOT silently 'simplify' the law back to a naive form (e.g. Compressor ratio law: detent 4:1 is the bit-identical keeper anchor; do NOT 'simplify' to (n-1)/R, which treated R as softness = INVERTED; chorus/tremolo kNumWaves must stay 5 together; the 1-pole 80 Hz highpass pole = 1-a not a; BBD fc ∝ 1/T from the SLEWED base tap — 5 kHz at 250 ms reference, clamped 50 Hz..Nyquist; lane-aware spread formula side = (lane_ + ch) >= 1). The delay design lives in plugin/docs/delay-modes.md; the IR training protocol + the plate/'140' instance + the biquad landmine live in docs/agents/ir-reverb-training.md.",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/dsp-invariants.md",
+          "version": "repo-file-v1:sha256:93a1a5d76e4eb20c14ee3e78f3398aeadd9164974f5cdd43971d08569cd6489a"
+        },
+        {
+          "resource": "repo://docs/agents/ir-reverb-training.md",
+          "version": "repo-file-v1:sha256:9f5afbe9ba94a83e8dc2f81b059e09fdfd7bc8417014e0f0685d592446ee0d8b"
+        },
+        {
+          "resource": "repo://plugin/docs/delay-modes.md",
+          "version": "repo-file-v1:sha256:9ec02bf187b0d419697922f28c28ae01fc289cd0d7b1feb81b90c3be2cf6c0e3"
+        },
+        {
+          "resource": "repo://test/src/effect_tests.cpp",
+          "version": "repo-file-v1:sha256:16d1b43353fd605221f3bd29e300796aa025943472a93534752db146229ea9e4"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-10T18:58:45.842Z"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:b8c87a614a086551d6c9fca6578c48a0e3ac221ce7a6925b80ea779a04e2e33d",
+  "claims": [
+    {
+      "id": "claim_746e41b7d7214abc8858befedfaa8e01",
+      "statement": "build-win/ is a pre-configured CMake build tree (CMAKE_SYSTEM_NAME=Windows, x86_64-w64-mingw32-g++-posix from /home/jambo/buildkit/mingw/root, Ninja, Release); a plain `cmake --build build-win --target TONE3000_Standalone` produces build-win/plugin/TONE3000_artefacts/Release/Standalone/TONE3000.exe, a self-contained PE32+ x86-64 exe whose DLL imports must be Windows API DLLs only (no libstdc++/libgcc/libwinpthread). (test/CMakeLists.txt cited only as the repo's CMakeLists reference; the windows-build rule lives in docs.)",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/windows-build.md",
+          "version": "repo-file-v1:sha256:beb35124c74152a23c21bc8e745a956f04920c4993fde0a59fc45940fb116357"
+        },
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:72555303ac6ece01b860bd949a73fd3d3272b1600c941db295b1d571906ccbab"
+        }
+      ]
+    },
+    {
+      "id": "claim_3e44a53eef8142a1855b5a15642aca39",
+      "statement": "The root CMakeLists.txt carries two idempotent MinGW configure-time patches that ASIO and DirectWrite need under MinGW and must be kept: T3K_MINGW_ASIO_SEH (rewrite the ASIO SDK's C-style __try/__except SEH to if/else in juce_audio_devices/asio/WINASIO.cpp) and T3K_MINGW_DWRITE_CRP (route IDWriteFactory::CreateCustomRenderingParams through the base COM interface in juce_graphics/fonts/juce_DirectWriteTypeface.cpp, whose MinGW header hides it behind the vtable). ASIO is a hard user requirement, ON by default via JUCE's bundled ASIO SDK. MinGW's libstdc++ lacks std::tanhf/std::floorf, so the codebase uses std::tanh/std::floor with float args.",
+      "evidence": [
+        {
+          "resource": "repo://CMakeLists.txt",
+          "version": "repo-file-v1:sha256:4a8b7e7151cc13e87bea6eb6f09ae298e88d4f61f4449370700dedae53c4df3e"
+        },
+        {
+          "resource": "repo://docs/agents/windows-build.md",
+          "version": "repo-file-v1:sha256:beb35124c74152a23c21bc8e745a956f04920c4993fde0a59fc45940fb116357"
+        }
+      ]
+    },
+    {
+      "id": "claim_044b750130dc4dc69504d626995529f5",
+      "statement": "scripts/win-standalone.sh stages the built TONE3000.exe to C:\\Users\\jambo\\Downloads\\TONE3000-win-YYYYMMDD-HHMMSS (run-timestamp only, never descriptive suffixes; older descriptive folders are historical A/B references to leave alone), with -2/-3 dedup, md5sums, and the git branch + HEAD commit printed for provenance. A plain build does not pick up a changed .env (publishable key) or new sources — it needs a reconfigure (GLOB re-runs) ~2 min.",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/windows-build.md",
+          "version": "repo-file-v1:sha256:beb35124c74152a23c21bc8e745a956f04920c4993fde0a59fc45940fb116357"
+        },
+        {
+          "resource": "repo://scripts/win-standalone.sh",
+          "version": "repo-file-v1:sha256:ccf1df4a87821fd1195521040779e0b7fae1bdf17614d32b4d4fd10daed86052"
+        }
+      ]
+    },
+    {
+      "id": "claim_ca986d5b8f8445b68fb74c42bcc01be9",
+      "statement": "Wine smoke test on WSLg: WINEPREFIX=/home/jambo/wine-test WINEDEBUG=-all DISPLAY=:0 wineboot -u, then timeout --signal=KILL 30 wine64 TONE3000.exe; exit 124 (had to SIGKILL a live app) means success, and an ALSA /dev/snd/seq 'No such file' line is expected with no audio device. Wine has no real ASIO driver, so this proves launch but not the ASIO dropdown; static proof the ASIO type compiled in is strings TONE3000.exe | grep -i ASIOAudioIODevice.",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/windows-build.md",
+          "version": "repo-file-v1:sha256:beb35124c74152a23c21bc8e745a956f04920c4993fde0a59fc45940fb116357"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-10T18:58:45.842Z"
+  }
+}

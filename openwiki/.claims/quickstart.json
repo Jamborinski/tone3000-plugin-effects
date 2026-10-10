@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:8c49ac013f9aef9efe72fbf5734a147dd75a2eed7d7d7739ef68899c9621e2c1",
+  "claims": [
+    {
+      "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
+      "statement": "TONE3000 is a JUCE 9.0.3 audio plugin (VST3 / AU / CLAP / LV2 / Standalone) that loads Neural Amp Modeler (NAM) captures and impulse responses (IRs) plus a built-in effects suite (Delay/Chorus/Tremolo/Compressor/Reverb/Convolution). The UI is native JUCE (plugin/ui, namespace t3k::ui) — no browser engine; the React/webview build was retired (plugin/docs/native-ui.md). NAM (NeuralAmpModelerCore) and its DSP dependency AudioDSPTools are in-tree under plugin/, hand-populated — Dependencies/ trees are load-bearing.",
+      "evidence": [
+        {
+          "resource": "repo://README.md",
+          "version": "repo-file-v1:sha256:bd8d43c073e55ea8d85e25972863268abb834a8f3e3f13555352daff449a335b"
+        },
+        {
+          "resource": "repo://plugin/ui/README.md",
+          "version": "repo-file-v1:sha256:e1ecada4904d7abed6da92fbf6a15e4f468ca1c9e0419155b97826d6db5fe2d2"
+        }
+      ]
+    },
+    {
+      "id": "claim_dd80c8d99b8e4632add2c838c294ac2f",
+      "statement": "Build configuration is read at CMake configure time from the repo-root .env (and .env.local override, with the configure environment overriding both) into the generated T3kConfig.h (plugin/ui/NativeUi.cmake, starting from core/T3kConfig.h.in). Required: T3K_PUBLISHABLE_KEY (= t3k_pub_..., the OAuth client_id for sign-in); T3K_API_DOMAIN (default https://www.tone3000.com) and T3K_UPDATE_NOTICE (default off). A `.env` change requires a reconfigure.",
+      "evidence": [
+        {
+          "resource": "repo://.env.example",
+          "version": "repo-file-v1:sha256:e5f5ec3b82ade990edf03db3f95de6ec8bfd13e9a93634b9f7efb783052e64ef"
+        },
+        {
+          "resource": "repo://plugin/ui/NativeUi.cmake",
+          "version": "repo-file-v1:sha256:92a7dae2cdfbf88dc8db07b65c6894ce60fb2b43453ff5c5b98b46a81efb766d"
+        }
+      ]
+    },
+    {
+      "id": "claim_5ed575c8aa33404e83be29dd9ca700b5",
+      "statement": "The DSP test loop is ./script/test-dsp.sh [gtest-filter]: configure-if-needed → cmake --build build --target DspTests → run build/test/DspTests_artefacts/.../DspTests. The suite compiles the REAL plugin sources (not copies) against the fixtures in test/files/ (NAM A2 captures a2-amp-test.nam / a2-amp-cab-test.nam / a2-am-test-2.nam, cab-ir-test(-2).wav, reverb-ir-mono/stereo-test.wav, em240-gold-plate-5s.wav); from plugin/ui it pulls in only core/Labels.cpp (the KnobScale readout formatter for the scale-contract tests), so a green DspTests does NOT prove the UI links.",
+      "evidence": [
+        {
+          "resource": "repo://script/test-dsp.sh",
+          "version": "repo-file-v1:sha256:9687741a4aeff5266793a02cff1b407fb03cd1d9bba6a05aff8798a46366cf9e"
+        },
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:72555303ac6ece01b860bd949a73fd3d3272b1600c941db295b1d571906ccbab"
+        }
+      ]
+    },
+    {
+      "id": "claim_05d9b798ab394409b315ebe564524c7a",
+      "statement": "Per-repo rules for AI agents live in the repo-root AGENTS.md, an INDEX whose task-specific rules are in docs/agents/*.md: dsp-invariants.md (DSP engines), ui-wiring.md (params/knobs/chains), ir-reverb-training.md (reverb-vs-IR-reference protocol), windows-build.md (MinGW cross-build), linux-build-deep.md, merge-upstream.md, ui-snapshots.md (testbed/goldens). Per-mode DSP laws and every CONSIDERED & DECLINED item in dsp-invariants.md are user-eared contracts to preserve — never silently simplify a law back to a naive form.",
+      "evidence": [
+        {
+          "resource": "repo://AGENTS.md",
+          "version": "repo-file-v1:sha256:4c5b27d9ca0ae5b9e0bed068c61cb37b5f0080e0bb6c372268c10c05ce56225b"
+        },
+        {
+          "resource": "repo://docs/agents/dsp-invariants.md",
+          "version": "repo-file-v1:sha256:93a1a5d76e4eb20c14ee3e78f3398aeadd9164974f5cdd43971d08569cd6489a"
+        }
+      ]
+    },
+    {
+      "id": "claim_e8638358e6ed41aabde6eb48df3ca3ad",
+      "statement": "Root CMakeLists.txt declares the JUCE 9.0.3 project (C++20), adds the in-tree deps (JUCE via FetchContent, NeuralAmpModelerCore, AudioDSPTools, the googletest test dir), and — for MinGW Windows builds — carries TWO keep-protected patches: T3K_MINGW_DWRITE_CRP (DirectWrite CreateRectFontPalace workaround patch in JUCE) and T3K_MINGW_ASIO_SEH (ASIO SEH exception) — documented in docs/agents/windows-build.md; do not remove these lines.",
+      "evidence": [
+        {
+          "resource": "repo://CMakeLists.txt",
+          "version": "repo-file-v1:sha256:4a8b7e7151cc13e87bea6eb6f09ae298e88d4f61f4449370700dedae53c4df3e"
+        }
+      ]
+    },
+    {
+      "id": "claim_6d6e0f4b779a405eb1dc523cb757c5e5",
+      "statement": "Windows deliverables are cross-built with MinGW in WSL and staged into C:\\\\Users\\\\jambo\\\\Downloads\\\\TONE3000-win-YYYYMMDD-HHMMSS (run-timestamp folder only, no descriptive suffix, -2/-3 dedup) by scripts/win-standalone.sh; ASIO is a hard dependency; the result is a self-contained PE32+ with no mingw shared-library dependencies (no libstdc++/libgcc/libwinpthread in the DLL import table), verified per docs/agents/windows-build.md.",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/windows-build.md",
+          "version": "repo-file-v1:sha256:beb35124c74152a23c21bc8e745a956f04920c4993fde0a59fc45940fb116357"
+        },
+        {
+          "resource": "repo://scripts/win-standalone.sh",
+          "version": "repo-file-v1:sha256:ccf1df4a87821fd1195521040779e0b7fae1bdf17614d32b4d4fd10daed86052"
+        }
+      ]
+    },
+    {
+      "id": "claim_f7a52aded7e04ee393277843e3791bcd",
+      "statement": "UI iteration uses the standalone testbed app (plugin/ui/testbed, target UiTestbed) rendering PluginRoot on a fixture-driven MockBackend + MockSession; modes include --scenario (live window), --selftest (unit tests + focus policy in a real window), --capture (2x PNG per scenario), --compare (before/after diff), --bench (CPU/memory phases). It is the acceptance path for UI changes: a green DspTests run does not prove the UI links; verify UI changes in the testbed or a GUI plugin build. -DT3K_BUILD_UI_TESTBED=ON wires --selftest into ctest.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/README.md",
+          "version": "repo-file-v1:sha256:e1ecada4904d7abed6da92fbf6a15e4f468ca1c9e0419155b97826d6db5fe2d2"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:8702ae1e38f7bdcabb4d1f5cefcbc5ded24212c562163f14e5d26a5f3099f210"
+        }
+      ]
+    },
+    {
+      "id": "claim_5f41f8df721a45b688fca54aae962375",
+      "statement": "The chain is a left/right lane of blocks (ChainBlock: Nam, IR, Insert, Effect, each with a ChainSide), processed at a fixed 48 kHz base rate (plugin/include/ChainDomain.h, kChainBaseSampleRate = 48000.0) with the host rate re-sampled at the chain's boundary (Lanczos-12). Zero-latency (PDC) is a hard invariant; the NAM engine and the reverb/convolver run inside the chain; effects are in plugin/include/{Delay,Chorus,Tremolo,Compressor,Reverb,ConvolutionReverb}.h.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/ChainBlock.h",
+          "version": "repo-file-v1:sha256:61ab9bd407dc8638563d1a21b8685bf7a6baeda00c4a664a3f882b310ba84182"
+        },
+        {
+          "resource": "repo://plugin/include/Processor.h",
+          "version": "repo-file-v1:sha256:485eae03699ec5059bd0c6b59c483cd62759677e452036359d400c5a62d50cb9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-10T18:58:45.842Z"
+  }
+}

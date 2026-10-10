@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:8cceeae5922e2861a4d61d2f358aa39645ac17779c58cd47f558d181920a05c0",
+  "claims": [
+    {
+      "id": "claim_9e89474d48b14a2ca41323ea45516a5d",
+      "statement": "KnobScale (plugin/ui/core/KnobScale.h, port of knobScale.ts) keeps three domains separate: normalised 0..1 knob position, a DISPLAY unit (ms/dB/%/name) for the drag readout and type-in, and a STORAGE contract via toStored/fromStored that is what actually goes into the block param. knobToStored()/knobFromStored() fall back to toDisplay/fromDisplay when no explicit storage pair is declared — bit-identical legacy behaviour for real-unit-stored and identity-stored fraction knobs. Knobs whose stored domain is 0..1 but whose display unit is human (delayHeads 1..4 heads, compClip 0..2 raw depth behind a 0..200 % face, convGain ±24 dB, convPitch 0.25x..4x, spring lines 1..6) MUST declare toStored/fromStored or the tile writes the display unit into a 0..1 param, the engine clamps it to 1.0, and the next resync snaps the knob back to max — the 2026-10-06 Heads glitch.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/core/KnobScale.h",
+          "version": "repo-file-v1:sha256:7911a5c7a0b9bd477ed1883216a9f27ddc2182e3870690fa88d5f78a8c201ae4"
+        }
+      ]
+    },
+    {
+      "id": "claim_5182e0a71fbd47bea2e298fb16e1de68",
+      "statement": "A block param field round-trips only if it exists in all FOUR state places: (1) getChainState in plugin/src/ProcessorChain.cpp (the BlockRow struct, the copyLane copy, AND params->setProperty('<field>',…) in serializeChain); (2) parseItem in plugin/ui/model/ChainState.cpp (item.<field> = num(v[\"params\"], \"<field>\", default)); (3) updateBlockParam in plugin/src/ProcessorChain.cpp (the param == \"<field>\" branch); (4) ProcessorState.cpp (blockState.setProperty + getProperty restore). Missing any one = 'works sonically, snaps back to default on sync'.",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/ui-wiring.md",
+          "version": "repo-file-v1:sha256:be80fbf2cf2403782a5d2e06749292b498077f2fd57a7343af4f3e6bbbd88e93"
+        },
+        {
+          "resource": "repo://plugin/ui/model/ChainState.cpp",
+          "version": "repo-file-v1:sha256:6989b931f154ad620a38555827ccca8dd97e294a8f9c8d2b2013eb93e4098fc6"
+        }
+      ]
+    },
+    {
+      "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
+      "statement": "ParamBinding (services/ParamBinding.h, port of useParameter.ts) is a view's handle on one host parameter, values normalised 0..1. It brackets drag writes in beginGesture/dragTo/endGesture so the host records one automation gesture, and inbound parameter echoes are ignored while the pointer is down (a stale echo must not snap the live value back). Change notifications fire on the message thread; an unknown id (a build without that parameter) yields an inert binding that reads 0 and swallows writes, so views never null-check.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/services/ParamBinding.cpp",
+          "version": "repo-file-v1:sha256:c045e3ab2c037c01fe8fa8914144c1cc6e2455edec2e08ca00ae962a1942a2b3"
+        },
+        {
+          "resource": "repo://plugin/ui/services/ParamBinding.h",
+          "version": "repo-file-v1:sha256:2b21daee700d807546ca96c13989d48ae0cf29dfbd4415cd934171aa07f50079"
+        }
+      ]
+    },
+    {
+      "id": "claim_6daceaff72354eb9b59e0ccdb092cb29",
+      "statement": "MidiMapper (plugin/include/MidiMapper.h) handles MIDI CC/note → target mapping with Learn, and lives in the processor (not the device layer) so the same map/learn/settings work identically in standalone and in DAW hosts; it serializes with plugin state via getStateInformation. Targets are four kinds: APVTS parameters, positional block powers (block1Power/rightBlock1Power — positional addressing is deliberate because block ids are ephemeral), stereo mode, and presetPrevious/presetNext steps. Behavior derivation: CC on a continuous parameter is absolute; CC on a toggle/trigger target fires once per press (value >= 64 fires, and a < 64 value also fires unless it follows a >= 64 from the same control — momentary release); note-on toggles continuous targets; program change n loads the nth preset in list order.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/MidiMapper.h",
+          "version": "repo-file-v1:sha256:d327a4768d49570ff99b8b149671a9da1bda67e664544b35156c1bdd6625911c"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-10T18:58:45.842Z"
+  }
+}

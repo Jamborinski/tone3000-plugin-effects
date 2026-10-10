@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:17ebe381701ae0804d1674c6f70be41459c88b7b157a2485bc5a37285d588206",
+  "claims": [
+    {
+      "id": "claim_2e79f0d644c648b78ca40190d3145e2a",
+      "statement": "The .t3kpreset on-disk format (plugin/include/PresetFile.h, shared by PresetManager and tools/preset_tool.cpp — depends only on juce_core + juce_data_structures so the latter needs neither the processor nor NAM) has two framings read, one written: v2 = \"T3KH\" | int32 LE headerBytes | header ValueTree | body ValueTree; v1 (legacy) = \"T3KB\" | body ValueTree. The header is a tiny ValueTree (\"T3KPresetHeader\": id, name) so listing a preset folder reads a few hundred bytes per file instead of deserializing the megabytes of model bytes each body embeds; the body repeats id and name so a reader that only knows the body still has everything. Legacy files fall back to a full parse for their header fields; PresetManager rewrites them as v2 on their next save/rename. PresetFile::write() writes then renames, so a failure never clobbers the target.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/PresetFile.h",
+          "version": "repo-file-v1:sha256:6feaf3bff4bc4ade033e5bd8c735a3ce33636e7e60e314b27f1a913a9aaef334"
+        },
+        {
+          "resource": "repo://plugin/src/PresetFile.cpp",
+          "version": "repo-file-v1:sha256:6b34bb74739d529b3f8a1bb9300463b2cd067def7eca7c082bc0ee19f6ca716c"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-10T18:58:45.842Z"
+  }
+}

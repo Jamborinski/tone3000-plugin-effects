@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:c9b15cd743cc3ff130f44fb7b5535e66e8f614d252206b4342e0db567b15400d",
+  "claims": [
+    {
+      "id": "claim_1e4d5ebd51294e05b3d66af2b97ecc71",
+      "statement": "plugin/ui/NativeUi.cmake reads T3K_PUBLISHABLE_KEY (required, the OAuth client_id, looks like t3k_pub_...), T3K_API_DOMAIN (default https://www.tone3000.com, trailing slash stripped), and T3K_UPDATE_NOTICE (default false; 'true' → 1) from .env / .env.local at the repo root (configure-environment variables override both), at configure time, and bakes them into the generated T3kConfig.h via configure_file(core/T3kConfig.h.in → build/t3k_ui/T3kConfig.h). Tone3000Session::Config::fromBuild() exposes that pair to the session layer.",
+      "evidence": [
+        {
+          "resource": "repo://.env.example",
+          "version": "repo-file-v1:sha256:e5f5ec3b82ade990edf03db3f95de6ec8bfd13e9a93634b9f7efb783052e64ef"
+        },
+        {
+          "resource": "repo://plugin/ui/NativeUi.cmake",
+          "version": "repo-file-v1:sha256:92a7dae2cdfbf88dc8db07b65c6894ce60fb2b43453ff5c5b98b46a81efb766d"
+        }
+      ]
+    },
+    {
+      "id": "claim_5a7f3fd8fd6449e68c8746f8527eabf2",
+      "statement": "Tone3000Client (port of the web app's T3KClient) persists Tokens {access, refresh, expiresAtMs} in UiPrefs JSON on disk so a sign-in from a webview build does not carry over and a signed-in user stays signed in across editor sessions. Proactive refresh: an access token is refreshed automatically when within 60 s of expiry (kRefreshLeadMs = 60_000); concurrent callers share one in-flight refresh (refreshWaiters_). Bearer fetch retries once on 401 (the expiry-check race). Because the prefs file is shared with every other host running the plugin and a refresh rotates the pair, the store is re-read before refreshing and before giving up on a rejected refresh — a pair another host rotated meanwhile is adopted rather than fought. Every reply lands on the message thread; the clock is injectable for tests.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/services/Tone3000Client.h",
+          "version": "repo-file-v1:sha256:71c29a703e7beb79f07c1bbc7f7ac0689d1c17242cc507fd1317e09195676659"
+        }
+      ]
+    },
+    {
+      "id": "claim_008bfbfe5f7941f997973d7bdb288d63",
+      "statement": "Typed cloud endpoints on Tone3000Client: getUser, getTone(int, Reply), setFavorite(toneId, bool, Reply), listTones(path, Reply) (a ToneQuery::requestPath → PaginatedResponse), listTrending(gear, Reply) (the /tones/trending top-10 feed; Bearer when signed in, anonymous otherwise — the signed-out preview), listTaxonomy(kind, query, pageSize, Reply) (/tags, /makes, /users), listModels(toneId, pageSize, architecture, Reply) (architecture < 0 omits the filter), and fetchPluginVersion(deviceId, localVersion, Reply) (/plugin/version with X-Device-Id and X-Plugin-Version headers, each omitted when empty). Errors carry the web client's codes/messages ('token_refresh_failed', 'getTone failed: 404'; non-2xx → '<label> failed: <status>').",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/services/Tone3000Client.h",
+          "version": "repo-file-v1:sha256:71c29a703e7beb79f07c1bbc7f7ac0689d1c17242cc507fd1317e09195676659"
+        }
+      ]
+    },
+    {
+      "id": "claim_5a58168235d44904a277a2d8142da067",
+      "statement": "Tone3000Session (port of useToneSession.ts + useT3kSelect.ts) adds three competing sign-in paths, first to finish winning: (1) loopback redirect http://localhost:<port>/ (auto-allowed for publishable keys, via LoopbackServer); (2) copy-URL (JUCE's launch reports success once the launcher forks — not when the browser opens — so the sign-in screen always shows the authorize URL to copy); (3) device flow (RFC 8628) — requestDeviceAuthorization gives deviceCode (never shown), userCode, verificationUri, expiresInS, intervalS; pollDeviceToken reports server codes authorization_pending / slow_down (+5s) / expired_token / access_denied, with 'token_refresh_failed' meaning a transport error. kProbeTimeoutMs = 8000 (port of the web's PROBE_TIMEOUT_MS) — probes time out at 8 s and never alarm on timeout alone. selectTone → fetchToneAndModels hands the tone + first loadable model to the backend for off-thread load.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/services/Tone3000Session.h",
+          "version": "repo-file-v1:sha256:6da213a61ed137b4e247c63debee0b04af8f3d7aa5d53762522259bed00141cb"
+        }
+      ]
+    },
+    {
+      "id": "claim_a4bde6ef1f8f410580fa5655f9612c7c",
+      "statement": "ConnectionGate (port of useConnectionGate.ts) is the first line of defence for network-dependent actions (add/swap/login). kProbeTtlMs = 30_000 (min gap between background probes); kConfirmDelayMs = 2000 (one transient failure must not raise the alarm). Problem::offline = no OS network interface up → the offline modal opens and the action is queued for 'Try again' (instant, no probe). Problem::insecure = diagnostic, not a gate: only after two consecutive network-layer failures while the OS reports a connection (usually wrong system clock); timeouts are inconclusive and never alarm, and a later successful probe/retry closes the modal. requireConnection(action) never blocks — with the action running now and a throttled background probe checking HTTPS on the side, nothing ever waits on a probe.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/services/ConnectionGate.h",
+          "version": "repo-file-v1:sha256:7521f466b6887e8a9fcadbc584a2c753303daa62c392489412770481af776376"
+        }
+      ]
+    },
+    {
+      "id": "claim_3146c9000e5b4fbbbc83ade073db393e",
+      "statement": "UpdateCheck is optional and off by default: only when the build sets T3K_UPDATE_NOTICE=true does it call fetchPluginVersion (a GET to ${T3K_API_DOMAIN}/api/v1/plugin/version with X-Device-Id and X-Plugin-Version headers) once on startup and raise an 'update available' notice when the server's version is newer than the running build's localVersion (which is empty/unknown for forks — that path is skipped). The update check is therefore a build-time decision baked into T3kConfig.h, not a runtime toggle.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/NativeUi.cmake",
+          "version": "repo-file-v1:sha256:92a7dae2cdfbf88dc8db07b65c6894ce60fb2b43453ff5c5b98b46a81efb766d"
+        },
+        {
+          "resource": "repo://plugin/ui/services/Tone3000Client.h",
+          "version": "repo-file-v1:sha256:71c29a703e7beb79f07c1bbc7f7ac0689d1c17242cc507fd1317e09195676659"
+        },
+        {
+          "resource": "repo://plugin/ui/services/UpdateCheck.h",
+          "version": "repo-file-v1:sha256:b6390b42de058bf2299e945156dfb7099fda79be81d246fd0bc61763827f6e26"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-10T18:58:45.842Z"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:4c0a43f8413911baef510040a307b8cd8bc859035f1ffc1679ffaef5ff72118a",
+  "claims": [
+    {
+      "id": "claim_4a29e18e4d66480f81119a31014b07b0",
+      "statement": "./script/test-dsp.sh is the canonical DSP test loop: it configures the build directory if needed, builds --target DspTests, and execs the DspTests binary with any optional gtest filter. The binary can also be run directly by hand: cmake --build build --target DspTests, then the binary in build/test/DspTests_artefacts (also registered with ctest).",
+      "evidence": [
+        {
+          "resource": "repo://script/test-dsp.sh",
+          "version": "repo-file-v1:sha256:9687741a4aeff5266793a02cff1b407fb03cd1d9bba6a05aff8798a46366cf9e"
+        }
+      ]
+    },
+    {
+      "id": "claim_bc13721ee2324075bae8c9a45ef0eba2",
+      "statement": "DspTests is a JUCE console app (juce_add_console_app) whose target_sources list compiles the real plugin sources (../plugin/src/AutoOffset.cpp, BlockEq.cpp, ConvolutionReverb.cpp, BudgetConvolver.cpp, Chorus.cpp, Delay.cpp, MidiMapper.cpp, NamEngine.cpp, PresetFile.cpp, PresetManager.cpp, Processor.cpp, ProcessorChain.cpp, ProcessorModelLoader.cpp, StandaloneStateAutosave.cpp, etc.) — compiled straight from the plugin tree so the tests exercise the real processor, not a copy.",
+      "evidence": [
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:72555303ac6ece01b860bd949a73fd3d3272b1600c941db295b1d571906ccbab"
+        }
+      ]
+    },
+    {
+      "id": "claim_3890caf1a2e74a6d9fc7b3dffe71d557",
+      "statement": "GUI sources are excluded from DspTests: the only UI file pulled in is plugin/ui/core/Labels.cpp (the KnobScale readout formatter the scale-contract tests link), with plugin/ui/core on the include path — so a green DspTests run does not prove the UI links.",
+      "evidence": [
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:72555303ac6ece01b860bd949a73fd3d3272b1600c941db295b1d571906ccbab"
+        }
+      ]
+    },
+    {
+      "id": "claim_5a6caa1d89544c4da8088d5e4fd846de",
+      "statement": "The fixture set in test/files/ ships the ground truth: NAM A2 captures (a2-am-test-2.nam, a2-amp-test.nam, a2-amp-cab-test.nam), cabinet IRs (cab-ir-test.wav, cab-ir-test-2.wav), reverb IRs (reverb-ir-mono-test.wav, reverb-ir-stereo-test.wav), and em240-gold-plate-5s.wav, the EMT 240 plate reference used by the plate-mode law tests.",
+      "evidence": [
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:72555303ac6ece01b860bd949a73fd3d3272b1600c941db295b1d571906ccbab"
+        }
+      ]
+    },
+    {
+      "id": "claim_234b89260757466897514267c525035f",
+      "statement": "DspTests compiles the real StandaloneStateAutosave portable no-op stub (not the iOS-only .mm observer) because Processor.cpp's constructor calls StandaloneStateAutosave::install(); this suite never runs where the real observer would be compiled.",
+      "evidence": [
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:72555303ac6ece01b860bd949a73fd3d3272b1600c941db295b1d571906ccbab"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-10T18:58:45.842Z"
+  }
+}

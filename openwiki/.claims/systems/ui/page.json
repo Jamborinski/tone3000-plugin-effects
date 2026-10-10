@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:df7fd76bfe9ff681d81a8298e204104718d2495b63a54dc2bdc37ad6f95840fc",
+  "claims": [
+    {
+      "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
+      "statement": "The native UI (t3k::ui) laid out every screen in the fixed design space of core/Design.h: kWidth = 1024, kHeight = 578 (content only; Figma's 600 includes a 22px mock titlebar), plus chrome strips that grow the window instead of squishing the core: kBannerHeight=44, kHintHeight=36, kHeaderHeight=45, kPlateHeight=108; kMaxScale = 2.0 (editor corner-drag scale ceiling). NativeEditor applies a single AffineTransform so no child component ever sees window size — this is a port of useUiScale.ts (1 design px = 1 JUCE logical unit).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/docs/native-ui.md",
+          "version": "repo-file-v1:sha256:d3f300c8dfc25e1040b87e69cec17d823d51e8a68a4bab140cd26a8d5a665da5"
+        },
+        {
+          "resource": "repo://plugin/ui/core/Design.h",
+          "version": "repo-file-v1:sha256:f2e75d6886f0b72216b27d5815e24f896e22f587724d737729cd911563e56c2e"
+        }
+      ]
+    },
+    {
+      "id": "claim_9bdac8b523d645068f19a20465844fc0",
+      "statement": "Services (services/Services.h) is the per-editor bundle of stores: UiClock (one 30 Hz tick every poller shares), ChainStore (revision-poll + optimistic edits), MeterStore, PresetStore, AudioDeviceStore (standalone only), MidiMapStore, UiPrefs, HintBus, Toast, Banners, ParamBinding, AutoMeasure, SpectrumFeed, TunerFeed, ModelLoads, LocalFiles, ImageLoader, ConnectionGate, UpdateCheck, ToneLoadFlow, Zoom, Pointer, and the TONE3000 cloud stack (HttpClient, OAuth, LoopbackServer, Tone3000Client, Tone3000Session). Ownership: NativeEditor → Services → PluginRoot → views; views hold references to the services they use and register as listeners in the constructor / unregister in the destructor. No singletons: two editors in one process never see each other's state.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/docs/native-ui.md",
+          "version": "repo-file-v1:sha256:d3f300c8dfc25e1040b87e69cec17d823d51e8a68a4bab140cd26a8d5a665da5"
+        },
+        {
+          "resource": "repo://plugin/ui/README.md",
+          "version": "repo-file-v1:sha256:e1ecada4904d7abed6da92fbf6a15e4f468ca1c9e0419155b97826d6db5fe2d2"
+        },
+        {
+          "resource": "repo://plugin/ui/services/Services.h",
+          "version": "repo-file-v1:sha256:2e2156350946a41100f5233b5a3deb5eb9aeb116d87a59852ce624ad58423df1"
+        }
+      ]
+    },
+    {
+      "id": "claim_639f93398b85403c801526a7d10d1195",
+      "statement": "The testbed (plugin/ui/testbed) is a standalone JUCE app (UiTestbed) that renders PluginRoot against a fixture-driven MockBackend + MockSession: --scenario for live windows, --capture [refDir] for 2x PNG screenshots + diff tables, --compare before/after for single pairs, --selftest for unit tests (pure logic + focus policy in a real window), --bench [--seconds N] [--json] for CPU / memory under realistic phase loads. Its own project keeps UI iteration from rebuilding the DSP tree; -DT3K_BUILD_UI_TESTBED=ON on the plugin build registers --selftest with ctest (CI runs it next to the DSP suite).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/README.md",
+          "version": "repo-file-v1:sha256:e1ecada4904d7abed6da92fbf6a15e4f468ca1c9e0419155b97826d6db5fe2d2"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:8702ae1e38f7bdcabb4d1f5cefcbc5ded24212c562163f14e5d26a5f3099f210"
+        }
+      ]
+    },
+    {
+      "id": "claim_f57ccd78a5114979a806c615320a5c95",
+      "statement": "DspTests compiles the real plugin DSP sources and exactly one UI file, plugin/ui/core/Labels.cpp (the KnobScale readout formatter that the scale contract tests link); everything else in plugin/ui (views, widgets, services, NativeEditor) is excluded. Therefore a green DspTests run does NOT prove the UI links: UI changes must be verified via the testbed (--selftest / --capture diff) or a GUI plugin build target before committing.",
+      "evidence": [
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:72555303ac6ece01b860bd949a73fd3d3272b1600c941db295b1d571906ccbab"
+        }
+      ]
+    },
+    {
+      "id": "claim_73de1c43a8e24f6ead2645e36181aa0f",
+      "statement": "The view tree from NativeEditor (owns UiPrefs, HttpClient, Tone3000Session, Services, PluginRoot; scales the 1024-wide design space) is: PluginRoot → PluginHeader (PresetBar / AccountMenu / StereoModeToggle) + AppBanner + middle (MainScreen chain + faceplate | BlockCard for a single-block detail view | TunerView; ToneBrowser takes over middle + Faceplate while open; SignInScreen takes that slot while signing in) + Faceplate + HintBar + OverlayLayer (Settings, modals, popovers, Toast). BlockCard (views/block/BlockCard.h) is the per-block card (Tone + Mix + power) that syncHeader() re-selects its tone without recreating the in-flight handler's closure, per the data flow rule.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/NativeEditor.h",
+          "version": "repo-file-v1:sha256:82b3ea30ae4bd7264924de2311564895e19e098344c41b64b8d282d068a285be"
+        },
+        {
+          "resource": "repo://plugin/ui/views/PluginRoot.h",
+          "version": "repo-file-v1:sha256:230e2799e8c3f0599ddcf4feff8d6465b9452dfb091a2807583427d7d67a6da7"
+        },
+        {
+          "resource": "repo://plugin/ui/views/block/BlockCard.h",
+          "version": "repo-file-v1:sha256:7f30ddb45d1d573e900516e1cafc29af76fd8e7da71a0bcf8f66dba11d58c762"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.2",
+    "at": "2026-10-10T18:58:45.842Z"
+  }
+}
