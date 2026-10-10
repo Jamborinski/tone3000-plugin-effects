@@ -65,7 +65,7 @@ cmake --build build-win --target TONE3000_Standalone --parallel "$(nproc)"
 Full reconfigure (`rm -rf build-win`, ~30 min download included) is only for a
 corrupted cache: `/home/jambo/buildkit/build-win-standalone.sh`.
 
-## Wine smoke test (WSLg display `:0`, `wine64` in the 26.04 repos)
+## Wine smoke test (WSLg display `:0`, system `wine64` in `/usr/bin`)
 ```bash
 WINEPREFIX=/home/jambo/wine-test WINEDEBUG=-all DISPLAY=:0 wineboot -u
 timeout --signal=KILL 30 wine64 build-win/plugin/TONE3000_artefacts/Release/Standalone/TONE3000.exe

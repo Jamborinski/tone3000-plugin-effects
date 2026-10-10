@@ -18,8 +18,8 @@
    `delay`, `delay-shift`, `chorus`, `chorus-shift`, `comp`, `comp-shift`,
    `reverb`, `reverb-shift`, `nam`, `nam-shift` (fixture states are built in
    code; kernel = deterministic envelope; no network, no window opened).
-3. `TileShot --tile <name> --out /tmp/shot.png` → **look at the PNG** (file
-   tools open WSL paths as `\\wsl.localhost\...`).
+3. `TileShot --tile <name> --out /tmp/shot.png` → **look at the PNG** (a
+   plain WSL path — the file tools open it directly).
 4. `TileShot --golden /tmp/shot.png goldens/<name>.png [--tol 24]` →
    exit 0 = match; exit 1 = diff bbox + % (regressions show up here);
    exit 2 = usage/size mismatch.

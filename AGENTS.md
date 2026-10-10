@@ -76,6 +76,7 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   published physics + our own constants tuned to our own pins); ZERO latency
   (causal flux integrator OK; the NAB pair are exact inverses; NO oversampling);
   WingComp "LA-2A" (Desktop) is unusable — never pull from it.
-- **Never commit credentials.** Local machine rules (WSL/sudo password,
-  long-job patterns): pi → `C:\Users\jambo\.pi\agent\AGENTS.md`;
-  Cline → `Documents\Cline\Rules\global.md`.
+- **Never commit credentials.** Local machine rules (sudo password,
+  long-job patterns): pi → `/home/jambo/.pi/agent/AGENTS.md` (pi runs
+  natively inside WSL); Cline → `C:\Users\jambo\Documents\Cline\Rules\global.md`
+  (Cline is Windows-side; its shell is this same WSL).

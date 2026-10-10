@@ -49,8 +49,7 @@
 5. **Hygiene** — mid-merge `git commit` refuses if ANY local file is dirty
    (even untracked) → `git stash push <file>` → commit → `git stash pop`.
    Multi-line commit messages: `git commit -F <file>`. Loop-y/multi-command
-   work: write a script file (variables + quotes never survive
-   `wsl -e bash -c "..."`). The push/branch rules are in the machine-global
-   agent rules.
+   work: write a script file (inline one-liners mangle vars/quotes). The
+   push/branch rules are in the machine-global agent rules.
 - Standing dirty in this working tree (modified `.gitignore`, untracked
   `release-notes-v0.0.12.md`, `.winph2.log`) — keep out of commits.
