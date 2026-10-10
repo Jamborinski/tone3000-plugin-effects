@@ -2,9 +2,6 @@
 type: "Reference"
 title: "Windows release pipeline"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.2
-    at: 2026-10-10T18:58:45.842Z
 sources:
   - id: openwiki-source-d44494ef3e497fea81240ef8
     resource: repo://CMakeLists.txt
@@ -15,6 +12,9 @@ sources:
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
+verified:
+  - by: openwiki/0.7.2
+    at: 2026-10-10T20:30:10.043Z
 ---
 
 

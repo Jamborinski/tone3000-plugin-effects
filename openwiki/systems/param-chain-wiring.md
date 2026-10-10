@@ -2,9 +2,6 @@
 type: "Reference"
 title: "Parameter system and knob-to-DSP wiring"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.2
-    at: 2026-10-10T18:58:45.842Z
 sources:
   - id: openwiki-source-da6fd5ac2a3719541ddf1725
     resource: repo://docs/agents/ui-wiring.md
@@ -19,6 +16,9 @@ sources:
   - id: openwiki-source-5b6ba89ac0a58ff2acd95eed
     resource: repo://plugin/ui/services/ParamBinding.h
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
+verified:
+  - by: openwiki/0.7.2
+    at: 2026-10-10T20:30:10.043Z
 ---
 
 

@@ -3,9 +3,6 @@ type: quickstart
 title: Quickstart
 description: What TONE3000 is — a cross-platform JUCE audio plugin that loads Neural Amp Model (NAM) captures and impulse responses (IRs) from the TONE3000 catalog or local files into a user-built signal chain — and how to configure, build, and test the repo.
 tags: [quickstart, build, audio-plugin, nam, impulse-response, cmake, dsp-tests]
-verified:
-  - by: openwiki/0.7.2
-    at: 2026-10-10T18:58:45.842Z
 sources:
   - id: openwiki-source-5f5b95b3d6a215fa02ceb945
     resource: repo://.env.example
@@ -35,7 +32,12 @@ sources:
     resource: repo://scripts/win-standalone.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
+  - id: openwiki-source-0368da5a39fa50284e393846
+    resource: repo://test/src/plate_family_tests.cpp
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
+verified:
+  - by: openwiki/0.7.2
+    at: 2026-10-10T20:30:10.043Z
 ---
 
 # TONE3000

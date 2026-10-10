@@ -5,7 +5,7 @@ description: The GoogleTest suite under test/ that compiles the real plugin sour
 tags: [testing, dsp-tests, googletest, fixtures, script]
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-10T18:58:45.842Z
+    at: 2026-10-10T20:30:10.043Z
 sources:
   - id: openwiki-source-fbe20d668cd183c9fb53adb2
     resource: repo://script/test-dsp.sh

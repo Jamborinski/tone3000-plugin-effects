@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:8cceeae5922e2861a4d61d2f358aa39645ac17779c58cd47f558d181920a05c0",
+  "pageVersion": "sha256:90482128c959ca61a6f045fcbe83c61582a00fe3904648d1df64d6f7316946e3",
   "claims": [
     {
       "id": "claim_9e89474d48b14a2ca41323ea45516a5d",
@@ -18,7 +18,7 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/ui-wiring.md",
-          "version": "repo-file-v1:sha256:be80fbf2cf2403782a5d2e06749292b498077f2fd57a7343af4f3e6bbbd88e93"
+          "version": "repo-file-v1:sha256:6819665026d582064972a46c304de363ee60e203f53ebb4392ebc2c9b272cb67"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
@@ -53,6 +53,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-10T18:58:45.842Z"
+    "at": "2026-10-10T20:30:10.043Z"
   }
 }

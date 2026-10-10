@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:df7fd76bfe9ff681d81a8298e204104718d2495b63a54dc2bdc37ad6f95840fc",
+  "pageVersion": "sha256:4d5ba7c13108f8f91ee78d5147ad0a3197922ba7f08361d20c606420d4b30ca7",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -54,7 +54,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:72555303ac6ece01b860bd949a73fd3d3272b1600c941db295b1d571906ccbab"
+          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
         }
       ]
     },
@@ -75,10 +75,20 @@
           "version": "repo-file-v1:sha256:7f30ddb45d1d573e900516e1cafc29af76fd8e7da71a0bcf8f66dba11d58c762"
         }
       ]
+    },
+    {
+      "id": "claim_e52cce16c067481c852c206903add27c",
+      "statement": "DspTests compiles the real plugin DSP sources and exactly one UI file, ../plugin/ui/core/Labels.cpp (the KnobScale readout formatter that the scale-contract tests link); everything else in plugin/ui (views, widgets, services, NativeEditor) is excluded. A green DspTests run (e.g. the 2026-10-13 plate final pass, 469/469) therefore does NOT prove the UI links -- UI changes must be verified via the GUI plugin build target (cmake --build build --target TONE3000_Standalone, done for the plate pass) or the testbed before committing.",
+      "evidence": [
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-10T18:58:45.842Z"
+    "at": "2026-10-10T20:30:10.043Z"
   }
 }

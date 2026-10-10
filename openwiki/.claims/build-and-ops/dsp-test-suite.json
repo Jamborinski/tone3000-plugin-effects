@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:4c0a43f8413911baef510040a307b8cd8bc859035f1ffc1679ffaef5ff72118a",
+  "pageVersion": "sha256:a44663733f48b058d0f1eb0bb6ed860d0888c7af66f4ddd6f0c01b0baecd537d",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -18,7 +18,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:72555303ac6ece01b860bd949a73fd3d3272b1600c941db295b1d571906ccbab"
+          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
         }
       ]
     },
@@ -28,7 +28,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:72555303ac6ece01b860bd949a73fd3d3272b1600c941db295b1d571906ccbab"
+          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
         }
       ]
     },
@@ -38,7 +38,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:72555303ac6ece01b860bd949a73fd3d3272b1600c941db295b1d571906ccbab"
+          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
         }
       ]
     },
@@ -48,13 +48,23 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:72555303ac6ece01b860bd949a73fd3d3272b1600c941db295b1d571906ccbab"
+          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
+        }
+      ]
+    },
+    {
+      "id": "claim_8ddfa533a06748b88500ee5da886842f",
+      "statement": "The plate guard suite lives in three registered test files in test/CMakeLists.txt: src/plate_comb_tests.cpp, src/plate_family_tests.cpp (added 2026-10-13 final pass: P1 EMT140 family table, P2 cross-model, P4 knob laws incl. SizeLaw, P5 stereo image, P6 cap/CPU, with guards re-pinned to the final Plate/'140' state), and src/plate_texture_tests.cpp (baselines re-pinned that pass: level 78.23, comb 19.39).",
+      "evidence": [
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-10T18:58:45.842Z"
+    "at": "2026-10-10T20:30:10.043Z"
   }
 }

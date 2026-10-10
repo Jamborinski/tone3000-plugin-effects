@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:8c49ac013f9aef9efe72fbf5734a147dd75a2eed7d7d7739ef68899c9621e2c1",
+  "pageVersion": "sha256:88f84975092a69d24b42614806d291e5973cc0d27810af72f1ca7e997ac15e8a",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -31,30 +31,16 @@
       ]
     },
     {
-      "id": "claim_5ed575c8aa33404e83be29dd9ca700b5",
-      "statement": "The DSP test loop is ./script/test-dsp.sh [gtest-filter]: configure-if-needed → cmake --build build --target DspTests → run build/test/DspTests_artefacts/.../DspTests. The suite compiles the REAL plugin sources (not copies) against the fixtures in test/files/ (NAM A2 captures a2-amp-test.nam / a2-amp-cab-test.nam / a2-am-test-2.nam, cab-ir-test(-2).wav, reverb-ir-mono/stereo-test.wav, em240-gold-plate-5s.wav); from plugin/ui it pulls in only core/Labels.cpp (the KnobScale readout formatter for the scale-contract tests), so a green DspTests does NOT prove the UI links.",
-      "evidence": [
-        {
-          "resource": "repo://script/test-dsp.sh",
-          "version": "repo-file-v1:sha256:9687741a4aeff5266793a02cff1b407fb03cd1d9bba6a05aff8798a46366cf9e"
-        },
-        {
-          "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:72555303ac6ece01b860bd949a73fd3d3272b1600c941db295b1d571906ccbab"
-        }
-      ]
-    },
-    {
       "id": "claim_05d9b798ab394409b315ebe564524c7a",
       "statement": "Per-repo rules for AI agents live in the repo-root AGENTS.md, an INDEX whose task-specific rules are in docs/agents/*.md: dsp-invariants.md (DSP engines), ui-wiring.md (params/knobs/chains), ir-reverb-training.md (reverb-vs-IR-reference protocol), windows-build.md (MinGW cross-build), linux-build-deep.md, merge-upstream.md, ui-snapshots.md (testbed/goldens). Per-mode DSP laws and every CONSIDERED & DECLINED item in dsp-invariants.md are user-eared contracts to preserve — never silently simplify a law back to a naive form.",
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:4c5b27d9ca0ae5b9e0bed068c61cb37b5f0080e0bb6c372268c10c05ce56225b"
+          "version": "repo-file-v1:sha256:625a91ecc4a0714c70d50eafb7557534a95b46a9c6595cce676df6a99d2e018c"
         },
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:93a1a5d76e4eb20c14ee3e78f3398aeadd9164974f5cdd43971d08569cd6489a"
+          "version": "repo-file-v1:sha256:598aadac1269a032a48459a033c845c61655c875d5f2c1719e332801ff482a2f"
         }
       ]
     },
@@ -74,7 +60,7 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:beb35124c74152a23c21bc8e745a956f04920c4993fde0a59fc45940fb116357"
+          "version": "repo-file-v1:sha256:7a0b7050dfe5d9b4cfe51a7c4522b5fedae95a9b0998084e19df480cb256b25d"
         },
         {
           "resource": "repo://scripts/win-standalone.sh",
@@ -109,10 +95,28 @@
           "version": "repo-file-v1:sha256:485eae03699ec5059bd0c6b59c483cd62759677e452036359d400c5a62d50cb9"
         }
       ]
+    },
+    {
+      "id": "claim_d058954116f94c6d90d45fcb4d08fdb2",
+      "statement": "The DSP test loop is ./script/test-dsp.sh [gtest-filter]: configure-if-needed to cmake --build build --target DspTests to running build/test/DspTests_artefacts/.../DspTests. The suite compiles the REAL plugin sources (not copies) against the fixtures in test/files/ (NAM A2 captures a2-amp-test.nam / a2-amp-cab-test.nam / a2-am-test-2.nam, cab-ir-test(-2).wav, reverb-ir-mono/stereo-test.wav, em240-gold-plate-5s.wav); from plugin/ui it pulls in only core/Labels.cpp (KnobScale readout formatter for the scale-contract tests), so a green DspTests does NOT prove the UI links (verify with the GUI target, e.g. TONE3000_Standalone). As of the 2026-10-13 plate final pass the suite runs 469 tests, including the new test/src/plate_family_tests.cpp guard suite (P1 EMT140 family table, P2 cross-model, P4 knob laws incl. the new plate SizeLaw, P5 stereo image, P6 cap/CPU); the plate guards re-pin to that state (level baseline 78.23, comb baseline 19.39, decay-law monotone-darkening 1.0 to 2.5 s pin, cap no-growth). Full record: docs/tickets/plate-140-final-training-pass-closeout.md and plugin/docs/reverb-modes.md (140 row).",
+      "evidence": [
+        {
+          "resource": "repo://script/test-dsp.sh",
+          "version": "repo-file-v1:sha256:9687741a4aeff5266793a02cff1b407fb03cd1d9bba6a05aff8798a46366cf9e"
+        },
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
+        },
+        {
+          "resource": "repo://test/src/plate_family_tests.cpp",
+          "version": "repo-file-v1:sha256:8ec2db87cb5f2c3e04fcadd5fd0fb5f83ee1d14556be78acc99ed49a181cd4fb"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-10T18:58:45.842Z"
+    "at": "2026-10-10T20:30:10.043Z"
   }
 }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:427091cd4979af8171a894ea96eda4e2b7853d7913c9c01923a3ea576e9577b8",
+  "pageVersion": "sha256:1847337da187ef27cad68653e0568d00b4502ac648d342d97392fc5513656d7a",
   "claims": [
     {
       "id": "claim_bcd3a636e7fe47c7aba00662347b2681",
@@ -8,39 +8,11 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:93a1a5d76e4eb20c14ee3e78f3398aeadd9164974f5cdd43971d08569cd6489a"
+          "version": "repo-file-v1:sha256:598aadac1269a032a48459a033c845c61655c875d5f2c1719e332801ff482a2f"
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:584e35e81e124aec2543962a3f072053aba8eeaafe315a3c9de2fafa84457bdf"
-        }
-      ]
-    },
-    {
-      "id": "claim_1dfb12e654c64440b63e7990539c3d2b",
-      "statement": "Plate/'140' (mode 2, type 0 = EMT 140 model) is tuned against the EMT 140 2.0 s IR convolved through the house BudgetConvolver, BOTH sides peak-normalised, with the reference's OWN numbers measured first (the reference itself drifts +4.85 dB and carries 4.3 dB of steady comb — the guard must pass for the reference). SHIPPED constants: air law kPlateAirHzBright = 4900, kPlateAirHzDark = 3600, kPlateAirStages = 2 (two 1st-order OUT-stage LPF stages, -6 dB/oct each; LONGER = DARKER — the direction the EMT family itself measures 0.5 s len -62.5 vs 2.0 s len -73.0, the ticket's 'shorter = darker' phrasing was INVERTED against the measurement); body kPlateBodyHz = 550, kPlateBodyDb = 1.30, kPlateBodyQ = 0.60; onset kPlateOnsetTaps = 5, kPlateOnsetDelayMs = {12.7, 19.3, 27.8, 43.1, 58.4}, kPlateOnsetAmps = {0.32, 0.27, 0.23, 0.19, 0.16}, kPlateOnsetLpA = 0.33; dwell kPlatePresence = 1.189 (+1.5 dB wet dwell, the user-confirmed LOWER-dwell member of the Plate/Spring pair); wash kPlateWashAp = 0.62 / kPlateWashRef = 0.244 (1-fb at Plate's 2000 ms default); bloom kPlateBloomFrac = 0.32, kPlateColorAmt = 0.3 (OFF — the soft-shoulder fizz was removed).",
-      "evidence": [
-        {
-          "resource": "repo://docs/agents/ir-reverb-training.md",
-          "version": "repo-file-v1:sha256:9f5afbe9ba94a83e8dc2f81b059e09fdfd7bc8417014e0f0685d592446ee0d8b"
-        },
-        {
-          "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:584e35e81e124aec2543962a3f072053aba8eeaafe315a3c9de2fafa84457bdf"
-        }
-      ]
-    },
-    {
-      "id": "claim_d06bebb1fc8240ed89b0e90b38ec662c",
-      "statement": "CONSIDERED & DECLINED (2026-10-13, keep the block; do NOT re-try blind): (1) in-loop darkening/body (comb +4.7 to +10 dB, fb-capped gain, one unstable); (2) 2nd-order biquad out-stages at low fc — measured UNSTABLE (unnormalised peaking; pole radius 1.127 → NaN), DC-DEAD (lowpass form's DC gain is 0.035 — a resonator, not a lowpass; 6–12 kHz passed uncut while level swung +14 dB), or wrong-shape (a '240 Hz peaking' peaking at 600–1.2 kHz) — ONLY 1st-order stages (y += a*(x-y), a = 1-exp(-2*pi*fc/fs)) are provably stable and DC-exact; if a 2nd-order stage is ever required: coefficients from a verified library (JUCE BiquadCoefficients) AND a numeric check of pole radius < 1 and DC gain before it ships; (3) a body-ADD out-stage (worked +4 dB but the 50 % NEUTRAL rebalance already reproduces the EMT body — REMOVED; the original 'body dead' complaint was an artifact of the old 60 % dials); (4) denser onset pings (L1: 42.7 → 29.5, Hadamard: 42.7 → 25.1) — denser pings were measured to thin the ping further; guard is floor 33.0 + within 10 dB of the reference's 46.6.",
-      "evidence": [
-        {
-          "resource": "repo://docs/agents/ir-reverb-training.md",
-          "version": "repo-file-v1:sha256:9f5afbe9ba94a83e8dc2f81b059e09fdfd7bc8417014e0f0685d592446ee0d8b"
-        },
-        {
-          "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:584e35e81e124aec2543962a3f072053aba8eeaafe315a3c9de2fafa84457bdf"
+          "version": "repo-file-v1:sha256:bc6b799a0a48c7d5c4368b16de0ee59ed644009d6eb887565a9582e655edb665"
         }
       ]
     },
@@ -50,7 +22,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:584e35e81e124aec2543962a3f072053aba8eeaafe315a3c9de2fafa84457bdf"
+          "version": "repo-file-v1:sha256:bc6b799a0a48c7d5c4368b16de0ee59ed644009d6eb887565a9582e655edb665"
         }
       ]
     },
@@ -60,35 +32,77 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:584e35e81e124aec2543962a3f072053aba8eeaafe315a3c9de2fafa84457bdf"
+          "version": "repo-file-v1:sha256:bc6b799a0a48c7d5c4368b16de0ee59ed644009d6eb887565a9582e655edb665"
         }
       ]
     },
     {
-      "id": "claim_94cfc041b3954106b5e7bd62da668123",
-      "statement": "Each effect mode is a distinct DSP engine, not a preset, and its per-mode law + every CONSIDERED-&-DECLINED item in docs/agents/dsp-invariants.md is a user-eared CONTRACT (pinned by tests in test/src/*effect_tests.cpp, convolution_reverb_tests.cpp, plate_comb_tests.cpp, plate_texture_tests.cpp, budget_convolver_cost_tests.cpp, etc.) — do NOT silently 'simplify' the law back to a naive form (e.g. Compressor ratio law: detent 4:1 is the bit-identical keeper anchor; do NOT 'simplify' to (n-1)/R, which treated R as softness = INVERTED; chorus/tremolo kNumWaves must stay 5 together; the 1-pole 80 Hz highpass pole = 1-a not a; BBD fc ∝ 1/T from the SLEWED base tap — 5 kHz at 250 ms reference, clamped 50 Hz..Nyquist; lane-aware spread formula side = (lane_ + ch) >= 1). The delay design lives in plugin/docs/delay-modes.md; the IR training protocol + the plate/'140' instance + the biquad landmine live in docs/agents/ir-reverb-training.md.",
+      "id": "claim_6c88d47100f24d97a79aff7c64f4383b",
+      "statement": "Plate/'140' (mode 2, type 0 = EMT 140 model) is tuned against the EMT 140 2.0 s IR convolved through the house BudgetConvolver, BOTH sides peak-normalised, with the reference's OWN numbers measured first (the reference itself drifts +4.85 dB and carries 4.3 dB of steady comb, so the guard must pass for the reference). SHIPPED constants (2026-10-13 final pass): air law kPlateAirHzBright = 4900, kPlateAirHzDark = 3600, kPlateAirStages = 2 (two 1st-order OUT-stage LPF stages, -6 dB/oct each; LONGER = DARKER is the MEASURED direction across the EMT 140 family hflf -27.9 to -34.9 dB over 1.0 to 2.5 s); body kPlateBodyHz = 550, kPlateBodyDb = 1.30, kPlateBodyQ = 0.60; onset 3 taps kPlateOnsetDelayMs = {14.2, 26.9, 51.3} ms, kPlateOnsetAmps = {0.42, 0.30, 0.16} (sum 0.88; the 2026-10-13 final pass replaced the 5-tap bank {12.7, 19.3, 27.8, 43.1, 58.4} sum 1.17 + whip 0.026), kPlateOnsetLpA = 0.33 (~2.5 kHz fizz safety), kPlateBrightOnset = 0.015 (lowered from 0.026; the whip FLOOR under the pings); dwell kPlatePresence = 1.189 (+1.5 dB wet dwell, the user-confirmed LOWER-dwell member of the Plate/Spring pair); wash kPlateWashAp = 0.62 / kPlateWashRef = 0.244; bloom kPlateBloomFrac = 0.32; kPlateColorAmt = 0.3 (OFF: soft-shoulder removed). Guard re-pins at the final state (plate_texture_tests.cpp): level baseline 78.23 (was 83.5977, within the +/-1 dB guard), comb baseline 19.39 (was 20.31, within the model-baseline+1 dB guard); all other five reverb modes bit-identical, 469/469 DspTests green.",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/ir-reverb-training.md",
+          "version": "repo-file-v1:sha256:cc42bff1f05da26db208ef852902a165d0a97f16f96b85a0c04e56510178febc"
+        },
+        {
+          "resource": "repo://plugin/include/Reverb.h",
+          "version": "repo-file-v1:sha256:bc6b799a0a48c7d5c4368b16de0ee59ed644009d6eb887565a9582e655edb665"
+        },
+        {
+          "resource": "repo://test/src/plate_texture_tests.cpp",
+          "version": "repo-file-v1:sha256:e149d3ec9f8c98d911164b9f2bd4168ed4182f8ded106e717083934893daea30"
+        }
+      ]
+    },
+    {
+      "id": "claim_9e8bf74943d348b1be5faf5427e5d752",
+      "statement": "CONSIDERED & DECLINED (2026-10-13 final pass; keep the full block; do NOT re-try blind): (1) in-loop darkening/body (comb +4.7 to +10 dB, fb-capped gain, one unstable); (2) 2nd-order biquad out-stages at low fc MEASURED UNSTABLE (unnormalised peaking; pole radius 1.127 to NaN), DC-DEAD (lowpass form DC gain 0.035 = a resonator not a lowpass; 6-12 kHz passed uncut), or wrong-shape (a 240 Hz peaking at 600 Hz-1.2 kHz) -- ONLY 1st-order stages (y += a*(x-y), a = 1-exp(-2*pi*fc/fs)) are stable and DC-exact; if ever required: JUCE BiquadCoefficients AND numeric pole radius < 1 AND DC gain checks before shipping; (3) body-ADD out-stage (worked +4 dB but 50 % NEUTRAL rebalance already reproduces the EMT body -- REMOVED); (4) denser onset pings: L1 dense-9-tap bank 42.7 to 29.5, Hadamard 42.7 to 25.1 (more in-band energy = higher floor = thinner peaks); (5) C3 near-miss (5 uneven taps sum 1.14, whip 0.026 KEPT): only +2.5 dB ping (37.15 to 39.70) vs C (3 taps, whip 0.015: 37.15 to 45.66, within 0.9 dB of ref 46.60) -- the lever is the FLOOR (kPlateBrightOnset), not tap count or sum; (6) extra series-LPF stage for Size law (can only darken -- wrong direction for size 1 = brighter; its low-band swamps the body at high-freq tail offsets -- rejected in favor of the corner shift kPlateSizeCornerFrac); (7) trained M/S split (the Haas-offset mechanism already gives a documented bounded image, S-M -4.06 dB at width 1.0; a mid/side gain would be an unmeasured constant -- documented as the model's MEASURED difference instead); (8) value-matching the reference comb (19.39 vs EMT 140's 14.71: different cavity physics; the model's own comb law -- growth with its own decay -- is pinned relative to its own baseline per ticket no-forced-match).",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/ir-reverb-training.md",
+          "version": "repo-file-v1:sha256:cc42bff1f05da26db208ef852902a165d0a97f16f96b85a0c04e56510178febc"
+        },
+        {
+          "resource": "repo://plugin/include/Reverb.h",
+          "version": "repo-file-v1:sha256:bc6b799a0a48c7d5c4368b16de0ee59ed644009d6eb887565a9582e655edb665"
+        }
+      ]
+    },
+    {
+      "id": "claim_e5172b883ab941b08fb295067b071375",
+      "statement": "The Size dial (params_.size) was a NO-OP on the Plate path (only Spring and Room read it) -- the 2026-10-13 user redirect: make it mean plate-class, not an arbitrary knob. SHIPPED law: a corner shift on the air-law two-stage LPF (kPlateSizeCornerFrac = 0.30 of the 4900-to-3600 Hz air-law range, +/-780 Hz per unit size) set in Reverb::setParams: sizeDelta = (0.5 - params_.size) * 2.0 * kPlateSizeCornerFrac; airFrac = jlimit(0,1, frac - sizeDelta); fc = kPlateAirHzBright - (kPlateAirHzBright - kPlateAirHzDark) * airFrac. MEASURED direction (hflf 6-12k vs 120-300 Hz @0.4-0.6 s, 2.0 s decay): size 0.0 = -59.9 dB, size 0.5 = -46.7 dB, size 1.0 = -35.3 dB -- size 1 (LARGE-PLATE class) is BRIGHTER, size 0 (compact) is DARKER; the first-draft physics guess (bigger = darker) was backwards and the measurement won. At size 0.5 sizeDelta = 0.0, so airLp_ is bit-identical to the pre-size-law 140 tuning (anchor). Guards (plate_family_tests.cpp SizeLaw): monotone brightening s1 > s5 > s0 (measured) and no comb growth at either extreme (comb 0.0=6.10, 0.5=19.39, 1.0=21.74; guard 19.39+1 dB at size 1). TODO (future ticket, NOT shipped): Chamber, Hall, and Digital reverb paths ALSO never read params_.size -- audit those paths the same way.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/Reverb.h",
+          "version": "repo-file-v1:sha256:bc6b799a0a48c7d5c4368b16de0ee59ed644009d6eb887565a9582e655edb665"
+        },
+        {
+          "resource": "repo://test/src/plate_family_tests.cpp",
+          "version": "repo-file-v1:sha256:8ec2db87cb5f2c3e04fcadd5fd0fb5f83ee1d14556be78acc99ed49a181cd4fb"
+        }
+      ]
+    },
+    {
+      "id": "claim_26a9bff355cc41cfa5ae91f83c3e4325",
+      "statement": "Each effect mode is a distinct DSP engine, not a preset, and its per-mode law + every CONSIDERED-&-DECLINED item in docs/agents/dsp-invariants.md and docs/agents/ir-reverb-training.md is a user-eared CONTRACT pinned by tests in test/src/: effect_tests.cpp, convolution_reverb_tests.cpp, plate_comb_tests.cpp, plate_texture_tests.cpp, plate_family_tests.cpp (2026-10-13 final pass: P1 family table, P2 cross-model, P4 knob laws incl. SizeLaw, P5 stereo image, P6 cap/CPU), budget_convolver_cost_tests.cpp, and more -- do NOT silently simplify the law back to a naive form (e.g. Compressor ratio law: detent 4:1 is the bit-identical keeper anchor; do NOT simplify to (n-1)/R which treated R as softness = INVERTED; chorus/tremolo kNumWaves must stay 5 together; 1-pole 80 Hz highpass pole = 1-a not a; BBD fc ~ 1/T from the SLEWED base tap, 5 kHz at 250 ms reference, clamped 50 Hz..Nyquist; lane-aware spread formula side = (lane_ + ch) >= 1). The delay design lives in plugin/docs/delay-modes.md; the IR training protocol + the plate/'140' instance + the biquad landmine live in docs/agents/ir-reverb-training.md.",
       "evidence": [
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:93a1a5d76e4eb20c14ee3e78f3398aeadd9164974f5cdd43971d08569cd6489a"
+          "version": "repo-file-v1:sha256:598aadac1269a032a48459a033c845c61655c875d5f2c1719e332801ff482a2f"
         },
         {
           "resource": "repo://docs/agents/ir-reverb-training.md",
-          "version": "repo-file-v1:sha256:9f5afbe9ba94a83e8dc2f81b059e09fdfd7bc8417014e0f0685d592446ee0d8b"
+          "version": "repo-file-v1:sha256:cc42bff1f05da26db208ef852902a165d0a97f16f96b85a0c04e56510178febc"
         },
         {
-          "resource": "repo://plugin/docs/delay-modes.md",
-          "version": "repo-file-v1:sha256:9ec02bf187b0d419697922f28c28ae01fc289cd0d7b1feb81b90c3be2cf6c0e3"
-        },
-        {
-          "resource": "repo://test/src/effect_tests.cpp",
-          "version": "repo-file-v1:sha256:16d1b43353fd605221f3bd29e300796aa025943472a93534752db146229ea9e4"
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-10T18:58:45.842Z"
+    "at": "2026-10-10T20:30:10.043Z"
   }
 }
