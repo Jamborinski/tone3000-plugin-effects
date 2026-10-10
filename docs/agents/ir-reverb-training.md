@@ -102,6 +102,19 @@ Metric families worth pinning (name the one that carries the assertion):
   the single most diagnostic "is it plate-like" number.
 - **onset ping ratio** — 2–150 ms region, peak-vs-band energy. Catches
   diffusion that smeared the whip (too much = toward chorus, a failure).
+  **Law, established 2026-10-13 final pass:** the ratio is a *contrast*
+  number — sparse pings over a QUIETER incoherent floor win, not more taps:
+  C (3 taps {14.2,26.9,51.3 ms} sum 0.88, whip 0.015) = 45.66 dB; C3 (5
+  uneven taps sum 1.14, whip KEPT 0.026) = 39.70 (+2.5 only); L1 (9-tap
+  dense bank) 42.7 -> 29.5. More in-band energy raises the floor and thins
+  the peaks. **Window artifact — cost a wrong doc line:** a tap at ~50 ms
+  is still inside the 2–150 ms window at short decay settings, so the ping
+  number at the 2.0 s dial can legally read LOWER than at 2.5 s (C: 45.66
+  @2.0 s vs 46.85 @2.5 s) — that does not make the long setting "better".
+  "Crosses the reference at X" claims must be re-checked per-length against
+  the CURRENT binary before writing into any shipped file (the pre-correction
+  claim "C crosses at 2.0 s (46.85)" was wrong for the current binary and
+  had to be walked back in 3 shipped files mid-closeout).
 - **body level** — 150–300 Hz (or 500–800 Hz) survival at 1–2 s. Catches a
   retune that "flattened the comb" by just **killing the lows** (a flat comb
   that came from dropping level or destroying the body is not a win).
@@ -157,7 +170,25 @@ compared against, so "CPU headroom is fine" is almost never the limiter.
   guard tests, keep the close-out untracked unless asked.
 - **AGENTS.md “On ticket completion”:** on close-out, also run the OpenWiki
   UPDATE (`openwiki_begin` mode="update") so `openwiki/` reflects the change —
-  the update path is still UNDER CONSTRUCTION as of 2026-10-10.
+  working as of the 2026-10-13 closeout (6 page jobs; effects-invariants
+  re-pinned to the final constants with the two stale STATE bullets retracted;
+  quickstart / test-suite / pages refreshed to the 469-test count).
+- **AGENTS.md managed block (since 2026-10-13):** `openwiki_finish` rewrites
+  the `<!-- OPENWIKI:START/END -->` region with its stock template (v0.7.2
+  `createCodeModeAgentsSnippet`, hard-coded, references `openwiki_search` /
+  GitHub-Actions tooling we do not use). `AGENTS.md` now carries that
+  template byte-identical (commit `d833197`) so the rewrite is a no-op — do
+  NOT re-customize that block (it gets clobbered each run); after any npm
+  upgrade of the openwiki pi integration, re-diff the committed block against
+  the installed template stock again.
+- **Windows standalone exe (STANDING user requirement, 2026-10-13):** every
+  closeout builds + stages it: `source /home/jambo/buildkit/winbuild_env.sh`
+  (it exports `$CMAKE`/`$NINJA` paths, NOT cmake on PATH — call
+  `$CMAKE --build build-win --target TONE3000_Standalone`), then
+  `bash scripts/win-standalone.sh` → `C:\Users\jambo\Downloads\TONE3000-win-
+  YYYYMMDD-HHMMSS`; verify PE32+ x86-64, Windows-only DLL imports (no
+  libstdc++/libwinpthread), ASIO-strings present, md5 recorded (full rules:
+  `windows-build.md`).
 
 ## Harness landmines (hit in the plate session — each cost time)
 - **gtest silent-0:** `--gtest_filter='A*,B*'` (comma list) can run **0 tests
@@ -175,6 +206,23 @@ compared against, so "CPU headroom is fine" is almost never the limiter.
   be exported (see `linux-build-deep.md`); after a Windows-side edit of a WSL
   repo file, `touch` it (9p mtime) or ninja says "no work to do" and you test a
   stale binary. `sudo` via `echo '…' | sudo -S -p '' cmd 2>/dev/null`.
+  `winbuild_env.sh` is the EXCEPTION to "cmake on PATH": it exports the
+  `$CMAKE` variable, not the bin dir — a bare `cmake` call is rc=127 (bit
+  in the 2026-10-13 closeout); use `$CMAKE --build build-win ...`.
+- **pi `write`/`edit` mangles escape sequences inside file content:** a
+  backslash-n inside a string LITERAL gets turned into a real newline
+  (`.join` + backslash-n became `.join(` + real newline → broken JS; two
+  wasted patch attempts on code-mode.js 2026-10-13). When patching an
+  escape-sensitive file (JS/TS string literals), write the content from a
+  bash heredoc (`python3 - <<'EOF'` with escapes passed through verbatim) or
+  build newlines at runtime (`String.fromCharCode(10)`); never trust a
+  round-trip through the write tool.
+- **Guard-test pow hygiene (bit in the 2026-10-13 final pass):** helpers
+  like `expectLevel`/`expectComb` that apply the dB scale INSIDE
+  (`pow(10, dB/20)`) — a test line that ALSO writes `* pow(10, 1.0/20.0)` on
+  the expected value has a DOUBLED scale (the Bloom comb-law guard ended up
+  ~2 dB looser than intended: it passed, but for the wrong reason). Read the
+  helper, then the test line, before pinning any number.
 
 ## MODEL/SUBTYPE (type) tuning rule -- GENERAL (any effect mode or subtype)
 - A mode (effect) and its model/subtype (type: the `Params::type[mode]` letters,
