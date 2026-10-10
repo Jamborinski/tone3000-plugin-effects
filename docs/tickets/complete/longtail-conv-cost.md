@@ -1,6 +1,9 @@
 # Ticket — Long-tail convolution: budgeted boundary cost engine
 
-Status: **READY** (scoped, not started) — created 2026-10-08
+Status: **COMPLETE** (2026-10-10) — the budgeted-boundary long-IR engine landed as
+`BudgetConvolver` (spread-OLA) + the promoted cost probes in
+`test/src/budget_convolver_cost_tests.cpp`, per the in-source notes that cite this
+ticket. Created 2026-10-08.
 Priority: robustness improvement for long IRs (20–120 s)
 
 ## Problem

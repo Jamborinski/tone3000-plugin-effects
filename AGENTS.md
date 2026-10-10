@@ -7,6 +7,7 @@ genuine detail; the danger summaries below are the safety net, not a substitute.
 ## Protocol (mandatory, not a suggestion)
 1. **Match by PATH, not by vibes, before you edit anything:**
    - touch `plugin/include/{Delay,Chorus,Tremolo,Compressor}.h|src/*` or `test/src/*` → **`docs/agents/dsp-invariants.md`**
+   - reverb-mode tuning against an **IR reference** (retune a mode in `plugin/include/Reverb.h`, add a reference-IR test / comb·decay metric / plate-vs-conv A/B) → **`docs/agents/ir-reverb-training.md`**
    - touch `plugin/ui/**`, chain state, KnobScale, tiles, a param's plumbing → **`docs/agents/ui-wiring.md`**
    - touch `plugin/ui/testbed/**`, TileShot/Compare, UI goldens, or re-shooting a tile → **`docs/agents/ui-snapshots.md`**
    - touch `CMakeLists*`, `build/`|`build-win/`, `scripts/win-*`, or a Windows exe → **`docs/agents/windows-build.md`** (and `linux-build-deep.md` if it's the Linux build/fresh-configure/helper)
@@ -45,6 +46,9 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
 ```
 - The suite **grows with features** (376 as of 2026-10-07) — **never assert a
   stale total** on failure; check build RC and that the test names actually ran.
+- **gtest silent-0 trap:** a comma list like `--gtest_filter='A*,B*'` can run
+  **0 tests with exit 0** (a green lie); a single `A*` works. Always confirm the
+  "Running N tests" line is non-zero before trusting the run.
 - **DspTests never compiles `plugin/ui`** — a green DspTests does NOT prove
   the UI links: verify UI changes with a GUI build
   (`cmake --build build --target TONE3000_Standalone` or `_VST3`) before committing.
@@ -62,6 +66,7 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
 | Fresh-configure, **GUI** link, ALSA/X11/freetype errors, VST3 helper, add/remove sources | `docs/agents/linux-build-deep.md` | ALSA `-lasound` resolves via pkg-config (the shim — don't revert); `--sysroot` on the helper; never hand-edit `build.ninja` |
 | Touch any **param / knob / scale / tile / chain state** | `docs/agents/ui-wiring.md` | A block field needs all FOUR state places; 0..1-stored human-unit knobs MUST declare `toStored`; new 5-knob kinds need `numParams_` |
 | Change any **DSP engine** (Delay/Chorus/Tremolo/Compressor) | `docs/agents/dsp-invariants.md` | Per-mode laws + CONSIDERED & DECLINED items are contracts; delay design deeper at `plugin/docs/delay-modes.md` |
+| **Train a reverb mode against a convolved IR reference** (Plate now; Spring/Digital/Chamber next) — retune `Reverb.h`, add a reference-IR test, comb/decay metric, plate-vs-conv A/B or CPU bench | `docs/agents/ir-reverb-training.md` | Convolve the reference with the **house** `BudgetConvolver`; **peak-normalise both sides**; **measure the reference's own numbers first** — the guard must pass for the reference (EMT 140 itself drifts +4.85 dB) |
 
 ## Hard rules (always apply, no file needed)
 - C++20, match the existing style; keep changes scoped to the ticket; no

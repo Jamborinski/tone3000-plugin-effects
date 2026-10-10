@@ -99,14 +99,23 @@ void processStateConvolverInChunks(
       h.copyFrom(0, 0, buf.getReadPointer(0) + start, c);
       juce::dsp::AudioBlock<float> hblk(h);
       head.process(juce::dsp::ProcessContextReplacing<float>(hblk));
-      juce::AudioBuffer<float> t(1, c);
-      t.copyFrom(0, 0, dL, c);
-      tail->process(t);
-      float* w0 = buf.getWritePointer(0) + start;
-      const float* hl = h.getReadPointer(0);
-      const float* tl = t.getReadPointer(0);
-      for (int i = 0; i < c; ++i)
-        w0[i] = hl[i] + tl[i];
+      {
+        // The tail's house contract: feed it as many channels as its engine
+        // has (its stepOne reads in[c] for EVERY engine channel). A stereo
+        // tail (stereo IR) fed a 1-channel lane null-derefs on channel 1.
+        // Duplicate the lane into every engine channel and take channel 0
+        // (the L kernel) -- the same 1-channel semantics JUCE's head gives
+        // here. Mono-IR tails (1 channel) run unchanged.
+        const int tch = std::max(1, tail->channels());
+        juce::AudioBuffer<float> t(tch, c);
+        for (int tc = 0; tc < tch; ++tc) t.copyFrom(tc, 0, dL, c);
+        tail->process(t);
+        const float* tl = t.getReadPointer(0);
+        float* w0 = buf.getWritePointer(0) + start;
+        const float* hl = h.getReadPointer(0);
+        for (int i = 0; i < c; ++i)
+          w0[i] = hl[i] + tl[i];
+      }
     }
   }
 }

@@ -174,6 +174,20 @@ class Reverb {
   // 0.4..1.0, more at long decay where the modes break):
   static constexpr double kSpringWashAp     = 0.30;    // Spring wash diffusion (back to the pre-round-12 value while we are isolating the true source of the Spring distortion)
   static constexpr double kPlateWashAp      = 0.62;    // Plate wash diffusion (more: kills the tiny residual hiss at high dwell)
+  // PLATE COMB RETUNE -- CONSIDERED & DECLINED (measured 2026-10-10 vs the EMT 140
+  // IR reference; do NOT re-try without reading the numbers):
+  //   lever 1 (decay-tracked loop LPF):  fixes the inverted decay->darkness track
+  //     but measurably WORSENS click comb 16.7 -> 21.4 dB (EMT 14.7); rejected.
+  //   lever 2/3 (>=4 in-series / Hadamard-mixed APF diffusion): in-series unit-
+  //     gain chain 22.4 dB; Hadamard-8 bank smeared the onset (ping 42.7 -> 25.1,
+  //     chorus-side) and mis-levelled +13.9 dB unless Parseval-scaled; rejected.
+  //   lever 4 (tap-time mod): 2.5 % -> comb 17.6 but low-mid body 23.9 -> 8.5 dB
+  //     (LF slope -17 -> -44 dB/s); 0.35 % -> comb still 19.1 > 16.7; body-killer,
+  //     rejected at every depth ("chorus-ification is a failure").
+  //   The as-shipped plate already beats the reference on steady comb (2.66 vs
+  //     4.32 dB) and is within +2 dB on click comb; residual gap is STRUCTURAL
+  //     (onset density 42.7 vs 46.6; body 23.9 vs 33.2) = out of scope here.
+  //   Full A/B matrix + CPU: docs/tickets/complete/plate-combing-closeout.md.
   // P-body (percept: the low-mid BODY -- 500-800 Hz is the plate's fundamental
   // sustain; the EMT 140 keeps it almost alive at 1-2 s where ours died 6-9 dB
   // early). Measured as a SURVIVAL (per-round-trip) deficit, not flatness
