@@ -1,6 +1,25 @@
 # Ticket — Plate decay parameter: fix the decay→darkness law (parameter response)
 
-Status: **READY** (2026-10-10) — not started. Companion to (split off
+Status: **DONE** (2026-10-13) — closed together with `plate-texture.md`.
+Finding: the EMT 140 reference FAMILY itself (0.5 s / 2.0 s / 3.0 s lengths,
+click-tail 0.3-0.6 s band balance) shows LONGER = DARKER
+(0.5 s len -62.5 vs 2.0 s len -73.0 in 6-12 k minus 150-300; the 3.0 s file
+is in between) -- i.e. the plate's ticket-side phrasing "shorter = darker"
+is INVERTED against the measured family, and the guard now pins the
+MEASURED direction. The plate now COMPLIES: 600 ms tail -32.5 dB > 2400 ms
+tail -73.3 dB (shorter = brighter, per the family). Mechanism: the
+frequency-dependent air corner is an OUT-stage 1st-order LPF cascade
+(2 x -6 dB/oct), 4900 Hz at the short decay -> 3600 Hz at the long (fc is the
+decay law). In-loop darkening/body remains REJECTED (measured comb cost
++4.7 to +10 dB, fb-capped gain, one unstable variant); out-stage 2nd-order
+biquads were REJECTED on measurement (unstable pole 1.13, DC-dead "lowpass"
+gain 0.035, wrong-shape 240 Hz peaking) -- only 1st-order stages are
+provably stable + DC-exact at fc << fs, and those are what shipped.
+Declines + full numbers: CONSIDERED & DECLINED block in
+`plugin/include/Reverb.h` (PLATE TEXTURE, 2026-10-13),
+`docs/agents/ir-reverb-training.md` (biquad landmine + plate "140" state),
+`docs/tickets/plate-texture.md` (DONE status).
+Original status (2026-10-10): READY. Companion to (split off
 from) `docs/tickets/plate-texture.md`: that ticket fixes the *shape at default*
 (sustained balance + onset density); **this ticket fixes the DIAL law** — that
 the decay parameter correctly drives *darkening* — and does so **without the

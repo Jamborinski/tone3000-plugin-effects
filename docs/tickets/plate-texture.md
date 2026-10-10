@@ -2,7 +2,24 @@
 #
 ## (onset density + sustained balance / colour)
 
-Status: **READY** (2026-10-10) — not started. Builds on the *comb* work
+Status: **DONE** (2026-10-13) — closed with `plate-decay-param-law.md`.
+The structural gap was attacked by lever order (law, body, onset, balance)
+against the EMT 140 2.0 s reference (house BudgetConvolver, peak-normalised,
+reference-measured guards). Final state (Plate/"140" model): body -16.6 dB
+vs reference -17.4 (reproduced by the 50 % NUTRAL rebalance the user decided,
+not by a boost -- the "body dead" complaint was an artifact of the old
+asymmetric 60 % dials); band balance ~3 dB BETTER than the reference (the air
+law darkened the 6-12 kHz band); decay law now tracks the REFERENCE FAMILY's
+measured direction (longer = darker: 0.5 s len -62.5 vs 2.0 s len -73.0,
+click-tail); onset 37.2 vs reference 46.6 (structural residual -- denser
+onsets were MEASURED to thin the ping further, L1/Hadamard both rejected),
+guarded at floor 35.0 + within 10 dB. Level held at baseline 83.5977 within
++/-1 dB (measured 84.10). CPU 48 kHz blk64 avg 1.844 us (within the
+committed baseline class). Full DspTests 454/454 green; standalone GUI
+links. Declines + numbers: CONSIDERED & DECLINED block in
+`plugin/include/Reverb.h` (PLATE TEXTURE, 2026-10-13) and
+`docs/agents/ir-reverb-training.md`.
+Original status (2026-10-10): READY. Builds on the *comb* work
 (`docs/tickets/complete/plate-combing.md`), which measured the comb/diffusion/damping
 layers and found them at-or-above the reference; this ticket re-opens the
 *structural* axis the comb ticket fenced out, and moves the parts still

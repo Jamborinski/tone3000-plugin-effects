@@ -170,6 +170,68 @@ compared against, so "CPU headroom is fine" is almost never the limiter.
   repo file, `touch` it (9p mtime) or ninja says "no work to do" and you test a
   stale binary. `sudo` via `echo '…' | sudo -S -p '' cmd 2>/dev/null`.
 
+## MODEL/SUBTYPE (type) tuning rule -- GENERAL (any effect mode or subtype)
+- A mode (effect) and its model/subtype (type: the `Params::type[mode]` letters,
+  `numTypes()`, `defaultDialsForType()`, and the UI type chip (e.g. the reverb
+  "140" plate chip = the EMT 140 model)) MAY carry their own knob defaults and
+  their own tone law, tuned against that model's reference -- permissive (CAN,
+  not MUST: a type may perfectly well share the generic mechanism). When a model
+  HAS been tuned to a reference, its rules are kept SEPARATE:
+  - model-specific constants/laws live on that mode's path (plate = `case 2` +
+    `kPlate*`); if a second type of the mode appears, its tuning goes on that
+    type (`type[mode]` / `defaultDialsForType()`) and the first type's (the
+    mode's generic) path stays untouched;
+  - it never overrides the generic/shared mechanism (shared comb lines, norm /
+    wash, the convolver, the OTHER modes -- bit-identical pins keep them
+    separate) and never leaks into another mode;
+  - the SAME rule applies to every effect family: delay subtypes
+    (Straight/Mod/BBD/Mem), the compressor subtypes, chorus/tape subtypes --
+    each mode/subtype may have its own defaults and law (tuned to ITS reference:
+    IR family or published spec) provided the generic path stays separate.
+- **Tuning-state rule (reverb vs an IR reference):** tune at 50 % NEUTRAL dials
+  (tone/size/width = 0.50; the old asymmetric 60 % starting row was an unsymmetric
+  guess, not data), decay = the reference's own LENGTH (EMT 140 2.0 s = 2000 ms),
+  and width per the reference's channel count at MEASUREMENT time (mono IR ->
+  0.0, stereo IR -> 1.0; the EMT 140 reference is stereo, so the guards run at
+  width 1.0 while the SHIPPING default stays 0.50). Scope = the reverb EFFECT
+  path only -- the convolver / plate-tape stay bit-exact (user rule).
+- **Plate/"140" model STATE (2026-10-13 vs EMT 140 2.0 s through the house
+  BudgetConvolver, peak-normalised):** onset ping 35.4-37.2 vs reference 46.6
+  (STRUCTURAL residual: our onset = whip burst + 5 onset pings + the early comb;
+  the reference = a physical cavity with dense real early reflections; denser
+  pings were MEASURED to thin the ping further (L1: 42.7 -> 29.5; Hadamard:
+  42.7 -> 25.1) -- guarded at floor 33.0 + within 10 dB); body 120-300 = 9.63
+  vs 9.31 (the plate BEATS the reference: the 50 % NUTRAL rebalance itself
+  reproduces the EMT body, so a body BOOST was unneeded and REMOVED -- the
+  original "body dead" complaint was an artifact of the old 60 % dials); band
+  balance (6-12k minus 120-300) plate -93.0 vs -85.6 (the air law darkened the
+  top band -- the plate is now COOLER than the reference); decay law: 600 ms
+  tail -32.5 dB > 2400 ms tail -73.3 (shorter = brighter, the direction the
+  REFERENCE FAMILY itself measures: 0.5 s len -62.5 vs 2.0 s len -73.0,
+  click-tail 0.3-0.6 s; the ticket's "shorter = darker" phrasing is INVERTED
+  against that measurement and the guard pins the MEASURED direction); click
+  comb PEAKINESS 20.31 (the air law concentrates the click's energy into the
+  low-mid comb band, so the peakiness-ratio metric rose from the pre-16.7 even
+  though the tap-peak AMPLITUDES did not grow; EMT 140's 14.7 is a
+  physical-cavity comb of a different construction; guard: model baseline +
+  1 dB); level 84.10 (baseline 83.5977 within +/-1 dB -- the ticket's level law
+  holds EXACTLY, no compensation needed: presence is still 1.189, the confirmed
+  +1.5 dB dwell); CPU 48 kHz blk64 avg 1.844 us (within the committed baseline
+  class; the two 1st-order air stages add ~0.19 us); full DspTests 454/454
+  green; standalone GUI links.
+- **Biquad landmine (2026-10-13, cost hours):** hand-written 2nd-order biquads
+  at fc << fs (48 kHz) are unreliable: "RBJ-style" LOWPASS and peaking forms,
+  written from memory, measured UNSTABLE (unnormalised peaking, pole 1.127 ->
+  NaN), or DC-DEAD (the lowpass form's DC gain is 0.035 -- it is a resonator,
+  not a lowpass; 6-12k passed uncut while the level swung +14 dB), or
+  wrong-shape (a 240 Hz "peaking" peaking at 600-1.2 kHz). Only 1st-order
+  stages (`y += a*(x-y)`, `a = 1-exp(-2*pi*fc/fs)`) are PROVABLY stable and
+  DC-exact at these numbers -- the SHIPPED air law is exactly that (2 stages,
+  -6 dB/oct each). If a 2nd-order stage is ever required: coefficients from a
+  verified library (JUCE `BiquadCoefficients`), and a NUMERIC check of pole
+  radius < 1 AND DC gain before it ships. In-loop variants of the same filters
+  were separately REJECTED on the comb (+4.7 to +10 dB; one unstable).
+
 ## Cross-references
 - `docs/agents/dsp-invariants.md` — per-mode laws + CONSIDERED & DECLINED
   contracts (this training's laws and declines land there / beside the mode).

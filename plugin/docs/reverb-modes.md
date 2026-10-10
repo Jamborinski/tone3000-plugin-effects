@@ -31,13 +31,25 @@ shared dials underneath — the delay/compressor precedent. Shared with all:
 |---------|-------|---------|--------|------|-------|----------|-------|
 | Digital | 0.60  | 1200 ms | 0 ms   | 0.40 | 1.00  | Density 0.00 | Mod 0.00 |
 | Spring  | 0.70  | 1500 ms | 0 ms   | 0.45 | 0.90  | Springs 3 | Sag 0.40 |
-| Plate   | 0.80  | 2200 ms | 0.5 ms | 0.35 | 0.80  | Bright 0.50 | Bloom 0.50 |
+| Plate   | 0.50  | 2000 ms | 0.5 ms | 0.50 | 0.50  | Bright 0.50 | Bloom 0.50 |
 | Room    | 0.35  | 500 ms  | 0 ms   | 0.50 | 0.70  | Early 0.50  | Air 0.30 |
 | Chamber | 0.55  | 2000 ms | 1 ms   | 0.50 | 0.85  | Volley 0.40 | Bass 0.60 |
 | Hall    | 0.90  | 3000 ms | 2 ms   | 0.60 | 0.95  | Build 0.60 | Space 0.70 |
 
 Selecting a mode resets that mode's dials + signatures to the starting row
 (the delay/compressor `enterMode` contract), then the user dials from there.
+
+**Plate model ("140")** (2026-10-13 retune decision): the plate's starting
+row was rebalanced to NEUTRAL 50 % (tone/size/width 0.50, decay 2000 ms =
+the EMT 140 reference's own length) - model/subtype tuning the user decided
+against the EMT 140 capture (its other knobs, Bright/Bloom, were already
+neutral; **Dwell** is the shared "In"/input-gain knob relabelled for the
+reverb block, a product-copy choice - it is drive, not a tone knob). The
+old 0.80/0.35/0.80 row was an unsymmetric guess, not data. The generic
+plumbing and every other mode above are untouched. See
+`docs/agents/ir-reverb-training.md` (the model/subtype tuning rule + the
+plate's final numbers) and the CONSIDERED & DECLINED block in
+`plugin/include/Reverb.h`.
 All starting decays fit the engine's 50..5000 ms range (Hall = 3000, the
 longest default; 5000 is the ceiling). The [50, 3000] region is bit-identical
 (`decayFb`) so the Digital anchor stays byte-identical. Alt-click on any knob returns it to that mode's starting

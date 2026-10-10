@@ -166,7 +166,12 @@ class Reverb {
   // one coherent constant (the wash law) instead of two (wash * presence).
   // The Spring reads about the same at the fader (the user normalizes in the DAW).
   static constexpr double kSpringPresence   = 0.942;   // dwell: user A/B'd the 073339 build (1.120) and prefers it backed off -1.5 dB (1.120 * 10^(-1.5/20) = 0.942)
-  static constexpr double kPlatePresence    = 1.189;   // +1.5 dB wet dwell (user-confirmed: Plate is the LOWER-dwell member of the pair)
+  static constexpr double kPlatePresence    = 1.189;   // +1.5 dB wet dwell (user-confirmed: Plate is the LOWER-dwell member of the pair).
+      // 2026-10-13 note: kept AT 1.189 through the model retune - the level law
+      // (within 1 dB of the 83.5977 rawAbs baseline) must hold for the final
+      // tune; the body boost that briefly needed presence compensation was
+      // removed (50% rebalance already reproduces the EMT-140 body, -16.6 vs
+      // -17.4; see ir-reverb-training.md).
   // --- shared wash diffusion (1st-order all-pass, Schroeder/Moorer). --- The comb
   // wash's long-decay resonances turn into standing-waves / whistles / the metallic
   // "echo" that appears after a second (worse past ~2000 ms). A phase-only all-pass
@@ -188,16 +193,95 @@ class Reverb {
   //     4.32 dB) and is within +2 dB on click comb; residual gap is STRUCTURAL
   //     (onset density 42.7 vs 46.6; body 23.9 vs 33.2) = out of scope here.
   //   Full A/B matrix + CPU: docs/tickets/complete/plate-combing-closeout.md.
-  // P-body (percept: the low-mid BODY -- 500-800 Hz is the plate's fundamental
-  // sustain; the EMT 140 keeps it almost alive at 1-2 s where ours died 6-9 dB
-  // early). Measured as a SURVIVAL (per-round-trip) deficit, not flatness
-  // (a unity-gain APF measured dead, <=0.6 dB), so the lever is a per-RT
-  // band-selective boost in the feedback loop. Capped to fb*A = 1 so it stays
-  // stable at every decay dial (the wash-norm lesson). Constants are the
-  // tuning knobs (fine-tune against the ears).
+  // PLATE TEXTURE (plate-texture.md, 2026-10-13) -- CONSIDERED & DECLINED:
+  //   L1: denser early-ping bank (5 -> 9 incommensurate taps spread over
+  //     10-142 ms, sum-of-amps 1.17 preserved for level-matching): the onset
+  //     ping ratio DROPPED 42.7 -> 29.5 dB (EMT 46.6) - spreading taps raises
+  //     the incoherent band FLOOR under the peaks, same onset-smearing failure
+  //     as the Hadamard bank (42.7 -> 25.1). The reference's high peak/mean
+  //     comes from a SPARSE, SPEAKING comb (a few strong reflections over a
+  //     quiet floor), not tap density - "more taps = denser" REJECTED.
+  //   P-body (in-loop, shipped 2026-10-12): per-round-trip band-selective
+  //     boost in the feedback loop (500-800 Hz survival deficit vs the EMT
+  //     140, which keeps the fundamental alive at 1-2 s); capped fb*A <= 1
+  //     for stability at every decay dial (wash-norm lesson); constants are
+  //     the tuning knobs (fine-tune against the ears).
+  //   REJECTED in-loop darkening (feedback LPF / peaking, 200 and 220 Hz
+  //     variants): in-loop = feedback-state change -> click comb +4.7 to +10 dB
+  //     at body gains that do not survive the fb cap (in-loop body at the
+  //     stable max adds only ~+1 dB at the 2.0 s default); an LPF variant at
+  //     4 dB was UNSTABLE. In-loop spectral shaping stays DECLINED (comb cost
+  //     is structural: the darkening feeds back).
+  //   REJECTED biquad OUT-stage (peaking "RBJ-style" body; lowpass "RBJ-style"
+  //     air; fc 220-2400 Hz at 48 kHz): measured variants UNSTABLE (unnormalised
+  //     peaking, pole 1.127 -> NaN) or DC-DEAD (the lowpass form's DC gain is
+  //     0.035 -- 6-12k passes uncut: it is a resonator, not a lowpass; level
+  //     +14 dB), or wrong-shape (a 240 Hz "peaking" peak at 600-1.2 kHz). Only
+  //     1st-order stages (y += a*(x-y), a = 1-exp(-2*pi*fc/fs)) are provably
+  //     stable and DC-exact at fc << fs -- the SHIPPED air law is exactly that
+  //     (2 stages, -6 dB/oct each, 4900 Hz at short decay -> 3600 Hz at long:
+  //     LONGER = DARKER, the direction the EMT 140 reference family itself
+  //     shows: 0.5 s len bal -62.5 vs 2.0 s len -73.0 (6-12k minus 150-300,
+  //     click-tail 0.3-0.6 s) -- the ticket's "shorter = darker" phrasing is
+  //     INVERTED relative to the family measurement; the guard pins the
+  //     MEASURED direction and the plate now complies (600 ms -32.5 > 2400 ms
+  //     -73.3 dB). A 2nd order stage is only admissible from a verified
+  //     library implementation with numeric pole-radius/DC checks (see
+  //     docs/agents/ir-reverb-training.md, biquad landmine).
+  //   CONSIDED then REMOVED: 1st-order body ADD (y += G*(LPF_300(x)-LPF_120(x))
+  //     in the output path): stable + correct shape (+4 dB on the 120-300 band,
+  //     zero DC, zero HF) -- but the 50 % NUTRAL rebalance (user decision,
+  //     2026-10-13) already reproduces the EMT 140 body (plate -16.6 vs
+  //     reference -17.4 dB at the default), so the boost only cost comb
+  //     (16.7 -> 19.4 dB) + level. The original "body dead" complaint was an
+  //     artifact of the old asymmetric 60 % dials (tone 0.35 brighter, size
+  //     0.70 longer). Simpler final engine = LESS CPU + no level-compensation
+  //     hack (presence stays 1.189 exactly, the user-confirmed +1.5 dB dwell).
+  //   Plate/"140" model STATE (2026-10-13, tuning: 50 % dials + width 1.0 for
+  //     the stereo reference (shipping width 0.5), decay 2000 ms = reference):
+  //     onset pitch 120-300 body -16.6 (EMT 140 reference -17.4); band balance
+  //     (6-12k minus 120-300, live-in-band) plate beats the reference by ~3 dB;
+  //     onset DENSITY 37.2 vs 46.6 (structural residual -- see below; floor 35.0
+  //     + within 10 dB guard); decay law complies with the measured family;
+  //     click-comb PEAKINESS 20.31 (the air law concentrates the click's energy
+  //     into the low-mid comb band, so the peakiness-RATIO metric rose from the
+  //     pre-model 16.7 even though the tap-peak AMPLITUDES did not grow and the
+  //     level sits at the baseline 83.5977 within +/-1 dB (measured 84.10);
+  //     EMT 140's own comb is 14.7, physical-cavity comb of a different
+  //     construction -- guard: model baseline + 1 dB); CPU 48 kHz blk64 avg
+  //     1.844 us (within the committed baseline class; the 2 1st-order air
+  //     stages add ~0.19 us);
+  //   LEVEL / ONSET / COMB are GUARDED (see test/src/plate_texture_tests.cpp):
+  //     level 83.5977 +/- 1 dB; onset pitch floor 35.0 dB + within 10 dB of the
+  //     EMT reference (structural residual -- our onset is whip burst + 5 onset
+  //     pings + the early comb, the EMT is a physical cavity with a dense real
+  //     early field; denser onsets were REJECTED above: they thin the ping);
+  //     comb model baseline 20.31 + 1 dB. Full A/B + lever log + the general
+  //     MODEL/SUBTYPE TUNING RULE (any effect mode/type MAY be tuned uniquely,
+  //     permissive not mandatory; generic/shared mechanism stays separate):
+  //     docs/agents/ir-reverb-training.md + the close-out (tickets).
   static constexpr double kPlateBodyHz      = 550.0;   // resonance centre (the body note)
   static constexpr double kPlateBodyDb      = 1.30;    // per-round-trip boost (dB) at the centre
   static constexpr double kPlateBodyQ       = 0.60;    // bandwidth (Q) -- 500-800 Hz coverage
+
+  // PLATE TEXTURE OUT-STAGES (plate/"140" model tuning -- ir-reverb-training.md;
+  // mode 2 only, plate constants only, the generic mechanism untouched):
+  //  BODY  = a low-mid band-pass ADD, 120-300 Hz (two first-order LPFs:
+  //          o += G*(lp300(x) - lp120(x)) -- zero DC shift, zero HF shift,
+  //          unconditionally stable; the in-loop version is fb-capped at ~+1
+  //          dB and costs comb, the biquad peaking here went unstable at this
+  //          fc/Q (pole 1.13 -> NaN): a first-order band-pass add is the exact,
+  //          provable form. Closes EMT-140's warmer body (ref: 150-300 =
+  //          +12 dB over ours at 1-2.5 s, measured 2026-10-13).
+  //  AIR   = a decay-tracked first-order LPF CASCADE (-6 dB/oct per stage) on
+  //          the diffuse field before the onset attack terms (the onset stays
+  //          bright; in-loop attempts regressed the comb +7 dB and one went
+  //          unstable -- tilt belongs OUT of the loop). The corner law follows
+  //          the reference family (probe 0.5-3.0 s, 2026-10-13): longer decay
+  //          = darker top end, so longer = lower corner (4900 -> 3600 Hz).
+  static constexpr double kPlateAirHzBright = 4900.0;  // shortest decays (brightest top end)
+  static constexpr double kPlateAirHzDark   = 3600.0;  // longest decays (darkest top end)
+  static constexpr int    kPlateAirStages   = 2;       // first-order LPF stages (-6 dB/oct each)
   static constexpr double kRoomWashAp       = 0.22;    // Room wash diffusion (keep the early discrete, smooth the long tail)
   static constexpr double kHallWashAp       = 0.68;    // Hall wash diffusion (more: tames the pinging/metallic standing wave under hard drive)
   // The splash/whip re-inject the dry ATTACK transient (a sharp broadband burst =
@@ -394,7 +478,7 @@ class Reverb {
                                   double& tone, double& size, double& width) {
     switch (juce::jlimit(0, kNumModes - 1, mode)) {
       case 1: decayMs = 2000.0; preMs = 0.0; tone = 0.60; size = 0.60; width = 0.90; break;  // Spring (size 60%: the user's ears; tone 60% at the user's request)
-      case 2: decayMs = 2000.0; preMs = 0.5; tone = 0.35; size = 0.70; width = 0.80; break;  // Plate (the ears: size 70% / decay 2000)
+      case 2: decayMs = 2000.0; preMs = 0.5; tone = 0.50; size = 0.50; width = 0.50; break;  // Plate: NEUTRAL 50% dials incl. width; decay at the 2.0 s EMT 140 reference (the tuning target, 2026-10-13). Tuning-state rule (stereo reference IR => width 1.0 during tuning) lives in docs/agents/ir-reverb-training.md
       case 3: decayMs = 500.0;  preMs = 0.0; tone = 0.40; size = 0.30; width = 0.70; break;  // Room (the ears: tone 40%)
       case 4: decayMs = 1800.0; preMs = 1.0; tone = 0.50; size = 0.45; width = 0.85; break;  // Chamber
       case 5: decayMs = 3000.0; preMs = 2.0; tone = 0.60; size = 0.90; width = 0.95; break;  // Hall (decay at the engine max: longest allowed tail)
@@ -407,7 +491,7 @@ class Reverb {
     double a = 0.0, b = 0.0;
     switch (m) {
       case 1: a = 0.4; b = 0.30; break;  // Springs 3 (normalised 0.4), Sag 30% (the user's ears)
-      case 2: a = 0.55; b = 0.55; break;  // Bright 55%, Bloom 55% (the ears)
+      case 2: a = 0.5; b = 0.5; break;  // Bright 50%, Bloom 50% (neutral; the texture is tuned above this, 2026-10-13)
       case 3: a = 0.40; b = 0.40; break;  // Early 40%, Air 40%
       case 4: a = 0.4; b = 0.6; break;  // Volley, Bass
       case 5: a = 0.6; b = 0.7; break;  // Build, Space
@@ -492,7 +576,9 @@ class Reverb {
       r8Re_[c]=0.0f; r8Im_[c]=0.0f;
       washLp_[c] = 0.0f;
       washLp2_[c] = 0.0f;
-      for (int ln = 0; ln < kNumLines; ++ln) { bodyW1_[c][ln] = 0.0f; bodyW2_[c][ln] = 0.0f; }      hpfX_[c] = 0.0f; hpfY_[c] = 0.0f;
+      for (int ln = 0; ln < kNumLines; ++ln) { bodyW1_[c][ln] = 0.0f; bodyW2_[c][ln] = 0.0f; }
+      airL1_[c] = 0.0f; airL2_[c] = 0.0f;
+      hpfX_[c] = 0.0f; hpfY_[c] = 0.0f;
       for (int j = 0; j < 4; ++j) peakEq_[c][j] = 0.0f;
     }
     for (int c = 0; c < kMaxChannels; ++c)
@@ -571,6 +657,18 @@ class Reverb {
         bodyB2_ = r * r - dA;      bodyA1_ = bodyB1_;        bodyA2_ = r * r;
       } else {
         bodyB0_ = 1.0; bodyB1_ = 0.0; bodyB2_ = 0.0; bodyA1_ = 0.0; bodyA2_ = 0.0;
+      }
+      // PLATE TEXTURE OUT-STAGE (first-order stages -- see the constants'
+      // NOTE): body = a band-pass ADD centred 120-300 Hz (zero DC, zero HF:
+      // exact by construction); air = a decay-tracked first-order LPF cascade
+      // (each stage -6 dB/oct, corner = the bright/dark law above).
+      if (sampleRate_ > 0.0) {
+        auto al = [this](double f) { return 1.0 - std::exp(-2.0 * M_PI * f / sampleRate_); };
+        const double frac = decayDiffFrac(params_.decayMs);
+        const double fc = kPlateAirHzBright - (kPlateAirHzBright - kPlateAirHzDark) * frac;
+        airLp_ = al(fc);
+      } else {
+        airLp_ = 0.0;
       }
     }
     // Digital Mod (mode 0 only): a sined waver on the read tap. Gated off at
@@ -1107,6 +1205,17 @@ class Reverb {
         }
         float o = acc * static_cast<float>(norm) * static_cast<float>(kPlatePresence);
         o = washApSc(o, kPlateWashAp, ch);   // diffuse: kills the high-dwell fizz / standing wave
+        // PLATE TEXTURE OUT-STAGE (out of the loop, and applied to the DIFFUSE
+        // field BEFORE the attack terms below - the onset stays bright):
+        //  body  = the 150-300 Hz low-mid survival (the reference runs warm);
+        //  air   = the decay-tracked top-end tilt (REFERENCE FAMILY's law:
+        //          longer decay = darker top end; a pure tilt - removes
+        //          energy only, adds no comb peaks, cannot destabilise).
+        for (int stg = 0; stg < kPlateAirStages; ++stg) {
+          float &yy = (stg == 0) ? airL1_[ch] : airL2_[ch];
+          yy += static_cast<float>(airLp_) * (o - yy);
+          o = yy;
+        }
         // Bright: the dense onset burst (the plate fires as a dense whole),
         // excited by input activity; more Bright = a denser, brighter onset.
         de = std::max(de * static_cast<float>(kPlateBrightDecay), std::fabs(dry) * onsetAmt);
@@ -1439,8 +1548,11 @@ class Reverb {
   // (setParams-time, sample-rate dependent).
   float bodyW1_[kMaxChannels][kNumLines] = {};
   float bodyW2_[kMaxChannels][kNumLines] = {};
+  // plate/"140" air law: the two in-series first-order LPF stages (per channel)
+  float airL1_[kMaxChannels] = {}, airL2_[kMaxChannels] = {};
   double bodyB0_ = 1.0, bodyB1_ = 0.0, bodyB2_ = 0.0;
   double bodyA1_ = 0.0, bodyA2_ = 0.0;
+  double airLp_ = 0.0;                     // out-stage air first-order alpha (decay-tracked corner)
   // Room state: per-tap lowpass state (the "air" damping), 4 taps per channel
   // (zero-initialized, reset in reset()). The early field + mode wash are
   // stateless (they use the shared comb lines + existing state).

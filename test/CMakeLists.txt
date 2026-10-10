@@ -45,6 +45,7 @@ target_sources(DspTests PRIVATE
     src/outgain_tests.cpp
     src/padless_wav_tests.cpp
     src/plate_comb_tests.cpp
+    src/plate_texture_tests.cpp
     src/pitch_shift_tests.cpp
     src/preset_tests.cpp
     src/processor_tests.cpp

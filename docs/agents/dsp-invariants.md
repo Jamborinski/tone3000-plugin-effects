@@ -144,3 +144,31 @@
   the 250 ms reference; clamped 50 Hz..Nyquist; applied to the WET READ.
   `bbdLawNorm_` = dimensionless `2π·fc_ref·refMs·0.001` (norm =
   `bbdLawNorm_/cur` reproduces `2π·fc/sr` exactly — `sr` cancels).
+## Reverb (plate / "140" model -- full text in `docs/agents/ir-reverb-training.md`)
+- Plate/"140" (mode 2, type 0 = the EMT 140 model) is tuned against the EMT 140
+  2.0 s IR reference (house convolver, peak-normalised): 50 % NEUTRAL start
+  dials (tone/size/width 0.50, decay 2000 ms = the reference's own length);
+  air law = 2x 1st-order OUT-stage LPF stages, 4900 Hz at short decay -> 3600 Hz
+  at long (LONGER = DARKER, the direction the reference family itself measures:
+  0.5 s len -62.5 vs 2.0 s len -73.0 -- the ticket's "shorter = darker"
+  phrasing is INVERTED against that measurement).
+- **CONSIDERED & DECLINED (2026-10-13):** in-loop darkening / body (comb +4.7 to
+  +10 dB, fb-capped gain, one unstable); 2nd-order biquad out-stages at low fc
+  (unstable pole 1.13 / DC-dead "lowpass" gain 0.035 / wrong-shape 240 Hz
+  peaking) -- 1st-order stages only; body ADD out-stage (worked, +4 dB, but the
+  50 % rebalance already reproduces the EMT body, so it only cost comb + level --
+  REMOVED); denser onset pings (L1 42.7 -> 29.5; Hadamard 42.7 -> 25.1 -- they
+  thin the ping).
+- **MODEL/SUBTYPE rule (general, all effects):** a mode + model/subtype (type)
+  MAY carry its own knob defaults and tone law (permissive, not mandatory),
+  tuned to its own reference, but it must never override the generic/shared path
+  or leak into other modes (bit-identical pins keep them separate).
+
+## MODEL/SUBTYPE (type) tuning rule is PERMISSIVE (CAN, all effects)
+A mode + model/subtype (type: `Params::type[mode]`, `numTypes()`,
+`defaultDialsForType()`, the UI type chip) MAY have its own knob defaults and
+own law tuned against its own reference (plate/"140" instance above; delay
+subtypes, compressor/chorus subtypes the same). It is NOT required (a type may
+share the generic mechanism), and it must keep SEPARATION from the generic /
+shared path and from other modes. Full text + the plate/"140" state + the
+biquad landmine: `docs/agents/ir-reverb-training.md`.

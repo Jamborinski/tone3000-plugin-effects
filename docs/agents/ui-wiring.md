@@ -60,3 +60,22 @@ The layout's `five`/`cols` flag is a SEPARATE gate — update both.
   decodes byte-per-char (Latin-1) — non-ASCII literals need
   `String(CharPointer_UTF8 ("..."))`** (else `\u2014` renders `â□□`; full note
   in `docs/agents/ui-snapshots.md`).
+## Reverb mode/subtype (type) defaults + Dwell
+- Mode-specific dial defaults are per-mode (`Params::defaultDialsForMode`, plus
+  the `Params::type[mode]` type axis: `numTypes()`, `defaultDialsForType()`, the
+  "140" chip = `compactReverbTypeName`). The plate/"140" model start was
+  rebalanced to 50 % NUTRAL (tone/size/width 0.50, decay 2000 ms = the EMT 140
+  reference length) on 2026-10-13 (user decision, reference-IR tuned): that is
+  MODEL/SUBTYPE tuning -- permissive (any effect mode/subtype MAY carry its own
+  defaults/law, keep them SEPARATE from the generic path and other modes; see
+  `ir-reverb-training.md`). The other five reverb mode rows are untouched.
+- **Dwell** (the reverb block's 6th knob) = the SHARED "In" (inputGain) knob
+  RE-LABELLED for the reverb tile (`input_.setLabel("Dwell")`,
+  `help::Key::reverbDwell`) -- a product-copy choice, NOT a reverb parameter and
+  NOT in ChainBlock.h; the plate's dwell TONE is the engine's presence constant
+  (`kPlatePresence`, +1.5 dB, user-confirmed).
+
+## Dwell = shared "In" relabelled (reverb tile only)
+The Dwell knob is the shared In/input-gain knob renamed for the reverb block
+(help key `reverbDwell`, label set in `EffectTile.cpp`). It is drive, not a
+retune knob; do not add a dedicated dwell parameter.
