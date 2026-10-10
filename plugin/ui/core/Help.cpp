@@ -196,10 +196,11 @@ std::map<Key, String> buildTable() {
       U("Add Convolver: insert a true-conversion reverb block. Load an IR (mono/stereo/quad wav) to tune trim, length scale, width and gain.");
   t[Key::effectConvolution] = U("Convolution setting: adjust the value for this block.");
   t[Key::convGain] = knobDesktop("Gain", "convolver output level, -24..+24 dB (0.5 = unity). The IR is energy-normalised on load.");
+  t[Key::convDry] = knobDesktop("Dry", "level of the DRY (un-processed) path that blends in under the Mix, -24..+24 dB (0.5 = unity). Does not touch the wet/IR; Mix and Dwell keep their usual roles.");
   t[Key::convWidth] = knobDesktop("Width", "Stereo width. Stereo IR: 0 = mono (L == R), 1 = full fold. Mono IR: WIDENS the output with a Haas delay difference (0 = centre, 1 = wide).");
   t[Key::convStartS] = knobDesktop("Start", "trim window start, in seconds of the raw IR (0 = from the top). Rebuilds the kernel.");
   t[Key::convEndS] = knobDesktop("End", "trim window end, in seconds of the raw IR (0 = to the end). Rebuilds the kernel.");
-  t[Key::convPitch] = knobDesktop("Length", "time-scale of the IR, 0.25x..4x log (1.0x = the IR's native length). Pitched down = longer, darker tail.");
+  t[Key::convPitch] = knobDesktop("Time", "time-scale of the IR, 0.25x..4x log (1.0x = the IR's native length). Pitched down = longer, darker tail.");
   t[Key::convPre] = knobDesktop("Pre", "wet pre-delay, 0..100 ms: the dry signal passes first this long before the reverb starts.");
   t[Key::convFadeIn] = knobDesktop("F In", "ramp the kernel's attack over % of its length (0..100).");
   t[Key::convFadeOut] = knobDesktop("F Out", "ramp the kernel's tail over % of its length (0..100).");

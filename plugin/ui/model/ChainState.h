@@ -189,7 +189,11 @@ struct ChainItem {
   // Convolution block (EffectKind::Convolution): the five user controls plus
   // the loaded IR's name (display only; the IR data does not persist).
   double convGain = 0.5;
+  double convDry = 0.5;        // dry-path level (the "Dry" knob), 0.5 = 0 dB
   double convWidth = 1.0;
+  double convWidthMono = 0.0;   // stored width for mono IRs (off by default)
+  double convWidthStereo = 1.0; // stored width for stereo IRs (full by default)
+  int convIrChannels = 0;      // 0 = none, 1 = mono, 2 = stereo
   double convStartS = 0.0;
   double convEndS = 0.0;
   double convPitch = 0.5;

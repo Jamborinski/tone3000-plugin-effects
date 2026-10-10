@@ -276,7 +276,11 @@ juce::ValueTree TONE3000Processor::serializeBlockSettings(const ChainBlock& bloc
       blockState.setProperty("reverbBuild", block.reverbBuild, nullptr);
       blockState.setProperty("reverbSpace", block.reverbSpace, nullptr);
       blockState.setProperty("convGain", block.convGain, nullptr);
+      blockState.setProperty("convDry", block.convDry, nullptr);
       blockState.setProperty("convWidth", block.convWidth, nullptr);
+      blockState.setProperty("convWidthMono", block.convWidthMono, nullptr);
+      blockState.setProperty("convWidthStereo", block.convWidthStereo, nullptr);
+      blockState.setProperty("convIrChannels", (double)block.convIrChannels, nullptr);
       blockState.setProperty("convStartS", block.convStartS, nullptr);
       blockState.setProperty("convEndS", block.convEndS, nullptr);
       blockState.setProperty("convPitch", block.convPitch, nullptr);
@@ -446,8 +450,27 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
       block.reverbBass = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbBass", 0.6)));
       block.reverbBuild = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbBuild", 0.6)));
       block.reverbSpace = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbSpace", 0.7)));
-      block.convGain = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convGain", 0.5)));
+      {
+        // Dry/wet split migration: presets saved before the "Dry" knob became
+        // a DRY-path gain stored their "Dry" value in convGain (the WET level).
+        // Carry that value onto the new convDry and reset the wet level to
+        // unity so a loaded preset keeps its dry level and doesn't keep an
+        // accidental wet boost.
+        double cg = static_cast<double>(blockState.getProperty("convGain", 0.5));
+        double cd = 0.5;
+        if (blockState.hasProperty("convDry"))
+          cd = static_cast<double>(blockState.getProperty("convDry", 0.5));
+        else {
+          cd = cg;    // old value was the dry knob
+          cg = 0.5;   // wet side reset to unity
+        }
+        block.convGain = juce::jlimit(0.0, 1.0, cg);
+        block.convDry  = juce::jlimit(0.0, 1.0, cd);
+      }
       block.convWidth = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convWidth", 1.0)));
+      block.convWidthMono = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convWidthMono", 0.0)));
+      block.convWidthStereo = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convWidthStereo", 1.0)));
+      block.convIrChannels = (int)static_cast<double>(blockState.getProperty("convIrChannels", 0));
       block.convStartS = juce::jlimit(0.0, ConvolutionReverb::kMaxIrSeconds, static_cast<double>(blockState.getProperty("convStartS", 0.0)));
       block.convEndS = juce::jlimit(0.0, ConvolutionReverb::kMaxIrSeconds, static_cast<double>(blockState.getProperty("convEndS", 0.0)));
       block.convPitch = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convPitch", 0.5)));

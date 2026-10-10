@@ -23,6 +23,7 @@
 // message pump; prepareToPlay resolves the same parameters synchronously).
 #include "Processor.h"
 #include <juce_audio_formats/juce_audio_formats.h>
+#include <functional>
 #include "test_helpers.h"
 #include "chain_test_helpers.h"
 
@@ -546,6 +547,7 @@ TEST(ProcessorTest, ConvolutionParamsAreAcceptedBySetBlockParam) {
   EXPECT_TRUE(proc.setBlockParam(id, "convInCurve", 0.22)) << "convInCurve rejected";
   EXPECT_TRUE(proc.setBlockParam(id, "convOutCurve", 0.66)) << "convOutCurve rejected";
   EXPECT_TRUE(proc.setBlockParam(id, "convToneDb", 3.5)) << "convToneDb rejected";
+  EXPECT_TRUE(proc.setBlockParam(id, "convDry", 0.42)) << "convDry rejected";
 }
 
 TEST(ProcessorTest, ConvolutionBlockRoundTripsAllParams) {
@@ -562,6 +564,7 @@ TEST(ProcessorTest, ConvolutionBlockRoundTripsAllParams) {
     EXPECT_TRUE(proc.setBlockParam(id, name, v)) << name << " rejected";
   };
   set("convGain", 0.63);
+  set("convDry", 0.42);
   set("convWidth", 0.44);
   set("convStartS", 0.75);
   set("convEndS", 2.5);
@@ -590,6 +593,7 @@ TEST(ProcessorTest, ConvolutionBlockRoundTripsAllParams) {
   const auto row = convRow(proc);
   EXPECT_TRUE(row.isObject()) << "the conv block's state row is not published";
   EXPECT_NEAR(static_cast<double>(row["convGain"]), 0.63, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row["convDry"]), 0.42, 1e-9);
   EXPECT_NEAR(static_cast<double>(row["convWidth"]), 0.44, 1e-9);
   EXPECT_NEAR(static_cast<double>(row["convStartS"]), 0.75, 1e-9);
   EXPECT_NEAR(static_cast<double>(row["convEndS"]), 2.5, 1e-9);
@@ -611,6 +615,7 @@ TEST(ProcessorTest, ConvolutionBlockRoundTripsAllParams) {
   const auto row2 = convRow(restored);
   EXPECT_TRUE(row2.isObject()) << "the conv block did not survive the state round-trip";
   EXPECT_NEAR(static_cast<double>(row2["convGain"]), 0.63, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row2["convDry"]), 0.42, 1e-9);
   EXPECT_NEAR(static_cast<double>(row2["convWidth"]), 0.44, 1e-9);
   EXPECT_NEAR(static_cast<double>(row2["convStartS"]), 0.75, 1e-9);
   EXPECT_NEAR(static_cast<double>(row2["convEndS"]), 2.5, 1e-9);
@@ -657,6 +662,138 @@ juce::File makeFixedIrWav() {
   return {};
 }
 }  // namespace
+
+TEST(ProcessorTest, ConvDryMigratesOldGainOnLoad) {
+  // Presets saved before the "Dry" knob became a DRY-path gain stored their
+  // "Dry" value in convGain (the WET level). Loading such a state must carry
+  // that value onto convDry and reset the wet level to unity.
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto id = proc.addEffectBlock(EffectKind::Convolution, "left", 0);
+  ASSERT_FALSE(id.empty());
+  EXPECT_TRUE(proc.setBlockParam(id, "convGain", 0.70));  // the old "Dry" value
+
+  // Save, then strip the convDry property so the tree looks like a pre-feature
+  // preset, and reload into a fresh processor.
+  juce::MemoryBlock saved;
+  proc.getStateInformation(saved);
+  const char* const p = static_cast<const char*>(saved.getData());
+  const size_t sz = saved.getSize();
+  juce::ValueTree state = juce::ValueTree::readFromData(p + 5, sz - 5);
+  ASSERT_TRUE(state.isValid());
+  std::function<void(juce::ValueTree&)> strip;
+  strip = [&](juce::ValueTree& t) {
+    if (t.hasProperty("convDry"))
+      t.removeProperty(juce::Identifier("convDry"), nullptr);
+    for (int i = 0; i < t.getNumChildren(); ++i) {
+      juce::ValueTree child = t.getChild(i);
+      strip(child);
+    }
+  };
+  strip(state);
+  juce::MemoryOutputStream strippedOut;
+  state.writeToStream(strippedOut);
+  std::vector<char> blob(5 + strippedOut.getDataSize());
+  std::copy(p, p + 5, blob.begin());  // magic 'T','3','K','B' + NUL
+  std::copy(static_cast<const char*>(strippedOut.getData()),
+            static_cast<const char*>(strippedOut.getData()) + strippedOut.getDataSize(),
+            blob.begin() + 5);
+  juce::MemoryBlock oldStyle(blob.data(), blob.size());
+
+  TONE3000Processor restored;
+  restored.setPlayConfigDetails(2, 2, 48000, 512);
+  restored.prepareToPlay(48000, 512);
+  restored.setStateInformation(oldStyle.getData(), static_cast<int>(oldStyle.getSize()));
+
+  juce::var dry, gain;
+  {
+    const juce::var st = restored.getChainState(-1);
+    auto* chain = st["chain"].getArray();
+    for (int i = 0; chain != nullptr && i < chain->size(); ++i) {
+      const juce::var params = (*chain)[i]["params"];
+      if (params.isObject() && params.hasProperty("convGain")) {
+        dry = params["convDry"];
+        gain = params["convGain"];
+      }
+    }
+  }
+  EXPECT_NEAR(static_cast<double>(dry), 0.70, 1e-9)
+      << "the old convGain value must migrate onto convDry";
+  EXPECT_NEAR(static_cast<double>(gain), 0.5, 1e-9)
+      << "the wet level must reset to unity on migration";
+}
+
+TEST(ProcessorTest, ConvDryScalesOnlyTheDryPath) {
+  // convDry scales only the DRY term of the Mix crossfade. A tone (not DC) is
+  // used so the chain's output DC-blocker doesn't eat the signal, and RMS over
+  // a stable window is measured. So:
+  //  - mix=0 (full dry): out = in * gain(convDry); the ratio between a -6 dB
+  //    setting and unity is gain(-6 dB) / unity -- convDry scales the dry path;
+  //  - mix=1 with a loaded IR: the wet path is untouched, so RMS is identical
+  //    regardless of convDry.
+  constexpr double kFs = 48000.0;
+  const int kN = 16384;
+  const double step = 2.0 * 3.14159265358979 * 220.0 / kFs;
+  auto drive = [&](TONE3000Processor& proc) {
+    const int kBlock = 512;
+    juce::AudioBuffer<float> buf(2, kBlock);
+    juce::MidiBuffer midi;
+    std::vector<float> out(kN, 0.0f);
+    double ph = 0.0;
+    for (int off = 0; off < kN; off += kBlock) {
+      const int c = std::min(kBlock, kN - off);
+      for (int i = 0; i < c; ++i) {
+        ph += step;
+        const float v = static_cast<float>(0.2 * std::sin(ph));
+        buf.setSample(0, i, v);
+        buf.setSample(1, i, v);
+      }
+      buf.clear(c, 0, kBlock - c);
+      proc.processBlock(buf, midi);
+      for (int i = 0; i < c; ++i) out[off + i] = buf.getSample(0, i);
+    }
+    // RMS over the stable window (last 4096 samples; smoothers & DC-blocker decayed).
+    double sum2 = 0.0;
+    for (int i = kN - 4096; i < kN; ++i) sum2 += (double)out[i] * out[i];
+    return std::sqrt(sum2 / 4096.0);
+  };
+  // Build a conv block (optionally loading an IR), set convDry + mix, and
+  // return the settled output RMS.
+  auto build = [&](double convDry, double mix, const juce::File& ir) {
+    TONE3000Processor proc;
+    proc.setPlayConfigDetails(2, 2, 48000, 512);
+    proc.prepareToPlay(48000, 512);
+    const auto cid = proc.addEffectBlock(EffectKind::Convolution, "left", 0);
+    if (cid.empty()) return 0.0;
+    if (ir != juce::File()) {
+      const juce::var resp = proc.loadConvIr(cid, ir);
+      if (resp.getDynamicObject() != nullptr &&
+          resp.getDynamicObject()->hasProperty("error"))
+        return 0.0;
+    }
+    if (!proc.setBlockParam(cid, "convDry", convDry)) return 0.0;
+    if (!proc.setBlockParam(cid, "mix", mix)) return 0.0;
+    return drive(proc);
+  };
+  juce::File noIr;  // invalid File == no IR to load
+  const double dryUnity = build(0.5, 0.0, noIr);
+  const double dryHalf = build(0.375, 0.0, noIr);  // (0.375-0.5)*48 = -6 dB
+  const double expHalf = dryUnity * juce::Decibels::decibelsToGain(-6.0);
+  EXPECT_GT(dryUnity, 1e-3) << "dry path must pass (unity) the input tone";
+  EXPECT_NEAR(dryHalf, expHalf, std::max(1e-6, 0.02 * dryUnity))
+      << "convDry at -6 dB must scale the dry term by gain(-6 dB)";
+
+  // Wet path (mix=1, loaded IR): convDry must not perturb the wet output.
+  const juce::File irWav = makeFixedIrWav();
+  ASSERT_TRUE(irWav.existsAsFile());
+  const double wetA = build(0.5, 1.0, irWav);
+  const double wetB = build(0.25, 1.0, irWav);
+  EXPECT_GT(wetA, 1e-6) << "wet path must produce output (loaded IR)";
+  EXPECT_NEAR(wetA, wetB, std::max(1e-6, 1e-3 * wetA))
+      << "convDry must not change the wet (mix=1) output";
+}
+
 
 TEST(ProcessorTest, ConvIrReferenceSurvivesStateRoundTrip) {
   // E-2: a loaded kernel must survive the preset/app-restart round trip.

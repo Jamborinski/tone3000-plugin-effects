@@ -343,6 +343,7 @@ std::shared_ptr<ConvolutionReverb::State> ConvolutionReverb::makeEditedState() {
   st->tail = std::move(tail);
   st->blockSize = blockSize;
   st->preview = std::move(preview);
+  st->fullLengthSamples = outLen;
   return st;
 }
 
@@ -591,8 +592,13 @@ void ConvolutionReverb::process(juce::AudioBuffer<float>& buffer) {
       for (int i = 0; i < n; ++i) {
         const size_t curPos = wPos;                            // where x[i] lands
         const size_t rPos = (curPos + sz - static_cast<size_t>(preW_)) % sz;
+        // dst and srcIn point at the SAME channel of the same buffer, so the
+        // read MUST come before the write: reading after we overwrite the
+        // buffer would store the wet input (ring[rPos]) in the ring instead
+        // of the dry -- and the next block's wet would be a double-delay.
+        const float dry = srcIn[i];
         dst[i] = ring[rPos];                                    // x[i - W]
-        ring[curPos] = srcIn[i];
+        ring[curPos] = dry;
         wPos = (curPos + 1) % sz;
       }
       ringPos_[c] = wPos;
@@ -739,6 +745,8 @@ int ConvolutionReverb::editedLengthSamples() const {
   }
   if (st == nullptr || st->conv == nullptr)
     return 0;
+  if (st->fullLengthSamples > 0)
+    return st->fullLengthSamples;
   return st->conv->getCurrentIRSize();
 }
 

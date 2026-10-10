@@ -279,6 +279,12 @@ class ConvolutionReverb {
     // Present only when the IR was split into (conv uniform head) + (tail).
     bool longIr = false;
     std::unique_ptr<BudgetConvolver> tail;
+    // The ACTUAL edited kernel length (outLen) in samples. For the short
+    // path == conv->getCurrentIRSize(); for the long path == head (8192) +
+    // the raw tailLen (NOT the ceiling-padded segments*kFrame). The UI
+    // length readout uses this so long IRs show their true length (7.4 s)
+    // instead of just the head (0.17 s).
+    int fullLengthSamples = 0;
   };
 
   // message thread, builds the whole next engine: trim window -> stretch ->

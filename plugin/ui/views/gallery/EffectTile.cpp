@@ -247,15 +247,15 @@ std::vector<EffectParams> paramsFor(const ChainItem& b, bool compact) {
   if (k == "convolution") {
     // Full 6x2 surface (FogConvolver-2 parity): 12 knobs = the fixed
     // Mix/In/Out trio + these nine, in slot order (A..E, sig, mod, F, G).
-    // "Dry" is the wet level (the engine's gain rides the wet path); the
-    // shared In knob is re-labelled "Dwell" on the conv tile.
+    // "Dry" is the DRY-path level (a gain on the dry term of the Mix crossfade);
+    // the shared In knob is re-labelled "Dwell" on the conv tile (wet input gain).
     const std::vector<EffectParams> full = {
-        {&scales::convPitch(), "convPitch", "Length", b.convPitch, help::Key::convPitch},
+        {&scales::convPitch(), "convPitch", "Time", b.convPitch, help::Key::convPitch},
         {&scales::convPre(), "convPreMs", "Pre", b.convPreMs, help::Key::convPre},
         {&scales::convFade(), "convFadeIn", "F In", b.convFadeIn, help::Key::convFadeIn},
         {&scales::convFade(), "convFadeOut", "F Out", b.convFadeOut, help::Key::convFadeOut},
         {&scales::convTone(), "convToneDb", "Tone", b.convToneDb, help::Key::convTone},
-        {&scales::convGain(), "convGain", "Dry", b.convGain, help::Key::convGain},
+        {&scales::convGain(), "convDry", "Dry", b.convDry, help::Key::convDry},
         {&scales::convWidth(), "convWidth", "Width", b.convWidth, help::Key::convWidth},
         {&scales::convFade(), "convInCurve", "InCrv", b.convInCurve, help::Key::convInCurve},
         {&scales::convFade(), "convOutCurve", "OutCrv", b.convOutCurve, help::Key::convOutCurve},
@@ -1058,20 +1058,30 @@ void EffectTile::updateConvIrLabel() {
   const juce::String secondsText = (block_.convSeconds > 0.0005)
       ? juce::String(block_.convSeconds, 2) + juce::String(" s")
       : juce::String();
+  // The IR's type (mono/stereo) appears next to the length readout so the
+  // Width knob's meaning is unambiguous (mono IR: width SPREADS the output
+  // via a Haas pair; stereo IR: width FOLDS the M/S spread).
+  const juce::String irTypeText =
+      (block_.convIrChannels == 1)
+          ? juce::String(" mono")
+      : (block_.convIrChannels == 2)
+          ? juce::String(" stereo")
+          : juce::String();
   if (block_.convIrLoaded && hasName) {
     // E-2 + length readout. Full tile: the length gets its OWN line under the
     // filename (the file's label is not the truth — a "5.0 s" NEVO plate
     // renders ~10 s, so the engine's real seconds carry it). Compact tile:
-    // no height for a second line — append "· N.NN s" to the name line.
-    if (compact_ && secondsText.isNotEmpty())
+    // no height for a second line — append "· N.NN s mono" to the name line.
+    const juce::String metaText = secondsText + irTypeText;
+    if (compact_ && metaText.isNotEmpty())
       convIrLabel_.setText(block_.convIrName +
-                               juce::String(juce::CharPointer_UTF8 (" \u00B7 ")) + secondsText,
+                               juce::String(juce::CharPointer_UTF8 (" \u00B7 ")) + metaText,
                            juce::dontSendNotification);
     else
       convIrLabel_.setText(block_.convIrName, juce::dontSendNotification);
-    const juce::String secondsLine = secondsText;
+    const juce::String secondsLine = secondsText + irTypeText;
     convIrSeconds_.setText(secondsLine, juce::dontSendNotification);
-    convIrSeconds_.setVisible(!compact_ && secondsText.isNotEmpty());
+    convIrSeconds_.setVisible(!compact_ && metaText.isNotEmpty());
     convIrButton_.setButtonText("Change IR");
   } else if (hasName) {
     // E-2: identity persisted but engine not hydrated (file missing on this

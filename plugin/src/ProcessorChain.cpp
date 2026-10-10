@@ -470,6 +470,11 @@ void restoreConvIrInBlock(ChainBlock& b) {
     return;
   juce::String loadError;
   b.conv.loadBuffer(buf, reader->sampleRate, &loadError, f.getFileName());
+  // Seed the active width from the IR type (the restore path mirrors the UI
+  // load path, so the block's convWidthMono / convWidthStereo slots stay
+  // coherent after a duplicate, paste, or app-restart re-hydrate).
+  if (b.conv.hasIr())
+    b.convApplyIrType(b.conv.rawChannelCount());
 }
 }  // namespace
 
@@ -1184,6 +1189,9 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
     int reverbType0 = 0, reverbType1 = 0, reverbType2 = 0;
     int reverbType3 = 0, reverbType4 = 0, reverbType5 = 0;
     double convGain = 0.5, convWidth = 1.0;
+    double convDry = 0.5;
+    double convWidthMono = 0.0, convWidthStereo = 1.0;
+    int convIrChannels = 0;  // 0 = none, 1 = mono, 2 = stereo (the IR type)
     double convStartS = 0.0, convEndS = 0.0;
     double convPitch = 0.5;
     double convPreMs = 0.0, convFadeIn = 0.0, convFadeOut = 0.0;
@@ -1293,6 +1301,10 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
           row.reverbSpace = block->reverbSpace;
           row.convGain = block->convGain;
           row.convWidth = block->convWidth;
+          row.convDry = block->convDry;
+          row.convWidthMono = block->convWidthMono;
+          row.convWidthStereo = block->convWidthStereo;
+          row.convIrChannels = block->convIrChannels;
           row.convStartS = block->convStartS;
           row.convEndS = block->convEndS;
           row.convPitch = block->convPitch;
@@ -1457,6 +1469,10 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
         params->setProperty("reverbSpace", row.reverbSpace);
         params->setProperty("convGain", row.convGain);
         params->setProperty("convWidth", row.convWidth);
+        params->setProperty("convDry", row.convDry);
+        params->setProperty("convWidthMono", row.convWidthMono);
+        params->setProperty("convWidthStereo", row.convWidthStereo);
+        params->setProperty("convIrChannels", row.convIrChannels);
         params->setProperty("convStartS", row.convStartS);
         params->setProperty("convEndS", row.convEndS);
         params->setProperty("convPitch", row.convPitch);
@@ -1889,7 +1905,7 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
                              param == "tremoloSpread" || param == "tremoloWave" ||
                              param == "compRatio" || param == "compAttackMs" ||
                              param == "compReleaseMs" || param == "compToneDb" ||
-                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbType0" || param == "reverbType1" || param == "reverbType2" || param == "reverbType3" || param == "reverbType4" || param == "reverbType5" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace" || param == "convGain" || param == "convWidth" || param == "convStartS" || param == "convEndS" || param == "convPitch" || param == "convPreMs" || param == "convFadeIn" || param == "convFadeOut" || param == "convInCurve" || param == "convOutCurve" || param == "convToneDb";
+                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbType0" || param == "reverbType1" || param == "reverbType2" || param == "reverbType3" || param == "reverbType4" || param == "reverbType5" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace" || param == "convGain" || param == "convDry" || param == "convWidth" || param == "convStartS" || param == "convEndS" || param == "convPitch" || param == "convPreMs" || param == "convFadeIn" || param == "convFadeOut" || param == "convInCurve" || param == "convOutCurve" || param == "convToneDb";
   const bool isContinuous = param == "inputGain" || param == "outputGain" || param == "mix" ||
                             isEffectParam;
   const bool isKnown = isContinuous || param == "enabled" || param == "normalize";
@@ -2163,11 +2179,21 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
   } else if (param == "reverbSpace") {
     block->reverbSpace = juce::jlimit(0.0, 1.0, value);
     block->reverb.setParams(block->reverbParams());
+  } else if (param == "convDry") {
+    block->convDry = juce::jlimit(0.0, 1.0, value);
+    // convDry is applied in the chain's mix loop (a dry-path gain); there is
+    // no engine param for it, so no setParams() call here.
   } else if (param == "convGain") {
     block->convGain = juce::jlimit(0.0, 1.0, value);
     block->conv.setParams(block->convParams());
   } else if (param == "convWidth") {
-    block->convWidth = juce::jlimit(0.0, 1.0, value);
+    // User change: save the new width to BOTH the active slot (convWidth,
+    // which the UI reads/writes) AND the storage slot matching the IR type
+    // (mono -> convWidthMono, stereo -> convWidthStereo). The active width is
+    // re-seeded from the storage slot on the next IR load (see
+    // ChainBlock::convApplyIrType), so the user's per-IR-type choice survives
+    // switching IRs.
+    block->convSaveWidth(value);
     block->conv.setParams(block->convParams());
   } else if (param == "convStartS") {
     // Trim times are in seconds of the raw IR; clamp to the IR cap.

@@ -283,6 +283,10 @@ struct ChainBlock {
   juce::LinearSmoothedValue<float> outputGainSmoother;
   float mixNormalized{1.0f};  // 0 = dry, 1 = wet
   juce::LinearSmoothedValue<float> mixSmoother;
+  // Conv "Dry" control: a gain on the dry path only (the DRY term of the Mix
+  // crossfade), 0.5 = unity, +/-24 dB. Convolution blocks only; click-free via its smoother.
+  float convDryNormalized{0.5f};
+  juce::LinearSmoothedValue<float> convDrySmoother;
 
   // Per-block meter levels (dB, -60 floor). Written by the audio thread every
   // block, read by the UI via getMeterLevels(). Input is measured post
@@ -400,11 +404,44 @@ struct ChainBlock {
   // session data loaded into `conv` (the block's IR data is NOT part of the
   // chain state: the house IR path keeps its IR on the tone/model machinery,
   // an effect block has no model slot to hang it on).
-  double convGain = 0.5;    // 0..1 stored; 0.5 = 0 dB (±24 dB span)
-  double convWidth = 1.0;   // 0..1 (stereo width fold)
+  double convGain = 0.5;    // 0..1 stored; conv WET level, 0.5 = 0 dB (hidden knob post
+                            //    dry/wet split; driven only by state migration/presets)
+  double convDry = 0.5;     // 0..1 stored; conv DRY-path level, 0.5 = 0 dB (the "Dry" knob)
+  double convWidth = 1.0;   // 0..1 (the ACTIVE stereo width; seeded from
+                            //          convWidthMono or convWidthStereo
+                            //          on IR load based on the IR type)
+  double convWidthMono = 0.0;   // stored width for MONO IRs -- "off" by default
+  double convWidthStereo = 1.0; // stored width for STEREO IRs -- full by default
+  // The IR's type (1 = mono, 2 = stereo, folded quad = 2). Seeded on IR
+  // load from the engine's rawChannelCount(); the active width is read
+  // from the matching stored slot (mono -> convWidthMono,
+  // stereo -> convWidthStereo), and user changes are saved back to that slot.
+  int convIrChannels = 0;   // 0 = no IR, 1 = mono, 2 = stereo
   double convStartS = 0.0;  // trim window start, seconds of raw IR (0 = 0).
   double convEndS = 0.0;    // trim window end (0 = to the end).
   double convPitch = 0.5;   // 0..1 stored; 0.5 = unity (0.25x..4x length)
+  /** On IR load: determine the IR type and seed the active width from the
+      matching stored slot. irCh: 0 = none, 1 = mono, 2 = stereo (the
+      engine's rawChannelCount(), folded). */
+  void convApplyIrType(int irCh) {
+    convIrChannels = (irCh >= 2) ? 2 : (irCh >= 1 ? 1 : 0);
+    if (convIrChannels == 2)
+      convWidth = convWidthStereo;
+    else if (convIrChannels == 1)
+      convWidth = convWidthMono;
+    else
+      convWidth = 1.0; // no IR -> neutral (the engine is silenced anyway)
+  }
+  /** On user change: save the new width into BOTH the active slot (the UI)
+      AND the storage slot matching the current IR type. */
+  void convSaveWidth(double v) {
+    v = juce::jlimit(0.0, 1.0, v);
+    convWidth = v;
+    if (convIrChannels == 2)
+      convWidthStereo = v;
+    else if (convIrChannels == 1)
+      convWidthMono = v;
+  }
   // The engine's live/creative params, all round-tripped (FogConvolver-2
   // parity): wet pre-delay + the edit-window fades/ramps + the Tone
   // peaking (0 = exactly flat).
