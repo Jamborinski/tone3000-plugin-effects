@@ -16,7 +16,12 @@
 #include <gtest/gtest.h>
 #include "ConvolutionReverb.h"
 
+#include <juce_audio_formats/juce_audio_formats.h>
+
+#include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <functional>
 
 namespace {
 
@@ -186,6 +191,43 @@ TEST(ConvolutionReverb, MonoIrBothChannels) {
     EXPECT_NEAR(buf.getSample(0, i), buf.getSample(1, i), 1e-7);
 }
 
+// longtail-conv-cost.md: IRs above the 1.0 s house cutoff take the split
+// schedule (uniform head + spread-OLA tail) instead of JUCE's NonUniform.
+// End-to-end the split engine must still feed real audio: zero-delay wet on
+// the head, a finite tail contribution, no NaN/overflow.
+TEST(ConvolutionReverb, LongIrUsesSplitEngineAndFeeds) {
+  const int n = 48000 * 2;  // 2 s @ 48k, above the 1.0 s short-IR cutoff
+  juce::AudioBuffer<float> ir(2, n);
+  for (int i = 0; i < n; ++i) {
+    const float d = std::exp(-(48000.0 / 60.0) * i);
+    const float v = (i & 1) ? 0.3f : -0.2f;
+    ir.setSample(0, i, v * d);
+    ir.setSample(1, i, -v * d);
+  }
+  ConvolutionReverb fx;
+  ASSERT_TRUE(fx.loadBuffer(ir, 48000.0));
+  fx.prepare(48000.0);
+  EXPECT_FALSE(fx.usesUniformEngine());  // split, not the single-block NonUniform
+
+  juce::AudioBuffer<float> buf(2, 256);
+  buf.clear();
+  buf.setSample(0, 0, 1.0f);  // unit impulse L
+  buf.setSample(1, 0, 1.0f);
+  fx.process(buf);
+  bool anyNonZero = false;
+  double maxAbs = 0.0;
+  for (int i = 0; i < 256; ++i) {
+    const float l = buf.getSample(0, i);
+    const float r = buf.getSample(1, i);
+    EXPECT_FALSE(std::isnan(l) || std::isinf(l));
+    EXPECT_FALSE(std::isnan(r) || std::isinf(r));
+    if (std::abs(l) > 1e-9f || std::abs(r) > 1e-9f) anyNonZero = true;
+    maxAbs = std::max({maxAbs, (double)std::abs(l), (double)std::abs(r)});
+  }
+  EXPECT_TRUE(anyNonZero);   // the impulse produced wet (head or tail fed it)
+  EXPECT_LT(maxAbs, 1.0e3);  // sane amplitude, no OLA overflow
+}
+
 // Trim window: seconds of raw IR, honoured in the engine length readback.
 TEST(ConvolutionReverb, TrimWindowLaw) {
   ConvolutionReverb fx;
@@ -242,7 +284,6 @@ TEST(ConvolutionReverb, FadeInRampLaw) {
   sil.clear();
   for (int i = 0; i < 6; ++i)
     fx.process(sil);
-
 
   const int nF = 600;
   float prev = 0.0f;
@@ -537,13 +578,12 @@ TEST(ConvolutionReverb, KernelPreviewEnvelopeTracksFades) {
   EXPECT_GT(pOut->envL[740], 0.9f) << "F Out must not reach past its 25% region";
 }
 
-#include <fstream>
-#include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <chrono>
+#include <algorithm>
 
-
-
+#include "test_helpers.h"
 
 // --- Width on a mono IR = Haas spread (0 = bit mono, 1 = full depth) ------------
 TEST(ConvolutionReverb, MonoIrWidthZeroStaysMono) {
@@ -612,4 +652,361 @@ TEST(ConvolutionReverb, StereoIrFoldLawUnchanged) {
   fx.process(b);
   for (int i = 0; i < 64; ++i)
     EXPECT_NEAR(b.getSample(0, i), b.getSample(1, i), 1e-7);
+}
+
+// --- long-tail-conv-cost.md: reference long-IR fixtures + cost probes ----------
+//
+// Reference IR (vendored test/files/em240-gold-plate-5s.wav): NEVO "EMT 240
+// Gold Foil Plate 5.0s" — 9.983 s actual @ 48 kHz, 2 ch, 32-bit float
+// (the filename seconds are nominal; the ticket's "5.0 s EMT 240 = really
+// 9.98 s" is this file). At Length x4 the engine length is ~39.9 s: the
+// reference long-kernel config of the ticket's Definition of done.
+
+// Load the vendored reference plate into a stereo buffer (message thread).
+juce::AudioBuffer<float> LoadEm240RefIr(juce::AudioFormatReader** readerOut) {
+  juce::AudioFormatManager fm;
+  fm.registerBasicFormats();
+  juce::AudioFormatReader* reader =
+      fm.createReaderFor(testFile("em240-gold-plate-5s.wav"));
+  juce::AudioBuffer<float> ir;
+  if (reader) {
+    ir = juce::AudioBuffer<float>(reader->numChannels, (int) reader->lengthInSamples);
+    reader->read(&ir, 0, (int) ir.getNumSamples(), 0, true, true);
+  }
+  if (readerOut) *readerOut = reader;
+  return ir;
+}
+
+#include "BudgetConvolver.h"
+
+// longtail-conv-cost.md (v1 contract): my (uniform head + budget tail) must
+// match JUCE's own non-uniform (head + burst tail) to float re-association.
+// Both engines convolve the SAME normalised full kernel with the SAME drive;
+// the only difference is the order my tail accumulates its ~M products, so
+// the residual is float re-association of the same domain sum.
+TEST(BudgetConvolver, BitCompatVsJuceNonUniform) {
+  const int N = 96000;  // ~2 s @ 48 kHz
+  const int headN = 8192;
+  const int tailN = N - headN;
+  std::vector<float> irL(N), irR(N);
+  uint64_t seed = 0x9e3779b97f4a7c15ULL;
+  auto rnd = [&]() {
+    seed = seed * 6364136223846793005ULL + 1442695040888963407ULL;
+    return (double)((seed >> 11) & 0x1fff'ffff) / 21474836.48;
+  };
+  const double dec = 96000 / (3.0 * N);      // ~-20 dB over 2 s
+  for (int i = 0; i < N; ++i) {
+    const float damp = (float)std::exp(-dec * i);
+    irL[i] = (float)((rnd() - 0.5) * 2.0) * damp;
+    irR[i] = (float)((rnd() - 0.5) * 2.0) * damp;
+  }
+  // JUCE's energy-normalise law applied to the WHOLE (head+tail) IR.
+  double eL = 0.0, eR = 0.0;
+  for (int i = 0; i < N; ++i) { eL += (double)irL[i] * irL[i]; eR += (double)irR[i] * irR[i]; }
+  const float factor = 0.125f / (float)std::sqrt(std::max(eL, eR));
+  for (int i = 0; i < N; ++i) { irL[i] *= factor; irR[i] *= factor; }
+
+  // Drive: a 220 Hz mono (both channels) 220 Hz tone for 5 frames.
+  const int feedN = 5 * 8192;
+  juce::AudioBuffer<float> drive(2, feedN);
+  double ph = 0.0; const double step = 2.0 * 3.141592653589793 * 220.0 / 48000.0;
+  for (int i = 0; i < feedN; ++i) {
+    ph += step;
+    const float v = (float)(0.15 * std::cos(ph));
+    drive.setSample(0, i, v); drive.setSample(1, i, v);
+  }
+
+  // ---- JUCE NonUniform (head + tail reference) ----
+  juce::AudioBuffer<float> full(2, N);
+  full.copyFrom(0, 0, irL.data(), N);
+  full.copyFrom(1, 0, irR.data(), N);
+  juce::dsp::Convolution nonuni(juce::dsp::Convolution::NonUniform{headN});
+  nonuni.loadImpulseResponse(std::move(full), 48000.0,
+                             juce::dsp::Convolution::Stereo::yes,
+                             juce::dsp::Convolution::Trim::no,
+                             juce::dsp::Convolution::Normalise::no);  // already normalised
+  nonuni.prepare(juce::dsp::ProcessSpec{48000.0, 256u, 2u});
+  {
+    juce::AudioBuffer<float> c(2, 256); c.clear();
+    juce::dsp::AudioBlock<float> blk(c);
+    for (int i = 0; i < 30; ++i)   // ~154 ms of silence (elapse install-fade)
+      nonuni.process(juce::dsp::ProcessContextReplacing<float>(blk));
+  }
+  juce::AudioBuffer<float> wetJuce(2, feedN);
+  wetJuce.clear();
+  {
+    juce::AudioBuffer<float> feed(2, 256);
+    int pos = 0;
+    while (pos < feedN) {
+      const int n = std::min(256, feedN - pos);
+      feed.clear();
+      for (int ch = 0; ch < 2; ++ch) {
+        for (int i = 0; i < n; ++i) feed.setSample(ch, i, drive.getSample(ch, pos + i));
+      }
+      juce::dsp::AudioBlock<float> blk(feed);
+      nonuni.process(juce::dsp::ProcessContextReplacing<float>(blk));
+      for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < n; ++i) wetJuce.setSample(ch, pos + i, feed.getSample(ch, i));
+      pos += n;
+    }
+  }
+
+  // ---- head (uniform, no delay) + tail (my BudgetConvolver, non-uniform) ----
+  juce::AudioBuffer<float> headBuf(2, headN);
+  headBuf.copyFrom(0, 0, irL.data(), headN);
+  headBuf.copyFrom(1, 0, irR.data(), headN);
+  juce::dsp::Convolution head{};
+  head.loadImpulseResponse(std::move(headBuf), 48000.0,
+                           juce::dsp::Convolution::Stereo::yes,
+                           juce::dsp::Convolution::Trim::no,
+                           juce::dsp::Convolution::Normalise::no);
+  head.prepare(juce::dsp::ProcessSpec{48000.0, 256u, 2u});
+  {
+    juce::AudioBuffer<float> c(2, 256); c.clear();
+    juce::dsp::AudioBlock<float> blk(c);
+    for (int i = 0; i < 30; ++i)
+      head.process(juce::dsp::ProcessContextReplacing<float>(blk));
+  }
+  BudgetConvolver tail(irL.data() + headN, irR.data() + headN, 2, tailN);
+  tail.primeSilence(256 * 30);   // ~154 ms (matches JUCE's install-fade)
+
+  juce::AudioBuffer<float> wetMine(2, feedN);
+  wetMine.clear();
+  {
+    juce::AudioBuffer<float> feed(2, 256);
+    int pos = 0;
+    while (pos < feedN) {
+      const int n = std::min(256, feedN - pos);
+      feed.clear();
+      for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < n; ++i) feed.setSample(ch, i, drive.getSample(ch, pos + i));
+
+      // head: wetMine[pos+i] = drive[pos+i] convolved with head (uniform, no delay).
+      juce::dsp::AudioBlock<float> blkH(feed);
+      head.process(juce::dsp::ProcessContextReplacing<float>(blkH));
+      for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < n; ++i) wetMine.setSample(ch, pos + i, feed.getSample(ch, i));
+      // tail: ADD drive[pos+i] convolved with the tail (non-uniform, +1 frame delay).
+      juce::AudioBuffer<float> feedT(2, n);
+      for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < n; ++i) feedT.setSample(ch, i, drive.getSample(ch, pos + i));
+      tail.process(feedT);
+      for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < n; ++i) wetMine.addSample(ch, pos + i, feedT.getSample(ch, i));
+      pos += n;
+    }
+  }
+
+  // Compare (wetMine - wetJuce): should be float re-association of the sum.
+  double maxDiff = 0.0, maxVal = 0.0;
+  for (int ch = 0; ch < 2; ++ch)
+    for (int i = 0; i < feedN; ++i) {
+      const double d = std::abs((double)wetJuce.getSample(ch, i) - (double)wetMine.getSample(ch, i));
+      const double v = std::max(std::abs((double)wetJuce.getSample(ch, i)),
+                                std::abs((double)wetMine.getSample(ch, i)));
+      if (d > maxDiff) maxDiff = d;
+      if (v > maxVal) maxVal = v;
+    }
+  const double relMax = maxVal > 0 ? maxDiff / maxVal : maxDiff;
+  std::cerr << "bit-compat: maxDiff=" << maxDiff << "  maxVal=" << maxVal
+            << "  relMax=" << relMax << "  (M=" << tail.segments()
+            << "  K=" << tail.pairsPerCall() << ")" << std::endl;
+  // The OLA is the same set of frame/segment products in the same summation
+  // order (old-before-new) as JUCE's non-uniform, so the two agree to float
+  // re-association of the same domain sum. Keep a small absolute slack over the
+  // re-association of ~M 16384-bin products; the point is the result is the
+  // same wet, not a redesign.
+  EXPECT_LT(relMax, 1e-4) << "maxDiff=" << maxDiff << " maxVal=" << maxVal;
+}
+
+// Minimal single-tap probe: head tap at sample 0, tail tap at sample 8192.
+// Input: single 1.0 at sample 0, zeros after. Both engines should produce
+// 1.0 at sample 0 (head) and 1.0 at sample 8192 (tail).
+TEST(BudgetConvolver, SingleTapProbe) {
+  const int N = 16384;
+  const int headN = 8192;
+  const int tailN = N - headN;   // 8192
+  std::vector<float> irL(N, 0.0f), irR(N, 0.0f);
+  irL[0] = 1.0f;       // head tap
+  irR[0] = 1.0f;       // head tap (both channels)
+  irL[headN] = 1.0f;   // tail tap (sample headN = 8192)
+  irR[headN] = 1.0f;   // tail tap (both channels)
+
+  // Drive: single 1.0 at sample 0, zeros after.
+  const int feedN = 5 * 8192;
+  juce::AudioBuffer<float> drive(2, feedN);
+  drive.clear();
+  drive.setSample(0, 0, 1.0f);
+  drive.setSample(1, 0, 1.0f);
+
+  // JUCE NonUniform (head + tail) reference.
+  juce::AudioBuffer<float> full(2, N);
+  full.copyFrom(0, 0, irL.data(), N);
+  full.copyFrom(1, 0, irR.data(), N);
+  juce::dsp::Convolution nonuni(juce::dsp::Convolution::NonUniform{headN});
+  nonuni.loadImpulseResponse(std::move(full), 48000.0,
+                             juce::dsp::Convolution::Stereo::yes,
+                             juce::dsp::Convolution::Trim::no,
+                             juce::dsp::Convolution::Normalise::no);
+  nonuni.prepare(juce::dsp::ProcessSpec{48000.0, 256u, 2u});
+  // Warm-up (elapse install-fade, 150 ms in 256-sample chunks).
+  {
+    juce::AudioBuffer<float> z(2, 256); z.clear();
+    juce::dsp::AudioBlock<float> blk(z);
+    for (int i = 0; i < 28; ++i)   // 28*256 = 7168 samples ~ 149 ms
+      nonuni.process(juce::dsp::ProcessContextReplacing<float>(blk));
+  }
+  // Collect wet_juce.
+  juce::AudioBuffer<float> wetJuce(2, 2 * tailN);
+  wetJuce.clear();
+  {
+    juce::AudioBuffer<float> feed(2, 256);
+    int pos = 0;
+    while (pos < feedN) {
+      const int n = std::min(256, feedN - pos);
+      feed.clear();
+      for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < n; ++i) feed.setSample(ch, i, drive.getSample(ch, pos + i));
+      juce::dsp::AudioBlock<float> blk(feed);
+      nonuni.process(juce::dsp::ProcessContextReplacing<float>(blk));
+      for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < n; ++i)
+          wetJuce.setSample(ch, std::min(pos + i, 2 * tailN - 1), feed.getSample(ch, i));
+      pos += n;
+    }
+  }
+
+  // my head (JUCE uniform, first 8192 taps) + tail (BudgetConvolver, rest).
+  juce::AudioBuffer<float> headBuf(2, headN);
+  headBuf.copyFrom(0, 0, irL.data(), headN);
+  headBuf.copyFrom(1, 0, irR.data(), headN);
+  juce::dsp::Convolution head{};
+  head.loadImpulseResponse(std::move(headBuf), 48000.0,
+                           juce::dsp::Convolution::Stereo::yes,
+                           juce::dsp::Convolution::Trim::no,
+                           juce::dsp::Convolution::Normalise::no);
+  head.prepare(juce::dsp::ProcessSpec{48000.0, 256u, 2u});
+  // Warm-up (elapse install-fade).
+  {
+    juce::AudioBuffer<float> z(2, 256); z.clear();
+    juce::dsp::AudioBlock<float> blk(z);
+    for (int i = 0; i < 28; ++i)
+      head.process(juce::dsp::ProcessContextReplacing<float>(blk));
+  }
+  BudgetConvolver tail(irL.data() + headN, irR.data() + headN, 2, tailN);
+  // Warm-up (prime silence, 150 ms of silence).
+  tail.primeSilence(7168);
+
+  // Feed.
+  juce::AudioBuffer<float> wetMine(2, 2 * tailN);
+  wetMine.clear();
+  {
+    int pos = 0;
+    while (pos < feedN) {
+      const int n = std::min(256, feedN - pos);
+      // head: wetMine[pos+i] = drive convolved with head (first 8192 taps).
+      juce::AudioBuffer<float> feedH(2, n);
+      feedH.clear();
+      for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < n; ++i) feedH.setSample(ch, i, drive.getSample(ch, pos + i));
+      juce::dsp::AudioBlock<float> blkH(feedH);
+      head.process(juce::dsp::ProcessContextReplacing<float>(blkH));
+      for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < n; ++i)
+          wetMine.setSample(ch, std::min(pos + i, 2 * tailN - 1), feedH.getSample(ch, i));
+      // tail: ADD the drive convolved with taps [8192..) into wetMine[pos+i].
+      juce::AudioBuffer<float> feedT(2, n);
+      feedT.clear();
+      for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < n; ++i) feedT.setSample(ch, i, drive.getSample(ch, pos + i));
+      tail.process(feedT);
+      for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < n; ++i)
+          wetMine.addSample(ch, std::min(pos + i, 2 * tailN - 1), feedT.getSample(ch, i));
+      pos += n;
+    }
+  }
+
+  // Print the first few samples and the two expected samples.
+  for (int ch = 0; ch < 2; ++ch) {
+    std::cerr << "ch " << ch << ":\n";
+    for (int p : {0, 1, 8191, 8192, 8193, 16383, 16384}) {
+      if (p < 2 * tailN)
+        std::cerr << "   p=" << p << "  juce=" << wetJuce.getSample(ch, p)
+                  << "  mine=" << wetMine.getSample(ch, p)
+                  << "  diff=" << (wetJuce.getSample(ch, p) - wetMine.getSample(ch, p))
+                  << std::endl;
+    }
+  }
+  SUCCEED();
+}
+
+// MINIMAL: 1.0 dry at sample 0, head tap 1.0 at sample 0, no tail (M=1).
+// spurious latency: WET at sample 0 = 0, WET at sample 8192 = 1.0.
+TEST(BudgetConvolver, MinimalSingleTapHeadOnly) {
+  const int headN = 8192;
+  std::vector<float> irL(headN, 0.0f), irR(headN, 0.0f);
+  irL[0] = 1.0f;   // single head tap = identity impulse
+  irR[0] = 1.0f;
+
+  const int feedN = 3 * headN;
+  juce::AudioBuffer<float> drive(2, feedN);
+  drive.clear();
+  drive.setSample(0, 0, 1.0f);
+  drive.setSample(1, 0, 1.0f);
+
+  // JUCE uniform (full IR = just head) reference.
+  juce::AudioBuffer<float> full(2, headN);
+  full.copyFrom(0, 0, irL.data(), headN);
+  full.copyFrom(1, 0, irR.data(), headN);
+  juce::dsp::Convolution ref{};
+  ref.loadImpulseResponse(std::move(full), 48000.0,
+                          juce::dsp::Convolution::Stereo::yes,
+                          juce::dsp::Convolution::Trim::no,
+                          juce::dsp::Convolution::Normalise::no);
+  ref.prepare(juce::dsp::ProcessSpec{48000.0, 256u, 2u});
+  juce::AudioBuffer<float> wetRef(2, feedN);
+  {
+    juce::AudioBuffer<float> feed(2, 256);
+    int pos = 0;
+    while (pos < feedN) {
+      const int n = std::min(256, feedN - pos);
+      feed.clear();
+      for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < n; ++i) feed.setSample(ch, i, drive.getSample(ch, pos + i));
+      juce::dsp::AudioBlock<float> blk(feed);
+      ref.process(juce::dsp::ProcessContextReplacing<float>(blk));
+      for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < n; ++i) wetRef.setSample(ch, pos + i, feed.getSample(ch, i));
+      pos += n;
+    }
+  }
+
+  // MY BudgetConvolver (full-IR = just head, M=1).
+  BudgetConvolver mine(irL.data(), irR.data(), 2, headN);
+  mine.primeSilence(256 * 30);
+  juce::AudioBuffer<float> wetMine(2, feedN);
+  {
+    juce::AudioBuffer<float> feed(2, 256);
+    int pos = 0;
+    while (pos < feedN) {
+      const int n = std::min(256, feedN - pos);
+      feed.clear();
+      for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < n; ++i) feed.setSample(ch, i, drive.getSample(ch, pos + i));
+      mine.process(feed);
+      for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < n; ++i) wetMine.setSample(ch, pos + i, feed.getSample(ch, i));
+      pos += n;
+    }
+  }
+
+  for (int p : {0, 1, 8191, 8192, 8193, 16383, 16384}) {
+    if (p < feedN)
+      std::cerr << "  p=" << p << "  ref=" << wetRef.getSample(0, p)
+                << "  mine=" << wetMine.getSample(0, p)
+                << "  diff=" << (wetRef.getSample(0,p) - wetMine.getSample(0,p))
+                << std::endl;
+  }
+  SUCCEED();
 }

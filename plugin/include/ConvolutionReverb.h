@@ -75,6 +75,7 @@
 
 #include "juce_dsp/juce_dsp.h"
 #include "juce_events/juce_events.h" // Timer (drag-coalescing, A6)
+#include "BudgetConvolver.h"
 
 class ConvolutionReverb;  // forward decl (RebuildSettleTimer's owner, below)
 
@@ -274,6 +275,10 @@ class ConvolutionReverb {
     std::shared_ptr<const KernelPreview> preview; // the waveform strip's data
     bool uniform = true;
     int blockSize = 1; // the convolver's prepared maximum block (house cap)
+    // longtail-conv-cost.md: long-IR tail engine (spread-OLA BudgetConvolver).
+    // Present only when the IR was split into (conv uniform head) + (tail).
+    bool longIr = false;
+    std::unique_ptr<BudgetConvolver> tail;
   };
 
   // message thread, builds the whole next engine: trim window -> stretch ->

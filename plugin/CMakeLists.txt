@@ -327,6 +327,8 @@ target_sources(${PROJECT_NAME}
         include/ChainHistory.h
         include/ConvolutionReverb.h
         src/ConvolutionReverb.cpp
+        include/BudgetConvolver.h
+        src/BudgetConvolver.cpp
         include/ImageDeck.h
         include/Spread.h
         src/Spread.cpp

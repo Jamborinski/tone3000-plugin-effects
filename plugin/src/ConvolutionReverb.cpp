@@ -23,26 +23,14 @@ namespace {
 // elapseConvolverInstallFade): JUCE may install its engine through an
 // internal crossfade; the house elapses it on the message thread before
 // the effect goes live. Elapsed in integral 256-sample blocks, ending
-// exactly on a partition boundary (no mid-partition partial chunk).
-//
-// IMPORTANT — apply ONLY to the long/non-uniform path. Measured (this JUCE
-// build, 30+ controlled runs): a FRESH short (single-segment, uniform)
-// engine feeds correctly from sample zero (1-tap wet = exactly 0.125*x,
-// multi-tap law exact), JUCE's prepare() resets its transition state and no
-// silent warm-up is needed. But feeding a short uniform engine silent
-// warm blocks (any count) leaves it dead or heap-garbage dependent for all
-// subsequent real feed. Long IRs (multi-segment) elapse cleanly — the
-// house does exactly this and its suite is green. Hence: elapse long,
-// leave fresh short.
-void elapseInstallFade(juce::dsp::Convolution& conv, double rate, int blockSize) {
-  // 3x the 50 ms install fade, rounded UP to a whole number of blocks.
-  const int blocks = std::max(1LL, (static_cast<long long>(rate * 0.15) + blockSize - 1) / blockSize);
-  juce::AudioBuffer<float> chunk(2, blockSize);
-  chunk.clear();
-  juce::dsp::AudioBlock<float> blk(chunk);
-  for (int b = 0; b < blocks; ++b)
-    conv.process(juce::dsp::ProcessContextReplacing<float>(blk));
-}
+// JUCE build quirk (measured 30+ runs): a FRESH short (single-segment,
+// uniform) engine feeds correctly from sample zero (1-tap wet = exactly
+// 0.125*x, multi-tap law exact) — JUCE's prepare() resets its transition
+// state and no silent warm-up is needed. Feeding it silent warm blocks (any
+// count) leaves it dead or heap-garbage dependent. But a multi-segment
+// engine elapses cleanly. Hence: our head stays FRESH (a uniform engine),
+// and our tail (a BudgetConvolver, multi-segment) is elapsed with one
+// silence frame — see makeEditedState below.
 
 // Copy up to min(dest, src) channels,  samples: JUCE 9's copyFrom is
 // per-channel (destChannel, destStart, source, sourceChannel, srcStart, n).
@@ -59,6 +47,68 @@ void copyChannels(juce::AudioBuffer<float>& dest, int dStart,
   const int ch = std::min(dest.getNumChannels(), src.getNumChannels());
   for (int c = 0; c < ch; ++c)
     dest.copyFrom(c, dStart, src, c, sStart, n);
+}
+
+// longtail-conv-cost.md: run one engine state's convolver over a buffer in
+// place. Short IRs are a single JUCE engine (the legacy path). Long IRs are a
+// uniform head + a spread-OLA tail; the head is run in place, the tail is
+// run on a preserved copy of the dry and the two are summed back in. Both
+// stay below kIrConvolverMaxBlockSize per JUCE call (the chunk loop), so the
+// host block cap still holds.
+void processStateConvolverInChunks(
+    juce::dsp::Convolution& head, BudgetConvolver* tail,
+    juce::AudioBuffer<float>& buf, int n, int ch) {
+  if (tail == nullptr) {
+    juce::dsp::AudioBlock<float> blk(buf);
+    processConvolverInChunks(head, blk);
+    return;
+  }
+  constexpr int kChunk = kIrConvolverMaxBlockSize;
+  for (int start = 0; start < n; start += kChunk) {
+    const int c = std::min(kChunk, n - start);
+    if (ch >= 2) {
+      float dL[kChunk], dR[kChunk];
+      std::copy(buf.getReadPointer(0) + start, buf.getReadPointer(0) + start + c,
+                dL);
+      std::copy(buf.getReadPointer(1) + start, buf.getReadPointer(1) + start + c,
+                dR);
+      juce::AudioBuffer<float> h(2, c);
+      h.copyFrom(0, 0, buf.getReadPointer(0) + start, c);
+      h.copyFrom(1, 0, buf.getReadPointer(1) + start, c);
+      juce::dsp::AudioBlock<float> hblk(h);
+      head.process(juce::dsp::ProcessContextReplacing<float>(hblk));
+      juce::AudioBuffer<float> t(2, c);
+      t.copyFrom(0, 0, dL, c);
+      t.copyFrom(1, 0, dR, c);
+      tail->process(t);
+      float* w0 = buf.getWritePointer(0) + start;
+      float* w1 = buf.getWritePointer(1) + start;
+      const float* hl = h.getReadPointer(0);
+      const float* hr = h.getReadPointer(1);
+      const float* tl = t.getReadPointer(0);
+      const float* tr = t.getReadPointer(1);
+      for (int i = 0; i < c; ++i) {
+        w0[i] = hl[i] + tl[i];
+        w1[i] = hr[i] + tr[i];
+      }
+    } else {
+      float dL[kChunk];
+      std::copy(buf.getReadPointer(0) + start, buf.getReadPointer(0) + start + c,
+                dL);
+      juce::AudioBuffer<float> h(1, c);
+      h.copyFrom(0, 0, buf.getReadPointer(0) + start, c);
+      juce::dsp::AudioBlock<float> hblk(h);
+      head.process(juce::dsp::ProcessContextReplacing<float>(hblk));
+      juce::AudioBuffer<float> t(1, c);
+      t.copyFrom(0, 0, dL, c);
+      tail->process(t);
+      float* w0 = buf.getWritePointer(0) + start;
+      const float* hl = h.getReadPointer(0);
+      const float* tl = t.getReadPointer(0);
+      for (int i = 0; i < c; ++i)
+        w0[i] = hl[i] + tl[i];
+    }
+  }
 }
 
 } // namespace
@@ -208,44 +258,91 @@ std::shared_ptr<ConvolutionReverb::State> ConvolutionReverb::makeEditedState() {
 
   // 4. Engine choice (house 1.0 s cutoff; the two-stage non-uniform engine
   //    is also zero-latency — this is a CPU choice, not an audible one).
-  const bool longIr = static_cast<double>(outLen) / fileRate > kShortIrMaxSeconds;
-  auto conv = longIr
-                  ? std::make_unique<juce::dsp::Convolution>(
-                        juce::dsp::Convolution::NonUniform{kNonUniformHeadSamples})
-                  : std::make_unique<juce::dsp::Convolution>();
-
-  // 5. Load from our edited buffer. JUCE takes ownership, re-samples it to
-  //    the engine rate, and normalises at the house amplitude law.
   const int irCh = (rawCh_ >= 2) ? 2 : 1; // quad folded to stereo already
-  juce::AudioBuffer<float> ir(irCh, outLen);
-  ir.copyFrom(0, 0, eL.data(), outLen);
-  if (irCh >= 2)
-    ir.copyFrom(1, 0, eR.data(), outLen);
-  conv->loadImpulseResponse(std::move(ir), fileRate,
-                            rawCh_ >= 2 ? juce::dsp::Convolution::Stereo::yes
-                                       : juce::dsp::Convolution::Stereo::no,
-                            juce::dsp::Convolution::Trim::no,      // window is
-                                                                   // explicit
-                            juce::dsp::Convolution::Normalise::yes);
-
-  // 6. Prepare (drains JUCE's background engine build) at the house block
-  //    cap. Long (non-uniform) engines additionally elapse the install
-  //    crossfade exactly as the house does; short (uniform) engines are
-  //    verified live-and-correct immediately after prepare, and a silent
-  //    warm-up would corrupt them in this JUCE build (see
-  //    elapseInstallFade).
   const int blockSize = kIrConvolverMaxBlockSize;
-  conv->prepare(juce::dsp::ProcessSpec{rate_,
-                                       static_cast<juce::uint32>(blockSize),
-                                       static_cast<juce::uint32>(2)});
-  if (longIr)
-    elapseInstallFade(*conv, rate_, blockSize);
+  // The waveform strip reflects the raw IR shape (pre-normalisation) in both
+  // modes, so a swap between the short and the long engine never changes it.
+  auto preview =
+      makeKernelPreview(eL, eR, irCh >= 2 ? 2 : 1, rate_, outLen);
+  const bool useTail =
+      static_cast<double>(outLen) / fileRate > kShortIrMaxSeconds &&
+      outLen > kNonUniformHeadSamples;
+
+  std::unique_ptr<juce::dsp::Convolution> conv;
+  std::unique_ptr<BudgetConvolver> tail;
+  if (useTail) {
+    // 4a. Long IR -> the longtail-conv-cost.md schedule: a plain uniform
+    //     engine holds the first kNonUniformHeadSamples taps (no delay,
+    //     same as JUCE's NonUniform head), and a spread-OLA tail engine
+    //     holds the rest (its boundary spike, one old product per call,
+    //     flat per-block cost). JUCE's NonUniform normalises the WHOLE IR
+    //     with 0.125/sqrt(max ch sum2); we apply that exact factor before
+    //     splitting, then load both engines Normalise::no so the sum of the
+    //     two engines is audibly bit-compatible with the old NonUniform.
+    const int headN = kNonUniformHeadSamples;
+    double sL = 0.0, sR = 0.0;
+    for (int i = 0; i < outLen; ++i) {
+      sL += static_cast<double>(eL[i]) * eL[i];
+      if (irCh >= 2)
+        sR += static_cast<double>(eR[i]) * eR[i];
+    }
+    const double maxS = (irCh >= 2) ? std::max(sL, sR) : sL;
+    const float f = (maxS < 1e-8) ? 1.0f
+                                 : static_cast<float>(0.125 / std::sqrt(maxS));
+    for (int i = 0; i < outLen; ++i) {
+      eL[i] *= f;
+      if (irCh >= 2)
+        eR[i] *= f;
+    }
+
+    juce::AudioBuffer<float> hBuf(irCh, headN);
+    hBuf.copyFrom(0, 0, eL.data(), headN);
+    if (irCh >= 2)
+      hBuf.copyFrom(1, 0, eR.data(), headN);
+    conv = std::make_unique<juce::dsp::Convolution>();
+    conv->loadImpulseResponse(
+        std::move(hBuf), fileRate,
+        irCh >= 2 ? juce::dsp::Convolution::Stereo::yes
+                  : juce::dsp::Convolution::Stereo::no,
+        juce::dsp::Convolution::Trim::no, juce::dsp::Convolution::Normalise::no);
+    const int tailLen = outLen - headN;
+    const float* tL = eL.data() + headN;
+    const float* tR = (irCh >= 2) ? eR.data() + headN : tL;
+    tail = std::make_unique<BudgetConvolver>(tL, tR, irCh, tailLen);
+    // The tail carries the same +1-frame OLA latency as an old NonUniform:
+    // elapse it with one silence frame. The head stays fresh — a fresh
+    // uniform engine feeds correctly from sample zero (see the JUCE quirk
+    // note at the top of this file).
+    juce::AudioBuffer<float> cold(irCh, kNonUniformHeadSamples);
+    cold.clear();
+    tail->process(cold);
+    conv->prepare(juce::dsp::ProcessSpec{rate_,
+                                         static_cast<juce::uint32>(blockSize),
+                                         static_cast<juce::uint32>(2)});
+  } else {
+    // 4b. Short IR: single JUCE engine, JUCE-normalised (as before).
+    conv = std::make_unique<juce::dsp::Convolution>();
+    juce::AudioBuffer<float> ir(irCh, outLen);
+    ir.copyFrom(0, 0, eL.data(), outLen);
+    if (irCh >= 2)
+      ir.copyFrom(1, 0, eR.data(), outLen);
+    conv->loadImpulseResponse(
+        std::move(ir), fileRate,
+        irCh >= 2 ? juce::dsp::Convolution::Stereo::yes
+                  : juce::dsp::Convolution::Stereo::no,
+        juce::dsp::Convolution::Trim::no, juce::dsp::Convolution::Normalise::yes);
+    conv->prepare(juce::dsp::ProcessSpec{rate_,
+                                         static_cast<juce::uint32>(blockSize),
+                                         static_cast<juce::uint32>(2)});
+  }
 
   auto st = std::make_shared<State>();
   st->conv = std::move(conv);
-  st->uniform = !longIr;
+  st->uniform = !tail; // tail present => long-IR split engine
+  st->longIr = (tail != nullptr);
+  st->tail = std::move(tail);
   st->blockSize = blockSize;
-  st->preview = makeKernelPreview(eL, eR, irCh >= 2 ? 2 : 1, rate_, outLen);
+  st->preview = std::move(preview);
   return st;
 }
 
@@ -509,9 +606,7 @@ void ConvolutionReverb::process(juce::AudioBuffer<float>& buffer) {
   if (cur != nullptr && cur->conv != nullptr) {
     if (fading)
       copyChannels(buffer, 0, *input, 0, n);
-    auto& conv = *cur->conv;  // process() mutates engine state (audio thread)
-    juce::dsp::AudioBlock<float> blk(buffer);
-    processConvolverInChunks(conv, blk);
+    processStateConvolverInChunks(*cur->conv, cur->tail.get(), buffer, n, ch);
 
     // 3. Width (M/S fold) then smoothed Gain (live, never baked) x the
     //    swap-fade weight. Mono buffers (dual-mono / stereo-mode lane) have
@@ -570,10 +665,9 @@ void ConvolutionReverb::process(juce::AudioBuffer<float>& buffer) {
   //    new engine already serves at full level while the fresh long engine
   //    fills its OLA memory).
   if (fading && dying->conv != nullptr) {
-    auto& convD = *dying->conv;
     copyChannels(fadeOutBuf_, 0, *input, 0, n);
-    juce::dsp::AudioBlock<float> blkD(fadeOutBuf_);
-    processConvolverInChunks(convD, blkD);
+    processStateConvolverInChunks(*dying->conv, dying->tail.get(), fadeOutBuf_,
+                                  n, ch);
 
     const float weight = 1.0f - fade;
     const float gainD = weight *
