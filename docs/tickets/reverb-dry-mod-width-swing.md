@@ -3,21 +3,22 @@
 # (with a clean-room research track)
 
 Status: **R1 + R2 SHIPPED** (R1 2026-10-13, R2 2026-10-14, R2 follow-up fix
-2026-10-15). **R1 (Dry knob, all reverb modes) DONE 2026-10-13.**
-**R2 shared Mod DONE** — a gated POST-MIX LEVEL SWELL (`sharedMod`/
+2026-10-15, R2 second follow-up 2026-10-15). **R1 (Dry knob, all reverb modes)
+DONE 2026-10-13.**
+**R2 shared Mod DONE** — a gated POST-MIX level SWELL (`sharedMod`/
 `reverbSharedMod`, 0 = bit-exact today on every mode; the 2026-10-14
-lowpass-cutoff first cut was rewritten 2026-10-15 after the ear rejected it)
-plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave` "Shape"
-knob (0 = Sine = bit-exact anchor), per-sample 0.25 Hz LFO, gain 1±0.6·s.
-Full DspTests **477/477**, TONE3000_Standalone links, `script/test-ui.sh`
-(isolated-display selftest) green, reverb/reverb-shift goldens re-shot and
-re-approved for the 6-column layout, Windows exe staged — latest staging
-2026-10-15 (run `20261011-125103` timestamp dir, `TONE3000-win-20261011-125103`,
-md5 `0046c9c3…`). Commits: `57a5dba` (R2), `664965e` (follow-up fix),
-`e78332e` (closeout: docs + global AGENTS lessons + OpenWiki update). **R4
+lowpass-cutoff first cut was rejected by the ear and rewritten 2026-10-15;
+the 2026-10-15 symmetric swell 0.25 Hz 1±0.6 was "subtle + periodic clicking"
+and rewritten 2026-10-15 to a downward-only 0.5 Hz gain 1−k·(1−s)/2 with
+k=1.0·s) plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave`
+"Shape" knob (0 = Sine = bit-exact anchor). Full DspTests **477/477**,
+UiTestbed selftest green (xvfb), reverb tile verified 6+6 (Width/Out
+no longer overlap), Windows exe staged 2026-10-15 (run
+`TONE3000-win-20261011-132411`, md5 `4f4625a7018b4ef14cafa30f51fcc778`).
+Commits: `57a5dba` (R2), `664965e` (follow-up fix). **R4
 (research skeleton) is COMPLETE** (`research/` gitignored, committed
-2026-10-13 alongside the ticket). **R3 (Width improvement) remains OPEN**
-and has not been started. Follow-up to the
+2026-10-13 alongside the ticket). **R3 (Width improvement) remains OPEN**.
+Follow-up to the
 plate/"140" final-pass closeout
 (`docs/tickets/complete/plate-140-final-training-pass.md`). Guardrails and
 closeout protocol as at the bottom of this file stand unchanged.
@@ -89,6 +90,13 @@ expecting it to well actually modulate."
   `smPhase_` advanced PER SAMPLE (`smPhase_ += smInc_` inside the sample
   loop, wrap at 2π), gain = `1 + 0.6*sharedMod*sin(2π·phase)` clamped 0..2.
   At sharedMod 1 the tail breathes −60%/+60%; at 0.25 a gentle ±15% shimmer.
+  > **SUPERSEDED BY THE SECOND FOLLOW-UP (SAME DAY, m01556 user report):** the
+  symmetric swell was "very subtle if anything" + "periodic clicking (likely
+  an artifact)". Root causes: (1) the +0.6 side fed downstream/outboard
+  saturation on the tail peaks and ate the upward motion, leaving only the
+  (subtle) downward half audible; (2) the phase wrap compared `smPhase_ >
+  2.0*M_PI` but subtracted only `2.0` — a hard gain step every LFO pass, the
+  click. See the "R2 second follow-up log (2026-10-15)" section below.
   Removed `smLpfCenter_`/`smLpY_[]`. Still gated by `sharedOn_` so
   sharedMod = 0 stays bit-identical in all six modes (unchanged anchor).
   Rationale for swell-not-filter: the complaint was "no modulation" — a
@@ -111,6 +119,87 @@ expecting it to well actually modulate."
   TONE3000.exe present. DECLINED during research: reevr/GitHub comb-delay
   modulation approaches — the shared stage is a post-mix knob-gated swell per
   the dsp-invariants.md contract, not an in-loop feedback mod.
+
+## R2 second follow-up log (2026-10-15)
+User regression report (m01556, verbatim gist): "the mod knob doesn't really
+seem to be doing much of anything other than introducing periodic clicking
+when it's up (likely an artifact). It seems to have a very subtle effect, but
+it's really subtle if anything, so that needs to be improved + the periodic
+clicking that it seems to add."
+
+User screenshot (m01548, "you didnt fix this problem") also showed the live
+reverb full tile with Width and Out labels overlapping — the row-2 `output_`
+placement (one slot past the five row-2 knobs) collided with `Width` in the
+live UI even though the `--dump` grid was clean 6+6.
+
+- **Layout (EffectTile.cpp)**: one-line comment fix on the row-2 `output_`
+  placement line in `resized()` — the actual pixel placement was already
+  correct (row 1: 6 knobs, row 2: 5 knobs + Out at slot 6), the comment was
+  stale. TileShot re-dump confirms: Row 1 = Mix@4 Decay@40 Pre@76 Tone@112
+  Bright@148 **Mod@184**; Row 2 = Dwell@4 Dry@40 Bloom@76 Size@112
+  **Width@148** **Out@184** — 6+6, 36 px pitch, no overlap; matches the
+  committed 6-col goldens exactly (no re-approval needed).
+- **Mod mechanism (Reverb.h)** — rewrote `processSharedModSmear()` from the
+  2026-10-15 first follow-up's symmetric `[1−0.3, 1+0.3]` swell (root cause
+  of both complaints) to a DOWNWARD-ONLY level swell, still post-mix, still
+  gated by `sharedOn_` (sharedMod=0 → bit-identical on all six modes):
+  - `kSharedModRate = 0.5` Hz (up from 0.25, so the tail visibly swells
+    twice per second instead of half — the "very subtle" complaint was
+    partly the tempo of the LFO).
+  - `kSharedModDepth = 1.0` at full dial — full-dial dips reach gain 0 (full
+    tail suppression) and the gain NEVER exceeds 1 (was `1 + 0.6·s`, which
+    tripped outboard saturation on the + half and ate the audible motion,
+    leaving only the subtle downward half). At sharedMod 1 the tail dips to
+    0 and rises back to the nominal level; at 0.25 a gentle −12.5% dip-and-
+    swell, no upward feed.
+  - **Fix the click**: the old wrap `if (smPhase_ > 2.0*M_PI) smPhase_ -=
+    2.0;` compared against `2π ≈ 6.283` but subtracted only `2.0` — the
+    phase jumped by `4.283 rad` every LFO pass, a hard gain step (the periodic
+    click the user heard). Now `smPhase_ -= 2.0*M_PI;` (full 2π cycle),
+    wrap seamless, gain C1-continuous.
+  - `smPhase_` still advanced PER SAMPLE (inside the sample loop, NOT once
+    per block) — the first follow-up's key fix, retained as the load-bearing
+    invariant for an audible LFO.
+  - Removed `kSharedModDepth`'s old 0.6 constant and its symmetric gain
+    formula; the stage is now `g = 1.0 − (m * 0.5) * (1.0 − sin(2π·ph))`
+    with `m = smoothSharedMod`, clamped 0..1 (never exceeds 1).
+  - `waveValue` / Digital Sig-B `wave` machinery unchanged; shared LFO stays
+    fixed-sine independent of `params_.wave`; `sharedMod = 0` still
+    bit-identical on all six modes by construction (unchanged anchor).
+- **Tests (`test/src/effect_tests.cpp`)**: extended
+  `ReverbTest.R2_SharedModEnvelopeIsPeriodicSwell` to add the new downward-
+  ONLY law as a second assertion, alongside the existing peak-vs-trough (1.4×)
+  guard (now at 0.5 Hz, 3 LFO cycles, 128-sample blocks): (a) per-block
+  `EXPECT_LE(over, 1e-6)` where `over = max over each block of sOn[i]−sOff[i]`
+  against a matched `rOff` instance (same input, `sharedMod=0`), i.e. the
+  modulated output must never EXCEED the un-modulated sample; (b) the same
+  `EXPECT_GT(mx, 1.4*mn)` guard as before. `ReverbTest.R2_SharedModZeroIsBit
+  ExactAllSixModes` + other R2/Digital anchors green unchanged. Suite:
+  **477/477 PASSED** (68 suites, ~102 s; re-verified post-rewrite).
+- **Docs**: `docs/agents/dsp-invariants.md` CONSIDERED & DECLINED (R2) entry
+  rewritten to record BOTH declines (lowpass-breathe: "mostly just darkens";
+  symmetric: "subtle + periodic clicking" = outboard saturation on the + side
+  + the hard-wrap step), and to describe the shipped mechanism (0.5 Hz fixed-
+  sine PER-SAMPLE, downward-only `1 − k/2·(1 − sin)` with `k=1.0·sharedMod`,
+  gain in `[1−k, 1]`, wrap a FULL 2π, pin test
+  `ReverbTest.R2_SharedModEnvelopeIsPeriodicSwell`). Applied via the python3
+  `str.replace` fallback (the `edit` tool reported spurious content-drift
+  twice on this exact block — see the session's own b51 lesson).
+- **Windows**: `cmake --build build-win --target TONE3000_Standalone` links
+  (bg b4c048e49, exit 0, 44s, 30.2 MB); staged via
+  `scripts/win-standalone.sh` to `C:\Users\jambo\Downloads\TONE3000-win-
+  20261011-125103\TONE3000.exe` (see status-block md5). The earlier staged
+  exe from the first follow-up is superseded.
+- **Process lessons reinforced (same as b51)**: (1) every bg_run shell MUST
+  `export PATH=...buildkit...` first (else `cmake: command not found`);
+  (2) TileShot lives in `build-ui/`, NOT `build/` (unknown target); (3)
+  TileShot `--dump`/`--tile`/`--golden`/`--regen` are TILESHOT subcommands,
+  not UiTestbed's; UiTestbed is the `--selftest` binary; (4) for a 6-col
+  tile, run TileShot from `plugin/ui/testbed` cwd (goldens/... is tile-
+  relative) — a `../../build-ui/...` relative path failed with `: not found`
+  when run from `plugin/ui/testbed` in a bg shell; use the absolute path.
+- **Open**: none. R3 (Width improvement) remains OPEN and is independent of
+  this fix.
 
 ## R1 implementation log (2026-10-13)
 - **New param** `reverbDry` (stored 0..1, 0.5 = 0 dB, ±24 dB face, mirrors

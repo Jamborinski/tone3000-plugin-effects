@@ -1005,12 +1005,17 @@ class Reverb {
   // knob-independent). OFF (sharedMod 0, the default) -> the entire code path
   // is never entered, so the bit-exact anchor is preserved by construction.
   static constexpr int kNumWaves = 5;  // same 5-detent law as Chorus/Tremolo
-  static constexpr double kSharedModRate = 0.25;     // Hz, slow "breathing" rate
-  static constexpr double kSharedModDepth = 0.6;     // wet-swell depth fraction
-  // The shared Mod is a LEVEL swell on the wet reverb sum (a reevr/dattorro-
-  // style post-modulation: LFO x wet, 0.25 Hz): at high dial the tail audibly
-  // grows and shrinks (swells) rather than merely darkening. Depth is scaled
-  // by the knob so a low setting gives a gentle shimmer.
+  static constexpr double kSharedModRate = 0.5;      // Hz, slow "breathing" rate
+  static constexpr double kSharedModDepth = 1.0;     // wet-swell depth fraction (downward-only full range)
+  // The shared Mod is a DOWNWARD-ONLY LEVEL SWELL on the wet reverb sum
+  // (a reevr/dattorro-style post-modulation: LFO x wet, 0.5 Hz, sine):
+  // the tail dips to a fraction of the nominal level and swells back UP
+  // to it — never above it, so the upward motion can never trip
+  // (a) the user's outboard saturation on the tail peaks (the previous
+  // symmetric [1-k, 1+k] version tripped it on the +k side and read as
+  // "subtle"), and (b) any downstream limiter. Full depth is 1.0 (a pure
+  // dip-to-zero swell at full dial); low dial settings give a gentle
+  // shimmer proportional to the knob.
 
   // One LFO shape over [0,1) phase, in [-1,1]. wave 0 = Sine (bit-identical
   // to the pre-R2 fixed-shape behaviour, the anchor); waves 1..4 match
@@ -1745,24 +1750,34 @@ class Reverb {
   // across all six modes so it stays the one shared, always-sine swell.
   void processSharedModSmear(juce::AudioBuffer<float>& buffer) {
     const int n = buffer.getNumSamples();
-    // Shared Mod is a LEVEL SWELL on the wet sum: gain = 1 + depth*sharedMod
-    // * waveValue(0, phase)  ->  [1 - k, 1 + k] with k = 0.6*sharedMod.
-    // At sharedMod 1 the tail breathes between -60% and +60% relative to the
-    // un-swept level (audible swell, not just a darkening); at 0.25 it's a
-    // gentle +/-15% shimmer. Gated OFF (sharedOn_ false) so the bit-exact
-    // anchor holds by construction (the whole stage is absent). The shared
-    // LFO shape is FIXED SINE (waveValue(0, ...)) — it never reads
+    // Shared Mod is a DOWNWARD-ONLY LEVEL SWELL on the wet sum:
+    //   gain = 1 - k/2 * (1 - sin(2*pi*phase))   where k = kSharedModDepth * sharedMod
+    // so gain ranges in [1 - k, 1] — the reverb tail dips down to a fraction of
+    // the nominal level and swells back UP TO IT, but NEVER ABOVE it. That
+    // asymmetry is the ear-friendly part: the upward swing is toward the
+    // (un-modulated) nominal level the DAW already passes, so it can't feed a
+    // downstream saturator on the peaks (the bug that made the previous
+    // symmetric [1-k, 1+k] version feel "subtle/clicky" — the dip side was
+    // clean but the +k side was tripping outboard saturation on the tail peaks,
+    // eating the modulation). At sharedMod 1 the tail breathes from 0% to 100%
+    // of the nominal; at 0.25 it's a gentle 25% shimmer. Gated OFF (sharedOn_
+    // false) so the bit-exact anchor holds by construction (the whole stage is
+    // absent). The shared LFO shape is FIXED SINE — it never reads
     // params_.wave (Digital's Sig B Shape — a separate, mode-specific knob).
-    // The phase advances PER SAMPLE (shared by both channels, one global
-    // LFO): a per-block constant gain would be audible only as a ~10 Hz
-    // buzz, not a slow swell — the phase must move inside the sample loop.
+    // The phase advances PER SAMPLE (shared by both channels, one global LFO):
+    // a per-block constant gain would be a ~10 Hz buzz, not a slow swell.
+    // Wrap at the FULL 2*PI (not a partial subtract) — the old code compared
+    // to 2*PI but subtracted only 2.0, landing the phase at ~4.28 (a hard gain
+    // discontinuity, audible as a click every ~1.3 s at 0.25 Hz).
     for (int i = 0; i < n; ++i) {
       smPhase_ += static_cast<float>(smInc_);
-      if (smPhase_ >= 2.0f * M_PI_F) smPhase_ -= 2.0f;  // keep the float near 0 for precision
-      const double ph = smPhase_ / (2.0 * M_PI);          // normalised 0..1
-      const double w = waveValue(0, ph);                   // sine in [-1, 1]
-      const float g = static_cast<float>(juce::jlimit(0.0, 2.0,
-          1.0 + kSharedModDepth * static_cast<double>(params_.sharedMod) * w));
+      if (smPhase_ >= 2.0f * M_PI_F) smPhase_ -= 2.0f * M_PI_F;  // keep the float near 0 for precision
+      const double ph = smPhase_ / (2.0 * M_PI);                  // normalised 0..1
+      const double w = waveValue(0, ph);                          // sine in [-1, 1]
+      const double k = kSharedModDepth * static_cast<double>(params_.sharedMod);  // 0..kSharedModDepth
+      // Downward-only: 1 - k/2 * (1 - w)  ->  [1 - k, 1] when w in [-1, 1].
+      const double gD = 1.0 - 0.5 * k * (1.0 - w);
+      const float g = static_cast<float>(juce::jlimit(0.0, 1.0, gD));
       for (int c = 0; c < buffer.getNumChannels(); ++c)
         buffer.getWritePointer(c)[i] *= g;
     }

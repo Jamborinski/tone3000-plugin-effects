@@ -1265,7 +1265,7 @@ void EffectTile::resized() {
     knobF_.setBounds(x, row2Y, colW, knobH); x += colW;   // Dry (right of Dwell)
     modKnob_.setBounds(x, row2Y, colW, knobH); x += colW; // Sig B
     knobD_.setBounds(x, row2Y, colW, knobH); x += colW;   // Size
-    knobE_.setBounds(x, row2Y, colW, knobH);              // Width (6-col even layout)
+    knobE_.setBounds(x, row2Y, colW, knobH); x += colW;    // Width (6 slots: Dwell/Dry/SigB/Size/Width/Out, matching conv's 6+6)
   } else if (reverbCompact) {
     knobD_.setBounds(x, row2Y, colW, knobH); x += colW;   // Size
     knobE_.setBounds(x, row2Y, colW, knobH); x += colW;   // Width

@@ -3633,14 +3633,33 @@ TEST(ReverbTest, R2_SharedModOnChangesOutputEveryMode) {
 }
 
 TEST(ReverbTest, R2_SharedModEnvelopeIsPeriodicSwell) {
-  // The regression behind "just darkens, no modulation" (2026-10-14): a
+  // The regression behind "just darkens, no modulation" (2026-10-14) AND
+  // "periodic clicking" (2026-10-15: the old phase wrap subtracted 2.0 when
+  // the threshold was 2*pi -- a hard gain discontinuity every pass). A
   // per-block-constant gain would pass R2_SharedModOnChangesOutputEveryMode
-  // too (a constant gain also changes the output), so this is the test that
-  // catches a missing per-sample LFO advance. Feed white noise (the comb
-  // stays filled at every block) for 2 full LFO cycles at 0.25 Hz and check
-  // the per-block RMS envelope oscillates: at sharedMod 1 the sweep spans
-  // gain 0.4..1.6, so peak-block RMS must far exceed trough-block RMS.
-  const int periodBlocks = static_cast<int>(kFs / kBlock / 0.25);  // blocks per LFO cycle
+  // too, so this is the test that catches a missing/broken per-sample LFO
+  // advance (and a broken wrap). Feed white noise (the comb stays filled at
+  // every block) for ~3 full LFO cycles at 0.5 Hz and check the per-block RMS
+  // envelope oscillates: at sharedMod 1 the downward-only gain sweeps
+  // 0..1, so the trough block (LFO minimum) must sit a large fraction
+  // below the peak block. The downward-only law itself is STRUCTURAL (gain
+  // = 1 - k/2*(1 - sin(2*pi*ph)), mathematically in [1-k, 1]) and is proven
+  // directly at the gain level:
+  const auto gainAt = [](double phase) {
+    const double w = Reverb::waveValue(0, phase);
+    const double k = Reverb::kSharedModDepth;  // full dial
+    return 1.0 - 0.5 * k * (1.0 - w);
+  };
+  for (int i = 0; i < 4096; ++i) {
+    const double ph = static_cast<double>(i) / 4096.0;
+    const double g = gainAt(ph);
+    EXPECT_GE(g, 0.0 - 1e-9) << "downward-only law: gain < 0 at phase " << ph;
+    EXPECT_LE(g, 1.0 + 1e-9) << "downward-only law: gain > 1 at phase " << ph;
+  }
+  EXPECT_FLOAT_EQ(gainAt(0.25), 1.0);  // sin = -1 -> full swell (gain 1)
+  EXPECT_FLOAT_EQ(gainAt(0.75), 0.0);  // sin = +1 -> full dip (gain 0)
+
+  const int periodBlocks = static_cast<int>(kFs / kBlock / 0.5);  // blocks per LFO cycle
   const int blocks = 3 * periodBlocks;
   Reverb rOn; rOn.prepare(kFs);
   Reverb::Params p;
@@ -3663,7 +3682,8 @@ TEST(ReverbTest, R2_SharedModEnvelopeIsPeriodicSwell) {
   const auto mx = *std::max_element(rms.begin(), rms.end());
   const auto mn = *std::min_element(rms.begin(), rms.end());
   EXPECT_GT(static_cast<double>(mx), 1.4 * mn) << "swell must oscillate: peak " << mx
-      << " vs trough " << mn << " (a per-block-constant gain gives ratio ~1)";
+      << " vs trough " << mn << " (a per-block-constant gain or a broken "
+      << "LFO wrap (e.g. -= 2.0 instead of -= 2*pi) gives a flat, clicky result)";
 }
 
 TEST(ReverbTest, R2_WaveValue0IsExactSine) {

@@ -171,14 +171,23 @@
   of the knob) instead of ADDING an optional swell on top. A lowpass-breathe
   on the wet sum shipped first (2026-10-14) and was DECLINED by the ear
   (2026-10-15, "mostly just darkens the signal"): a filter sweep masks under
-  each mode's own air/tone law and reads as static coloration. The shipped
-  mechanism is a POST-MIX level SWELL, gated fully at `sharedMod==0`
-  (`Reverb::processSharedModSmear`: 0.25 Hz fixed-SINE LFO advanced PER
-  SAMPLE, gain 1 +/- 0.6*sharedMod, clamped 0..2) -- audible tail modulation,
-  mode-independent; `wave` shapes ONLY Digital's Sig-B read-tap waver (wave 0
-  = `std::sin` bit-exact). A per-block-constant gain reads as a buzz, not a
-  swell -- keep the LFO phase advance INSIDE the sample loop (pinned by
-  `ReverbTest.R2_SharedModEnvelopeIsPeriodicSwell`).
+  each mode's own air/tone law and reads as static coloration. A symmetric
+  [1-k, 1+k] level swell shipped second and was DECLINED by the ear
+  (2026-10-15, "subtle + periodic clicking"): the +k side tripped outboard
+  saturation on the tail peaks (eating the upward motion) and the phase wrap
+  compared against 2*pi but subtracted only 2.0 (a hard gain discontinuity
+  every pass -- the click). The shipped mechanism is a POST-MIX, DOWNWARD-ONLY
+  level SWELL, gated fully at `sharedMod==0`
+  (`Reverb::processSharedModSmear`: 0.5 Hz fixed-SINE LFO advanced PER
+  SAMPLE, gain = 1 - k/2*(1 - sin(2*pi*ph)) with k = 1.0*sharedMod, so
+  [1-k, 1] -- the tail dips and swells back up to the nominal level but never
+  ABOVE it, so it can never feed a downstream saturator) -- audible tail
+  modulation, mode-independent; `wave` shapes ONLY Digital's Sig-B read-tap
+  waver (wave 0 = `std::sin` bit-exact). A per-block-constant gain reads as a
+  buzz, not a swell -- keep the LFO phase advance INSIDE the sample loop and
+  the wrap a FULL 2*pi (pinned by
+  `ReverbTest.R2_SharedModEnvelopeIsPeriodicSwell`, which also pins the
+  downward-only gain range [0, 1] at full dial).
 - **MODEL/SUBTYPE rule (general, all effects):** a mode + model/subtype (type)
   MAY carry its own knob defaults and tone law (permissive, not mandatory),
   tuned to its own reference, but it must never override the generic/shared path
