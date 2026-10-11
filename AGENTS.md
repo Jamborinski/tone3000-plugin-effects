@@ -77,7 +77,11 @@ export LD_LIBRARY_PATH=/home/jambo/buildkit/stage/usr/lib/x86_64-linux-gnu${LD_L
 # or direct:
 LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
 ```
-- The suite **grows with features** (477 as of 2026-10-15) — **never assert a
+- **Fresh shells start empty** — every `bg_run`/background task and even some
+  foreground tool calls start with a **minimal env**: `cmake: command not
+  found`, missing stage libs. Export the two canonical lines (`PATH` +
+  `LD_LIBRARY_PATH`) at the top of EVERY build/test command.
+- The suite **grows with features** (478 as of 2026-10-15) — **never assert a
   stale total** on failure; check build RC and that the test names actually ran.
 - **gtest silent-0 trap:** a comma list like `--gtest_filter='A*,B*'` can run
   **0 tests with exit 0** (a green lie); a single `A*` works. Always confirm the
@@ -105,7 +109,7 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
 | **Merge / sync `upstream`**, or push branches/tags | `docs/agents/merge-upstream.md` | `upstream`=tone-3000, `origin`=fork; resolve per-function; DspTests + Win link BEFORE committing; commit only conflicted files; push only when told |
 | Fresh-configure, **GUI** link, ALSA/X11/freetype errors, VST3 helper, add/remove sources | `docs/agents/linux-build-deep.md` | ALSA `-lasound` resolves via pkg-config (the shim — don't revert); `--sysroot` on the helper; never hand-edit `build.ninja` |
 | Touch any **param / knob / scale / tile / chain state** | `docs/agents/ui-wiring.md` | A block field needs all FOUR state places; 0..1-stored human-unit knobs MUST declare `toStored`; new 5-knob kinds need `numParams_` |
-| Change any **DSP engine** (Delay/Chorus/Tremolo/Compressor) | `docs/agents/dsp-invariants.md` | Per-mode laws + CONSIDERED & DECLINED items are contracts; delay design deeper at `plugin/docs/delay-modes.md` |
+| Change any **DSP engine** (Delay/Chorus/Tremolo/Compressor/Reverb) | `docs/agents/dsp-invariants.md` | Per-mode laws + CONSIDERED & DECLINED items are contracts; shared Mod = **wet-unity + added chorus layer, never a crossfade law**; stage CPU ceiling 30 us/block@128 (convolver-class budget); delay design at `plugin/docs/delay-modes.md` |
 | **Train a reverb mode against a convolved IR reference** (Plate now; Spring/Digital/Chamber next) — retune `Reverb.h`, add a reference-IR test, comb/decay metric, plate-vs-conv A/B or CPU bench | `docs/agents/ir-reverb-training.md` | Convolve the reference with the **house** `BudgetConvolver`; **peak-normalise both sides**; **measure the reference's own numbers first** — the guard must pass for the reference (EMT 140 itself drifts +4.85 dB) |
 
 ## Hard rules (always apply, no file needed)
@@ -122,6 +126,10 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   (causal flux integrator OK; the NAB pair are exact inverses; NO oversampling);
   WingComp "LA-2A" (Desktop) is unusable — never pull from it.
 - **Model/subtype (type) tuning is permissive (CAN, not MUST) — 2026-10-13:** a mode + model (e.g. reverb Plate/"140" = mode 2, type 0 today — `Params::type[mode]` axis, `numTypes()`/`defaultDialsForType()`, the "140" chip) may carry its own neutral defaults (50 % dials; decay 2.0 s = reference length) + reference-IR law (LONGER = DARKER, the direction the EMT 140 family itself measures) — it must keep the generic/shared mechanism and the other modes separate (other modes stay bit-identical). The rule is GENERAL (any effect mode/subtype); full text + the plate/"140" instance + the biquad landmine: `docs/agents/ir-reverb-training.md`; one-liners: `dsp-invariants.md` § Reverb + `ui-wiring.md`.
+- **`edit` tool drift trap (this repo, WSL/9p):** it intermittently reports
+  spurious "content drift" even when the oldText is verbatim. On failure:
+  re-check with `grep -n`/`sed -n`, then apply via `python3` `str.replace`
+  (`assert s.count(old)==1`) or `sed -i`, and verify with `grep -n`.
 - **Never commit credentials.** Local-machine rules + session lessons
   (long-job patterns, GPU, build env): the global pi AGENTS.md at
   `C:\\Users\\jambo\\.pi\\agent\\AGENTS.md` (WSL path
