@@ -162,16 +162,23 @@
   50 % rebalance already reproduces the EMT body, so it only cost comb + level --
   REMOVED); denser onset pings (L1 42.7 -> 29.5; Hadamard 42.7 -> 25.1 -- they
   thin the ping).
-- **CONSIDERED & DECLINED (2026-10-14, the shared Mod knob / R2):** driving the
+- **CONSIDERED & DECLINED (2026-10-14/15, the shared Mod knob / R2):** driving the
   shared user-facing Mod knob by SCALING the existing in-loop LFO constants
   (`kSmearAmt` 0.12 / `kFbDriftAmt` 0.03, the per-mode signature swirl in
   `washApSc`/`processSpring`/`processPlate`) -- that would change the
   always-on mode CHARACTER at the knob's 0 default (breaking the bit-exact
   anchor AND the mandate that the swirl is each mode's signature, independent
-  of the knob) instead of ADDING an optional swell on top. The shipped
-  mechanism is a POST-mIX stage gated fully at `sharedMod==0`
-  (`Reverb::processSharedModSmear`, always a sine LFO); `wave` shapes ONLY
-  Digital's Sig-B read-tap waver (wave 0 = `std::sin` bit-exact).
+  of the knob) instead of ADDING an optional swell on top. A lowpass-breathe
+  on the wet sum shipped first (2026-10-14) and was DECLINED by the ear
+  (2026-10-15, "mostly just darkens the signal"): a filter sweep masks under
+  each mode's own air/tone law and reads as static coloration. The shipped
+  mechanism is a POST-MIX level SWELL, gated fully at `sharedMod==0`
+  (`Reverb::processSharedModSmear`: 0.25 Hz fixed-SINE LFO advanced PER
+  SAMPLE, gain 1 +/- 0.6*sharedMod, clamped 0..2) -- audible tail modulation,
+  mode-independent; `wave` shapes ONLY Digital's Sig-B read-tap waver (wave 0
+  = `std::sin` bit-exact). A per-block-constant gain reads as a buzz, not a
+  swell -- keep the LFO phase advance INSIDE the sample loop (pinned by
+  `ReverbTest.R2_SharedModEnvelopeIsPeriodicSwell`).
 - **MODEL/SUBTYPE rule (general, all effects):** a mode + model/subtype (type)
   MAY carry its own knob defaults and tone law (permissive, not mandatory),
   tuned to its own reference, but it must never override the generic/shared path
