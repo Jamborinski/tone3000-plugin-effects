@@ -2,17 +2,22 @@
 # better Width, and the "swirly / swelled" EMT-140 character gap
 # (with a clean-room research track)
 
-Status: **IN PROGRESS** (2026-10-14) — GREENLIT 2026-10-13; **R1 (Dry knob,
-all reverb modes) is DONE 2026-10-13**. **R2 (Mod knob, all modes + Digital
-"Shape" Sig B) is IMPLEMENTED 2026-10-14** — shared post-mix sine-swelling
-modulation (new `sharedMod`/`reverbSharedMod` field, 0 = bit-exact today on
-every mode) plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave`
-"Shape" knob (0 = Sine = today's read-tap waver). Full DspTests 476/476,
-TONE3000_Standalone links, `script/test-ui.sh` (isolated-display selftest)
-green, reverb/reverb-shift goldens re-shot and re-approved, Windows exe
-staged. **R4 (research skeleton) is COMPLETE** (`research/` gitignored,
-committed 2026-10-13 alongside the ticket). R3 (Width improvement) remains
-OPEN and has not been started. Follow-up to the
+Status: **R1 + R2 SHIPPED** (R1 2026-10-13, R2 2026-10-14, R2 follow-up fix
+2026-10-15). **R1 (Dry knob, all reverb modes) DONE 2026-10-13.**
+**R2 shared Mod DONE** — a gated POST-MIX LEVEL SWELL (`sharedMod`/
+`reverbSharedMod`, 0 = bit-exact today on every mode; the 2026-10-14
+lowpass-cutoff first cut was rewritten 2026-10-15 after the ear rejected it)
+plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave` "Shape"
+knob (0 = Sine = bit-exact anchor), per-sample 0.25 Hz LFO, gain 1±0.6·s.
+Full DspTests **477/477**, TONE3000_Standalone links, `script/test-ui.sh`
+(isolated-display selftest) green, reverb/reverb-shift goldens re-shot and
+re-approved for the 6-column layout, Windows exe staged — latest staging
+2026-10-15 (run `20261011-125103` timestamp dir, `TONE3000-win-20261011-125103`,
+md5 `0046c9c3…`). Commits: `57a5dba` (R2), `664965e` (follow-up fix),
+`e78332e` (closeout: docs + global AGENTS lessons + OpenWiki update). **R4
+(research skeleton) is COMPLETE** (`research/` gitignored, committed
+2026-10-13 alongside the ticket). **R3 (Width improvement) remains OPEN**
+and has not been started. Follow-up to the
 plate/"140" final-pass closeout
 (`docs/tickets/complete/plate-140-final-training-pass.md`). Guardrails and
 closeout protocol as at the bottom of this file stand unchanged.

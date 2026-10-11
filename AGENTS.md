@@ -147,6 +147,11 @@ The scheduled OpenWiki GitHub Actions workflow refreshes the repository wiki. Do
 <!-- OPENWIKI:END -->
 
 ## On ticket completion (docs/tickets close-out)
+- **STAGE A WINDOWS EXE — user-mandated, every closeout:** after DspTests /
+  selftest / goldens are green and the commit is in, run
+  `bash scripts/win-standalone.sh` (background it if > 3 min) and record the
+  staging dir (`TONE3000-win-YYYYMMDD-HHMMSS`) + md5 in the ticket log. Don't
+  close a shipped ticket without it (detail: `docs/agents/windows-build.md`).
 - **When closing a ticket in `docs/tickets/` (or a session that landed
   user-visible behavior / API / param / mode changes), RUN the OpenWiki
   UPDATE — `openwiki_begin(root, mode="update")` → plan per the changed
