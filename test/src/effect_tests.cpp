@@ -3637,7 +3637,83 @@ struct ReverbChorusSweep {
   static double amtScale(Reverb& r){ return r.smTestAmtScale_; }
   static void setAmt(Reverb& r, double v){ r.smTestAmtScale_ = v; }
   static void setDepth(Reverb& r, double v){ r.smTestDepthScale_ = v; }
+  static void setLpf(Reverb& r, double hz){ r.smTestLpfHz_ = hz; }
+  static void setFloor(Reverb& r, double v){ r.smTestFloor_ = v; }
 };
+
+TEST(ReverbTest, R2_ModClickSharpnessSweep) {
+  // CLICK-RESIDUE SWEEP (ninth cut, 2026-10-15): the residual "a few
+  // clickly transients" at full Mod is measured as the chorus LAYER's fine
+  // structure (derivative-RMS of the on-minus-off signal) -- the thin comb
+  // residue of the moving delayed voices beating the dense plate tail.
+  // The per-voice darkening (kModVoiceLpfHz, 12 dB/oct) is the lever.
+  // NOTE (honest-metric lesson, 2026-10-15): the FIRST version of this
+  // test printed the TOTAL OUTPUT level as "layer" -- output barely moves
+  // for a small decorrelated layer, so that number (about -1 dB) HID the
+  // real cost: going 6k -> 1.5k cut the true LAYER RMS by ~20 dB (the
+  // bright plate tail sits mostly above the corner). This table prints the
+  // TRUE layer level (RMS of on - off) + sharpness per cutoff.
+  const unsigned int fs = 48000; const int n = 2*fs; const int blk = 128;
+  auto render = [&](double lpfHz, double floor, double amt) {
+    Reverb r; r.prepare(fs);
+    Reverb::Params p;
+    p.decayMs = 1800.0; p.tone = 0.3; p.size = 0.5; p.width = 1.0; p.preMs = 0.0;
+    p.mode = 3; p.volley = 0.4; p.bass = 0.6;
+    p.sharedMod = 1.0;
+    ReverbChorusSweep::setLpf(r, lpfHz);   // hooks are READ in setParams/process -> first
+    ReverbChorusSweep::setFloor(r, floor);
+    ReverbChorusSweep::setAmt(r, amt);
+    r.setParams(p);
+    std::mt19937 rng(4242); std::uniform_real_distribution<float> d(-0.3f, 0.3f);
+    juce::AudioBuffer<float> b(2, blk);
+    std::vector<std::vector<float>> out(2, std::vector<float>(n));
+    for (int off = 0; off + blk <= n; off += blk) {
+      for (int i = 0; i < blk; ++i) { b.setSample(0, i, d(rng)); b.setSample(1, i, d(rng)); }
+      r.process(b);
+      for (int i = 0; i < blk; ++i) { out[0][off+i] = b.getSample(0,i); out[1][off+i] = b.getSample(1,i); }
+    }
+    return out;
+  };
+  const unsigned m1 = fs, m2 = 2*fs;
+  auto rms = [](const auto& o, unsigned a, unsigned b){ double s=0; for(unsigned i=a;i<b;++i) s += (double)o[0][i]*o[0][i] + (double)o[1][i]*o[1][i]; return std::sqrt(s/(2.0*(b-a))); };
+  auto sharp = [](const auto& o, unsigned a, unsigned b){
+    double s=0,c=0; for(unsigned i=a+1;i<b;++i,++c){ const double d0=(double)o[0][i]-(double)o[0][i-1], d1=(double)o[1][i]-(double)o[1][i-1]; s += d0*d0+d1*d1; } return std::sqrt(s/c); };
+  Reverb off; off.prepare(fs);
+  { Reverb::Params p; p.decayMs=1800.0; p.tone=0.3; p.size=0.5; p.width=1.0; p.preMs=0.0; p.mode=3; p.volley=0.4; p.bass=0.6; p.sharedMod=0.0; off.setParams(p); }
+  std::vector<std::vector<float>> offOut(2, std::vector<float>(n));
+  { std::mt19937 rng(4242); std::uniform_real_distribution<float> d(-0.3f, 0.3f);
+    juce::AudioBuffer<float> b(2, blk);
+    for (int off2 = 0; off2 + blk <= n; off2 += blk) {
+      for (int i = 0; i < blk; ++i) { b.setSample(0, i, d(rng)); b.setSample(1, i, d(rng)); }
+      off.process(b);
+      for (int i = 0; i < blk; ++i) { offOut[0][off2+i] = b.getSample(0,i); offOut[1][off2+i] = b.getSample(1,i); }
+    } }
+  const double wetR = rms(offOut,m1,m2), wetS = sharp(offOut,m1,m2);
+  const auto db = [](double x, double ref){ return 20.0*std::log10(std::max(x,1e-12)/std::max(ref,1e-12)); };
+  const char nl[] = "\n";
+  // Reference = the shipped 6 kHz cutoff, floor 0.30 config: report every
+  // line relative to it (layer dB vs wet; sharpness ratio vs the reference
+  // layer's sharpness). A line's layer is a DIFFERENCE sum (on - off), so its
+  // magnitude and sharpness are both relative to that reference layer.
+  auto line = [&](const std::vector<std::vector<float>>& on) {
+    std::vector<std::vector<float>> layer(2, std::vector<float>(n));
+    for (unsigned i = m1; i < m2; ++i) { layer[0][i] = (float)((double)on[0][i]-(double)offOut[0][i]); layer[1][i] = (float)((double)on[1][i]-(double)offOut[1][i]); }
+    return std::make_pair(rms(layer,m1,m2), sharp(layer,m1,m2));
+  };
+  const auto ref = line(render(6000.0, 0.30, 1.8));  // baseline: the 8th-cut ship
+  auto print = [&](const char* tag, double lpf, double fr, double amt) {
+    const auto v = line(render(lpf, fr, amt));
+    std::cout << "  " << tag << " => layer " << db(v.first, wetR)
+              << " dB (wet)  sharp x" << (v.second/ref.second) << " (rel ship)" << nl;
+  };
+  std::cout << "  CLICK-RESIDUE SWEEP (ref = 6 kHz, floor .30, amt 1.8 = the 8th-cut ship):" << nl;
+  print("ship  (6k, .30, 1.8)", 6000.0, 0.30, 1.8);
+  print("4k amt 1.8", 4000.0, 0.30, 1.8);
+  print("4k amt 2.4", 4000.0, 0.30, 2.4);
+  print("4k amt 3.0", 4000.0, 0.30, 3.0);
+  print("3k amt 4.0", 3000.0, 0.30, 4.0);
+  SUCCEED();
+}
 
 TEST(ReverbTest, R2_ModSonicSweep) {
   // CONSTANT SWEEP (2026-10-15, measure-before-committing): the probe put the
@@ -3867,10 +3943,10 @@ TEST(ReverbTest, R2_SharedModChorusesTheTailNotTheAttack) {
       }
     }
     const double ratio = std::sqrt(eOn / (used)) / std::sqrt(eOff / (used));
-    EXPECT_LT(ratio, 2.9) << "added chorus layer must stay under the structural ceiling 1+kModChorusAmt (2.8x): on/off RMS ratio " << ratio;
+    EXPECT_LT(ratio, 4.1) << "added chorus layer must stay under the structural ceiling 1+kModChorusAmt (4.5x): on/off RMS ratio " << ratio;
     EXPECT_GT(ratio, 0.15) << "stage must not be a hard zero: on/off RMS ratio " << ratio;
     EXPECT_GT(ratio, 1.0) << "wet-unity law: engaging Mod must never DROP the wet level (ratio <= 1 means the fifth-cut crossfade traded undelayed against delayed)";
-    EXPECT_LT(pkOn, 2.9 * pkOff) << "added chorus layer must not feed a downstream saturator on peaks: on peak "
+    EXPECT_LT(pkOn, 4.1 * pkOff) << "added chorus layer must not feed a downstream saturator on peaks: on peak "
         << pkOn << " vs off peak " << pkOff;
   }
 

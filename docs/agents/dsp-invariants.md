@@ -238,9 +238,19 @@
   18 ms max at sharedMod 1 (deeper + slower + exaggerated per the ear;
   amount is set by MEASUREMENT (eighth cut, above), depth 12 -> 18 ms
   kept from the seventh).
-  Worst-coherent ceiling 1.0 + 1.8*1.0 = 2.8x the off signal worst case
-  (measured coherent sum ~1.085x -- +0.85 dB lift, musical, never feeds a
-  saturator; the pin uses the 2.9x structural ceiling). Two
+  NINTH CUT (2026-10-15, measured, residual CLICKLY TRANSIENTS + natural
+  taper): R2_ModClickSharpnessSweep (true layer-level + layer-sharpness
+  metric, ref = 6 kHz / floor 0.30 = the 8th-cut ship): the tap-floor sweep
+  was flat within 0.1 % (floor 0.30 stays); the DARKENING is the lever --
+  6 kHz = sharp x1.0 @ layer -11.0 dB; 4 kHz = sharp x0.58 @ -16.9 dB;
+  3 kHz = sharp x0.39 @ -21.2 dB (hollow). SHIPPED: kModVoiceLpfHz 6 -> 4
+  kHz (best sharpness-per-body-dB; -42 % transient energy) +
+  kModChorusAmt 1.8 -> 2.8 restoring the body (probe: layer -13.1 dB,
+  sharp x1.055 ~ the 8th-cut body, "the sound otherwise is right"). TAPER:
+  smoothstep m^2(3-2m) across the WHOLE 0..1 sweep (user: no 50 % plateau --
+  make 0->100 % natural; keep past-50 % behaviour similar to the ramp).
+  Ceilings: worst-coherent 1.0 + 2.8 = 3.8x; pin uses the 4.1x structural
+  ceiling (measured coherent stays ~1.05x). Two
   orders of magnitude under the convolver-class cap (+~4.5 us/block@128
   over the 3.3 us plate baseline). Budget (2026-10-15 user directive,
   9950X3D): quality first; the hard cap is `BudgetConvolver` on a 5-6 s

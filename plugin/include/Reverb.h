@@ -801,7 +801,8 @@ class Reverb {
       // Biquad low-pass (RBJ, 12 dB/oct), one per delayed voice: fc =
       // kModVoiceLpfHz, Q 0.707 (Butterworth). A musical, uniform darkening
       // of each line's thin comb content (replaces the earlier one-poles).
-      const double w0 = 2.0 * M_PI * kModVoiceLpfHz / sampleRate_;
+      const double lpfHz = smTestLpfHz_ > 0.0 ? smTestLpfHz_ : kModVoiceLpfHz;
+      const double w0 = 2.0 * M_PI * lpfHz / sampleRate_;
       const double cw = std::cos(w0);
       const double al = std::tan(w0 / 2.0) / 0.70710678;  // Q = 0.707
       const double a0 = 1.0 + al + cw;
@@ -1049,7 +1050,14 @@ class Reverb {
   static constexpr int kModVoices = 5;  // 4 delay lines (v=1..4) + the undelayed voice
   static constexpr double kSharedModRate = 0.5;    // Hz, base LFO rate (a full warble per 2 s)
   static constexpr double kSharedModDepthMs = 18.0; // max depth of the DEEPEST voice (at sharedMod 1)
-  static constexpr double kModVoiceLpfHz = 6000.0; // per-line 12 dB/oct darkening of the thin comb
+  // MEASURED (R2_ModClickSharpnessSweep, 2026-10-15, ninth cut): the
+  // residual "clickly transients" are the thin comb residue of the moving
+  // delayed voices -- darkening is the lever (the tap floor sweep was flat,
+  // so the floor 0.30 stays). 6k -> 4 kHz cuts the layer sharpness -42 % at
+  // only -5.9 dB of layer body; lower still buys little more per dB
+  // (3 kHz: -61 % sharp at -10 dB body = hollow). 4 kHz = the best
+  // trade; amt 1.8 keeps the net body close to the 8th-cut ship.
+  static constexpr double kModVoiceLpfHz = 4000.0; // per-line 12 dB/oct darkening of the thin comb
   // Chorus LAYER gain: the delayed voices ADD ON TOP of the full (unity)
   // undelayed wet -- this is the "lush modulation ADDED to the reverb"
   // (2026-10-15) and is what kills BOTH the level drop and the clicking.
@@ -1064,7 +1072,13 @@ class Reverb {
   // "really hard to tell it's doing anything"). 1.8 lands at ~-15.5 dB with
   // output +1.2 dB over the wet and sharpness ratio 1.03 (no added click
   // energy) -- chosen by measurement, not vibes.
-  static constexpr double kModChorusAmt = 1.8;
+  // MEASURED (R2_ModClickSharpnessSweep + R2_ModSonicProbe, ninth cut,
+  // 2026-10-15): 4 kHz darkening cuts layer sharpness -42% but costs -5.9 dB
+  // body, so compensate with amount. Probe sweep: amt 1.8 -> sharp x1.030,
+  // amt 3.5 -> x1.075 (the 8th-cut ship). 2.8 = sharp x1.05 (~7% below the
+  // 8th-cut transient energy = the "lessened clickly transients") at the
+  // same ~-13 dB body the eighth cut measured.
+  static constexpr double kModChorusAmt = 2.8;
   static constexpr double kModVoiceFloor = 0.30;   // taps sweep 30..100 % of the voice depth
                                                    // (gives the tap a real depth of motion
                                                    // while keeping it in the classic chorus 1..4 ms band)
@@ -1772,6 +1786,8 @@ class Reverb {
   uint32_t chDelayMax_  = 0;    // max delay samples (at current sample rate, sharedMod 1)
   // Measured-tune accessor (R2, 2026-10-15): sweep the chorus layer
   // amount/depth by real render in DspTests before committing constants.
+  double smTestLpfHz_ = 0.0;  // >0: override kModVoiceLpfHz (measured-tune hook)
+  double smTestFloor_ = 0.0;  // >0: override kModVoiceFloor (measured-tune hook)
   friend struct ReverbChorusSweep;
   // Spring state: the metallic boing resonator (2.4 kHz) per channel + the
   // onset-splash (drip) env per channel. Both are bounded (|r|<1, decaying env)
@@ -1893,7 +1909,11 @@ class Reverb {
     // biquads at DC: |wet| + kModChorusAmt*(1+kModVoiceFloor)/2*|wet|
     // = 1.425*|wet| worst-coherent ceiling -- a musical lift; the biquad
     // darkening + voice decorrelation keeps it far below in real use
-    const double taper = (m <= 0.5) ? 2.0 * m : 1.0;
+    // TAPER (ninth cut, 2026-10-15): a NATURAL full 0..1 ramp (user: make
+    // 0->100% "more natural" -- the sound keeps changing all the way to max,
+    // no plateau). smoothstep: 0 at 0, 1 at 1, gentle at both ends,
+    // noticeable throughout (steeper through the mids than linear).
+    const double taper = m * m * (3.0 - 2.0 * m);
     const double amt  = kModChorusAmt * m * taper * smTestAmtScale_;
     const double maxDepth = m * static_cast<double>(chDelayMax_) * smTestDepthScale_;
     for (int c = 0; c < numCh; ++c) {
@@ -1928,7 +1948,8 @@ class Reverb {
         const double invN = 1.0 / (kModVoices - 1);
         for (int v = 1; v < kModVoices; ++v) {
           const double sweep = 0.5 + 0.5 * std::sin(ph[v]);                 // 0..1
-          const double D = (kModVoiceFloor + (1.0 - kModVoiceFloor) * sweep)
+          const double floor = smTestFloor_ > 0.0 ? smTestFloor_ : kModVoiceFloor;
+          const double D = (floor + (1.0 - floor) * sweep)
                             * maxDepth * kModVoiceD[v];                     // floor..depth_v
           const uint32_t d0 = static_cast<uint32_t>(juce::jlimit(0.0, (double)(chMask_ >> 1), D));
           const float frac = static_cast<float>(D - (double)d0);

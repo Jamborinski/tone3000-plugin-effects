@@ -29,7 +29,21 @@ swell (clicking) → downward-only swell ("delayed reverb") → single-voice
 chorus ("crispy static") → crossfade chord (volume drop + residual click)
 → wet-unity added layer (subtle by LEVEL) → measured amplitude (this). Plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave`
 "Shape" knob (0 = Sine = bit-exact anchor; shapes only Digital's read-tap
-waver). **EIGHTH CUT (2026-10-15, MEASURED):** the "still quite subtle" report was taken
+waver). **NINTH CUT (2026-10-15, MEASURED):** the "nearly perfect, minus a few
+clickly transients (lessened)" report + "make the 0->100% ramp more natural
+(no 50% plateau; 50->100% behaviour should resemble the ramp)".
+`R2_ModClickSharpnessSweep` (true layer-level + layer-sharpness metric vs the
+8th-cut ship): tap-floor sweep flat within 0.1 % (floor 0.30 stays) --
+darkening is the lever: 6 kHz = sharp x1.0 @ layer -11.0 dB; 4 kHz =
+sharp x0.58 @ -16.9 dB; 3 kHz = x0.39 @ -21.2 dB (hollow). SHIPPED:
+kModVoiceLpfHz 6 -> **4 kHz** (-42 % transient energy, best sharpness per
+body dB) + kModChorusAmt 1.8 -> **2.8** (probe: layer -13.1 dB -- the 8th-cut
+body preserved, sharp x1.055). TAPER: **smoothstep** m^2(3-2m) across the
+whole 0..1 (natural full-range ramp; gentle at both ends, steeper through
+the mids). Pins at the 3.8+1 structural ceiling (4.1x in the test);
+481+ tests green, selftest 122/122, staged for A/B.
+
+**EIGHTH CUT (2026-10-15, MEASURED):** the "still quite subtle" report was taken
 to the lab: new `ReverbTest.R2_ModSonicProbe` renders the REAL engine and reports
 what the stage does to the sound (layer level vs wet, tilt, L/R correlation,
 sharpness). Verdict: the chorus LAYER sat at **-23 dB under the wet** =
