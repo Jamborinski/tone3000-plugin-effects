@@ -23,10 +23,10 @@ Plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave` "Shape" knob
 3.3 µs plate baseline — comfortably in budget. Full DspTests **478/478**
 (477 + `ChainRoundTrip.ReverbModeOrderMarkerSurvivesUiJsonRoundTrip`, locking
 the mode-order v2 marker fix in `ProcessorChain.cpp::getChainState`).
-UiTestbed selftest green (xvfb), reverb tile 6+6, Windows exe built
-2026-10-15 (md5 `fb00a44c7ce215cae22a1c18a5e4c06f`, prior staged runs:
-`TONE3000-win-20261011-134940` md5 `f7ebcfd70696ed5313157b213aaa4f87`,
-`TONE3000-win-20261011-132411` md5 `4f4625a7018b4ef14cafa30f51fcc778`).
+UiTestbed selftest green (xvfb), reverb tile 6+6, Windows staged
+2026-10-15 run `TONE3000-win-20261011-145158` (md5 `e4a77bfb50daf5cab4be815bc35997ab`,
+30,083,758 B; earlier runs: `…-134940` md5 `f7ebcfd70696ed5313157b213aaa4f87`,
+`…-132411` md5 `4f4625a7018b4ef14cafa30f51fcc778`).
 Commits: `57a5dba` (R2), `664965e`, `5e71f5a`, `bd3166c` (1st–3rd Mod cuts),
 plus this fourth follow-up. **R4
 (research skeleton) is COMPLETE** (`research/` gitignored, committed
