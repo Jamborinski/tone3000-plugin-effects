@@ -640,7 +640,6 @@ class Reverb {
       for (int t = 0; t < kNumHallTaps; ++t) hallTapsLp_[c][t] = 0.0f;
       digApX_[c] = 0.0f; digApY_[c] = 0.0f;
       smearPhase_[c] = 0.0f;
-      smLpY_[c] = 0.0f;
       fbDriftPhase_[c] = 0.5f*M_PI_F;   // quarter-cycle offset from smearPhase_
       r1Re_[c] = 0.0f; r1Im_[c] = 0.0f; r2Re_[c] = 0.0f; r2Im_[c] = 0.0f; r3Re_[c] = 0.0f; r3Im_[c] = 0.0f;
       r4Re_[c]=0.0f; r4Im_[c]=0.0f; r5Re_[c]=0.0f; r5Im_[c]=0.0f;
@@ -776,11 +775,8 @@ class Reverb {
     sharedOn_ = (params_.sharedMod > 0.0) && (sampleRate_ > 0.0);
     if (sharedOn_) {
       smInc_ = 2.0 * M_PI * kSharedModRate / sampleRate_;
-      smLpfCenter_ = static_cast<float>(1.0 - std::exp(-2.0 * M_PI *
-          (kSharedModBaseF * 1000.0) / sampleRate_));
     } else {
       smInc_ = 0.0;
-      smLpfCenter_ = 0.0f;
     }
   }
 
@@ -1002,20 +998,19 @@ class Reverb {
   // The wash wet was levelled by a LIVE "(1.0 - fb)". That COLLAPSES as decay -> max:
   // with the tone low-pass in the loop the comb's real growth stops scaling like
   // 1/(1-fb), so (1-fb) over-normalises and a long reverb goes silent (measured:
-  // Shared-Mod (R2, all modes) LFO-smear constants — see DESIGN DECISION in
+  // Shared-Mod (R2, all modes) LFO-swell constants — see DESIGN DECISION in
   // docs/tickets/reverb-dry-mod-width-swing.md. This is a NEW, post-mix, knob-
   // gated mechanism (distinct from the always-on kSmearAmt/kFbDriftAmt used
   // inside the Plate/Spring signature paths, which stay bit-identical and
   // knob-independent). OFF (sharedMod 0, the default) -> the entire code path
   // is never entered, so the bit-exact anchor is preserved by construction.
   static constexpr int kNumWaves = 5;  // same 5-detent law as Chorus/Tremolo
-  static constexpr double kSharedModRate = 0.3;      // Hz, slow "breathing" rate
-  static constexpr double kSharedModDepth = 0.3;     // cutoff sweep depth (fraction)
-  static constexpr double kSharedModBaseF = 1.2;     // kHz, mid-band centre (below the
-    // air-law's ~5-8 kHz corner, above the 120-300 Hz body band: the shared
-  // "swell" lives in the MIDDLE band, the plate's signature, perceptually —
-  // the existing mode-specific kSmearAmt/kFbDriftAmt already own the finer,
-  // always-on per-mode character; this is the coarse, user-gated extra on top).
+  static constexpr double kSharedModRate = 0.25;     // Hz, slow "breathing" rate
+  static constexpr double kSharedModDepth = 0.6;     // wet-swell depth fraction
+  // The shared Mod is a LEVEL swell on the wet reverb sum (a reevr/dattorro-
+  // style post-modulation: LFO x wet, 0.25 Hz): at high dial the tail audibly
+  // grows and shrinks (swells) rather than merely darkening. Depth is scaled
+  // by the knob so a low setting gives a gentle shimmer.
 
   // One LFO shape over [0,1) phase, in [-1,1]. wave 0 = Sine (bit-identical
   // to the pre-R2 fixed-shape behaviour, the anchor); waves 1..4 match
@@ -1665,9 +1660,7 @@ class Reverb {
   // and from modOn_/modPhase_ (Digital's separate read-tap waver, untouched).
   bool   sharedOn_      = false;
   double smInc_         = 0.0;   // radians/sample, set in setParams()
-  double smLpfCenter_   = 0.0;   // one-pole LPF alpha at kSharedModBaseF kHz
   float  smPhase_       = 0.0f;  // the ONE shared LFO phase (all channels, one global phase)
-  float  smLpY_[kMaxChannels] = {};   // per-channel one-pole state (continuity across blocks)
   // Spring state: the metallic boing resonator (2.4 kHz) per channel + the
   // onset-splash (drip) env per channel. Both are bounded (|r|<1, decaying env)
   // and reset in reset(). Only used when the Spring law path is live.
@@ -1752,20 +1745,26 @@ class Reverb {
   // across all six modes so it stays the one shared, always-sine swell.
   void processSharedModSmear(juce::AudioBuffer<float>& buffer) {
     const int n = buffer.getNumSamples();
-    for (int c = 0; c < buffer.getNumChannels(); ++c) {
-      float* data = buffer.getWritePointer(c);
-      float& lpY = smLpY_[c];
-      for (int i = 0; i < n; ++i) {
-        smPhase_ += static_cast<float>(smInc_);
-        if (smPhase_ >= 1.0f) smPhase_ -= 1.0f;
-        // Shared Mod uses a FIXED SINE shape (wave 0 = the bit-exact anchor),
-        // independent of params_.wave (Digital's Sig B Shape — a separate, mode-specific knob).
-        const float wav = static_cast<float>(waveValue(0, smPhase_));
-        const float alpha = static_cast<float>(smLpfCenter_ * (1.0 + kSharedModDepth * 0.5 * (1.0 + wav)));
-        const float a = juce::jlimit(0.0f, 1.0f, alpha);
-        lpY += a * (data[i] - lpY);
-        data[i] = lpY;
-      }
+    // Shared Mod is a LEVEL SWELL on the wet sum: gain = 1 + depth*sharedMod
+    // * waveValue(0, phase)  ->  [1 - k, 1 + k] with k = 0.6*sharedMod.
+    // At sharedMod 1 the tail breathes between -60% and +60% relative to the
+    // un-swept level (audible swell, not just a darkening); at 0.25 it's a
+    // gentle +/-15% shimmer. Gated OFF (sharedOn_ false) so the bit-exact
+    // anchor holds by construction (the whole stage is absent). The shared
+    // LFO shape is FIXED SINE (waveValue(0, ...)) — it never reads
+    // params_.wave (Digital's Sig B Shape — a separate, mode-specific knob).
+    // The phase advances PER SAMPLE (shared by both channels, one global
+    // LFO): a per-block constant gain would be audible only as a ~10 Hz
+    // buzz, not a slow swell — the phase must move inside the sample loop.
+    for (int i = 0; i < n; ++i) {
+      smPhase_ += static_cast<float>(smInc_);
+      if (smPhase_ >= 2.0f * M_PI_F) smPhase_ -= 2.0f;  // keep the float near 0 for precision
+      const double ph = smPhase_ / (2.0 * M_PI);          // normalised 0..1
+      const double w = waveValue(0, ph);                   // sine in [-1, 1]
+      const float g = static_cast<float>(juce::jlimit(0.0, 2.0,
+          1.0 + kSharedModDepth * static_cast<double>(params_.sharedMod) * w));
+      for (int c = 0; c < buffer.getNumChannels(); ++c)
+        buffer.getWritePointer(c)[i] *= g;
     }
   }
 };

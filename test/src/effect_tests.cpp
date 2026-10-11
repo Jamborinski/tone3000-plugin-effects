@@ -3632,6 +3632,40 @@ TEST(ReverbTest, R2_SharedModOnChangesOutputEveryMode) {
   }
 }
 
+TEST(ReverbTest, R2_SharedModEnvelopeIsPeriodicSwell) {
+  // The regression behind "just darkens, no modulation" (2026-10-14): a
+  // per-block-constant gain would pass R2_SharedModOnChangesOutputEveryMode
+  // too (a constant gain also changes the output), so this is the test that
+  // catches a missing per-sample LFO advance. Feed white noise (the comb
+  // stays filled at every block) for 2 full LFO cycles at 0.25 Hz and check
+  // the per-block RMS envelope oscillates: at sharedMod 1 the sweep spans
+  // gain 0.4..1.6, so peak-block RMS must far exceed trough-block RMS.
+  const int periodBlocks = static_cast<int>(kFs / kBlock / 0.25);  // blocks per LFO cycle
+  const int blocks = 3 * periodBlocks;
+  Reverb rOn; rOn.prepare(kFs);
+  Reverb::Params p;
+  p.decayMs = 1800.0; p.tone = 0.3; p.size = 0.5; p.width = 1.0; p.preMs = 0.0;
+  p.mode = 3; p.volley = 0.4; p.bass = 0.6;   // Chamber (any mode: the stage is shared)
+  p.sharedMod = 1.0;
+  rOn.setParams(p);
+  std::mt19937 rng(777); std::uniform_real_distribution<float> d(-1.0f, 1.0f);
+  juce::AudioBuffer<float> buf(2, kBlock);
+  std::vector<double> rms;
+  for (int b = 0; b < blocks; ++b) {
+    for (int i = 0; i < kBlock; ++i) { buf.setSample(0, i, d(rng)); buf.setSample(1, i, d(rng)); }
+    rOn.process(buf);
+    if (b >= periodBlocks) {   // skip the first cycle (fill-in transient)
+      double e = 0.0;
+      for (int i = 0; i < kBlock; ++i) e += buf.getSample(0, i) * buf.getSample(0, i);
+      rms.push_back(std::sqrt(e));
+    }
+  }
+  const auto mx = *std::max_element(rms.begin(), rms.end());
+  const auto mn = *std::min_element(rms.begin(), rms.end());
+  EXPECT_GT(static_cast<double>(mx), 1.4 * mn) << "swell must oscillate: peak " << mx
+      << " vs trough " << mn << " (a per-block-constant gain gives ratio ~1)";
+}
+
 TEST(ReverbTest, R2_WaveValue0IsExactSine) {
   // The bit-exact anchor at the helper level: wave 0 (Sine) must be exactly
   // std::sin(2*pi*phase) for arbitrary phase (not a re-derivation).

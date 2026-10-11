@@ -246,11 +246,12 @@ std::vector<EffectParams> paramsFor(const ChainItem& b, bool compact) {
         {&scales::reverbTone(), "reverbTone", "Tone", b.reverbTone, help::Key::reverbTone},
         {&scales::reverbSize(), "reverbSize", "Size", b.reverbSize, help::Key::reverbSize},
         {&scales::reverbWidth(), "reverbWidth", "Width", b.reverbWidth, help::Key::reverbWidth},
-        {&scales::reverbDry(), "reverbDry", "Dry", b.reverbDry, help::Key::reverbDry},
         // R2: the SHARED Mod knob (all six modes, 0 = today's static tail,
-        // 1 = full optional waver on top); rides knobH_ on the full tile only
-        // (numParams_ gates it out compact, like Dry did at index 5).
+        // 1 = full optional waver on top). R2 fix: 6-col even layout — it
+        // rides knobH_ (row 1) and Dry follows it (param index 6, knobF_,
+        // row 2); numParams_ gates both out compact.
         {&scales::reverbSharedMod(), "reverbSharedMod", "Mod", b.reverbSharedMod, help::Key::reverbSharedMod},
+        {&scales::reverbDry(), "reverbDry", "Dry", b.reverbDry, help::Key::reverbDry},
     };
   if (k == "convolution") {
     // Full 6x2 surface (FogConvolver-2 parity): 12 knobs = the fixed
@@ -358,13 +359,13 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
   Knob* knobs[5] = {&knobA_, &knobB_, &knobC_, &knobD_, &knobE_};
   const std::vector<EffectParams> ps = paramsFor(block_, compact_);
   auto knobAt = [=](int i) -> Knob* {
-    // Reverb full tile: index 5 is the Dry knob (knobF_), index 6 is R2's
-    // shared Mod knob (knobH_) -- NOT sigKnob_/modKnob_, which carry the
-    // per-mode Sig A/B (wired in the ctor, not via the param list).
+    // Reverb full tile: index 5 = shared Mod -> knobH_ (row 1, 6-col even
+    // layout), index 6 = Dry -> knobF_ (row 2) -- NOT sigKnob_/modKnob_,
+    // which carry the per-mode Sig A/B (wired in resized(), not the param list).
     if (block_.effectKind == "reverb" && !compact_ && i == 5)
-      return &knobF_;
-    if (block_.effectKind == "reverb" && !compact_ && i == 6)
       return &knobH_;
+    if (block_.effectKind == "reverb" && !compact_ && i == 6)
+      return &knobF_;
     return i < 5 ? knobs[i] : (i == 5 ? &sigKnob_ : (i == 6 ? &modKnob_
                     : (i == 7 ? &knobF_ : (i == 8 ? &knobG_ : &knobH_))));
   };
@@ -739,12 +740,12 @@ void EffectTile::syncKnobs() {
   // not in knobD_/E -- keep the two passes agreeing).
   const std::vector<EffectParams> ps = paramsFor(block_, compact_);
   for (int i = 0; i < numParams_ && i < (int)ps.size(); ++i) {
-    // Reverb full tile: index 5 = Dry -> knobF_, index 6 = shared Mod -> knobH_
-    // (sigKnob_/modKnob_ belong to the per-mode sigs, mapped by resized()).
+    // Reverb full tile: index 5 = shared Mod -> knobH_ (row 1),
+    // index 6 = Dry -> knobF_ (row 2) — 6-column even layout (R2 fix).
     Knob* k = slots[i];
     if (block_.effectKind == "reverb" && !compact_) {
-      if (i == 5) k = &knobF_;
-      else if (i == 6) k = &knobH_;
+      if (i == 5) k = &knobH_;
+      else if (i == 6) k = &knobF_;
     }
     k->setValue((float)knobFromStored(*ps[i].scale, ps[i].raw));
   }
@@ -1217,25 +1218,28 @@ void EffectTile::resized() {
   const bool convFull = conv && !compact_;
   const bool convCompact = conv && compact_;
   const int cols = convFull ? 6
-                            : ((delayFull || compFull) ? 5 : (reverbFull ? 7 : (five ? 4 : 3)));
+                            : ((delayFull || compFull) ? 5 : (reverbFull ? 6 : (five ? 4 : 3)));
   const int colW = (W - 8) / cols;
 
   // Row 1: Mix, p0, p1, p2 [p3 on the full delay tile]. Reverb: full =
-  // Mix/Decay/Pre/Mod/SigA/Tone (R2: Mod left of Tone, the ticket's spot);
-  // compact = Mix/Decay/SigA/Tone (Pre + SigB + Mod hide).
+  // Mix/Decay/Pre/Tone/SigA/Mod (R2 follow-up: 6 even columns, matching
+  // conv; Mod at the row's right end); compact = Mix/Decay/SigA/Tone
+  // (Pre + SigB + Mod hide).
   int x = 4;
   mix_.setBounds(x, row1Y, colW, knobH); x += colW;
   knobA_.setBounds(x, row1Y, colW, knobH); x += colW;  // Decay
   if (reverbFull) {
     knobB_.setBounds(x, row1Y, colW, knobH); x += colW;   // Pre
-    knobH_.setBounds(x, row1Y, colW, knobH); x += colW;   // Mod (R2, left of Tone)
+    knobC_.setBounds(x, row1Y, colW, knobH); x += colW;   // Tone (6-col even layout)
     sigKnob_.setBounds(x, row1Y, colW, knobH); x += colW; // Sig A
+    knobH_.setBounds(x, row1Y, colW, knobH);               // Mod (R2, reverb full)
   } else if (reverbCompact) {
     sigKnob_.setBounds(x, row1Y, colW, knobH); x += colW; // Sig A (right of Decay)
+    knobC_.setBounds(x, row1Y, colW, knobH); x += colW;   // Tone
   } else {
     knobB_.setBounds(x, row1Y, colW, knobH); x += colW;
+    knobC_.setBounds(x, row1Y, colW, knobH); x += colW;
   }
-  knobC_.setBounds(x, row1Y, colW, knobH); x += colW;
   if (delayFull) {
     knobD_.setBounds(x, row1Y, colW, knobH);  // Fb joins row 1
   }
@@ -1259,9 +1263,9 @@ void EffectTile::resized() {
     x += colW;
   } else if (reverbFull) {
     knobF_.setBounds(x, row2Y, colW, knobH); x += colW;   // Dry (right of Dwell)
+    modKnob_.setBounds(x, row2Y, colW, knobH); x += colW; // Sig B
     knobD_.setBounds(x, row2Y, colW, knobH); x += colW;   // Size
-    knobE_.setBounds(x, row2Y, colW, knobH); x += colW;   // Width
-    modKnob_.setBounds(x, row2Y, colW, knobH); x += colW; // Sig B (right of Width)
+    knobE_.setBounds(x, row2Y, colW, knobH);              // Width (6-col even layout)
   } else if (reverbCompact) {
     knobD_.setBounds(x, row2Y, colW, knobH); x += colW;   // Size
     knobE_.setBounds(x, row2Y, colW, knobH); x += colW;   // Width

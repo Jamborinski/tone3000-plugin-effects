@@ -18,6 +18,13 @@ plate/"140" final-pass closeout
 closeout protocol as at the bottom of this file stand unchanged.
 
 ## R2 implementation log (2026-10-14)
+> **SUPERSEDED IN PART** (2026-10-15 user regression report): the shared Mod
+> shipped here as a lowpass cutoff-breathe and was rewritten to a per-sample
+> wet-level swell; the full tile went 7→6 columns to match conv. See the
+> "R2 follow-up log (2026-10-15)" immediately below — the numbers in this
+> section (0.3 Hz, 1.2 kHz, 7 params, 476/476) describe the intermediate
+> state, not the final one.
+
 - **Engine (`plugin/include/Reverb.h`)**:
   - `Params::sharedMod` (0..1) + `Params::wave` (0..4, `Reverb::kNumWaves=5`)
     appended after `type[6]`; clamped in `setParams` (wave `jlimit(0,4, ...)`
@@ -63,6 +70,42 @@ closeout protocol as at the bottom of this file stand unchanged.
 terminal, isolated X display) so they neither steal the operator's input nor
 get polluted by it (user fix request, 2026-10-14). `AGENTS.md` updated to point
 at the wrapper.
+
+## R2 follow-up log (2026-10-15)
+User regression report (m00875): full reverb tile knobs "smoshed to the left
+and larger" vs conv's evenly-justified grid; shared Mod "mostly just darkens
+the signal and basically is at full tilt as long as its above 0. I was
+expecting it to well actually modulate."
+- **Mod mechanism (Reverb.h)**: the R2 first cut was a per-channel 1-pole
+  lowpass cutoff-breathe (1.2 kHz) — perceptually a static darkening, and the
+  LFO phase advanced once per block (not per sample). Rewrote
+  `processSharedModSmear()` as a LEVEL SWELL on the wet sum (reevr/dattorro-
+  style post-modulation): `kSharedModRate = 0.25 Hz`, `kSharedModDepth = 0.6`,
+  `smPhase_` advanced PER SAMPLE (`smPhase_ += smInc_` inside the sample
+  loop, wrap at 2π), gain = `1 + 0.6*sharedMod*sin(2π·phase)` clamped 0..2.
+  At sharedMod 1 the tail breathes −60%/+60%; at 0.25 a gentle ±15% shimmer.
+  Removed `smLpfCenter_`/`smLpY_[]`. Still gated by `sharedOn_` so
+  sharedMod = 0 stays bit-identical in all six modes (unchanged anchor).
+  Rationale for swell-not-filter: the complaint was "no modulation" — a
+  level swell is audible modulation of the tail itself; the filter-breathe
+  masked under the mode's own air/tone laws.
+- **Layout (EffectTile.cpp)**: reverb full tile 7→6 columns (`reverbFull ? 6`),
+  matching conv's 6-col pitch. Row1 = Mix/Decay/Pre/Tone/SigA/Mod(knobH_),
+  row2 = Dwell/Dry(knobF_)/SigB(modKnob_)/Size(knobD_)/Width(knobE_)/Out;
+  `paramsFor` index 5 = `reverbSharedMod`→knobH_, index 6 = `reverbDry`→knobF_;
+  `knobAt()`/`syncKnobs()` remapped to match. Verified by `TileShot --dump`
+  (12 controls, 36 px pitch, both rows even) + `--golden` re-approval of
+  `reverb.png`/`reverb-shift.png` (old 7-col frames replaced; eyeballed per
+  `ui-snapshots.md`).
+- **Tests**: NEW `ReverbTest.R2_SharedModEnvelopeIsPeriodicSwell` — white
+  noise 3 LFO cycles (48k, 128-sample blocks), Chamber mode, sharedMod 1.0,
+  per-block RMS; asserts peak > 1.4× trough (a per-block-constant-gain
+  implementation — the old bug — gives ratio ~1 and fails). Suite:
+  **477/477 PASSED** (68 suites, 102.7 s). UiTestbed `--selftest` green
+  (xvfb, script/test-ui.sh). Windows: `build-win TONE3000_Standalone` links,
+  TONE3000.exe present. DECLINED during research: reevr/GitHub comb-delay
+  modulation approaches — the shared stage is a post-mix knob-gated swell per
+  the dsp-invariants.md contract, not an in-loop feedback mod.
 
 ## R1 implementation log (2026-10-13)
 - **New param** `reverbDry` (stored 0..1, 0.5 = 0 dB, ±24 dB face, mirrors
