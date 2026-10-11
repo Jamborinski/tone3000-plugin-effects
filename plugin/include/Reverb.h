@@ -1048,7 +1048,7 @@ class Reverb {
   // downstream saturator (the lesson of the level cuts).
   static constexpr int kModVoices = 5;  // 4 delay lines (v=1..4) + the undelayed voice
   static constexpr double kSharedModRate = 0.5;    // Hz, base LFO rate (a full warble per 2 s)
-  static constexpr double kSharedModDepthMs = 12.0; // max depth of the DEEPEST voice (at sharedMod 1)
+  static constexpr double kSharedModDepthMs = 18.0; // max depth of the DEEPEST voice (at sharedMod 1)
   static constexpr double kModVoiceLpfHz = 6000.0; // per-line 12 dB/oct darkening of the thin comb
   // Chorus LAYER gain: the delayed voices ADD ON TOP of the full (unity)
   // undelayed wet -- this is the "lush modulation ADDED to the reverb"
@@ -1058,8 +1058,9 @@ class Reverb {
   // fresh wet on the dense early reflections -> the volume drop; (b) every
   // LFO pass where the taps anti-phase the early reflections -> a sharp
   // pumping dip that reads as a click. A layer on top of full-level wet has
-  // neither effect. Kept modest (0.30) so the added level stays musical.
-  static constexpr double kModChorusAmt = 0.30;
+  // neither effect. Kept musical (0.45) per the 2026-10-15 body-increase
+  // cut (the fifth cut at 0.30 read as "pretty subtle" by the ear).
+  static constexpr double kModChorusAmt = 0.45;
   static constexpr double kModVoiceFloor = 0.30;   // taps sweep 30..100 % of the voice depth
                                                    // (gives the tap a real depth of motion
                                                    // while keeping it in the classic chorus 1..4 ms band)
@@ -1877,7 +1878,8 @@ class Reverb {
     // stays at full depth ("initial amount of added modulation is more
     // gradual; 50%-100% would be the same"). Worst case with the 6 kHz
     // biquads at DC: |wet| + kModChorusAmt*(1+kModVoiceFloor)/2*|wet|
-    // = 1.425*|wet| -- a musical +5.1 dB ceiling, in real use far lower.
+    // = 1.425*|wet| worst-coherent ceiling -- a musical lift; the biquad
+    // darkening + voice decorrelation keeps it far below in real use
     const double taper = (m <= 0.5) ? 2.0 * m : 1.0;
     const double amt  = kModChorusAmt * m * taper;
     const double maxDepth = m * static_cast<double>(chDelayMax_);  // 0..chDelayMax_

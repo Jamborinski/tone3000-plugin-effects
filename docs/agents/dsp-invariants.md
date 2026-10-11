@@ -216,9 +216,9 @@
   the 50/50 undelayed-vs-delayed split REPLACES half the fresh wet with the
   biquad-darkened, coherent delayed copies -- the level+brightness drop IS
   the crossfade, and the anti-phase dips on the dense early reflections are
-  the residual clicks. SHIPPED FINAL (2026-10-15, sixth cut): WET-UNITY +
+  the residual clicks. SHIPPED FINAL (2026-10-15, seventh cut): WET-UNITY +
   ADDED CHORUS LAYER -- out = wet + amt*chorus,
-  amt = kModChorusAmt(0.30) * m * taper, taper = 2m for m<=0.5 else 1
+  amt = kModChorusAmt(0.45) * m * taper, taper = 2m for m<=0.5 else 1
   (the user's "gradual first 50% of the sweep" request: 0->0.5 ramps the
   modulation in, 0.5->1 identical). The wet stays at FULL level on every
   sample -> no volume drop and no anti-phase dip -> the click class is gone
@@ -226,10 +226,12 @@
   Butterworth biquad @6 kHz each, taps floored at kModVoiceFloor 0.30 of
   their depth (no ~zero-delay in-phase alignment), incommensurate
   1.31/0.77/1.64x the 0.5 Hz base sine, depths 1.0/0.72/0.50/0.34 x
-  12 ms max at sharedMod 1 (deeper + slower + exaggerated per the ear).
-  Worst-coherent ceiling 1.0 + 0.30*1.0 = 1.30x the off signal (+2.2 dB,
-  incoherent averaging keeps it far under in practice -- measured 1.019
-  on the white-noise fixture) -- musical, never feeds a saturator. Two
+  18 ms max at sharedMod 1 (deeper + slower + exaggerated per the ear;
+  the seventh cut raised amt 0.30 -> 0.45 and max depth 12 -> 18 ms after
+  the sixth read as "pretty subtle" by the ear).
+  Worst-coherent ceiling 1.0 + 0.45*1.0 = 1.45x the off signal (a musical
+  lift; the biquad darkening + voice decorrelation keeps it far under in
+  practice) -- never feeds a saturator. Two
   orders of magnitude under the convolver-class cap (+~4.5 us/block@128
   over the 3.3 us plate baseline). Budget (2026-10-15 user directive,
   9950X3D): quality first; the hard cap is `BudgetConvolver` on a 5-6 s

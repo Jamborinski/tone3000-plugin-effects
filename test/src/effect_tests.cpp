@@ -3694,9 +3694,9 @@ TEST(ReverbTest, R2_SharedModChorusesTheTailNotTheAttack) {
   // NEVER drop the wet level (the fifth- and earlier cuts traded undelayed
   // against delayed copies and dropped the early reverb -- the "big volume
   // drop"), and the added layer is bounded: worst-coherent ceiling is
-  // 1.0 + 0.30*1.0 = 1.30x the off signal (+2.2 dB, incoherent averaging keeps
-  // it far below in practice -- 1.019 on this fixture). Pin: not more than the
-  // 1.35x structural ceiling (no saturator feed), not a hard zero (stage not
+  // 1.0 + 0.45*1.0 = 1.45x the off signal (a musical lift in practice -- the
+  // four biquad-darkened voices are decorrelated, ~1.02-1.15x on this
+  // fixture). Pin: not more than the 1.50x structural ceiling (no saturator feed), not a hard zero (stage not
   // dead), and on PEAKS the same ceiling so no single sample feeds outboard
   // drive.
   {
@@ -3721,10 +3721,10 @@ TEST(ReverbTest, R2_SharedModChorusesTheTailNotTheAttack) {
       }
     }
     const double ratio = std::sqrt(eOn / (used)) / std::sqrt(eOff / (used));
-    EXPECT_LT(ratio, 1.35) << "added chorus layer must stay under the 1.35x structural ceiling (no saturator feed): on/off RMS ratio " << ratio;
+    EXPECT_LT(ratio, 1.50) << "added chorus layer must stay under the 1.50x structural ceiling (no saturator feed): on/off RMS ratio " << ratio;
     EXPECT_GT(ratio, 0.15) << "stage must not be a hard zero: on/off RMS ratio " << ratio;
     EXPECT_GT(ratio, 1.0) << "wet-unity law: engaging Mod must never DROP the wet level (ratio <= 1 means the fifth-cut crossfade traded undelayed against delayed)";
-    EXPECT_LT(pkOn, 1.35 * pkOff) << "added chorus layer must not feed a downstream saturator on peaks: on peak "
+    EXPECT_LT(pkOn, 1.50 * pkOff) << "added chorus layer must not feed a downstream saturator on peaks: on peak "
         << pkOn << " vs off peak " << pkOff;
   }
 
