@@ -256,6 +256,7 @@ juce::ValueTree TONE3000Processor::serializeBlockSettings(const ChainBlock& bloc
       blockState.setProperty("reverbTone", block.reverbTone, nullptr);
       blockState.setProperty("reverbSize", block.reverbSize, nullptr);
       blockState.setProperty("reverbWidth", block.reverbWidth, nullptr);
+      blockState.setProperty("reverbDry", block.reverbDry, nullptr);
       blockState.setProperty("reverbMode", block.reverbMode, nullptr);
       blockState.setProperty("reverbModeOrderV1", 1, nullptr);  // mode-order v2 (Plate 0) marker; makes restore's remap a no-op
       blockState.setProperty("reverbType0", block.reverbType0, nullptr);
@@ -431,6 +432,8 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
       block.reverbWidth = juce::jlimit(Reverb::kMinWidth, Reverb::kMaxWidth,
                                      static_cast<double>(
                                          blockState.getProperty("reverbWidth", 1.0)));
+      block.reverbDry = juce::jlimit(0.0, 1.0, static_cast<double>(
+                                         blockState.getProperty("reverbDry", 0.5)));
       {
         // Mode-order migration (2026-10-13): the reverb mode order was
         // reordered to Plate(0), Spring(1), Room(2), Chamber(3), Hall(4),

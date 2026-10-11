@@ -676,6 +676,29 @@ inline const KnobScale& convFade() {
   return s;
 }
 
+// Dry (reverb block, ALL modes): a DRY-path level on the reverb block,
+// stored 0..1 (0.5 = 0 dB), shown ±24 dB. Same law as convGain (the conv
+// block's Dry knob) — the two knobs are siblings in meaning (each scales
+// only its own block's dry term of the Mix crossfade), so the readout
+// shape matches; kept as a separate scale so the tile can name them
+// independently.
+inline const KnobScale& reverbDry() {
+  static const KnobScale s = [] {
+    KnobScale c;
+    c.toDisplay = [](double n) { return juce::jmap(n, 0.0, 1.0, -24.0, 24.0); };
+    c.fromDisplay = [](double d) { return juce::jmap(d, -24.0, 24.0, 0.0, 1.0); };
+    c.toStored = [](double n) { return n; };          // knob 0..1 == stored 0..1
+    c.fromStored = [](double d) { return d; };
+    c.format = [](double n) {
+      const double db = juce::jmap(n, 0.0, 1.0, -24.0, 24.0);
+      return juce::String(db, std::abs(db) - std::trunc(db) < 0.05 ? 0 : 1) + " dB";
+    };
+    c.editText = [](double n) { return juce::String(juce::jmap(n, 0.0, 1.0, -24.0, 24.0), 1); };
+    return c;
+  }();
+  return s;
+}
+
 // TONE: live peaking on the wet, -12..+12 dB (same shape as convGain at a
 // shorter span; 0 dB = exactly flat).
 inline const KnobScale& convTone() {

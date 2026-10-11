@@ -7,6 +7,8 @@ sources:
     resource: repo://docs/agents/ui-wiring.md
   - id: openwiki-source-7162675b87d5c606d8e7cac9
     resource: repo://plugin/include/MidiMapper.h
+  - id: openwiki-source-fd29254520bef2ca5ddb33d0
+    resource: repo://plugin/src/ProcessorChain.cpp
   - id: openwiki-source-2cc0983ddb88288e69accf75
     resource: repo://plugin/ui/core/KnobScale.h
   - id: openwiki-source-20c83d572d97ba03f654862b
@@ -18,7 +20,7 @@ sources:
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-10T20:30:10.043Z
+    at: 2026-10-11T15:58:48.204Z
 ---
 
 

@@ -195,6 +195,7 @@ ChainItem parseItem(const juce::var& v) {
     item.reverbTone = num(v["params"], "reverbTone", 0.4);
     item.reverbSize = num(v["params"], "reverbSize", 0.6);
     item.reverbWidth = num(v["params"], "reverbWidth", 1.0);
+    item.reverbDry = num(v["params"], "reverbDry", 0.5);
     // Mode-order v2 (Plate 0) migration: presets saved under the old order
     // (Digital 0, Spring 1, Plate 2, Room 3, Chamber 4, Hall 5 — pre the v2
     // marker) remap 0->5, 1->1, 2->0, 3->2, 4->3, 5->4.

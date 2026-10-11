@@ -287,6 +287,9 @@ struct ChainBlock {
   // crossfade), 0.5 = unity, +/-24 dB. Convolution blocks only; click-free via its smoother.
   float convDryNormalized{0.5f};
   juce::LinearSmoothedValue<float> convDrySmoother;
+  // Reverb "Dry" control: same law as convDry (0.5 = unity, +/-24 dB on the
+  // DRY term of the Mix crossfade), reverb blocks only; click-free via smoother.
+  juce::LinearSmoothedValue<float> reverbDrySmoother;
 
   // Per-block meter levels (dB, -60 floor). Written by the audio thread every
   // block, read by the UI via getMeterLevels(). Input is measured post
@@ -360,6 +363,13 @@ struct ChainBlock {
   double compClip = 1.0;       // CLIP [0..2]: 1 (noon) = that mode's normal breakup (modes 1-4)
   double compKnee = 6.0;       // KNEE [1..11] dB: VCA soft-knee width; 6 = the classic
   // Reverb (EffectKind::Reverb): 8-knob digital comb bank (see Reverb.h).
+  // reverbDry — a DRY-path gain on the reverb block (ALL modes):
+  // 0.5 = 0 dB (unity), the -24..+24 dB face. Applied to the DRY term of the
+  // Mix crossfade only (the wet/reverb path is untouched); the anchor law is
+  // `reverbDry 0.5 == bit-identical to no Dry knob` (same class as Digital
+  // Density 0 / Mod 0 in Reverb.h). Mirrors convDry exactly in semantics;
+  // kept as a separate field so the convolution block never touches it.
+  double reverbDry = 0.5;       // 0..1 stored; reverb DRY-path level, 0.5 = 0 dB
   double reverbDecayMs = 1200.0; // 50..3000 ms (tail length)
   double reverbPreMs = 0.0;      // 0..60 ms (pre-delay)
   double reverbTone = 0.4;       // 0..1 (0 bright, 1 dark; low-pass on feedback)

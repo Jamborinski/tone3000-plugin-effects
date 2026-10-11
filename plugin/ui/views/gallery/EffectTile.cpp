@@ -243,6 +243,7 @@ std::vector<EffectParams> paramsFor(const ChainItem& b, bool compact) {
         {&scales::reverbTone(), "reverbTone", "Tone", b.reverbTone, help::Key::reverbTone},
         {&scales::reverbSize(), "reverbSize", "Size", b.reverbSize, help::Key::reverbSize},
         {&scales::reverbWidth(), "reverbWidth", "Width", b.reverbWidth, help::Key::reverbWidth},
+        {&scales::reverbDry(), "reverbDry", "Dry", b.reverbDry, help::Key::reverbDry},
     };
   if (k == "convolution") {
     // Full 6x2 surface (FogConvolver-2 parity): 12 knobs = the fixed
@@ -291,9 +292,12 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
       numParams_(block.effectKind == "compressor" ? 7
                  : (block.effectKind == "convolution"
                     ? ((size <= gallery::kStereoTileSize) ? 5 : 9)
-                    : (block.effectKind == "delay" || block.effectKind == "reverb" ||
-                       block.effectKind == "chorus" || block.effectKind == "tremolo" ? 5
-                       : 3))),
+                    : (block.effectKind == "reverb"
+                       ? ((size <= gallery::kStereoTileSize) ? 5 : 6)  // Dry rides knobF_ on the full tile; hidden compact (like Pre/SigB)
+                       : (block.effectKind == "delay" ||
+                          block.effectKind == "chorus" ||
+                          block.effectKind == "tremolo" ? 5
+                          : 3)))),
       compact_(size <= gallery::kStereoTileSize),
       mix_(knob("Mix", scales::percent(), 1.0f, help::Key::effectMix,
                 (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
@@ -345,6 +349,11 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
   Knob* knobs[5] = {&knobA_, &knobB_, &knobC_, &knobD_, &knobE_};
   const std::vector<EffectParams> ps = paramsFor(block_, compact_);
   auto knobAt = [=](int i) -> Knob* {
+    // Reverb full tile: index 5 is the Dry knob (knobF_), NOT sigKnob_ --
+    // reverb's sigs are separate widgets (sigKnob_/modKnob_ carry the
+    // per-mode Sig A/B, wired in the ctor, not via the param list).
+    if (block_.effectKind == "reverb" && !compact_ && i == 5)
+      return &knobF_;
     return i < 5 ? knobs[i] : (i == 5 ? &sigKnob_ : (i == 6 ? &modKnob_
                     : (i == 7 ? &knobF_ : &knobG_)));
   };
@@ -718,8 +727,11 @@ void EffectTile::syncKnobs() {
   // with i>=5 riding sig/mod/F/G (the compact conv's Dry/Width land there,
   // not in knobD_/E -- keep the two passes agreeing).
   const std::vector<EffectParams> ps = paramsFor(block_, compact_);
-  for (int i = 0; i < numParams_ && i < (int)ps.size(); ++i)
-    slots[i]->setValue((float)knobFromStored(*ps[i].scale, ps[i].raw));
+  for (int i = 0; i < numParams_ && i < (int)ps.size(); ++i) {
+    // Reverb full tile: index 5 = Dry -> knobF_ (sigKnob_ belongs to the sigs).
+    Knob* k = (block_.effectKind == "reverb" && !compact_ && i == 5) ? &knobF_ : slots[i];
+    k->setValue((float)knobFromStored(*ps[i].scale, ps[i].raw));
+  }
   if (block_.effectKind == "compressor") {
     modeCombo_.setSelectedId(juce::jlimit(0, 4, block_.compMode) + 1,
                              juce::dontSendNotification);
@@ -994,7 +1006,7 @@ void EffectTile::syncReverbMode() {
   modKnob_.setHelp(reverbSigHelp(m, 1));
   modKnob_.setValue((float)knobFromStored(*sb, reverbSigRaw(block_, m, 1)));
 
-  syncKnobs();  // refresh the five shared dials (Decay/Pre/Tone/Size/Width)
+  syncKnobs();  // refresh the shared dials (Decay/Pre/Tone/Size/Width, + Dry on the full tile)
 
   // Per-mode contextual label: Spring's Size reads as the spring's "Length".
   knobD_.setLabel(m == 1 ? "Length" : "Size");
@@ -1189,7 +1201,7 @@ void EffectTile::resized() {
   const bool convFull = conv && !compact_;
   const bool convCompact = conv && compact_;
   const int cols = convFull ? 6
-                            : ((delayFull || compFull || reverbFull) ? 5 : (five ? 4 : 3));
+                            : ((delayFull || compFull) ? 5 : (reverbFull ? 6 : (five ? 4 : 3)));
   const int colW = (W - 8) / cols;
 
   // Row 1: Mix, p0, p1, p2 [p3 on the full delay tile]. Reverb: full =
@@ -1228,6 +1240,7 @@ void EffectTile::resized() {
     sigKnob_.setBounds(x, row2Y, colW, knobH);  // the mode's unique (Rate in Mod mode)
     x += colW;
   } else if (reverbFull) {
+    knobF_.setBounds(x, row2Y, colW, knobH); x += colW;   // Dry (right of Dwell)
     knobD_.setBounds(x, row2Y, colW, knobH); x += colW;   // Size
     knobE_.setBounds(x, row2Y, colW, knobH); x += colW;   // Width
     modKnob_.setBounds(x, row2Y, colW, knobH); x += colW; // Sig B (right of Width)

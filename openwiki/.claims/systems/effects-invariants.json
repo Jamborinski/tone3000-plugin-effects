@@ -1,10 +1,20 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:1847337da187ef27cad68653e0568d00b4502ac648d342d97392fc5513656d7a",
+  "pageVersion": "sha256:317efb30b2dc2fa40e439572ee61b192ff06e3cbc9a3eb4dacac7c4c93b860dc",
   "claims": [
     {
       "id": "claim_bcd3a636e7fe47c7aba00662347b2681",
-      "statement": "The Reverb engine has kNumModes = 6 (Digital/Spring/Plate/Room/Chamber/Hall, Reverb.h case 0..5). Decay caps kMaxDecayMsByMode[6] = {2750, 2500, 2500, 2000, 3000, 3500} ms, clamped EXACTLY at the user's stated onset (stabilised above by a decay-gated HF softener kSoftenerAmt = 0.12). The 2000 ms Neutral default dials: Plate (mode 2) has NEUTRAL 50% tone/size/width, decay 2000 ms = the EMT 140 2.0 s reference length (the tuning target, 2026-10-13), while Spring is decay 2000 / tone 0.60 / size 0.60 / width 0.90 (the user's ears), Room 500 ms / 0.40 / 0.30 / 0.70, Chamber 1800 / 1.0 pre / 0.50 / 0.45 / 0.85, Hall 3000 / 2.0 pre / 0.60 / 0.90 / 0.95.",
+      "statement": "The Reverb engine has kNumModes = 6 in V2 mode order (Plate 0, Spring 1, Room 2, Chamber 3, Hall 4, Digital 5; Reverb.h case 0..5). Decay caps kMaxDecayMsByMode[6] = {2500 (Plate), 2500 (Spring), 2000 (Room), 3000 (Chamber), 3500 (Hall), 2750 (Digital)} ms, clamped EXACTLY at the user's stated onset (stabilised above by a decay-gated HF softener kSoftenerAmt = 0.12). enterMode default dials: Plate (mode 0, '140' instance) NEUTRAL 50% tone/size/width, decay 2000 ms = the EMT 140 2.0 s reference length (tuning target, 2026-10-13); Spring decay 2000 / tone 0.60 / size 0.60 / width 0.90 (the user's ears); Room 500 ms / 0.40 / 0.30 / 0.70; Chamber 1800 / 1.0 pre / 0.50 / 0.45 / 0.85; Hall 3000 / 2.0 pre / 0.60 / 0.90 / 0.95; Digital default dials per defaultDialsForMode.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/Reverb.h",
+          "version": "repo-file-v1:sha256:ab7afed2567aa624add79190903f8fec52e58af19d5e7fdb27e5ceeb6f3c5065"
+        }
+      ]
+    },
+    {
+      "id": "claim_2a36822c531e4da7bc5e4ea32b8d8f85",
+      "statement": "MODE/SUBTYPE (type) tuning rule — GENERAL across all effects (plate/'140' is the instance): a mode + model/subtype (Params::type[mode] axis, numTypes(), defaultDialsForType(), UI type chip e.g. the '140' Plate chip = mode 0 type 0 in V2 mode order) MAY carry its own knob defaults and its own tone law tuned against its own reference IR — permissive (CAN, not MUST) — but it must NEVER override the generic/shared path or the OTHER modes (bit-identical pins keep them separate: shared comb lines, norm/wash, convolver, and 15-digit pins for every other mode). defaultDialsForType currently returns false (no type override shipped yet). The same rule applies to delay subtypes (Straight/Mod/BBD/Mem), compressor subtypes, chorus/tape subtypes — each may have its own defaults and law (tuned to ITS reference) provided the generic path stays separate.",
       "evidence": [
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
@@ -12,45 +22,35 @@
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:bc6b799a0a48c7d5c4368b16de0ee59ed644009d6eb887565a9582e655edb665"
-        }
-      ]
-    },
-    {
-      "id": "claim_2a36822c531e4da7bc5e4ea32b8d8f85",
-      "statement": "MODE/SUBTYPE (type) tuning rule — GENERAL across all effects (plate/'140' is the instance): a mode + model/subtype (Params::type[mode] axis, numTypes(), defaultDialsForType(), UI type chip e.g. the '140' Plate chip = mode 2 type 0) MAY carry its own knob defaults and its own tone law tuned against its own reference IR — permissive (CAN, not MUST) — but it must NEVER override the generic/shared path or the OTHER modes (bit-identical pins keep them separate: shared comb lines, norm/wash, convolver, and 15-digit pins for every other mode). The same rule applies to delay subtypes (Straight/Mod/BBD/Mem), compressor subtypes, chorus/tape subtypes — each may have its own defaults and law (tuned to ITS reference) provided the generic path stays separate.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:bc6b799a0a48c7d5c4368b16de0ee59ed644009d6eb887565a9582e655edb665"
+          "version": "repo-file-v1:sha256:ab7afed2567aa624add79190903f8fec52e58af19d5e7fdb27e5ceeb6f3c5065"
         }
       ]
     },
     {
       "id": "claim_3a4ba30b11724d0b9007c9bf8ff7edf4",
-      "statement": "Spring (mode 1) metallic body + boing: the incommensurate resonator cluster (kSpringR1..R3* gains, IR-driven ears-pass — the 1.3–2.8 kHz pings lifted ~+4 dB RELATIVE to the 220–900 Hz body modes, ping + sparkle) replaces the old single-2-kHz boing ring, which is DISABLED (kSpringBoingGain = 0.000, 'replaced by the R1/R2/R3 cluster'; earlier value 0.028). Body gain kSpringBodyGain = 0.018 (modest — 'body is under the metal, not over it').",
+      "statement": "Spring (mode 1) metallic body + boing: the incommensurate resonator cluster (kSpringR1..R3 gains, IR-driven ears-pass — the 1.3–2.8 kHz pings lifted ~+4 dB RELATIVE to the 220–900 Hz body modes, ping + sparkle) replaces the old single-2-kHz boing ring, which is DISABLED (kSpringBoingGain = 0.000, 'replaced by the R1/R2/R3 cluster'; earlier value 0.028). Body gain kSpringBodyGain = 0.018 (modest — 'body is under the metal, not over it').",
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:bc6b799a0a48c7d5c4368b16de0ee59ed644009d6eb887565a9582e655edb665"
+          "version": "repo-file-v1:sha256:ab7afed2567aa624add79190903f8fec52e58af19d5e7fdb27e5ceeb6f3c5065"
         }
       ]
     },
     {
       "id": "claim_6c88d47100f24d97a79aff7c64f4383b",
-      "statement": "Plate/'140' (mode 2, type 0 = EMT 140 model) is tuned against the EMT 140 2.0 s IR convolved through the house BudgetConvolver, BOTH sides peak-normalised, with the reference's OWN numbers measured first (the reference itself drifts +4.85 dB and carries 4.3 dB of steady comb, so the guard must pass for the reference). SHIPPED constants (2026-10-13 final pass): air law kPlateAirHzBright = 4900, kPlateAirHzDark = 3600, kPlateAirStages = 2 (two 1st-order OUT-stage LPF stages, -6 dB/oct each; LONGER = DARKER is the MEASURED direction across the EMT 140 family hflf -27.9 to -34.9 dB over 1.0 to 2.5 s); body kPlateBodyHz = 550, kPlateBodyDb = 1.30, kPlateBodyQ = 0.60; onset 3 taps kPlateOnsetDelayMs = {14.2, 26.9, 51.3} ms, kPlateOnsetAmps = {0.42, 0.30, 0.16} (sum 0.88; the 2026-10-13 final pass replaced the 5-tap bank {12.7, 19.3, 27.8, 43.1, 58.4} sum 1.17 + whip 0.026), kPlateOnsetLpA = 0.33 (~2.5 kHz fizz safety), kPlateBrightOnset = 0.015 (lowered from 0.026; the whip FLOOR under the pings); dwell kPlatePresence = 1.189 (+1.5 dB wet dwell, the user-confirmed LOWER-dwell member of the Plate/Spring pair); wash kPlateWashAp = 0.62 / kPlateWashRef = 0.244; bloom kPlateBloomFrac = 0.32; kPlateColorAmt = 0.3 (OFF: soft-shoulder removed). Guard re-pins at the final state (plate_texture_tests.cpp): level baseline 78.23 (was 83.5977, within the +/-1 dB guard), comb baseline 19.39 (was 20.31, within the model-baseline+1 dB guard); all other five reverb modes bit-identical, 469/469 DspTests green.",
+      "statement": "Plate/'140' (mode 0 in V2 mode order, type 0 = EMT 140 model) is tuned against the EMT 140 2.0 s IR convolved through the house BudgetConvolver, BOTH sides peak-normalised, with the reference's OWN numbers measured first (the reference itself drifts +4.85 dB and carries 4.3 dB of steady comb, so the guard must pass for the reference). SHIPPED constants (2026-10-13 final pass): air law kPlateAirHzBright = 4900, kPlateAirHzDark = 3600, kPlateAirStages = 2 (two 1st-order OUT-stage LPF stages, -6 dB/oct each; LONGER = DARKER is the MEASURED direction across the EMT 140 family hflf -27.9 to -34.9 dB over 1.0 to 2.5 s); body kPlateBodyHz = 550, kPlateBodyDb = 1.30, kPlateBodyQ = 0.60; onset 3 taps kPlateOnsetDelayMs = {14.2, 26.9, 51.3} ms, kPlateOnsetAmps = {0.42, 0.30, 0.16} (sum 0.88; the 2026-10-13 final pass replaced the 5-tap bank {12.7, 19.3, 27.8, 43.1, 58.4} sum 1.17 + whip 0.026), kPlateOnsetLpA = 0.33 (~2.5 kHz fizz safety), kPlateBrightOnset = 0.015 (lowered from 0.026; the whip FLOOR under the pings); dwell kPlatePresence = 1.189 (+1.5 dB wet dwell, the user-confirmed LOWER-dwell member of the Plate/Spring pair); wash kPlateWashAp = 0.62 / kPlateWashRef = 0.244; bloom kPlateBloomFrac = 0.32; kPlateColorAmt = 0.3 (OFF: soft-shoulder removed). Guard re-pins at the final state (plate_texture_tests.cpp): level baseline 78.23 (was 83.5977, within the +/-1 dB guard), comb baseline 19.39 (was 20.31, within the model-baseline+1 dB guard); all other five reverb modes bit-identical; DspTests green (470/470 as of the 2026-10-13 R1 reverbDry addition).",
       "evidence": [
         {
           "resource": "repo://docs/agents/ir-reverb-training.md",
-          "version": "repo-file-v1:sha256:cc42bff1f05da26db208ef852902a165d0a97f16f96b85a0c04e56510178febc"
+          "version": "repo-file-v1:sha256:6e4fda9f00982ab53c4436884ab707d3565ac54c031be3a54be7af6610788530"
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:bc6b799a0a48c7d5c4368b16de0ee59ed644009d6eb887565a9582e655edb665"
+          "version": "repo-file-v1:sha256:ab7afed2567aa624add79190903f8fec52e58af19d5e7fdb27e5ceeb6f3c5065"
         },
         {
           "resource": "repo://test/src/plate_texture_tests.cpp",
-          "version": "repo-file-v1:sha256:e149d3ec9f8c98d911164b9f2bd4168ed4182f8ded106e717083934893daea30"
+          "version": "repo-file-v1:sha256:604d4a41478141e78d16aaa9dda15358f868cdce466f37f2755b57129739abdd"
         }
       ]
     },
@@ -60,25 +60,25 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/ir-reverb-training.md",
-          "version": "repo-file-v1:sha256:cc42bff1f05da26db208ef852902a165d0a97f16f96b85a0c04e56510178febc"
+          "version": "repo-file-v1:sha256:6e4fda9f00982ab53c4436884ab707d3565ac54c031be3a54be7af6610788530"
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:bc6b799a0a48c7d5c4368b16de0ee59ed644009d6eb887565a9582e655edb665"
+          "version": "repo-file-v1:sha256:ab7afed2567aa624add79190903f8fec52e58af19d5e7fdb27e5ceeb6f3c5065"
         }
       ]
     },
     {
       "id": "claim_e5172b883ab941b08fb295067b071375",
-      "statement": "The Size dial (params_.size) was a NO-OP on the Plate path (only Spring and Room read it) -- the 2026-10-13 user redirect: make it mean plate-class, not an arbitrary knob. SHIPPED law: a corner shift on the air-law two-stage LPF (kPlateSizeCornerFrac = 0.30 of the 4900-to-3600 Hz air-law range, +/-780 Hz per unit size) set in Reverb::setParams: sizeDelta = (0.5 - params_.size) * 2.0 * kPlateSizeCornerFrac; airFrac = jlimit(0,1, frac - sizeDelta); fc = kPlateAirHzBright - (kPlateAirHzBright - kPlateAirHzDark) * airFrac. MEASURED direction (hflf 6-12k vs 120-300 Hz @0.4-0.6 s, 2.0 s decay): size 0.0 = -59.9 dB, size 0.5 = -46.7 dB, size 1.0 = -35.3 dB -- size 1 (LARGE-PLATE class) is BRIGHTER, size 0 (compact) is DARKER; the first-draft physics guess (bigger = darker) was backwards and the measurement won. At size 0.5 sizeDelta = 0.0, so airLp_ is bit-identical to the pre-size-law 140 tuning (anchor). Guards (plate_family_tests.cpp SizeLaw): monotone brightening s1 > s5 > s0 (measured) and no comb growth at either extreme (comb 0.0=6.10, 0.5=19.39, 1.0=21.74; guard 19.39+1 dB at size 1). TODO (future ticket, NOT shipped): Chamber, Hall, and Digital reverb paths ALSO never read params_.size -- audit those paths the same way.",
+      "statement": "The Size dial (params_.size) was a NO-OP on the Plate path (mode 0 in V2 order) -- the 2026-10-13 user redirect: make it mean plate-class, not an arbitrary knob. SHIPPED law: a corner shift on the air-law two-stage LPF (kPlateSizeCornerFrac = 0.30 of the 4900-to-3600 Hz air-law range, +/-780 Hz per unit size) set in Reverb::setParams: sizeDelta = (0.5 - params_.size) * 2.0 * kPlateSizeCornerFrac; airFrac = jlimit(0,1, frac - sizeDelta); fc = kPlateAirHzBright - (kPlateAirHzBright - kPlateAirHzDark) * airFrac. MEASURED direction (hflf 6-12k vs 120-300 Hz @0.4-0.6 s, 2.0 s decay): size 0.0 = -59.9 dB, size 0.5 = -46.7 dB, size 1.0 = -35.3 dB -- size 1 (LARGE-PLATE class) is BRIGHTER, size 0 (compact) is DARKER; the first-draft physics guess (bigger = darker) was backwards and the measurement won. At size 0.5 sizeDelta = 0.0, so airLp_ is bit-identical to the pre-size-law 140 tuning (anchor). Guards (plate_family_tests.cpp SizeLaw): monotone brightening s1 > s5 > s0 (measured) and no comb growth at either extreme (comb 0.0=6.10, 0.5=19.39, 1.0=21.74; guard 19.39+1 dB at size 1). TODO (future ticket, NOT shipped): Chamber, Hall, and Digital reverb paths ALSO never read params_.size -- audit those paths the same way.",
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:bc6b799a0a48c7d5c4368b16de0ee59ed644009d6eb887565a9582e655edb665"
+          "version": "repo-file-v1:sha256:ab7afed2567aa624add79190903f8fec52e58af19d5e7fdb27e5ceeb6f3c5065"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
-          "version": "repo-file-v1:sha256:8ec2db87cb5f2c3e04fcadd5fd0fb5f83ee1d14556be78acc99ed49a181cd4fb"
+          "version": "repo-file-v1:sha256:434a66a7286b3bf873efbc6324012889213c7addea33ef5257bce9d3225e2c9c"
         }
       ]
     },
@@ -92,7 +92,7 @@
         },
         {
           "resource": "repo://docs/agents/ir-reverb-training.md",
-          "version": "repo-file-v1:sha256:cc42bff1f05da26db208ef852902a165d0a97f16f96b85a0c04e56510178febc"
+          "version": "repo-file-v1:sha256:6e4fda9f00982ab53c4436884ab707d3565ac54c031be3a54be7af6610788530"
         },
         {
           "resource": "repo://test/CMakeLists.txt",
@@ -103,6 +103,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-10T20:30:10.043Z"
+    "at": "2026-10-11T15:58:48.204Z"
   }
 }

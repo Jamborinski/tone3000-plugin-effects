@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:4d5ba7c13108f8f91ee78d5147ad0a3197922ba7f08361d20c606420d4b30ca7",
+  "pageVersion": "sha256:82739bd62d53f7c3a347eb0f70547f2500bab9eb9273e9c9ad57ed3e8002f385",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -85,10 +85,38 @@
           "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
         }
       ]
+    },
+    {
+      "id": "claim_82abd5a8c472415b94d24c18a3759cb4",
+      "statement": "The reverb tile's Dry knob uses scales::reverbDry(), a standalone scale that mirrors scales::convGain() exactly (toDisplay linear-maps 0..1 to -24..+24 dB, toStored/fromStored are the identity, format renders signed dB). It is a separate scale so reverb-tile and conv-tile each name their own dry face independently; the conv tile's convDry knob keeps using scales::convGain().",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/core/KnobScale.h",
+          "version": "repo-file-v1:sha256:a529876886e6c711f084db81be2c6d4073a09f384113c24bfbf8ad3d5a7e6c54"
+        },
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
+          "version": "repo-file-v1:sha256:c50fef8948b98b2f34085ed192385ea1eed64d701c10a85379ecf864998207ce"
+        }
+      ]
+    },
+    {
+      "id": "claim_300ac5ea181b41dea89458d0eb282864",
+      "statement": "For the full reverb tile the generic param list is 6 entries (Decay, Pre, Tone, Size, Width, Dry); Dry = index 5 and is placed right of Dwell in row 2 via a reverb-specific knobAt branch that returns knobF_ for index 5, so it does NOT collide with sigKnob_/modKnob_ (the mode's Sig A / Sig B, which are separate widgets not in the param list). Other effect kinds have no reverb branch and keep the shared generic knobAt mapping (i==5 → sigKnob_, etc.) unchanged. numParams_ for reverb is 6 (full) or 5 (compact): compact row 2 is unchanged (In/Size/Width/Out) — Dry is still bound in the param stream at index 5 but has no visible slot on the compact surface, matching the existing compact 'silent extra param' pattern already used for Pre.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/core/Help.cpp",
+          "version": "repo-file-v1:sha256:8a37e19e55e5e9d033d38675de924404bb7610f19d678bf896300c87b10e1287"
+        },
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
+          "version": "repo-file-v1:sha256:c50fef8948b98b2f34085ed192385ea1eed64d701c10a85379ecf864998207ce"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-10T20:30:10.043Z"
+    "at": "2026-10-11T15:58:48.204Z"
   }
 }

@@ -2,9 +2,6 @@
 type: "Reference"
 title: "IR convolution and `BudgetConvolver`"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.2
-    at: 2026-10-10T18:58:45.842Z
 sources:
   - id: openwiki-source-929ce4feadb6f107f2d06847
     resource: repo://plugin/include/BudgetConvolver.h
@@ -17,6 +14,9 @@ sources:
   - id: openwiki-source-8a517d0ba4e262c409b9866c
     resource: repo://plugin/src/ProcessorModelLoader.cpp
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
+verified:
+  - by: openwiki/0.7.2
+    at: 2026-10-11T15:58:48.204Z
 ---
 
 

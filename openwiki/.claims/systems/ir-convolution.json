@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:4baa8b592ec8a2ed5baaf59824711c1920ed6bae250c717300dee20948202d55",
+  "pageVersion": "sha256:a974e137cced24b8dd62a77d31f203aa3854add36cf7100bc76f5da75b3e2273",
   "claims": [
     {
       "id": "claim_5950146e18974b41ad95b20a6e9d7d5d",
@@ -14,11 +14,15 @@
     },
     {
       "id": "claim_82f6446db99a4747ac911e3db87a6472",
-      "statement": "kIrConvolverMaxBlockSize = 256 (ChainBlock.h:98) caps the per-call BudgetConvolver feed; processConvolverInChunks (ChainBlock.h:107-116) splits any host-sized block into ≤256-sample slices so per-call OLA product cost cannot inflate with the host's block size — the host block may be up to 4096 but the product budget per call stays K regardless. ConvolutionReverb.h also carries this constant (line 54) as its own copy of the house CPU law.",
+      "statement": "kIrConvolverMaxBlockSize = 256 (ChainBlock.h) caps the per-call BudgetConvolver feed; irConvolverBlockSizeFor and processConvolverInChunks (ChainBlock.h) split any host-sized block into ≤256-sample slices so per-call OLA product cost cannot inflate with the host's block size — the host block may be larger than the cap but the product budget per call stays bounded regardless. BudgetConvolver.h carries the matching kMaxCall = 256 / kFrame = 8192 pair as its own copy of the house CPU law (ConvolutionReverb.h references this cap in its header comment: 'Block-size cap (kIrConvolverMaxBlockSize) + chunked RT feed').",
       "evidence": [
         {
+          "resource": "repo://plugin/include/BudgetConvolver.h",
+          "version": "repo-file-v1:sha256:78415f5b4fc4f1608239bb7bcecf2edf5ef6b9943891f49188bf6a96c2b4c9e9"
+        },
+        {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:61ab9bd407dc8638563d1a21b8685bf7a6baeda00c4a664a3f882b310ba84182"
+          "version": "repo-file-v1:sha256:9fbc18fa92a8615349b53c85b7aaa99b60008a5b4d43503686a82104445bcb07"
         }
       ]
     },
@@ -38,7 +42,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:61ab9bd407dc8638563d1a21b8685bf7a6baeda00c4a664a3f882b310ba84182"
+          "version": "repo-file-v1:sha256:9fbc18fa92a8615349b53c85b7aaa99b60008a5b4d43503686a82104445bcb07"
         },
         {
           "resource": "repo://plugin/include/ChainDomain.h",
@@ -63,6 +67,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-10T18:58:45.842Z"
+    "at": "2026-10-11T15:58:48.204Z"
   }
 }

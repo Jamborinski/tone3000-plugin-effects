@@ -623,6 +623,8 @@ void TONE3000Processor::prepareChainBlock(ChainBlock& block) {
   block.mixSmoother.setCurrentAndTargetValue(block.mixNormalized);
   block.convDrySmoother.reset(chainRate, 0.05f);
   block.convDrySmoother.setCurrentAndTargetValue(1.0f);  // updated on first process
+  block.reverbDrySmoother.reset(chainRate, 0.05f);
+  block.reverbDrySmoother.setCurrentAndTargetValue(1.0f);
   block.namNormalizationSmoother.setCurrentAndTargetValue(1.0f);
   block.wetFadeGain.reset(chainRate, kWetFadeSeconds);
   block.wetFadeGain.setCurrentAndTargetValue(block.enabled ? 1.0f : 0.0f);
@@ -1253,13 +1255,26 @@ void TONE3000Processor::processChainOnBuffer(std::vector<std::unique_ptr<ChainBl
     // exactly as before. Convolution blocks only. The click-free smoothing runs
     // getNextValue() per sample (like inputGain), so the 0.05 s smoother actually
     // settles across the block instead of advancing one step per block.
-    if (block->effectKind == EffectKind::Convolution) {
-      const float convDryDb = (static_cast<float>(block->convDry) - 0.5f) * 48.0f;
-      block->convDrySmoother.setTargetValue(juce::Decibels::decibelsToGain(convDryDb));
+    // Conv/Reverb "Dry" control: a gain on the dry path only (the DRY term of
+    // the Mix crossfade), 0.5 = unity, +/-24 dB. Applied after the dry copy, so
+    // Dwell (input gain) and the Wet path are untouched, and Mix still
+    // crossfades against this scaled dry term exactly as before. One branch
+    // per block kind; each block carries its own value + smoother, so the
+    // anchor law (0.5 = unity gain, bit-identical to no knob) holds exactly.
+    if (block->effectKind == EffectKind::Convolution ||
+        block->effectKind == EffectKind::Reverb) {
+      const double dryStored = block->effectKind == EffectKind::Convolution
+                                   ? block->convDry
+                                   : block->reverbDry;
+      const float dryDb = (static_cast<float>(dryStored) - 0.5f) * 48.0f;
+      auto& drySmoother = block->effectKind == EffectKind::Convolution
+                              ? block->convDrySmoother
+                              : block->reverbDrySmoother;
+      drySmoother.setTargetValue(juce::Decibels::decibelsToGain(dryDb));
       for (int ch = 0; ch < numChannels; ++ch) {
         auto* d = dryScratch.getWritePointer(ch);
         for (int i = 0; i < numSamples; ++i)
-          d[i] *= block->convDrySmoother.getNextValue();
+          d[i] *= drySmoother.getNextValue();
       }
     }
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:88f84975092a69d24b42614806d291e5973cc0d27810af72f1ca7e997ac15e8a",
+  "pageVersion": "sha256:a942224117516881ebdf80976b05dbfb60321a71134b66f9c1b973eed609af67",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -84,11 +84,11 @@
     },
     {
       "id": "claim_5f41f8df721a45b688fca54aae962375",
-      "statement": "The chain is a left/right lane of blocks (ChainBlock: Nam, IR, Insert, Effect, each with a ChainSide), processed at a fixed 48 kHz base rate (plugin/include/ChainDomain.h, kChainBaseSampleRate = 48000.0) with the host rate re-sampled at the chain's boundary (Lanczos-12). Zero-latency (PDC) is a hard invariant; the NAM engine and the reverb/convolver run inside the chain; effects are in plugin/include/{Delay,Chorus,Tremolo,Compressor,Reverb,ConvolutionReverb}.h.",
+      "statement": "The chain is a left/right lane of blocks (ChainBlock: Nam, IR, Insert, Effect, each with a ChainSide), processed at a fixed 48 kHz base rate (plugin/include/ChainDomain.h, kChainBaseSampleRate = 48000.0) with the host rate re-sampled at the chain's boundary (Lanczos-12). Zero-latency (PDC) is a hard invariant; the NAM engine and the reverb/convolver run inside the chain (convDry and, since the 2026-10-13 R1 pass, reverbDry are chain-layer dry-gain fields on the Convolution and Reverb effect blocks respectively); effects are in plugin/include/{Delay,Chorus,Tremolo,Compressor,Reverb,ConvolutionReverb}.h.",
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:61ab9bd407dc8638563d1a21b8685bf7a6baeda00c4a664a3f882b310ba84182"
+          "version": "repo-file-v1:sha256:9fbc18fa92a8615349b53c85b7aaa99b60008a5b4d43503686a82104445bcb07"
         },
         {
           "resource": "repo://plugin/include/Processor.h",
@@ -98,7 +98,7 @@
     },
     {
       "id": "claim_d058954116f94c6d90d45fcb4d08fdb2",
-      "statement": "The DSP test loop is ./script/test-dsp.sh [gtest-filter]: configure-if-needed to cmake --build build --target DspTests to running build/test/DspTests_artefacts/.../DspTests. The suite compiles the REAL plugin sources (not copies) against the fixtures in test/files/ (NAM A2 captures a2-amp-test.nam / a2-amp-cab-test.nam / a2-am-test-2.nam, cab-ir-test(-2).wav, reverb-ir-mono/stereo-test.wav, em240-gold-plate-5s.wav); from plugin/ui it pulls in only core/Labels.cpp (KnobScale readout formatter for the scale-contract tests), so a green DspTests does NOT prove the UI links (verify with the GUI target, e.g. TONE3000_Standalone). As of the 2026-10-13 plate final pass the suite runs 469 tests, including the new test/src/plate_family_tests.cpp guard suite (P1 EMT140 family table, P2 cross-model, P4 knob laws incl. the new plate SizeLaw, P5 stereo image, P6 cap/CPU); the plate guards re-pin to that state (level baseline 78.23, comb baseline 19.39, decay-law monotone-darkening 1.0 to 2.5 s pin, cap no-growth). Full record: docs/tickets/plate-140-final-training-pass-closeout.md and plugin/docs/reverb-modes.md (140 row).",
+      "statement": "The DSP test loop is ./script/test-dsp.sh [gtest-filter]: configure-if-needed to cmake --build build --target DspTests to running build/test/DspTests_artefacts/.../DspTests. The suite compiles the REAL plugin sources (not copies) against the fixtures in test/files/ (NAM A2 captures a2-amp-test.nam / a2-amp-cab-test.nam / a2-am-test-2.nam, cab-ir-test(-2).wav, reverb-ir-mono/stereo-test.wav, em240-gold-plate-5s.wav); from plugin/ui it pulls in only core/Labels.cpp (KnobScale readout formatter for the scale-contract tests), so a green DspTests does NOT prove the UI links (verify with the GUI target, e.g. TONE3000_Standalone). As of the 2026-10-13 R1 reverbDry pass the suite runs 470 tests (was 469 after the plate '140' final pass; +1 for TEST(ProcessorTest, ReverbDryScalesOnlyTheDryPathAllModes), a 6-mode loop mirror of the existing convolver ConvDryScalesOnlyTheDryPath anchor), including the test/src/plate_family_tests.cpp guard suite (P1 EMT140 family table, P2 cross-model, P4 knob laws incl. the plate SizeLaw, P5 stereo image, P6 cap/CPU); the plate guards re-pin to that state (level baseline 78.23, comb baseline 19.39, decay-law monotone-darkening 1.0 to 2.5 s pin, cap no-growth). Full record: docs/tickets/plate-140-final-training-pass-closeout.md and plugin/docs/reverb-modes.md (140 row); the reverbDry anchor law lives in docs/tickets/reverb-dry-mod-width-swing.md (R1).",
       "evidence": [
         {
           "resource": "repo://script/test-dsp.sh",
@@ -110,13 +110,17 @@
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
-          "version": "repo-file-v1:sha256:8ec2db87cb5f2c3e04fcadd5fd0fb5f83ee1d14556be78acc99ed49a181cd4fb"
+          "version": "repo-file-v1:sha256:434a66a7286b3bf873efbc6324012889213c7addea33ef5257bce9d3225e2c9c"
+        },
+        {
+          "resource": "repo://test/src/processor_tests.cpp",
+          "version": "repo-file-v1:sha256:9f37bb818a587222edae85fe6d12ecb4b88578df3b167a5babbdced02573ebb4"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-10T20:30:10.043Z"
+    "at": "2026-10-11T15:58:48.204Z"
   }
 }

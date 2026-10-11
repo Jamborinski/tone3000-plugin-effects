@@ -2,13 +2,83 @@
 # better Width, and the "swirly / swelled" EMT-140 character gap
 # (with a clean-room research track)
 
-Status: **GREENLIT** (2026-10-13, same session) — approved for work, to be
-executed in a FUTURE session (2026-10-13 ticket). Follow-up to the
+Status: **IN PROGRESS** (2026-10-13) — GREENLIT 2026-10-13; **R1 (Dry knob,
+all reverb modes) is IMPLEMENTED 2026-10-13 and passing** — full state wiring,
+tile, help text, and anchor test all verified against the 470-test suite plus
+the standalone GUI build. **R4 (research skeleton) is COMPLETE** (`research/`
+gitignored, committed 2026-10-13 alongside the ticket). R2 (Mod knob) and
+R3 (Width improvement) remain OPEN and have not been started. Follow-up to the
 plate/"140" final-pass closeout
-(`docs/tickets/complete/plate-140-final-training-pass.md`). Suggested first
-PR = R4 (research skeleton + EMT-140 swirl characterisation, no code); R1–R3
-after it, each as its own sub-ticket split when it lands. Guardrails and
+(`docs/tickets/complete/plate-140-final-training-pass.md`). Guardrails and
 closeout protocol as at the bottom of this file stand unchanged.
+
+## R1 implementation log (2026-10-13)
+- **New param** `reverbDry` (stored 0..1, 0.5 = 0 dB, ±24 dB face, mirrors
+  `convDry` exactly — same class: a gain on the DRY term of the Mix crossfade,
+  the wet/reverb path is untouched). Not a `Reverb::Params` field (that is the
+  engine's own tuning); it's a chain-layer dry gain, applied in the chain's
+  mix loop after the dry copy, mirroring `convDry`'s placement.
+- **Four state places** (per `docs/agents/ui-wiring.md`):
+  - `plugin/ui/model/ChainState.h` + `.cpp` — `ChainItem::reverbDry` + JSON load
+  - `plugin/include/ChainBlock.h` — `ChainBlock::reverbDry` + `reverbDrySmoother`
+    (the smoother is per-block, so each reverb block carries its own click-free
+    ramp; there is no shared `convDryNormalized`-style dead field — that
+    exists in `ChainBlock.h` for conv but is never read)
+  - `plugin/src/ProcessorChain.cpp` — `BlockRow` field + getChainState copy +
+    serialize + param whitelist + `updateBlockParam` dispatch (no `setParams()`
+    call, matching `convDry`)
+  - `plugin/src/ProcessorState.cpp` — serialize + restore (default 0.5, clamped
+    0..1)
+  - `plugin/src/Processor.cpp` — smoother init + the unified conv||reverb
+    dry-path gain branch (each block kind reads its own stored value)
+- **UI** (`plugin/ui/views/gallery/EffectTile.{h,cpp}`):
+  - `paramsFor` gains a 6th entry (Dry, `scales::reverbDry()` scale) for the
+    reverb kind; `numParams_` for reverb splits into full (6) vs compact (5)
+    — on the full tile the 6th param (index 5) lands on `knobF_` (a new branch
+    in `knobAt` for reverb-full, so it does NOT collide with `sigKnob_`/
+    `modKnob_`, which carry the mode's Sig A/B and are wired separately in the
+    ctor, not through the param list). On the compact tile, Dry stays in the
+    param stream but has no visible slot — same pattern as the existing
+    Pre/SigB compact hiding.
+  - `resized()` full row 2 gains a 6th column right of Dwell (row 2 = In/Dry/
+    Size/Width/SigB/Out)
+  - `syncKnobs()` uses `knobF_` for reverb-full index 5 (matching the ctor's
+    `knobAt`), so the value-sync path and the ctor-binding path agree.
+- **KnobScale** (`plugin/ui/core/KnobScale.h`): new `scales::reverbDry()` —
+  same law as `scales::convGain()` (±24 dB, identity toStored/fromStored,
+  knob 0..1 == stored 0..1), kept as a separate scale so the tile can name
+  them independently.
+- **Help** (`plugin/ui/core/Help.{h,cpp}`): new `Key::reverbDry` + copy
+  ("level of the DRY (un-processed) path that blends in under the Mix, -24..
+  +24 dB (0.5 = unity). Does not touch the wet reverb tail; Mix and Dwell
+  keep their usual roles.").
+- **Anchor test** (`test/src/processor_tests.cpp`, `TEST(ProcessorTest,
+  ReverbDryScalesOnlyTheDryPathAllModes)`): mirrors the convDry anchor test —
+  loops all 6 reverb modes; at mix=0 asserts the -6 dB Dry setting scales the
+  dry term by exactly `gain(-6 dB)`; at mix=1 asserts the wet (reverb) output
+  is invariant under the Dry knob. **Passing** (460 ms, alongside the 470-
+  test DSP suite, all green). Standalone GUI build links.
+
+### R1 — Dry knob on the reverb block (EVERY mode) — **DONE 2026-10-13**
+- ✅ New **Dry** dial on the reverb tile, positioned **right of Dwell** (row 2:
+  Dwell, **Dry**, Size, Width, Bloom, Out — layout per `EffectTile.cpp`
+  reverb row). Same semantics as the convolver's Dry at
+  `EffectTile.cpp:250-264` / `Help.cpp:199` (`Key::convDry`): a level on the
+  DRY term of the Mix crossfade, -24..+24 dB (0.5 = unity), does not touch
+  the wet.
+- ✅ New `block_` field + scale in `plugin/ui/core/KnobScale.h` (a "Dry" scale
+  already exists for the convolver gate — `scales::convGain()` is the model).
+- ✅ **FOUR state places** (`ui-wiring.md`): `ChainState.h` field, `ChainState.cpp`
+  JSON load, tile `EffectTile.cpp` knob array + `paramsFor` mapping, and the
+  DSP-side param (where the effect's dry/wet split lives — trace the
+  `Mix/Out` path first; the reverb "Out" already exists as a wet level, the
+  Dry knob must land on the DRY side of that split, NOT on the wet).
+- ✅ Guard: **Mix 1 + Dry 0.5 (unity) must be bit-identical to today** (anchor,
+  same law as Digital Density 0 / Mod 0 in `Reverb.h:84-90`), all 6 reverb
+  modes + convolver bit-identical at their anchors — via the anchor test
+  `ReverbDryScalesOnlyTheDryPathAllModes` (mix=1 invariance across all 6 modes;
+  convDry's own anchor test `ConvDryScalesOnlyTheDryPath` also still passes,
+  unchanged).
 
 ## Origin (user, 2026-10-13)
 > dont fix this, lets just draft a follow up ticket for now — there is this

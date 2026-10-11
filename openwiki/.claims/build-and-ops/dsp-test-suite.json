@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:a44663733f48b058d0f1eb0bb6ed860d0888c7af66f4ddd6f0c01b0baecd537d",
+  "pageVersion": "sha256:7d4c5ed85c86389fc5c25daf0b594ca141ce3b2d64999f687b64f0094e2995f7",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -61,10 +61,34 @@
           "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
         }
       ]
+    },
+    {
+      "id": "claim_49ddcff1eeae4a768036ec3c85952a43",
+      "statement": "The R1 reverb Dry anchor test TEST(ProcessorTest, ReverbDryScalesOnlyTheDryPathAllModes) (test/src/processor_tests.cpp, ~822, added alongside the convolver analogue) loops all 6 reverb modes; at mix=0 it asserts a -6 dB Dry setting scales the dry term by exactly gain(-6 dB); at mix=1 it asserts the wet (reverb tail) output is invariant under the Dry knob. It runs in ~460 ms and passes.",
+      "evidence": [
+        {
+          "resource": "repo://test/src/processor_tests.cpp",
+          "version": "repo-file-v1:sha256:9f37bb818a587222edae85fe6d12ecb4b88578df3b167a5babbdced02573ebb4"
+        }
+      ]
+    },
+    {
+      "id": "claim_916532a025994ae585b6b8a9c6329055",
+      "statement": "The DspTests suite passes at 470 tests as of the 2026-10-13 R1 reverbDry addition (469 before it); the suite grows with features, so the count in AGENTS.md is a lower-bound, not a total to assert.",
+      "evidence": [
+        {
+          "resource": "repo://AGENTS.md",
+          "version": "repo-file-v1:sha256:625a91ecc4a0714c70d50eafb7557534a95b46a9c6595cce676df6a99d2e018c"
+        },
+        {
+          "resource": "repo://script/test-dsp.sh",
+          "version": "repo-file-v1:sha256:9687741a4aeff5266793a02cff1b407fb03cd1d9bba6a05aff8798a46366cf9e"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-10T20:30:10.043Z"
+    "at": "2026-10-11T15:58:48.204Z"
   }
 }

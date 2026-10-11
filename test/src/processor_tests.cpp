@@ -819,6 +819,74 @@ TEST(ProcessorTest, ConvDryScalesOnlyTheDryPath) {
       << "convDry must not change the wet (mix=1) output";
 }
 
+TEST(ProcessorTest, ReverbDryScalesOnlyTheDryPathAllModes) {
+  // reverbDry scales only the DRY term of the Mix crossfade, identically in
+  // EVERY reverb mode (the knob is per-block, not per-mode; the anchor law is
+  // `reverbDry 0.5 == bit-identical to no Dry knob`). Mirror of the convDry
+  // anchor test (ConvDryScalesOnlyTheDryPath) — the reverb engine is a
+  // self-contained wet source (no IR needed), so the wet side checks mix=1
+  // output invariance directly.
+  constexpr double kFs = 48000.0;
+  const int kN = 16384;
+  const double step = 2.0 * 3.14159265358979 * 220.0 / kFs;
+  auto drive = [&](TONE3000Processor& proc) {
+    const int kBlock = 512;
+    juce::AudioBuffer<float> buf(2, kBlock);
+    juce::MidiBuffer midi;
+    std::vector<float> out(kN, 0.0f);
+    double ph = 0.0;
+    for (int off = 0; off < kN; off += kBlock) {
+      const int c = std::min(kBlock, kN - off);
+      for (int i = 0; i < c; ++i) {
+        ph += step;
+        const float v = static_cast<float>(0.2 * std::sin(ph));
+        buf.setSample(0, i, v);
+        buf.setSample(1, i, v);
+      }
+      buf.clear(c, 0, kBlock - c);
+      proc.processBlock(buf, midi);
+      for (int i = 0; i < c; ++i) out[off + i] = buf.getSample(0, i);
+    }
+    // RMS over the stable window (last 4096 samples; smoothers & DC-blocker decayed).
+    double sum2 = 0.0;
+    for (int i = kN - 4096; i < kN; ++i) sum2 += (double)out[i] * out[i];
+    return std::sqrt(sum2 / 4096.0);
+  };
+  auto build = [&](int reverbMode, double reverbDry, double mix) {
+    TONE3000Processor proc;
+    proc.setPlayConfigDetails(2, 2, 48000, 512);
+    proc.prepareToPlay(48000, 512);
+    const auto rid = proc.addEffectBlock(EffectKind::Reverb, "left", 0);
+    if (rid.empty()) return 0.0;
+    if (!proc.setBlockParam(rid, "reverbMode", (double)reverbMode)) return 0.0;
+    if (!proc.setBlockParam(rid, "reverbDry", reverbDry)) return 0.0;
+    if (!proc.setBlockParam(rid, "mix", mix)) return 0.0;
+    return drive(proc);
+  };
+  EXPECT_EQ(Reverb::kNumModes, 6) << "the anchor loops every mode; keep it honest";
+  for (int mode = 0; mode < Reverb::kNumModes; ++mode) {
+    // mix=0 (full dry): out = in * gain(reverbDry). A -6 dB setting vs unity
+    // must differ by exactly gain(-6 dB) — reverbDry scales the dry path.
+    const double dryUnity = build(mode, 0.5, 0.0);
+    const double dryHalf = build(mode, 0.375, 0.0);  // (0.375-0.5)*48 = -6 dB
+    const double expHalf = dryUnity * juce::Decibels::decibelsToGain(-6.0);
+    EXPECT_GT(dryUnity, 1e-3)
+        << "dry path must pass (unity) the input tone in reverb mode " << mode;
+    EXPECT_NEAR(dryHalf, expHalf, std::max(1e-6, 0.02 * dryUnity))
+        << "reverbDry at -6 dB must scale the dry term by gain(-6 dB) in mode "
+        << mode;
+
+    // Wet path (mix=1): reverbDry must not perturb the reverb output.
+    const double wetA = build(mode, 0.5, 1.0);
+    const double wetB = build(mode, 0.25, 1.0);
+    EXPECT_GT(wetA, 1e-9)
+        << "wet path must produce output in reverb mode " << mode;
+    EXPECT_NEAR(wetA, wetB, std::max(1e-9, 1e-3 * wetA))
+        << "reverbDry must not change the wet (mix=1) output in mode "
+        << mode;
+  }
+}
+
 TEST(ProcessorTest, ConvIrTypeSeededOnLiveLoad) {
   // Loading a mono IR must seed convIrChannels==1 and a mono width default;
   // a stereo IR convIrChannels==2 and a stereo width default. This is what the

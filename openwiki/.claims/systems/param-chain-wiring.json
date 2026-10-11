@@ -1,28 +1,32 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:90482128c959ca61a6f045fcbe83c61582a00fe3904648d1df64d6f7316946e3",
+  "pageVersion": "sha256:f87f34bc3635f40f98cf8d7705437683eac5bbe8163d530329a30c5187fc4e81",
   "claims": [
     {
       "id": "claim_9e89474d48b14a2ca41323ea45516a5d",
-      "statement": "KnobScale (plugin/ui/core/KnobScale.h, port of knobScale.ts) keeps three domains separate: normalised 0..1 knob position, a DISPLAY unit (ms/dB/%/name) for the drag readout and type-in, and a STORAGE contract via toStored/fromStored that is what actually goes into the block param. knobToStored()/knobFromStored() fall back to toDisplay/fromDisplay when no explicit storage pair is declared — bit-identical legacy behaviour for real-unit-stored and identity-stored fraction knobs. Knobs whose stored domain is 0..1 but whose display unit is human (delayHeads 1..4 heads, compClip 0..2 raw depth behind a 0..200 % face, convGain ±24 dB, convPitch 0.25x..4x, spring lines 1..6) MUST declare toStored/fromStored or the tile writes the display unit into a 0..1 param, the engine clamps it to 1.0, and the next resync snaps the knob back to max — the 2026-10-06 Heads glitch.",
+      "statement": "KnobScale (plugin/ui/core/KnobScale.h, port of knobScale.ts) keeps three domains separate: normalised 0..1 knob position, a DISPLAY unit (ms/dB/%/name) for the drag readout and type-in, and a STORAGE contract via toStored/fromStored that is what actually goes into the block param. knobToStored()/knobFromStored() fall back to toDisplay/fromDisplay when no explicit storage pair is declared — bit-identical legacy behaviour for real-unit-stored and identity-stored fraction knobs. Knobs whose stored domain is 0..1 but whose display unit is human (delayHeads 1..4 heads, compClip 0..2 raw depth behind a 0..200 % face, convGain ±24 dB, reverbDry ±24 dB (added 2026-10-13 R1; a SEPARATE scale that mirrors convGain() exactly — identity toStored/fromStored, own scale face so the tile names them independently), convPitch 0.25x..4x, spring lines 1..6) MUST declare toStored/fromStored or the tile writes the display unit into a 0..1 param, the engine clamps it to 1.0, and the next resync snaps the knob back to max — the 2026-10-06 Heads glitch.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:7911a5c7a0b9bd477ed1883216a9f27ddc2182e3870690fa88d5f78a8c201ae4"
+          "version": "repo-file-v1:sha256:a529876886e6c711f084db81be2c6d4073a09f384113c24bfbf8ad3d5a7e6c54"
         }
       ]
     },
     {
       "id": "claim_5182e0a71fbd47bea2e298fb16e1de68",
-      "statement": "A block param field round-trips only if it exists in all FOUR state places: (1) getChainState in plugin/src/ProcessorChain.cpp (the BlockRow struct, the copyLane copy, AND params->setProperty('<field>',…) in serializeChain); (2) parseItem in plugin/ui/model/ChainState.cpp (item.<field> = num(v[\"params\"], \"<field>\", default)); (3) updateBlockParam in plugin/src/ProcessorChain.cpp (the param == \"<field>\" branch); (4) ProcessorState.cpp (blockState.setProperty + getProperty restore). Missing any one = 'works sonically, snaps back to default on sync'.",
+      "statement": "A block param field round-trips only if it exists in all FOUR state places: (1) getChainState in plugin/src/ProcessorChain.cpp (the BlockRow struct, the copyLane copy, AND params->setProperty('<field>',…) in serializeChain); (2) parseItem in plugin/ui/model/ChainState.cpp (item.<field> = num(v[\"params\"], \"<field>\", default)); (3) updateBlockParam in plugin/src/ProcessorChain.cpp (the param == \"<field>\" branch); (4) ProcessorState.cpp (blockState.setProperty + getProperty restore). Missing any one = 'works sonically, snaps back to default on sync'. Chain-layer dry-gain params (convDry, and reverbDry since the 2026-10-13 R1 pass) occupy these four places exactly like engine params but their updateBlockParam branch does NOT call an engine setParams — the gain is applied in the chain's mix loop on the dry term only (see the effects-invariants anchor laws).",
       "evidence": [
         {
           "resource": "repo://docs/agents/ui-wiring.md",
           "version": "repo-file-v1:sha256:6819665026d582064972a46c304de363ee60e203f53ebb4392ebc2c9b272cb67"
         },
         {
+          "resource": "repo://plugin/src/ProcessorChain.cpp",
+          "version": "repo-file-v1:sha256:28f52c62e18ac210f6d4cad1b4bfa63ef76d4b27aaa8586a0309c39ab600e271"
+        },
+        {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:6989b931f154ad620a38555827ccca8dd97e294a8f9c8d2b2013eb93e4098fc6"
+          "version": "repo-file-v1:sha256:dc3e1eb44f67d6a818d3e719f6e2413ed8294f8fb4a584f98006322584dca6b8"
         }
       ]
     },
@@ -53,6 +57,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-10T20:30:10.043Z"
+    "at": "2026-10-11T15:58:48.204Z"
   }
 }

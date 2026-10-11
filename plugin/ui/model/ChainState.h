@@ -162,6 +162,7 @@ struct ChainItem {
   double compKnee = 6.0;       // KNEE [1..11] dB: VCA soft-knee width; 6 = classic
   // Reverb (see Reverb.h): 8-knob digital comb-bank reverb.
   double reverbDecayMs = 1200.0;  // 50..3000 ms (tail length)
+  double reverbDry = 0.5;         // 0..1 stored; reverb DRY-path level (the "Dry" knob), 0.5 = 0 dB
   double reverbPreMs = 0.0;      // 0..60 ms (pre-delay)
   double reverbTone = 0.4;       // 0..1 (0 bright, 1 dark)
   double reverbSize = 0.6;       // 0..1 (scales all delay times)

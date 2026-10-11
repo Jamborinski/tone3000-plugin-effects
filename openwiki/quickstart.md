@@ -34,10 +34,12 @@ sources:
     resource: repo://test/CMakeLists.txt
   - id: openwiki-source-0368da5a39fa50284e393846
     resource: repo://test/src/plate_family_tests.cpp
+  - id: openwiki-source-a95d9a96cf87c30a610c9c3b
+    resource: repo://test/src/processor_tests.cpp
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-10T20:30:10.043Z
+    at: 2026-10-11T15:58:48.204Z
 ---
 
 # TONE3000
