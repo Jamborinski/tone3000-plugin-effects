@@ -3687,15 +3687,18 @@ TEST(ReverbTest, R2_SharedModChorusesTheTailNotTheAttack) {
   Reverb rOff; rOff.prepare(kFs);
   rOff.setParams(pOff);
 
-  // (a) LEVEL SANITY (the anti-saturator-feed law): a chorus on steady WHITE
-  // NOISE incoherently sums its voices, so the on/off RMS lands well below 1
-  // (0.30 undelayed + 3 decorrelated delayed taps ~ 0.37x the input) -- this is
-  // correct, level-preserving-in-peak spread, NOT a level cut. Pin what actually
-  // matters: the output never EXCEEDS the input (it must not feed a downstream
-  // saturator -- the lesson of the level-swell cuts), and it is not a hard
-  // zero or a big gain. A downward-only LEVEL SWELL that dips to ~0 over the
-  // sweep is caught by (b); a +k symmetric swing that clips outboard is caught
-  // by the peak bound here.
+  // (a) LEVEL LAW (sixth cut, 2026-10-15): the wet stays at FULL unity and the
+  // chorus is an ADDED layer, out = wet + amt*chorus with
+  // amt = 0.30 * m * taper(m) (m = sharedMod; taper ramps 0->0.5 in, 0.5..1 =
+  // full -- the user's "gradual first half" request). So engaging the knob can
+  // NEVER drop the wet level (the fifth- and earlier cuts traded undelayed
+  // against delayed copies and dropped the early reverb -- the "big volume
+  // drop"), and the added layer is bounded: worst-coherent ceiling is
+  // 1.0 + 0.30*1.0 = 1.30x the off signal (+2.2 dB, incoherent averaging keeps
+  // it far below in practice -- 1.019 on this fixture). Pin: not more than the
+  // 1.35x structural ceiling (no saturator feed), not a hard zero (stage not
+  // dead), and on PEAKS the same ceiling so no single sample feeds outboard
+  // drive.
   {
     std::mt19937 rng(777); std::uniform_real_distribution<float> d(-1.0f, 1.0f);
     juce::AudioBuffer<float> bOn(2, kBlock);
@@ -3718,9 +3721,10 @@ TEST(ReverbTest, R2_SharedModChorusesTheTailNotTheAttack) {
       }
     }
     const double ratio = std::sqrt(eOn / (used)) / std::sqrt(eOff / (used));
-    EXPECT_LT(ratio, 1.0) << "chorus must not GAIN the tail (saturator feed): on/off RMS ratio " << ratio;
-    EXPECT_GT(ratio, 0.15) << "chorus must not be a hard zero: on/off RMS ratio " << ratio;
-    EXPECT_LT(pkOn, 1.05 * pkOff) << "chorus must not feed a downstream saturator: on peak "
+    EXPECT_LT(ratio, 1.35) << "added chorus layer must stay under the 1.35x structural ceiling (no saturator feed): on/off RMS ratio " << ratio;
+    EXPECT_GT(ratio, 0.15) << "stage must not be a hard zero: on/off RMS ratio " << ratio;
+    EXPECT_GT(ratio, 1.0) << "wet-unity law: engaging Mod must never DROP the wet level (ratio <= 1 means the fifth-cut crossfade traded undelayed against delayed)";
+    EXPECT_LT(pkOn, 1.35 * pkOff) << "added chorus layer must not feed a downstream saturator on peaks: on peak "
         << pkOn << " vs off peak " << pkOff;
   }
 

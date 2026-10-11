@@ -1050,11 +1050,19 @@ class Reverb {
   static constexpr double kSharedModRate = 0.5;    // Hz, base LFO rate (a full warble per 2 s)
   static constexpr double kSharedModDepthMs = 12.0; // max depth of the DEEPEST voice (at sharedMod 1)
   static constexpr double kModVoiceLpfHz = 6000.0; // per-line 12 dB/oct darkening of the thin comb
-  static constexpr double kModVoiceFloor = 0.30;   // taps never dip below 30% of the voice depth:
-                                                   // coherent in-phase alignment at a near-zero
-                                                   // delay is what made each LFO pass pump the
-                                                   // level (the "clicking") and cut the dense
-                                                   // early reflections (the early-volume dip)
+  // Chorus LAYER gain: the delayed voices ADD ON TOP of the full (unity)
+  // undelayed wet -- this is the "lush modulation ADDED to the reverb"
+  // (2026-10-15) and is what kills BOTH the level drop and the clicking.
+  // The earlier 50/50 crossfade (0.5*wet + 0.5*chorus) is the root of both
+  // complaints: (a) the darkened/coherent delayed copy replaces half the
+  // fresh wet on the dense early reflections -> the volume drop; (b) every
+  // LFO pass where the taps anti-phase the early reflections -> a sharp
+  // pumping dip that reads as a click. A layer on top of full-level wet has
+  // neither effect. Kept modest (0.30) so the added level stays musical.
+  static constexpr double kModChorusAmt = 0.30;
+  static constexpr double kModVoiceFloor = 0.30;   // taps sweep 30..100 % of the voice depth
+                                                   // (gives the tap a real depth of motion
+                                                   // while keeping it in the classic chorus 1..4 ms band)
   // Per-voice depth ratio (share of the max depth), LFO rate factor, and phase offset:
   // incommensurate rate factors + spread phase offsets -> the beatings smear
   // into a slow, exaggerated swirl (single voice: "crispy static"; the
@@ -1861,9 +1869,17 @@ class Reverb {
     const int numCh = juce::jmin(buffer.getNumChannels(), kMaxChannels);
     const double m = static_cast<double>(params_.sharedMod);  // 0..1
     if (m <= 0.0) return;  // belt-and-braces (sharedOn_ already gates this)
-    // Level law (worst-coherent): 0.30 (undelayed) + 3*0.175*0.707 (delayed,
-    // the one-pole passes DC) = 0.833 -- the stage only reaches or spreads the
-    // tail, never amplifies it, so it cannot feed a downstream saturator.
+    // LAW (fifth cut, 2026-10-15): out = wet + amt * chorus -- the undelayed
+    // wet stays at FULL unity level (no volume drop when engaged, no anti-
+    // phase pumping click on the early reflections) and the chorus is a LAYER
+    // on top (the "lush modulation added to the reverb" ask). amt is the
+    // knob TAPER: 0..0.5 of the sweep ramps the depth in gradually, 0.5..1
+    // stays at full depth ("initial amount of added modulation is more
+    // gradual; 50%-100% would be the same"). Worst case with the 6 kHz
+    // biquads at DC: |wet| + kModChorusAmt*(1+kModVoiceFloor)/2*|wet|
+    // = 1.425*|wet| -- a musical +5.1 dB ceiling, in real use far lower.
+    const double taper = (m <= 0.5) ? 2.0 * m : 1.0;
+    const double amt  = kModChorusAmt * m * taper;
     const double maxDepth = m * static_cast<double>(chDelayMax_);  // 0..chDelayMax_
     for (int c = 0; c < numCh; ++c) {
       float* out = buffer.getWritePointer(c);
@@ -1888,13 +1904,11 @@ class Reverb {
       for (int i = 0; i < n; ++i) {
         wr[w] = in[i];
         w = (w + 1) & chMask_;
-        // Each delayed voice: wavering fractional tap FLOORED at kModVoiceFloor
-        // (the taps never align in phase at a ~zero delay -> no coherent level
-        // pump = the old click), darkened by its own 12 dB/oct biquad
-        // (kills the thin comb residue per line). Chord law: 0.5 (undelayed)
-        // + 4 * 0.25 * (unity-DC biquad) = 1.00 worst-coherent; on real tails
-        // the lines stay decorrelated so the modulation layers ON TOP of the
-        // full reverb level instead of trading against it.
+        // Each delayed voice: wavering fractional tap (30..100 % of the voice
+        // depth), darkened by its own 12 dB/oct biquad (kills the thin comb
+        // residue per line). LAYER law: out = wet + amt*(mean of the 4
+        // biquad'd delayed voices) -- the wet itself is never reduced (the
+        // fifth-cut fix for the engage-volume-drop + anti-phase click).
         double dsum = 0.0;
         const double invN = 1.0 / (kModVoices - 1);
         for (int v = 1; v < kModVoices; ++v) {
@@ -1912,7 +1926,7 @@ class Reverb {
           ph[v] += smInc_ * kModVoiceR[v];
           if (ph[v] >= 2.0 * M_PI) ph[v] -= 2.0 * M_PI;
         }
-        out[i] = static_cast<float>(0.5 * in[i] + dsum);
+        out[i] = static_cast<float>(in[i] + amt * dsum);
       }
       chWrite_[c] = w;
       for (int v = 1; v < kModVoices; ++v) {

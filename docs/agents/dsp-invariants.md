@@ -209,43 +209,39 @@
   voices whose taps sweep through zero delay pumps the summed level at
   every LFO pass (the "click"), loudest on the dense in-phase early
   reflections (the early-volume dip), and a modulation that TRADES against
-  the signal is choppy by construction. SHIPPED FINAL (2026-10-15):
-  CHORD-LAW chorus -- out = 0.5*wet + sum(v1..4 delayed/4), each delayed
-  voice a 12 dB/oct Butterworth biquad @6 kHz on a tap that FLOORS at
-  30% of its voice depth (kModVoiceFloor: taps never align in phase at
-  ~zero delay -> no coherent level pump), incommensurate 1.31/0.77/1.64x
-  the 0.5 Hz base sine, depths 1.0/0.72/0.50/0.34 x 12 ms at sharedMod 1
-  (deeper + slower + exaggerated per the ear, still two orders of
-  magnitude under the convolver-class cap: +4.4 us/block@128). The
-  modulation now LAYERS ON TOP of the full reverb level instead of being
-  traded against it -- the "lush modulation added to the reverb" the user
-  asked for. Same pins, extended:
-  `ReverbTest.R2_SharedModChorusesTheTailNotTheAttack`
-  (a) level law -- on/off RMS ratio < 1.0 (no gain/feed) and > 0.15, peak
-  < 1.05x off peak; (b) a 440 Hz tone's block RMS sweeps peak > 1.4x trough
-  over the incommensurate-voice beat (a per-block-constant delay or flat
-  gain gives a flat envelope -- the regression this guards).  Budget (2026-10-15
-  user directive, 9950X3D): quality first; the hard cap is
-  `BudgetConvolver` on a 5-6 s stereo IR = avg ~24 us/block@256 (p95 ~335
-  us); the shipped stage measures ~6.9 us/block@128 on top of the plate
-  baseline (~3.3 us) -- comfortably in budget. Gated fully at
+  the signal is choppy by construction. A CROSSFADE CHORD-LAW (out =
+  0.5*wet + sum(v1..4)/4, taps floored at 30% of voice depth) shipped next
+  and was ALSO declined by the ear (2026-10-15, "still some clicking ...
+  turning on the mod gives a big volume drop in the wet vs it being off"):
+  the 50/50 undelayed-vs-delayed split REPLACES half the fresh wet with the
+  biquad-darkened, coherent delayed copies -- the level+brightness drop IS
+  the crossfade, and the anti-phase dips on the dense early reflections are
+  the residual clicks. SHIPPED FINAL (2026-10-15, sixth cut): WET-UNITY +
+  ADDED CHORUS LAYER -- out = wet + amt*chorus,
+  amt = kModChorusAmt(0.30) * m * taper, taper = 2m for m<=0.5 else 1
+  (the user's "gradual first 50% of the sweep" request: 0->0.5 ramps the
+  modulation in, 0.5->1 identical). The wet stays at FULL level on every
+  sample -> no volume drop and no anti-phase dip -> the click class is gone
+  by construction. Four delayed voices (the chorus layer): 12 dB/oct
+  Butterworth biquad @6 kHz each, taps floored at kModVoiceFloor 0.30 of
+  their depth (no ~zero-delay in-phase alignment), incommensurate
+  1.31/0.77/1.64x the 0.5 Hz base sine, depths 1.0/0.72/0.50/0.34 x
+  12 ms max at sharedMod 1 (deeper + slower + exaggerated per the ear).
+  Worst-coherent ceiling 1.0 + 0.30*1.0 = 1.30x the off signal (+2.2 dB,
+  incoherent averaging keeps it far under in practice -- measured 1.019
+  on the white-noise fixture) -- musical, never feeds a saturator. Two
+  orders of magnitude under the convolver-class cap (+~4.5 us/block@128
+  over the 3.3 us plate baseline). Budget (2026-10-15 user directive,
+  9950X3D): quality first; the hard cap is `BudgetConvolver` on a 5-6 s
+  stereo IR = avg ~24 us/block@256 (p95 ~335 us). Gated fully at
   `sharedMod==0` so the bit-exact anchor holds by construction; `wave`
-  shapes ONLY Digital's Sig-B read-tap waver (wave 0 = `std::sin` bit-exact).
-  Pinned by `ReverbTest.R2_SharedModChorusesTheTailNotTheAttack`:
-  (a) level law -- on/off RMS ratio < 1.0 (no gain/feed) and > 0.15, peak
-  < 1.05x off peak; (b) a 440 Hz tone's block RMS sweeps peak > 1.4x trough
-  over the incommensurate-voice beat (a per-block-constant delay or flat
-  gain gives a flat envelope -- the regression this guards). 
-- **MODEL/SUBTYPE rule (general, all effects):** a mode + model/subtype (type)
-  MAY carry its own knob defaults and tone law (permissive, not mandatory),
-  tuned to its own reference, but it must never override the generic/shared path
-  or leak into other modes (bit-identical pins keep them separate).
-
-## MODEL/SUBTYPE (type) tuning rule is PERMISSIVE (CAN, all effects)
-A mode + model/subtype (type: `Params::type[mode]`, `numTypes()`,
-`defaultDialsForType()`, the UI type chip) MAY have its own knob defaults and
-own law tuned against its own reference (plate/"140" instance above; delay
-subtypes, compressor/chorus subtypes the same). It is NOT required (a type may
-share the generic mechanism), and it must keep SEPARATION from the generic /
-shared path and from other modes. Full text + the plate/"140" state + the
-biquad landmine: `docs/agents/ir-reverb-training.md`.
+  shapes ONLY Digital's Sig-B read-tap waver (wave 0 = `std::sin`
+  bit-exact). Pinned by
+  `ReverbTest.R2_SharedModChorusesTheTailNotTheAttack`:
+  (a) level law -- on/off RMS ratio in (0.15, 1.35), MUST be > 1.0 (wet-
+  unity: engaging Mod can never DROP the wet -- ratio <= 1 is the
+  crossfade regression this guards against), on peak < 1.35x off peak
+  (no saturator feed); (b) a 440 Hz tone's block RMS sweeps peak > 1.2x
+  trough (a per-block-constant delay or flat gain gives a flat envelope --
+  a dead modulation).
+ 

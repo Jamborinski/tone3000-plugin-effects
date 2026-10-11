@@ -2,33 +2,39 @@
 # better Width, and the "swirly / swelled" EMT-140 character gap
 # (with a clean-room research track)
 
-Status: **R1 + R2 SHIPPED** (R1 2026-10-13, R2 2026-10-14, four R2 Mod
+Status: **R1 + R2 SHIPPED** (R1 2026-10-13, R2 2026-10-14, SIX R2 Mod
 follow-ups 2026-10-14/15 — see the follow-up logs below). **R1 (Dry knob, all
 reverb modes) DONE 2026-10-13.**
-**R2 shared Mod DONE (final mechanism): a MULTI-VOICE POST-MIX CHORUS**
-(`sharedMod`/`reverbSharedMod`, 0..1, 0 = bit-exact today on every mode).
-`Reverb::processSharedModSmear`: undelayed voice 0.5 (fresh attack kept) +
-three delayed voices (each 1/3 after its own 12 dB/oct Butterworth biquad @6
-kHz) tapped at incommensurate wavering delays 0..6 ms (base SINE 1.2 Hz, rate
-factors 1.37/0.79/1.71x, depth ratios 0.62/0.40/0.24, phase-offset spread) —
-the liquid, swirly chorused wash. Level law 0.5 + 1/3*3 = 1.0 worst-coherent
-(never feeds a saturator). Evolved by ear across four cuts: lowpass-breathe →
-symmetric swell (clicking) → downward-only swell (sounded like a delayed
-reverb) → single-voice chorus ("crispy static") → this multi-voice chorus.
-Plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave` "Shape" knob
-(0 = Sine = bit-exact anchor; shapes only Digital's read-tap waver).
-**BUDGET (user 2026-10-15): quality-first, hard cap = convolver-class** —
-`BudgetConvolver` on a 5-6 s stereo IR measures avg ~24 µs/block@256 (p95
-~335 µs) on the 9950X3D; the shipped stage adds ~6.9 µs/block@128 over the
-3.3 µs plate baseline — comfortably in budget. Full DspTests **478/478**
-(477 + `ChainRoundTrip.ReverbModeOrderMarkerSurvivesUiJsonRoundTrip`, locking
-the mode-order v2 marker fix in `ProcessorChain.cpp::getChainState`).
-UiTestbed selftest green (xvfb), reverb tile 6+6, Windows staged
-2026-10-15 run `TONE3000-win-20261011-145158` (md5 `e4a77bfb50daf5cab4be815bc35997ab`,
-30,083,758 B; earlier runs: `…-134940` md5 `f7ebcfd70696ed5313157b213aaa4f87`,
-`…-132411` md5 `4f4625a7018b4ef14cafa30f51fcc778`).
-Commits: `57a5dba` (R2), `664965e`, `5e71f5a`, `bd3166c` (1st–3rd Mod cuts),
-plus this fourth follow-up. **R4
+**R2 shared Mod DONE (sixth-cut final mechanism): WET-UNITY + ADDED CHORUS
+LAYER** (`sharedMod`/`reverbSharedMod`, 0..1, 0 = bit-exact today on every
+mode). `Reverb::processSharedModSmear`: out = wet (FULL level, every sample)
++ amt · chorus-layer, where
+amt = kModChorusAmt(0.30) · m · taper, taper = 2m for m ≤ 0.5 else 1 (the
+user's "gradual first half of the sweep" request: 0→0.5 ramps the modulation
+in, 0.5→1 identical). The chorus layer = four delayed voices (12 dB/oct
+Butterworth biquad @6 kHz each, taps floored at 30% of voice depth,
+incommensurate 1.31/0.77/1.64× the 0.5 Hz base sine, depths
+1.0/0.72/0.50/0.34 × 12 ms max). The wet is never replaced → no volume drop,
+no anti-phase dip → the click class and the "big volume drop" are gone by
+construction. Worst-coherent ceiling 1.30× (+2.2 dB, measured 1.019 on the
+white-noise fixture) — musical, never feeds a saturator. Evolved by ear
+across SIX cuts (all recorded under CONSIDERED & DECLINED in
+docs/agents/dsp-invariants.md): lowpass-breathe → symmetric swell (clicking)
+→ downward-only swell ("delayed reverb") → single-voice chorus ("crispy
+static") → crossfade chord (volume drop + residual click) → this wet-unity
+added layer. Plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave`
+"Shape" knob (0 = Sine = bit-exact anchor; shapes only Digital's read-tap
+waver). **BUDGET (user 2026-10-15): quality-first, hard cap =
+convolver-class** — `BudgetConvolver` on a 5-6 s stereo IR measures avg ~24
+µs/block@256 (p95 ~335 µs) on the 9950X3D; the stage measures ~7.8 µs
+total / ~+4.5 over the 3.3 µs plate baseline — comfortably in budget with
+runway to spend. Full DspTests **478/478** (incl.
+`ChainRoundTrip.ReverbModeOrderMarkerSurvivesUiJsonRoundTrip`). UiTestbed
+selftest green (xvfb), reverb tile 6+6. Windows staged 2026-10-15
+`TONE3000-win-20261011-150332` (30,084,270 B; earlier runs
+`…-145158`, `…-134940`, `…-132411`).
+Commits: `57a5dba` (R2), `664965e`, `5e71f5a`, `bd3166c`, `91256dd`,
+`904695b` (1st–5th Mod cuts), plus this sixth follow-up. **R4
 (research skeleton) is COMPLETE** (`research/` gitignored, committed
 2026-10-13 alongside the ticket). **R3 (Width improvement) remains OPEN**.
 Follow-up to the
@@ -383,6 +389,40 @@ to the reverb."
   crossfade "click+early-dip") + the CHORD law pinned; Help.cpp Mod text =
   "Four slow, interweaving delayed voices warble under the reverb".
 
+## R2 sixth follow-up log (2026-10-15) — wet-unity + added chorus layer + taper
+User regression (m02414, verbatim): "this is getting a lot closer. There is
+still some clicking when the mod is engaged that needs to be clicked, also
+turning on the mod gives a big volume drop in the wet vs it being off."
+Taper request (m02417, verbatim gist): "perhaps the actual effect other mod
+could be slightly lessened at the beginning of the knob sweep (first 50% or
+so). So 50%-100% would be the same, just the initial amount of added
+modulation is more gradual."
+- **Root cause = the crossfade law, again**: out = 0.5·wet + 0.5·chorus
+  REPLACES half the fresh wet with the biquad-darkened, coherent delayed
+  copies → (a) the "big volume drop" on engage (level + brightness traded
+  away), (b) anti-phase dips on the dense early reflections = the residual
+  clicks. A modulation that TRADES against the signal has always been the
+  wrong class of fix; every earlier rejection (swells, crispy) shares this
+  root once the crossfade entered the mix.
+- **Fix (shipped law)**: `out = wet + amt·chorus` — wet at FULL unity on
+  every sample (no drop, no dip, click class gone by construction); the
+  chorus is a bounded ADDED layer,
+  `amt = kModChorusAmt(0.30) · m · (m<=0.5 ? 2m : 1)` — the requested taper
+  (first half ramps in gradually, top half identical). Ceiling 1.30× wet
+  worst-coherent (+2.2 dB; 1.019× measured on the white-noise fixture), so
+  the layer stays musical and never feeds a saturator. Constants unchanged
+  from the fifth cut (4 voices; 0.5 Hz base; 12 ms max; floors 0.30;
+  biquad @6 kHz) — only the MIX LAW and the taper changed.
+- **Test**: `ReverbTest.R2_SharedModChorusesTheTailNotTheAttack` rewritten
+  to the sixth law: (a) on/off RMS ratio in (0.15, 1.35) AND **> 1.0**
+  (wet-unity: engaging Mod can never DROP the wet — ratio ≤ 1 is the
+  crossfade regression), on-peak < 1.35× off-peak; (b) 440 Hz tone
+  per-block RMS peak > 1.2× trough (modulation alive).
+- **Verified 2026-10-15**: DspTests 478/478; TONE3000_Standalone links
+  (build/ 15/16 steps, TONE3000.exe build-win/ 16/17); UiTestbed --selftest
+  122/122 categories 0 failed (xvfb); CPU (plate+sharedMod 1.0, 48k blk128)
+  ~7.8 µs total over the 3.3 µs baseline — under the 30 µs bench ceiling and
+  the convolver-class cap; Help.cpp + dsp-invariants.md + this log synced.
 ## R1 implementation log (2026-10-13)
 - **New param** `reverbDry` (stored 0..1, 0.5 = 0 dB, ±24 dB face, mirrors
   `convDry` exactly — same class: a gain on the DRY term of the Mix crossfade,
