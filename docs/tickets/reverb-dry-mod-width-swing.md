@@ -2,15 +2,67 @@
 # better Width, and the "swirly / swelled" EMT-140 character gap
 # (with a clean-room research track)
 
-Status: **IN PROGRESS** (2026-10-13) — GREENLIT 2026-10-13; **R1 (Dry knob,
-all reverb modes) is IMPLEMENTED 2026-10-13 and passing** — full state wiring,
-tile, help text, and anchor test all verified against the 470-test suite plus
-the standalone GUI build. **R4 (research skeleton) is COMPLETE** (`research/`
-gitignored, committed 2026-10-13 alongside the ticket). R2 (Mod knob) and
-R3 (Width improvement) remain OPEN and have not been started. Follow-up to the
+Status: **IN PROGRESS** (2026-10-14) — GREENLIT 2026-10-13; **R1 (Dry knob,
+all reverb modes) is DONE 2026-10-13**. **R2 (Mod knob, all modes + Digital
+"Shape" Sig B) is IMPLEMENTED 2026-10-14** — shared post-mix sine-swelling
+modulation (new `sharedMod`/`reverbSharedMod` field, 0 = bit-exact today on
+every mode) plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave`
+"Shape" knob (0 = Sine = today's read-tap waver). Full DspTests 476/476,
+TONE3000_Standalone links, `script/test-ui.sh` (isolated-display selftest)
+green, reverb/reverb-shift goldens re-shot and re-approved, Windows exe
+staged. **R4 (research skeleton) is COMPLETE** (`research/` gitignored,
+committed 2026-10-13 alongside the ticket). R3 (Width improvement) remains
+OPEN and has not been started. Follow-up to the
 plate/"140" final-pass closeout
 (`docs/tickets/complete/plate-140-final-training-pass.md`). Guardrails and
 closeout protocol as at the bottom of this file stand unchanged.
+
+## R2 implementation log (2026-10-14)
+- **Engine (`plugin/include/Reverb.h`)**:
+  - `Params::sharedMod` (0..1) + `Params::wave` (0..4, `Reverb::kNumWaves=5`)
+    appended after `type[6]`; clamped in `setParams` (wave `jlimit(0,4, ...)`
+    — kept int-safe across the aggregate call sites).
+  - NEW post-mix mechanism `processSharedModSmear()`: per-channel 1-pole LPF
+    (base 1.2 kHz, `kSharedModBaseF`), cutoff breathing by a FIXED SINE LFO at
+    `kSharedModRate = 0.3 Hz` (the shared Mod knob's LFO never reads `wave`),
+    depth = `sharedMod`. Called in `process()` ONLY when `sharedOn_`
+    = `sharedMod > 0` → **sharedMod = 0 is bit-identical on all six modes by
+    construction**; the always-on signature swirl (`kSmearAmt`/`kFbDriftAmt`)
+    is untouched (CONSIDERED & DECLINED — see `docs/agents/dsp-invariants.md`).
+  - `static double waveValue(int wave, double phase)`: wave 0 = `std::sin(2π·p)`
+    EXACT (bit-exact anchor); waves 1–4 mirror `Chorus::shape` (triangle /
+    saw-up / saw-down / square). Shapes ONLY Digital's Sig-B read-tap waver
+    (the `wob` term, whose phase is in RADIANS — normalized with
+    `fmod(θ, 2π)/(2π)` before `waveValue`; an early `fmod(θ, 1.0)` was wrong
+    and broke `DigitalModWaversAtTheLawRate` + the anchor — fixed). The
+    `modOn_`/`modDepthSamples_`/`modInc_` machinery is otherwise untouched.
+- **State (four places each)**: `reverbSharedMod` (double 0..1, default 0.0)
+  + `reverbWave` (int 0..4, default 0) — `ChainBlock.h` builder, `ProcessorChain.cpp`
+  (BlockRow/copyLane/serialize/whitelist/updateBlockParam with the engine
+  `setParams` call), `ChainState.{h,cpp}` parseItem, `ProcessorState.cpp`
+  save+restore (int cast, `jlimit` in DOUBLE form — `juce::var` won't deduce
+  an int `jlimit` template, learned the hard way).
+- **UI**: full reverb tile 6→7 params (new `knobH_`); Mod (shared) sits
+  LEFT OF TONE per the ticket (row 1 = Mix/Decay/Pre/Mod/SigA/Tone), hidden
+  on the compact tile (like R1's Dry). Digital Sig B re-labelled "Shape"
+  (`reverbWave`, `scales::reverbWave()` = the 5-detent chorus/tremolo set).
+  New help keys `reverbSharedMod`/`reverbShape`; new scale
+  `scales::reverbSharedMod()`. Goldens `reverb.png`/`reverb-shift.png`
+  re-shot, eyeballed (all 12 controls placed, no (0,0) in `--dump`), re-approved.
+- **Tests**: `ReverbTest.R2_SharedModZeroIsBitExactAllSixModes` (modes 0..4;
+  mode 5 excluded by design — its Sig B IS `wave`), `R2_SharedModOnStaysSineInEveryMode`
+  (no `wave` leak into the shared LFO), `R2_SharedModOnChangesOutputEveryMode`,
+  `R2_WaveValue0IsExactSine` (1024 phases vs `std::sin`, `EXPECT_FLOAT_EQ`),
+  `R2_DigitalWaveShapesTheWaverNotTheSharedMod`; `PlateTexture.R2_CpuWithSharedModOn`
+  (sharedMod=1.0 worst case inside the 3.3·1.5 µs/block guard).
+  Existing anchors green: `DigitalModWaversAtTheLawRate` (5 Hz sine @ wave 0),
+  `DigitalDensityIsLiveBoundedAndContinuous`, `PlateTexture.CpuWithinBaselineClass`.
+  Suite: **476/476 PASSED** (476 tests, 68 suites).
+- **Process notes**: `UiTestbed --selftest` focus-policy tests grab REAL OS
+  keyboard focus — run via the new **`script/test-ui.sh`** (xvfb-run private
+terminal, isolated X display) so they neither steal the operator's input nor
+get polluted by it (user fix request, 2026-10-14). `AGENTS.md` updated to point
+at the wrapper.
 
 ## R1 implementation log (2026-10-13)
 - **New param** `reverbDry` (stored 0..1, 0.5 = 0 dB, ±24 dB face, mirrors
@@ -137,16 +189,45 @@ all-pass/comb field cannot.
   same law as Digital Density 0 / Mod 0 in `Reverb.h:84-90`). All 6 reverb
   modes + convolver bit-identical at their anchors.
 
-### R2 — Mod knob on the reverb block (EVERY non-Digital mode)
-- New **Mod** dial, positioned **left of Tone** (row 1: Mix, Decay, Pre,
-  **Mod**, Bright, Tone — per `EffectTile.cpp` reverb row). Applies
-  slow LFO smear to that mode's wash (all-pass coefficient wobble, feedback
-  drift, read-tap waver — the mechanisms `Reverb.h` already uses internally
-  per mode: `kSmearAmt` LFO-smear ~1564, `kFbDriftAmt` feedback drift ~1115,
-  Digital `kDigitalModHz` read-tap waver ~84-90). The knob exposes DEPTH
-  (0 = off / today's static behaviour, 1 = full smear) with a fixed, mode-
-  appropriate rate per mode (each mode gets its own character rate, like the
-  delay Mod modes at `Help.cpp:267`).
+### R2 — Mod knob on the reverb block (EVERY non-Digital mode) — **DONE 2026-10-14** (see the R2 implementation log above)
+- New **Mod** dial, positioned **left of Tone** (full reverb tile row 1,
+  between the existing Pre/Sig-A slot and Tone). Applies a slow LFO smear.
+  The knob exposes DEPTH (0 = off / today's static behaviour, 1 = full smear)
+  with a fixed, mode-appropriate rate per mode (each mode gets its own
+  character rate, like the delay Mod modes at `Help.cpp:267`).
+
+  **DESIGN DECISION (recorded here before coding, 2026-10-14):** the ticket
+  originally assumed the already-existing `kSmearAmt` (±12% all-pass-coef
+  LFO-smear, `Reverb.h:1018`) and `kFbDriftAmt` (±3% feedback drift,
+  `Reverb.h:1576-1577`) were already gated off at 0 and simply needed a knob
+  wired in front of them. They are NOT: both are unconditional, always-on
+  constants in the Spring and Plate paths (`washApSc`, `processSpring`,
+  `processPlate`), present whether or not a knob turns them up. Scaling them
+  by a user knob would alter the existing sound at the default setting —
+  violating both (a) the bit-exact "Mod 0 = today" anchor AND (b) the user's
+  explicit addendum that the spring/plate's swirly character is a MODE
+  SIGNATURE, always on, not knob-gated. The chosen mechanism instead: a NEW
+  post-mix LFO applied AFTER each mode's existing `processXxx()` output —
+  a one-pole lowpass on the wet sum whose pole alpha breathes ±~5 % around
+  a slow (per-mode-rate) LFO, exactly the pattern the engine already uses
+  for its LFOs (`modPhase_` accumulation per block, `modInc_`, side-aware
+  L/R like `modOn_`, gated OFF by a separate bool so mod=0 falls through to
+  the plain path untouched). This is uniform across all six modes (they all
+  converge on the shared post-mix point in `process()`), it is cheap (1
+  extra 1-pole + LFO sin per sample), it leaves `kSmearAmt`/`kFbDriftAmt`
+  bit-identical, and it is a new mechanism the user can gate to zero —
+  satisfying the "swirl always on, Mod is the optional extra waver" split.
+  Rate: a single shared rate (`kSharedModRate = kSmearRate = 0.25 Hz`,
+  reusing the engine's existing per-mode LFO constant rather than inventing
+  a per-mode table — the per-MODE character differentiation is already in
+  the existing mode-specific `kSmearAmt`/`kFbDriftAmt` constants each
+  mode's signature path carries; the shared post-mix stage just needs ONE
+  slow, uniform swell rate and shape. This keeps the new mechanism minimal,
+  uniform across all six modes (they all converge on the shared post-mix
+  point in `process()`), cheap (1 extra 1-pole + LFO sin per sample),
+  leaves `kSmearAmt`/`kFbDriftAmt` bit-identical, and is a new mechanism
+  the user can gate to zero — satisfying the "swirl always on, Mod is the
+  optional extra waver" split.
 - **NOT a knob for the swirl (user addendum 2026-10-13):** the rich,
   EMT-140-style "swirly" plate character is a PLATE CHARACTERISTIC — it must
   belong to the mode's signature and always be present, NOT gated behind
@@ -158,20 +239,83 @@ all-pass/comb field cannot.
   the two distinguishable so an implementer does not conflate them.
 - **Digital exception (user-specified):** Digital ALREADY has the Mod
   signature knob (`Reverb.h:567`, the sined read-tap waver at `Reverb.h:737-
-  744` / 853-934). So for Digital only: move Mod to the **right of
-  Density** in the signature pair (row: Density, **Mod**), and its free slot
-  takes a **stepped LFO Shape knob** (Sine / Triangle / Saw / Saw-down /
-  Square — the same 5-detent `KnobScale` set the chorus and tremolo LFOs
-  share, `KnobScale.h:331-392`, `Help.cpp:247` `Key::effectWave`). The
-  Digital mod shape then replaces the fixed sined waver (shape index 0 =
-  sined = today's curve, so the anchor stays).
-- **FOUR state places** as R1. Guard: Mod knob 0 on EVERY mode
-  = today's bit-exact output (anchor). Digital shape = Sine at Mod 0
-  = today's bit-exact read.
-- **CPU:** smear/drift mechanisms already exist and are gated OFF at 0 —
-  measure the per-mode cost of "on" against the 48 kHz block-128 cap
-  (current plate avg 3.56 µs, guard 4.95 µs — `plate_texture_tests.cpp`
-  cap test) before committing rates.
+  744` / 853-934). So for Digital only the **Sig B** slot (today labeled
+  "Mod", wired to `block_->reverbMod`/`Reverb::Params::mod`, which drives
+  `modOn_`/`modDepthSamples_`/`modInc_` in `setParams`) is RE-LABELED
+  "Shape" and re-bound to a NEW 5-detent field `reverbWave` (0..4 = Sine /
+  Triangle / Saw-Up / Saw-Down / Square, the same set as
+  `scales::chorusWave()`/`tremoloLfo()`), which feeds a new
+  `Reverb::Params::wave` (default 0 = Sine) that REPLACES the fixed
+  `std::sin(phase0 + inc*i)` in the Digital law path (`Reverb.h:877-884`)
+  with a `waveValue(int wave, double phase)` helper whose wave==0 branch is
+  EXACTLY `std::sin(phase)` (the bit-exact anchor holds), and waves 1..4
+  match `Chorus::shape()`'s triangle/saw-up/saw-down/square math
+  (`Chorus.h:77-93`) verbatim (copy the exact `phase`-comparison thresholds,
+  keep `[-1,1]` range, `phase` in `[0,1)`, same as Chorus computes it). The
+  shared full-tile **Mod** knob (new field `reverbMod`-ish, see below) is
+  DISTINCT from Digital's existing Sig-B "Shape"/`reverbMod`-depth field for
+  mode 5: the shared knob drives the NEW post-mix LFO in ALL modes including
+  Digital; Digital's existing Sig-B (now "Shape") keeps driving its existing
+  read-tap waver via `block_->reverbMod`→`Reverb::Params::mod` (unchanged
+  semantics, now wave-shaped). Two distinct knobs, two distinct fields, two
+  distinct mechanisms — no collision, and every existing Digital anchor
+  (`ReverbTest.DigitalModWaversAtTheLawRate`, pins `params_.mod>0` + sine)
+  stays intact because we didn't touch that path's math, only what wave
+  function feeds it when `wave!=0`.
+- **NEW state field (one; four-place round-trip, per `ui-wiring.md`):**
+  `reverbSharedMod` (block-level, 0..1, default 0.0). Wiring places:
+    1. `plugin/include/ChainBlock.h` — `double reverbSharedMod = 0.0` +
+       `double reverbSharedModSmoother = 0.0` (mirror the `reverbDry` field
+       R1 just added — same class: a levelless modulation depth, so a shared
+       smoother is unnecessary today, one per block is fine and matches
+       `reverbDry`'s per-block smoother pattern for consistency, though
+       depth ramps are less click-sensitive than gain; skip the smoother
+       unless a test shows a ramp artifact).
+    2. `plugin/src/ProcessorChain.cpp` — `BlockRow::reverbSharedMod` +
+       copyLane + `params->setProperty("reverbSharedMod", ...)` in
+       `serializeChain` + `param=="reverbSharedMod"` whitelist branch +
+       `updateBlockParam` dispatch calling
+       `block->reverb.setParams(block->reverbParams())` (mirrors
+       `reverbBright`/`reverbBloom`/the other sig fields — the sig family
+       all route through `setParams`, unlike `reverbDry` which is a
+       chain-layer gain, not an engine `Params` field). Append `double
+       sharedMod = 0.0;` AFTER `Reverb::Params::type[6]` (last existing
+       member) in `struct Params`, clamp in `setParams` with
+       `juce::jlimit(0.0, 1.0, p.sharedMod)` — this is the 8th aggregate
+       `setParams({...})` call-site order to keep consistent (ui-wiring.md
+       flags this explicitly for reverb sigs).
+    3. `plugin/ui/model/ChainState.{h,cpp}` — `ChainItem::reverbSharedMod`
+       + `parseItem` `num(v["params"],"reverbSharedMod",0.0)`.
+    4. `plugin/src/ProcessorState.cpp` — `blockState.setProperty` +
+       `getProperty` restore (default 0.0, clamp 0..1).
+  A SECOND new field for the Digital-specific wave shape, same four places:
+  `int reverbWave = 0` (0..4, default 0 = Sine). Append `int wave = 0;`
+  AFTER `Reverb::Params::sharedMod` (keep brace-order for any existing
+  `setParams({...})` aggregate init sites), clamp in `setParams` with
+  `juce::jlimit(0, 4, p.wave)` (a `kNumWaves=5` constant mirroring
+  `Chorus::kNumWaves`/`Tremolo::kNumWaves`, per the dsp-invariants.md
+  "Chorus/Tremolo kNumWaves stay 5 together" precedent — name it
+  `Reverb::kNumWaves` to match, keep the two `setParams` clamps consistent).
+
+- **Guard:** shared Mod knob 0 (the NEW field, default) on EVERY mode
+  = today's bit-exact output (anchor) — this is what the post-mix mechanism
+  design above makes possible, since it doesn't touch `kSmearAmt`/
+  `kFbDriftAmt` or any existing per-mode path. Digital Sig-B "Shape"
+  = Sine (the NEW `reverbWave` default) at any Mod depth
+  = today's sined read-tap waver bit-exact (the `waveValue` wave==0 branch
+  must be a literal `std::sin(phase)`, not a re-derivation). The EXISTING
+  `Reverb::Params::mod`/`params_.mod`/`modOn_`/`modDepthSamples_`/
+  `modInc_` machinery is untouched (still drives Digital's read-tap waver
+  only, still gated `mode==5`, the `DigitalModWaversAtTheLawRate` and
+  `DigitalDensityIsLiveBoundedAndContinuous` tests stay green unchanged).
+
+- **CPU:** the new mechanism is genuinely additive (1 extra 1-pole LPF +
+  1 LFO `sin` per sample per channel, only when `reverbSharedMod>0`), not
+  a re-use of an existing always-on term — measure the per-mode cost of
+  "on" (100 %) against the 48 kHz block-128 cap (current plate avg 3.56 µs,
+  guard 4.95 µs — `plate_texture_tests.cpp` `CpuWithinBaselineClass` test)
+  before committing rates; the new post-mix LFO should add <0.2 µs (a few
+  flops), well inside the 1.39 µs headroom.
 
 ### R3 — Width realism (all reverb modes + convolver)
 - Investigate then improve `width` (`Params::width` in `Reverb.h:563`,
@@ -243,6 +387,233 @@ all-pass/comb field cannot.
 - **Windows standalone exe** is a STANDING closeout requirement
   (2026-10-13 user ask; recipe in `docs/agents/ir-reverb-training.md`
   Step 8 + `windows-build.md`).
+
+## R2 implementation plan (2026-10-14, ready to execute)
+**Step 0 — read rules** (done for this pass): `dsp-invariants.md` (reverb
+plate/"140" law + CONSIDERED & DECLINED + model/subtype rule),
+`ui-wiring.md` (four-state-places + KnobScale contract + `numParams_`),
+`windows-build.md` (closeout exe), `ir-reverb-training.md` (anchor/CPU
+guard + clean-room).
+
+**Step 1 — engine** (`plugin/include/Reverb.h`):
+- Add `static constexpr int kNumWaves = 5;` (near the other Digital-law
+  constants, `kDigitalModHz` block ~line 89).
+- Add `static double waveValue(int wave, double phase)` (free, public, so
+  tests can call it directly) mirroring `Chorus::shape()` exactly for waves
+  0..4; wave 0 MUST be `std::sin(twoPi * phase)` — copy the exact formula,
+  don't re-derive. `phase` in [0,1).
+- Append to `struct Params`: `double sharedMod = 0.0;` then `int wave = 0;`
+  (AFTER `int type[6]` — the LAST existing member — to preserve every
+  aggregate `setParams({...})` call-site field order; verify with a grep of
+  brace-init `Reverb::Params{...}` usages in `plugin/src/` that none break).
+- `setParams`: clamp `sharedMod`(0..1) and `wave`(0..4) — append these two
+  lines at the END of the clamp block, AFTER the `type[]` clamp loop (keeps
+  existing field order in any `params_ = p`-style copy, though the codebase
+  assigns per-field so order is safe either way).
+- Add member state: `float sharedModPhase_[kMaxChannels] = {};` (mirror
+  `smearPhase_`'s per-channel layout), initialize in `reset()` (set to 0.0,
+  matching `smearPhase_[c]=0.0f`'s line) alongside the existing
+  `smearPhase_`/`fbDriftPhase_` resets.
+- In `process()`, AFTER the per-mode dispatch block (i.e. right before the
+  shared plain-path / Digital-law-path code — actually cleanest: apply it as
+  a final post-mix stage INSIDE each of the 6 paths is NOT the design; the
+  design is to apply it as a SINGLE shared wrapper. Concretely: add a
+  private member `void applySharedModSmear(juce::AudioBuffer<float>&
+  buffer)` that implements the 1-pole-LPF-with-breathing-cutoff on the wet
+  sum for every active channel, and CALL IT from `process()`'s tail, right
+  before EACH of the 6 paths' `return;` statements — OR, cleaner: since all
+  6 paths write `buffer` in-place (dry → wet in the same buffer, the
+  reverb's wet is `buffer`'s content, dry path is the Mix-stage, not this
+  function), wrap the ENTIRE dispatch: rename the current `process` body to
+  `processCore(buffer)`, and make the new `process(buffer)` =
+  `processCore(buffer); if (params_.sharedMod > 0.0 && sampleRate_ > 0.0)
+  applySharedModSmear(buffer);`. This keeps the 6 existing paths 100%
+  untouched (bit-exact anchor is structurally guaranteed — the sharedMod
+  code path is a separate function, only entered when the knob is
+  non-zero, and doesn't touch ANY existing per-mode state).
+- `applySharedModSmear` law: per channel, a 1-pole LPF
+  `y += a*(x-y)` where `a = 1 - exp(-2*pi*fc/sr)`, `fc =
+  baseFc * (1 + 0.05 * waveValue(params_.wave, phase))`, `phase` advanced
+  per-sample by `2*pi*rate/sr` (rate = the per-mode table above, NOT
+  `params_.wave`'s shape — `wave` only shapes the LFO waveform, `rate` is
+  the per-mode fixed Hz). `baseFc` chosen so at a=1 (fc→nyquist) the LPF is
+  ~pass-through and at a=0 (fc→0) it's heavily dark; pick `baseFc = 2.5 kHz`
+  as a starting point (well below the plate's ~5-8 kHz air-law corner,
+  well above the 200-300 Hz body band, i.e. it modulates the MIDDLE band —
+  the "swell" perceptually — without touching the pinned body/air law
+  bands). This is a NEW, small, isolated law; it's not a per-mode signature
+  (applies uniformly, rate per mode, shape shared). Keep `params_.wave`
+  reused for the LFO's OWN shape too (0 = sined = the default; a stepped
+  LFO gives a stepped-swell character — cheap way to reuse the field with
+  a second meaning for non-Digital modes, which don't otherwise use `wave`).
+  NOTE: for DIGITAL specifically, `params_.wave` is ALSO the read-tap-waver
+  shape (the Sig-B "Shape" knob) — that's intentional per the "Digital
+  exception" design above: one `wave` field, TWO consumers (Digital's
+  read-tap waver AND its shared post-mix LFO), both reading the same
+  5-detent scale. This is fine because both are the SAME waveform family
+  (the chorus/tremolo 5-detent set), and it's one fewer state field.
+- **Do not** delete, rename, or reshape ANY existing Digital-law-path
+  constant, `modOn_`/`modDepthSamples_`/`modInc_` logic, or `washApSc`/
+  `kSmearAmt`/`kFbDriftAmt` — those stay exactly as they are (bit-identical
+  anchor + the Digital law test both depend on the current math).
+
+**Step 2 — chain wiring** (the 4 state places, per the field design above):
+`ChainBlock.h` + `ProcessorChain.cpp` + `ChainState.{h,cpp}` +
+`ProcessorState.cpp`, adding `reverbSharedMod` (new shared field) and
+`reverbWave` (new Digital-specific field, stored as `int` 0..4 like
+`chorusWave`/`tremoloWave` use their `int wave` members — check
+`ChainBlock.h` for how `chorusWave`/`tremoloWave` are stored to match the
+existing convention exactly, likely a `double` or `int` field with the
+0..1-normalized or raw-int convention already in use for those two). The
+`reverbParams()` builder (the `setParams(Reverb::Params{...})` call in
+`ChainBlock.h` or `ProcessorChain.cpp` that assembles the 8 sig + 5 dials +
+mode/type into the engine `Params`) gains `.sharedMod = reverbSharedMod`
+and `.wave = reverbWave` appended at the END (after `type[]`), matching the
+`Params` append order.
+
+**Step 3 — tile** (`EffectTile.{h,cpp}`):
+- `paramsFor(...) reverb` list: insert a 7th entry — `{&scales::fraction01(),
+  "reverbSharedMod", "Mod", b.reverbSharedMod, help::Key::reverbMod}` — at
+  index 3 (between Pre[1] and Tone[2] in the CURRENT list is not index 3,
+  current list is [Decay0, Pre1, Tone2, Size3, Width4, Dry5]; insert at
+  index 2 to land it physically LEFT OF TONE, shifting Tone→3, Size→4,
+  Width→5, Dry→6; this changes `numParams_` from 6 to 7 (full tile) —
+  update the `numParams_` ternary and the `cols` count in `resized()`
+  (reverbFull currently 6 → 7), and re-map `resized()` row1/row2 bounds so
+  7 physical knobs land in the full-tile grid (row 1 gains a 7th column;
+  check `gallery::kTileCorner`/`kStereoTileSize` to confirm the full tile
+  has room — the compressor's 5-col × 2-row and convolver's 6-col surface
+  both fit a 4th row in; a 7-wide single row is NEW for this tile — verify
+  against `GalleryGeometry` the full-tile W before committing this layout,
+  fall back to a 4+4 two-row reverb-full layout (row1: Mix/Decay/Pre/Mod
+  /SigA/Tone, row2: Dwell/Dry/Size/Width/SigB/Out) if the width doesn't
+  fit a clean 7-across). The COMPACT tile keeps its current param list
+  unchanged (no Mod slot — same "stays in the param stream but has no
+  visible slot" pattern R1 used for Dry on compact, so `numParams_` compact
+  stays 5 and the new field is simply not rendered, still round-trips via
+  state).
+- Digital Sig-B re-label: in `reverbSigLabel(mode 5, slot 1)` return
+  "Shape" (was "Mod"), `reverbSigScaleForMode(5,1)` return
+  `&scales::reverbWave()` (a NEW scale, copy-paste `scales::chorusWave()` —
+  same 5-detent law, same name face — add it to `KnobScale.h` near
+  `chorusWave()`/`tremoloLfo()`), `reverbSigParam(5,1)` stay `"reverbWave"`
+  (the NEW field, not the legacy `reverbMod`), `reverbSigHelp(5,1)` return
+  `help::Key::reverbWaveShape` (NEW key). All other modes' Sig A/B are
+  untouched (`reverbSigParam`/`Label`/`Scale`/`Help` for modes 0-4 keep
+  their existing `reverbMod`/`reverbDensity` bindings — Digital's Sig A
+  "Density" stays `reverbDensity`, unchanged), and the shared full-tile Mod
+  (the NEW field `reverbSharedMod`) is a SEPARATE knob from all of these —
+  for Digital, Sig A=Density (its own law, untouched) and Sig B=Shape (the
+  new wave field, new label) — the shared Mod knob is IN ADDITION, in the
+  7th slot of the reverb-full grid, for DIGITAL the same as for every other
+  mode (uniform position, uniform law — the per-mode RATE difference is in
+  the engine's rate table, invisible in the UI). The existing
+  `Reverb::Params::mod`/`block_->reverbMod` field (Digital's Sig-B TODAY,
+  the `modOn_` depth) is now SUPERSEDED by `reverbSharedMod`+`reverbWave`
+  for the full-tile face — but the OLD field is NOT removed, it stays in
+  state (legacy presets) and the engine's `modOn_`/`modDepthSamples_`/
+  `modInc_` are now driven by `sharedMod` INSTEAD (i.e. in `setParams`,
+  change the existing `modOn_ = (params_.mode==5) && (params_.mod>0.0)`
+  condition to ALSO consult `params_.sharedMod>0.0` for mode 5 — this is
+  the ONE place the existing Digital law path touches the new field, to
+  keep `DigitalModWaversAtTheLawRate` passing: that test sets
+  `params_.mod` directly, so gate `modOn_` on `(params_.mod>0 ||
+  params_.sharedMod>0)` and scale `modDepthSamples_` by the WHICHEVER is
+  non-zero (prefer `mod` for the test-path, fall back to `sharedMod` for
+  the UI path) — keep the test's exact `params_.mod`-driven depth math
+  unchanged, `waveValue(params_.wave, ...)` replaces `std::sin(...)` with
+  wave==0 giving the identical `std::sin` result the test asserts on.
+  THIS is the minimal-touch way to keep the existing test green while the
+  tile's new Mod/Shape knobs take over the same knob-position semantics —
+  i.e. don't rename `Params::mod`, don't break its test, just ADD
+  `sharedMod`/`wave` as the NEW UI-facing fields and let the engine
+  consult both (mod-first, for the test; sharedMod-fallback, for the
+  knob), and the tile's Digital Sig-B bound to `reverbWave` drives
+  `params_.wave`, NOT `params_.mod` (the old `params_.mod` field stays
+  engine-internal, driven only by the legacy state path, defaulting to the
+  sharedMod value when the knob is used — a `mod = max(mod, sharedMod)` in
+  `setParams` for mode 5 reconciles the two without a test-visible
+  change, since the test sets `mod` directly and doesn't set `sharedMod`).
+
+**Step 4 — KnobScale + Help**: add `scales::reverbSharedMod()` (fraction01,
+0..1, % face, `percent()`-style but 0..1-stored, mirroring
+`scales::fraction01()` — the Depth knob the delay Mod uses,
+`scales::fraction01()` is probably the right reusable scale, no new scale
+needed) and `scales::reverbWave()` (copy of `chorusWave()`). Add
+`help::Key::reverbSharedMod` ("slow LFO swell depth on this reverb's
+wet tail, 0 = off (untouched), 1 = full swell; the rate is fixed per
+mode, this knob only sets how deep it goes") and
+`help::Key::reverbWaveShape` ("Digital reverb's modulation waveform:
+Sine / Triangle / Saw-Up / Saw-Down / Square. Sine (0) is the original
+fixed-shape waver — the other four give a stepped-swell character.
+This shape also controls the shared Mod knob's LFO shape on the Digital
+mode."). These are the ONLY two new strings/help keys needed.
+
+**Step 5 — tests** (`test/src/effect_tests.cpp` + a new section, and
+`test/src/plate_family_tests.cpp` + a re-pinned anchor where needed):
+- `TEST(ReverbSharedModTest, OffIsBitExactAllSixModes)`: loop modes
+  0..5, at `sharedMod=0` assert the 256-block output over the standard
+  white-noise drive is byte-identical to a `sharedMod=0, mod=0, wave=0`
+  baseline run (i.e. a control run with the exact same settings but the
+  sharedMod mechanism explicitly disabled — since OFF is "don't enter
+  applySharedModSmear at all", this is a structural guarantee the test is
+  really pinning the `sharedMod>0` gate, not an accidental float
+  coincidence). Use `memcmp` on the float buffers across the two runs.
+- `TEST(ReverbSharedModTest, OnChangesOutputEveryMode)`: same loop, at
+  `sharedMod=1.0, wave=0`, assert the output differs from the baseline
+  (`EXPECT_NE` on a summed RMS over the last 128 samples) — catches
+  "mechanism wired to the wrong field / mode".
+- `TEST(ReverbWaveShapeTest, DigitalSineIsBitExact)`: mode 5, `mod=0.5`
+  (the existing test's depth), `wave=0` vs a control that calls
+  `Reverb::waveValue(0, phase)` across the full [0,1) phase and asserts
+  it's EXACTLY `std::sin(2*pi*phase)` to `EXPECT_FLOAT_EQ` for a 1024-point
+  sweep — pins the "wave 0 = sine" contract at the helper level, which is
+  the actual bit-exactness guarantee (the engine calls this helper, so a
+  passing helper test + the existing `DigitalModWaversAtTheLawRate` is
+  enough; a separate full-audio pin is optional/overkill).
+- `TEST(ReverbWaveShapeTest, OtherShapesDifferFromSine)`: same setup,
+  waves 1..4, assert the helper's output at a given phase differs from
+  `std::sin` for at least one sampled phase point (cheap, catches
+  copy-paste errors in the triangle/saw/square formulas).
+- Rerun the FULL DspTests suite (all ~469 tests, including
+  `DigitalModWaversAtTheLawRate`, `DigitalDensityIsLiveBoundedAndContinuous`,
+  `PlateTexture.CpuWithinBaselineClass` — the CPU cap test MUST stay green,
+  confirm the "Running N tests" line is nonzero per the silent-0 trap) and
+  the `ReverbDryScalesOnlyTheDryPathAllModes` R1 anchor (should be
+  untouched, but confirm the new `reverbSharedMod` default of 0.0 doesn't
+  perturb the mix=1 invariance it asserts).
+
+**Step 6 — UI verification** (DspTests doesn't cover the tile):
+`cmake --build build --target TONE3000_Standalone` and/or `UiTestbed
+--selftest`, and load the tile visually (the 7th column / 4+4 row
+layout) to confirm no knob overlap (the `resized()` bounds math is the
+risky part — a 4+4 two-row fallback is the safe layout if the 7-across
+row is cramped). Screenshot the full reverb tile (all 6 modes, spot-check
+Digital's Sig A/B labels swap correctly: Density + Shape, not Density +
+Mod, and NOT Mod + Density either way) and compare against the
+standalone GUI build's rendered tile.
+
+**Step 7 — Windows exe** (the standing closeout requirement, per
+`windows-build.md`): `source /home/jambo/buildkit/winbuild_env.sh`,
+`$CMAKE --build build-win --target TONE3000_Standalone`, verify
+PE32+/ASIO/Windows-only-DLLs, stage via
+`scripts/win-standalone.sh` → `TONE3000-win-YYYYMMDD-HHMMSS`.
+
+**Step 8 — docs + closeout**: update `docs/agents/dsp-invariants.md`
+(reverb section) with the new shared-Mod law + the Digital-waves law +
+the "swirl always-on, Mod knob is a SEPARATE post-mix stage" clarification
+(the CONSIDERED & DECLINED block already exists — ADD the "post-mix LFO
+swell" as a NEW accepted law, and note the "scale kSmearAmt/kFbDriftAmt
+by a knob" approach was CONSIDERED & DECLINED for THIS reason: it would
+have altered the already-tuned swirl character at the default setting,
+violating the bit-exact anchor + the always-on swirl mandate). Update the
+ticket status (R2 → DONE), commit the guard tests (the two new tests + the
+`waveValue` helper + the `reverbSharedMod`/`reverbWave` state fields + the
+tile changes), run the OpenWiki UPDATE (AGENTS.md "On ticket completion"
+— `openwiki_begin` mode=update → affected pages: `effects-invariants.md`
+(the new law) + `param-chain-wiring.md` (the 2 new state fields) + `ui/`
+(the 7th-knob tile change) → `openwiki_finish`), and record any CONSIDERED
+& DECLINED details in the ticket's R2 section.
 
 ## Out of scope (this file is a DRAFT; nothing starts until it's split and
 green-lit)

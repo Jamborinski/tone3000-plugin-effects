@@ -148,7 +148,7 @@
   `bbdLawNorm_` = dimensionless `2π·fc_ref·refMs·0.001` (norm =
   `bbdLawNorm_/cur` reproduces `2π·fc/sr` exactly — `sr` cancels).
 ## Reverb (plate / "140" model -- full text in `docs/agents/ir-reverb-training.md`)
-- Plate/"140" (mode 2, type 0 = the EMT 140 model) is tuned against the EMT 140
+- Plate/"140" (mode 0, type 0 = the EMT 140 model) is tuned against the EMT 140
   2.0 s IR reference (house convolver, peak-normalised): 50 % NEUTRAL start
   dials (tone/size/width 0.50, decay 2000 ms = the reference's own length);
   air law = 2x 1st-order OUT-stage LPF stages, 4900 Hz at short decay -> 3600 Hz
@@ -162,6 +162,16 @@
   50 % rebalance already reproduces the EMT body, so it only cost comb + level --
   REMOVED); denser onset pings (L1 42.7 -> 29.5; Hadamard 42.7 -> 25.1 -- they
   thin the ping).
+- **CONSIDERED & DECLINED (2026-10-14, the shared Mod knob / R2):** driving the
+  shared user-facing Mod knob by SCALING the existing in-loop LFO constants
+  (`kSmearAmt` 0.12 / `kFbDriftAmt` 0.03, the per-mode signature swirl in
+  `washApSc`/`processSpring`/`processPlate`) -- that would change the
+  always-on mode CHARACTER at the knob's 0 default (breaking the bit-exact
+  anchor AND the mandate that the swirl is each mode's signature, independent
+  of the knob) instead of ADDING an optional swell on top. The shipped
+  mechanism is a POST-mIX stage gated fully at `sharedMod==0`
+  (`Reverb::processSharedModSmear`, always a sine LFO); `wave` shapes ONLY
+  Digital's Sig-B read-tap waver (wave 0 = `std::sin` bit-exact).
 - **MODEL/SUBTYPE rule (general, all effects):** a mode + model/subtype (type)
   MAY carry its own knob defaults and tone law (permissive, not mandatory),
   tuned to its own reference, but it must never override the generic/shared path

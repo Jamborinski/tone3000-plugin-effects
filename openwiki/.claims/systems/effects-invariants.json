@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:317efb30b2dc2fa40e439572ee61b192ff06e3cbc9a3eb4dacac7c4c93b860dc",
+  "pageVersion": "sha256:1d16e3a26536cf9749e14e3be18432fac7322af540bc1a48838433875eaff098",
   "claims": [
     {
       "id": "claim_bcd3a636e7fe47c7aba00662347b2681",
@@ -8,7 +8,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:ab7afed2567aa624add79190903f8fec52e58af19d5e7fdb27e5ceeb6f3c5065"
+          "version": "repo-file-v1:sha256:5b52946f9edcb5ff2133cc0b3df8d2987017f55d5d7d69c7ee1b7ba6348015f3"
         }
       ]
     },
@@ -18,11 +18,11 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:598aadac1269a032a48459a033c845c61655c875d5f2c1719e332801ff482a2f"
+          "version": "repo-file-v1:sha256:37e3df448904f949cffcd808ad791dce43f05fe79149ce4e971504d616093c0f"
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:ab7afed2567aa624add79190903f8fec52e58af19d5e7fdb27e5ceeb6f3c5065"
+          "version": "repo-file-v1:sha256:5b52946f9edcb5ff2133cc0b3df8d2987017f55d5d7d69c7ee1b7ba6348015f3"
         }
       ]
     },
@@ -32,7 +32,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:ab7afed2567aa624add79190903f8fec52e58af19d5e7fdb27e5ceeb6f3c5065"
+          "version": "repo-file-v1:sha256:5b52946f9edcb5ff2133cc0b3df8d2987017f55d5d7d69c7ee1b7ba6348015f3"
         }
       ]
     },
@@ -46,11 +46,11 @@
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:ab7afed2567aa624add79190903f8fec52e58af19d5e7fdb27e5ceeb6f3c5065"
+          "version": "repo-file-v1:sha256:5b52946f9edcb5ff2133cc0b3df8d2987017f55d5d7d69c7ee1b7ba6348015f3"
         },
         {
           "resource": "repo://test/src/plate_texture_tests.cpp",
-          "version": "repo-file-v1:sha256:604d4a41478141e78d16aaa9dda15358f868cdce466f37f2755b57129739abdd"
+          "version": "repo-file-v1:sha256:4e58e6fbd4019939c1db83a9951a03a78bfd59b10cede3b5cc643ae84cd9e46a"
         }
       ]
     },
@@ -64,7 +64,7 @@
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:ab7afed2567aa624add79190903f8fec52e58af19d5e7fdb27e5ceeb6f3c5065"
+          "version": "repo-file-v1:sha256:5b52946f9edcb5ff2133cc0b3df8d2987017f55d5d7d69c7ee1b7ba6348015f3"
         }
       ]
     },
@@ -74,7 +74,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:ab7afed2567aa624add79190903f8fec52e58af19d5e7fdb27e5ceeb6f3c5065"
+          "version": "repo-file-v1:sha256:5b52946f9edcb5ff2133cc0b3df8d2987017f55d5d7d69c7ee1b7ba6348015f3"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
@@ -88,7 +88,7 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:598aadac1269a032a48459a033c845c61655c875d5f2c1719e332801ff482a2f"
+          "version": "repo-file-v1:sha256:37e3df448904f949cffcd808ad791dce43f05fe79149ce4e971504d616093c0f"
         },
         {
           "resource": "repo://docs/agents/ir-reverb-training.md",
@@ -103,6 +103,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-11T15:58:48.204Z"
+    "at": "2026-10-11T17:47:30.537Z"
   }
 }

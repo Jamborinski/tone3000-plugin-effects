@@ -29,6 +29,7 @@
 #include <array>
 #include <cmath>
 #include <complex>
+#include <random>
 
 namespace {
 
@@ -3535,6 +3536,127 @@ TEST(SpringTest, OneSpringBoingsMoreThanSix) {
 // Sag is the spring dispersion (a dispersive medium): the loop low-pass darkens
 // with Sag so the HF decays faster than the LF, and low tones ring longer. Pin
 // the effect isolated on Springs (armed in both runs) by the low/high sustain ratio.
+// ---- R2 (shared Mod + Digital Shape) anchors: the bit-identity contracts ----
+// (design: docs/tickets/reverb-dry-mod-width-swing.md, the DESIGN DECISION block)
+
+namespace {
+// Run the reverb engine on a burst of noise through many blocks; returns the
+// summed output (all channels concatenated) formemcmp-style comparison.
+std::vector<float> sharedModRun(int mode, double sharedMod, int wave, int frames = 48 * kBlock) {
+  Reverb r; r.prepare(kFs);
+  Reverb::Params p;
+  p.decayMs = 1800.0; p.tone = 0.3; p.size = 0.5; p.width = 1.0; p.preMs = 0.0;
+  // Arm the mode's signature path so every per-mode branch is exercised too
+  // (the anchor has to hold with the mode's own law ON, not just the plain path):
+  switch (mode) {
+    case 0: p.bright = 0.5; p.bloom = 0.5; break;   // Plate
+    case 1: p.springs = 0.4; p.sag = 0.3;  break;   // Spring
+    case 2: p.early = 0.4;  p.air = 0.4;   break;   // Room
+    case 3: p.volley = 0.4; p.bass = 0.6;  break;   // Chamber
+    case 4: p.build = 0.6;  p.space = 0.7; break;   // Hall
+    default: p.density = 0.3; p.mod = 0.3; break;   // Digital (arms density+modOn_)
+  }
+  p.mode = mode;
+  p.sharedMod = sharedMod;  // R2: the new shared knob (0 = off/anchor)
+  p.wave = wave;
+  r.setParams(p);
+  const int n = frames;
+  // White noise (deterministic) through the engine.
+  std::mt19937 rng(12345); std::uniform_real_distribution<float> d(-1.0f, 1.0f);
+  juce::AudioBuffer<float> buf(2, kBlock);
+  std::vector<float> out(2 * static_cast<size_t>(n));
+  for (int off = 0; off + kBlock <= n; off += kBlock) {
+    for (int i = 0; i < kBlock; ++i) {
+      buf.setSample(0, i, d(rng));
+      buf.setSample(1, i, d(rng));
+    }
+    r.process(buf);
+    for (int i = 0; i < kBlock; ++i) {
+      out[2 * (off + i)] = buf.getSample(0, i);
+      out[2 * (off + i) + 1] = buf.getSample(1, i);
+    }
+  }
+  return out;
+}
+}  // namespace
+
+TEST(ReverbTest, R2_SharedModZeroIsBitExactAllSixModes) {
+  // Anchor: sharedMod = 0 (the default) must be bit-identical to today's
+  // output, on EVERY mode (the processSharedModSmear path is simply never
+  // entered when sharedOn_ is false) -- proven by two runs differing ONLY in
+  // wave: in modes 0..4 the wave drives nothing, so they must match exactly.
+  // Mode 5 is EXCLUDED: its Sig B "Shape" knob IS the wave field and does
+  // drive the read-tap waver (covered by
+  // R2_DigitalWaveShapesTheWaverNotTheSharedMod).
+  for (int m = 0; m < Reverb::kNumModes; ++m) {
+    if (m == 5) continue;
+    const auto off = sharedModRun(m, 0.0, 0);
+    const auto ref = sharedModRun(m, 0.0, 3);
+    ASSERT_EQ(off.size(), ref.size());
+    for (size_t i = 0; i < off.size(); ++i)
+      EXPECT_EQ(off[i], ref[i]) << "mode " << m << " sample " << i
+          << ": sharedMod=0 must be bit-identical regardless of wave (no leak)";
+  }
+}
+
+TEST(ReverbTest, R2_SharedModOnStaysSineInEveryMode) {
+  // The shared Mod mechanism always uses a sine LFO (waveValue(0, ...)) --
+  // `wave` (Digital's Sig B "Shape") must NOT reshape the shared post-mix
+  // swell in any mode, even with sharedMod armed. Mode 5 excluded: its wave
+  // also drives its own read-tap waver (separate mechanism).
+  for (int m = 0; m < Reverb::kNumModes; ++m) {
+    if (m == 5) continue;
+    const auto s0 = sharedModRun(m, 1.0, 0);
+    for (int w = 1; w < Reverb::kNumWaves; ++w) {
+      const auto sw = sharedModRun(m, 1.0, w);
+      ASSERT_EQ(s0.size(), sw.size());
+      for (size_t i = 0; i < s0.size(); ++i)
+        EXPECT_EQ(s0[i], sw[i]) << "mode " << m
+            << ": shared Mod LFO must stay sine (wave must not reshape it)";
+    }
+  }
+}
+
+TEST(ReverbTest, R2_SharedModOnChangesOutputEveryMode) {
+  // Live: sharedMod = 1 must actually change the tail on every mode (catches a
+  // wiring slip where reverbSharedMod lands on the wrong engine field).
+  for (int m = 0; m < Reverb::kNumModes; ++m) {
+    const auto off = sharedModRun(m, 0.0, 0);
+    const auto on = sharedModRun(m, 1.0, 0);
+    ASSERT_EQ(off.size(), on.size());
+    double diff = 0.0;
+    const size_t start = off.size() / 4;  // skip the fill-in transient
+    for (size_t i = start; i < off.size(); ++i)
+      diff = std::max(diff, std::abs((double)on[i] - (double)off[i]));
+    EXPECT_GT(diff, 1e-4) << "shared Mod must change the tail for mode " << m;
+  }
+}
+
+TEST(ReverbTest, R2_WaveValue0IsExactSine) {
+  // The bit-exact anchor at the helper level: wave 0 (Sine) must be exactly
+  // std::sin(2*pi*phase) for arbitrary phase (not a re-derivation).
+  for (int i = 0; i < 1024; ++i) {
+    const double ph = static_cast<double>(i) / 1024.0;
+    EXPECT_FLOAT_EQ(Reverb::waveValue(0, ph), std::sin(2.0 * M_PI * ph))
+        << "wave 0 must be bit-exact std::sin at phase " << ph;
+  }
+}
+
+TEST(ReverbTest, R2_DigitalWaveShapesTheWaverNotTheSharedMod) {
+  // Digital: wave 1..4 must change the read-tap waver output itself (the
+  // existing `mod` depth path) compared to wave 0 (sine, the anchor).
+  const auto s = sharedModRun(5, 0.0, 0);
+  for (int w = 1; w < Reverb::kNumWaves; ++w) {
+    const auto sw = sharedModRun(5, 0.0, w);
+    ASSERT_EQ(s.size(), sw.size());
+    double diff = 0.0;
+    const size_t start = s.size() / 4;
+    for (size_t i = start; i < s.size(); ++i)
+      diff = std::max(diff, std::abs((double)sw[i] - (double)s[i]));
+    EXPECT_GT(diff, 1e-5) << "Digital wave " << w << " must differ from the sine anchor";
+  }
+}
+
 TEST(SpringTest, SagMakesLowTonesOutsustainHigh) {
   const int n = 20 * kBlock;
   const int from = n * 2 / 3;

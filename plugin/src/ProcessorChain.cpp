@@ -1194,6 +1194,8 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
     double reverbTone = 0.4, reverbSize = 0.6, reverbWidth = 1.0;
     int reverbMode = 0;
     double reverbDensity = 0.0, reverbMod = 0.0;
+    double reverbSharedMod = 0.0; // R2: the shared Mod knob depth (0 = off)
+    int reverbWave = 0;           // R2: the Mod LFO shape (0 = Sine anchor)
     double reverbSprings = 0.0, reverbSag = 0.0;
     double reverbBright = 0.0, reverbBloom = 0.0;
     double reverbEarly = 0.0, reverbAir = 0.0;
@@ -1303,6 +1305,8 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
           row.reverbType5 = block->reverbType5;
           row.reverbDensity = block->reverbDensity;
           row.reverbMod = block->reverbMod;
+          row.reverbSharedMod = block->reverbSharedMod;
+          row.reverbWave = block->reverbWave;
           row.reverbSprings = block->reverbSprings;
           row.reverbSag = block->reverbSag;
           row.reverbBright = block->reverbBright;
@@ -1472,6 +1476,8 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
         params->setProperty("reverbType5", row.reverbType5);
         params->setProperty("reverbDensity", row.reverbDensity);
         params->setProperty("reverbMod", row.reverbMod);
+        params->setProperty("reverbSharedMod", row.reverbSharedMod);
+        params->setProperty("reverbWave", row.reverbWave);
         params->setProperty("reverbSprings", row.reverbSprings);
         params->setProperty("reverbSag", row.reverbSag);
         params->setProperty("reverbBright", row.reverbBright);
@@ -1920,7 +1926,7 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
                              param == "tremoloSpread" || param == "tremoloWave" ||
                              param == "compRatio" || param == "compAttackMs" ||
                              param == "compReleaseMs" || param == "compToneDb" ||
-                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbDry" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbType0" || param == "reverbType1" || param == "reverbType2" || param == "reverbType3" || param == "reverbType4" || param == "reverbType5" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace" || param == "convGain" || param == "convDry" || param == "convWidth" || param == "convStartS" || param == "convEndS" || param == "convPitch" || param == "convPreMs" || param == "convFadeIn" || param == "convFadeOut" || param == "convInCurve" || param == "convOutCurve" || param == "convToneDb";
+                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbDry" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbType0" || param == "reverbType1" || param == "reverbType2" || param == "reverbType3" || param == "reverbType4" || param == "reverbType5" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSharedMod" || param == "reverbWave" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace" || param == "convGain" || param == "convDry" || param == "convWidth" || param == "convStartS" || param == "convEndS" || param == "convPitch" || param == "convPreMs" || param == "convFadeIn" || param == "convFadeOut" || param == "convInCurve" || param == "convOutCurve" || param == "convToneDb";
   const bool isContinuous = param == "inputGain" || param == "outputGain" || param == "mix" ||
                             isEffectParam;
   const bool isKnown = isContinuous || param == "enabled" || param == "normalize";
@@ -2168,6 +2174,12 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
     block->reverb.setParams(block->reverbParams());
   } else if (param == "reverbMod") {
     block->reverbMod = juce::jlimit(0.0, 1.0, value);
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbSharedMod") {
+    block->reverbSharedMod = juce::jlimit(0.0, 1.0, value);
+    block->reverb.setParams(block->reverbParams());
+  } else if (param == "reverbWave") {
+    block->reverbWave = static_cast<int>(juce::jlimit(0.0, Reverb::kNumWaves - 1.0, value));
     block->reverb.setParams(block->reverbParams());
   } else if (param == "reverbSprings") {
     block->reverbSprings = juce::jlimit(0.0, 1.0, value);

@@ -214,6 +214,8 @@ ChainItem parseItem(const juce::var& v) {
     item.reverbType5 = num(v["params"], "reverbType5", 0);
     item.reverbDensity = num(v["params"], "reverbDensity", 0.0);
     item.reverbMod = num(v["params"], "reverbMod", 0.0);
+    item.reverbSharedMod = num(v["params"], "reverbSharedMod", 0.0);
+    item.reverbWave = static_cast<int>(num(v["params"], "reverbWave", 0));
     item.reverbSprings = num(v["params"], "reverbSprings", 0.4);
     item.reverbSag = num(v["params"], "reverbSag", 0.4);
     item.reverbBright = num(v["params"], "reverbBright", 0.5);

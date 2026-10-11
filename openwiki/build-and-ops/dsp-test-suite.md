@@ -4,18 +4,20 @@ title: DSP test suite (DspTests)
 description: The GoogleTest suite under test/ that compiles the real plugin sources against shipped fixtures — the canonical ./script/test-dsp.sh loop, the gtest silent-0 comma-filter trap, and the a2-amp / cab-ir / reverb-ir fixture set.
 tags: [testing, dsp-tests, googletest, fixtures, script]
 sources:
-  - id: openwiki-source-8037e2358a2c4f9b2c722a11
-    resource: repo://AGENTS.md
   - id: openwiki-source-fbe20d668cd183c9fb53adb2
     resource: repo://script/test-dsp.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
+  - id: openwiki-source-9122ffeb8c7fc8e2457955ce
+    resource: repo://test/src/effect_tests.cpp
+  - id: openwiki-source-9ff2ef0f7a4a77aed9113ced
+    resource: repo://test/src/plate_texture_tests.cpp
   - id: openwiki-source-a95d9a96cf87c30a610c9c3b
     resource: repo://test/src/processor_tests.cpp
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-11T15:58:48.204Z
+    at: 2026-10-11T17:47:30.537Z
 ---
 
 # DSP test suite (DspTests)

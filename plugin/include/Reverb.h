@@ -573,6 +573,22 @@ class Reverb {
     // precedent). Appended after the 12 sigs (existing brace-inits keep
     // compiling; legacy state without the key = 0 = type 0).
     int type[6] = {0, 0, 0, 0, 0, 0};
+    // Shared Mod (2026-10-14, R2 — all six modes): a NEW, slow post-mix LFO
+    // depth (0 = OFF / bit-identical to today, 1 = full). Distinct from the
+    // Digital-only `mod` read-tap-waver above — see the DESIGN DECISION in
+    // docs/tickets/reverb-dry-mod-width-swing.md (R2). This is a fresh
+    // mechanism (a post-mix one-pole lowpass breath, `sharedOn_`), NOT a
+    // re-scaled `kSmearAmt`/`kFbDriftAmt` (those stay always-on, unchanged —
+    // the bit-identity anchor holds at `sharedMod` 0). Appended LAST (after
+    // type[6]) to match every reverbParams() aggregate's field order.
+    double sharedMod = 0.0;
+    // Digital Sig B "Shape" (R2): 0 = Sine (bit-identical anchor), 1..4 =
+    // Triangle / Saw-Up / Saw-Down / Square — the same 5-detent law as
+    // Chorus::shape() / `waveValue()`. Shapes ONLY Digital's read-tap waver
+    // (the existing `mod` field still sets its DEPTH). The shared, all-modes
+    // Mod knob (`sharedMod`) always uses a fixed sine LFO (`waveValue(0, ...)`
+    // in `processSharedModSmear`) — it does not read this field.
+    int wave = 0;
   };
 
   void prepare(double sampleRate) {
@@ -624,6 +640,7 @@ class Reverb {
       for (int t = 0; t < kNumHallTaps; ++t) hallTapsLp_[c][t] = 0.0f;
       digApX_[c] = 0.0f; digApY_[c] = 0.0f;
       smearPhase_[c] = 0.0f;
+      smLpY_[c] = 0.0f;
       fbDriftPhase_[c] = 0.5f*M_PI_F;   // quarter-cycle offset from smearPhase_
       r1Re_[c] = 0.0f; r1Im_[c] = 0.0f; r2Re_[c] = 0.0f; r2Im_[c] = 0.0f; r3Re_[c] = 0.0f; r3Im_[c] = 0.0f;
       r4Re_[c]=0.0f; r4Im_[c]=0.0f; r5Re_[c]=0.0f; r5Im_[c]=0.0f;
@@ -665,6 +682,8 @@ class Reverb {
     params_.bass = juce::jlimit(0.0, 1.0, p.bass);
     params_.build = juce::jlimit(0.0, 1.0, p.build);
     params_.space = juce::jlimit(0.0, 1.0, p.space);
+    params_.sharedMod = juce::jlimit(0.0, 1.0, p.sharedMod);
+    params_.wave = static_cast<int>(juce::jlimit(0, kNumWaves - 1, p.wave));
     if (sampleRate_ > 0.0) {
       // Size scales every line (0 = half base), 1 = large (1.5x base); Pre
       // offsets every tap.
@@ -747,6 +766,22 @@ class Reverb {
       modDepthSamples_ = 0.0f;
       modInc_ = 0.0;
     }
+    // Shared Mod (R2, all modes): a NEW, slow post-mix LFO on the wet sum
+    // (one-pole lowpass whose cutoff breathes with the LFO). Gated OFF at 0
+    // -> the whole processSharedModSmear path is never entered, so every mode
+    // stays bit-identical to today at the default (the R2 anchor). Strictly
+    // separate from the Digital read-tap waver (modOn_) and from the always-
+    // on kSmearAmt/kFbDriftAmt signature laws (those are the mode's own
+    // character and do not move with this knob).
+    sharedOn_ = (params_.sharedMod > 0.0) && (sampleRate_ > 0.0);
+    if (sharedOn_) {
+      smInc_ = 2.0 * M_PI * kSharedModRate / sampleRate_;
+      smLpfCenter_ = static_cast<float>(1.0 - std::exp(-2.0 * M_PI *
+          (kSharedModBaseF * 1000.0) / sampleRate_));
+    } else {
+      smInc_ = 0.0;
+      smLpfCenter_ = 0.0f;
+    }
   }
 
   int latencySamples() const {
@@ -790,6 +825,7 @@ class Reverb {
         (params_.springs > 0.0 || params_.sag > 0.0);
     if (springOn) {
       processSpring(buffer);
+      if (sharedOn_) processSharedModSmear(buffer);
       return;
     }
     // Plate (mode 0) is law-live when armed (Bright>0 or Bloom>0); at both 0 it
@@ -798,6 +834,7 @@ class Reverb {
         (params_.bright > 0.0 || params_.bloom > 0.0);
     if (plateOn) {
       processPlate(buffer);
+      if (sharedOn_) processSharedModSmear(buffer);
       return;
     }
     // Room (mode 3) is law-live when armed (Early>0 or Air>0); at both 0 it runs
@@ -806,6 +843,7 @@ class Reverb {
         (params_.early > 0.0 || params_.air > 0.0);
     if (roomOn) {
       processRoom(buffer);
+      if (sharedOn_) processSharedModSmear(buffer);
       return;
     }
     // Chamber (mode 4) is law-live when armed (Volley>0 or Bass>0); at both 0 it
@@ -814,6 +852,7 @@ class Reverb {
         (params_.volley > 0.0 || params_.bass > 0.0);
     if (chamberOn) {
       processChamber(buffer);
+      if (sharedOn_) processSharedModSmear(buffer);
       return;
     }
     // Hall (mode 5) is law-live when armed (Build>0 or Space>0); at both 0 it
@@ -824,6 +863,7 @@ class Reverb {
         (params_.build > 0.0 || params_.space > 0.0);
     if (hallOn) {
       processHall(buffer);
+      if (sharedOn_) processSharedModSmear(buffer);
       return;
     }
     if (!densityOn && !modOn_) {
@@ -847,6 +887,8 @@ class Reverb {
           out[i] = static_cast<float>(acc * norm);
         }
       }
+      if (sharedOn_)
+        processSharedModSmear(buffer);
       return;
     }
 
@@ -875,7 +917,8 @@ class Reverb {
         // only affect later samples of ITS OWN ring (lines have separate rings,
         // so the order is exactly the plain path's at Density 0).
         const float wob = modOn_
-            ? side * depth * static_cast<float>(std::sin(phase0 + inc * i))
+            ? side * depth
+              * static_cast<float>(waveValue(params_.wave, fmod(phase0 + inc * i, 2.0 * M_PI) / (2.0 * M_PI)))
             : 0.0f;
         for (int ln = 0; ln < kNumLines; ++ln) {
           auto& L = lines[ln];
@@ -932,6 +975,8 @@ class Reverb {
     }
     if (modOn_)
       modPhase_ = phase0 + inc * numSamples;  // advance the LFO once per block
+    if (sharedOn_)
+      processSharedModSmear(buffer);  // R2: the shared, knob-gated post-mix swell
   }
 
   // Subtle level-driven soft-shoulder for the spring driver color: identity
@@ -957,6 +1002,42 @@ class Reverb {
   // The wash wet was levelled by a LIVE "(1.0 - fb)". That COLLAPSES as decay -> max:
   // with the tone low-pass in the loop the comb's real growth stops scaling like
   // 1/(1-fb), so (1-fb) over-normalises and a long reverb goes silent (measured:
+  // Shared-Mod (R2, all modes) LFO-smear constants — see DESIGN DECISION in
+  // docs/tickets/reverb-dry-mod-width-swing.md. This is a NEW, post-mix, knob-
+  // gated mechanism (distinct from the always-on kSmearAmt/kFbDriftAmt used
+  // inside the Plate/Spring signature paths, which stay bit-identical and
+  // knob-independent). OFF (sharedMod 0, the default) -> the entire code path
+  // is never entered, so the bit-exact anchor is preserved by construction.
+  static constexpr int kNumWaves = 5;  // same 5-detent law as Chorus/Tremolo
+  static constexpr double kSharedModRate = 0.3;      // Hz, slow "breathing" rate
+  static constexpr double kSharedModDepth = 0.3;     // cutoff sweep depth (fraction)
+  static constexpr double kSharedModBaseF = 1.2;     // kHz, mid-band centre (below the
+    // air-law's ~5-8 kHz corner, above the 120-300 Hz body band: the shared
+  // "swell" lives in the MIDDLE band, the plate's signature, perceptually —
+  // the existing mode-specific kSmearAmt/kFbDriftAmt already own the finer,
+  // always-on per-mode character; this is the coarse, user-gated extra on top).
+
+  // One LFO shape over [0,1) phase, in [-1,1]. wave 0 = Sine (bit-identical
+  // to the pre-R2 fixed-shape behaviour, the anchor); waves 1..4 match
+  // Chorus::shape() (Tremolo's own law) exactly — copy-paste that formula
+  // verbatim so the same "Shape" face means the same thing on the reverb tile.
+  static double waveValue(int wave, double phase) {
+    switch (wave) {
+      case 1:  // Triangle
+        return (phase < 0.25) ? (phase * 4.0)
+             : (phase < 0.75) ? (2.0 - phase * 4.0)
+                              : (phase * 4.0 - 4.0);
+      case 2:  // Saw-up
+        return phase * 2.0 - 1.0;
+      case 3:  // Saw-down
+        return 1.0 - 2.0 * phase;
+      case 4:  // Square
+        return (phase < 0.5) ? -1.0 : 1.0;
+      default:  // Sine (0) — the anchor, EXACT std::sin, not a re-derivation
+        return std::sin(2.0 * M_PI * phase);
+    }
+  }
+
   // Digital 0.045 @1.5s -> 0.004 @3.0s; Plate 0.066 -> 0.007; Spring 0.038 -> 0.008).
   // Each mode now levels its wet from a FIXED reference (= that mode's (1-fb) at its
   // DEFAULT decay), so the default level the ears-pass set is PRESERVED and the level
@@ -1576,6 +1657,17 @@ class Reverb {
   static constexpr double kFbDriftRate = 0.18;
   static constexpr double kFbDriftAmt  = 0.03;         // ISOLATION: drift ON ±3%   // ±3 %
   float fbDriftPhase_[kMaxChannels] = {};        // offset by quarter-cycle from smearPhase_
+  // Shared Mod (R2, 2026-10-14, all six modes): a NEW, slow, post-mix LFO on the
+  // wet reverb sum (one-pole lowpass whose cutoff breathes with the LFO), gated
+  // OFF at `sharedMod` 0 by construction — see DESIGN DECISION in
+  // docs/tickets/reverb-dry-mod-width-swing.md. Strictly separate from
+  // smearPhase_/fbDriftPhase_ (the always-on per-mode signature laws, untouched)
+  // and from modOn_/modPhase_ (Digital's separate read-tap waver, untouched).
+  bool   sharedOn_      = false;
+  double smInc_         = 0.0;   // radians/sample, set in setParams()
+  double smLpfCenter_   = 0.0;   // one-pole LPF alpha at kSharedModBaseF kHz
+  float  smPhase_       = 0.0f;  // the ONE shared LFO phase (all channels, one global phase)
+  float  smLpY_[kMaxChannels] = {};   // per-channel one-pole state (continuity across blocks)
   // Spring state: the metallic boing resonator (2.4 kHz) per channel + the
   // onset-splash (drip) env per channel. Both are bounded (|r|<1, decaying env)
   // and reset in reset(). Only used when the Spring law path is live.
@@ -1645,4 +1737,35 @@ class Reverb {
   // damping, like Room/Chamber -- this is what kills the bright recursive shimmer).
   float hallTapsLp_[kMaxChannels][kNumHallTaps] = {};
   double hallTapsSamples_[kNumHallTaps] = {};
+
+  // Shared Mod (R2): the shared, slow, knob-gated post-mix swell (see the
+  // state members above + DESIGN DECISION in
+  // docs/tickets/reverb-dry-mod-width-swing.md). Called from process()'s
+  // tail ONLY when `sharedOn_` is true (i.e. `sharedMod` > 0) — so at the
+  // default (0) this function is never entered, and every mode stays
+  // bit-identical to today. A one-pole lowpass on the wet reverb sum (both
+  // channels, in place), whose coefficient breathes with a slow LFO. The
+  // shared LFO uses SINE (`waveValue(0, ...)`), NOT `params_.wave` — the
+  // latter belongs to Digital's Sig B "Shape" read-tap waver (the Digital
+  // exception); coupling Digital's shape into the shared Mod would let the
+  // two knobs leak into each other. Keep the shared Mod shape uniform (sine)
+  // across all six modes so it stays the one shared, always-sine swell.
+  void processSharedModSmear(juce::AudioBuffer<float>& buffer) {
+    const int n = buffer.getNumSamples();
+    for (int c = 0; c < buffer.getNumChannels(); ++c) {
+      float* data = buffer.getWritePointer(c);
+      float& lpY = smLpY_[c];
+      for (int i = 0; i < n; ++i) {
+        smPhase_ += static_cast<float>(smInc_);
+        if (smPhase_ >= 1.0f) smPhase_ -= 1.0f;
+        // Shared Mod uses a FIXED SINE shape (wave 0 = the bit-exact anchor),
+        // independent of params_.wave (Digital's Sig B Shape — a separate, mode-specific knob).
+        const float wav = static_cast<float>(waveValue(0, smPhase_));
+        const float alpha = static_cast<float>(smLpfCenter_ * (1.0 + kSharedModDepth * 0.5 * (1.0 + wav)));
+        const float a = juce::jlimit(0.0f, 1.0f, alpha);
+        lpY += a * (data[i] - lpY);
+        data[i] = lpY;
+      }
+    }
+  }
 };

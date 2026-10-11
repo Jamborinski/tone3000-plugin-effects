@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:f87f34bc3635f40f98cf8d7705437683eac5bbe8163d530329a30c5187fc4e81",
+  "pageVersion": "sha256:3a153b10ff709f341606a1a2768504753ba88f388845b40501c22cbe1b36677c",
   "claims": [
     {
       "id": "claim_9e89474d48b14a2ca41323ea45516a5d",
@@ -8,7 +8,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:a529876886e6c711f084db81be2c6d4073a09f384113c24bfbf8ad3d5a7e6c54"
+          "version": "repo-file-v1:sha256:a5805ef9cb674d789aa8aee8d75a83cae8a25b267ed5fcbd5b8147aabdd1472d"
         }
       ]
     },
@@ -22,11 +22,11 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:28f52c62e18ac210f6d4cad1b4bfa63ef76d4b27aaa8586a0309c39ab600e271"
+          "version": "repo-file-v1:sha256:e7040d30d599ca451c1f204cb35a45245e30470632eb726debb4b89aa66ca8b8"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:dc3e1eb44f67d6a818d3e719f6e2413ed8294f8fb4a584f98006322584dca6b8"
+          "version": "repo-file-v1:sha256:015eccba5482f329474de68b01344d59910915aa4accd301e6a9aa50fe94bf79"
         }
       ]
     },
@@ -57,6 +57,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-11T15:58:48.204Z"
+    "at": "2026-10-11T17:47:30.537Z"
   }
 }

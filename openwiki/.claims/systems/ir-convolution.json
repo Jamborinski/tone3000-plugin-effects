@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:a974e137cced24b8dd62a77d31f203aa3854add36cf7100bc76f5da75b3e2273",
+  "pageVersion": "sha256:f0853353249c2f27424cf2804010d8d878b1e70cd62a71780becfd9368e04aa2",
   "claims": [
     {
       "id": "claim_5950146e18974b41ad95b20a6e9d7d5d",
@@ -22,7 +22,7 @@
         },
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:9fbc18fa92a8615349b53c85b7aaa99b60008a5b4d43503686a82104445bcb07"
+          "version": "repo-file-v1:sha256:4ffcb3c0dd8ebc27be4684b11e2bf4e9d865df2ea82f184361fd97ea336f1df5"
         }
       ]
     },
@@ -42,7 +42,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:9fbc18fa92a8615349b53c85b7aaa99b60008a5b4d43503686a82104445bcb07"
+          "version": "repo-file-v1:sha256:4ffcb3c0dd8ebc27be4684b11e2bf4e9d865df2ea82f184361fd97ea336f1df5"
         },
         {
           "resource": "repo://plugin/include/ChainDomain.h",
@@ -67,6 +67,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-11T15:58:48.204Z"
+    "at": "2026-10-11T17:47:30.537Z"
   }
 }

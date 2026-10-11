@@ -382,6 +382,17 @@ struct ChainBlock {
   int reverbMode = 0;
   double reverbDensity = 0.0;
   double reverbMod = 0.0;
+  // reverbSharedMod (R2, 2026-10-14) — the SHARED Mod knob (depth 0..1, 0 =
+  // off / bit-identical to today, 1 = full), live on ALL six reverb modes:
+  // a slow post-mix LFO swell (see Reverb.h processSharedModSmear). Distinct
+  // from reverbMod above (Digital's read-tap waver depth) — a separate
+  // mechanism, see DESIGN DECISION in docs/tickets/reverb-dry-mod-width-swing.md.
+  double reverbSharedMod = 0.0;
+  // reverbWave (R2) — the Mod LFO shape (0 = Sine bit-exact anchor, 1 Triangle,
+  // 2 Saw-up, 3 Saw-down, 4 Square — the same 5-detent law as chorus/tremolo).
+  // Drives BOTH the shared Mod smear (all modes) and Digital's read-tap waver
+  // (the existing `mod` field still sets its depth; `wave` sets its shape).
+  int reverbWave = 0;
   double reverbSprings = 0.4;  // Springs 3
   double reverbSag = 0.4;
   double reverbBright = 0.5;
@@ -400,12 +411,22 @@ struct ChainBlock {
   // ORDER MUST MATCH the Reverb::Params aggregate (positional): the five shared
   // knobs, then mode, then the 12 sigs (2/mode), then the 6 per-mode types
   // (type[0..5] is an aggregate array member -- the six values fill it).
+  // R2 (2026-10-14): the two SHARED fields (sharedMod, wave) sit right after
+  // the Digital `mod` sig — matching the Reverb::Params append order — to
+  // preserve every positional-init site (there are no brace-initializers in
+  // the codebase; everything is member-wise assignment, but keep the order
+  // matching anyway for any future aggregate uses).
   Reverb::Params reverbParams() const {
+    // NOTE: positional aggregate — the order MUST match Reverb::Params member
+    // order exactly (sharedMod/wave are declared AFTER type[6]; an earlier
+    // draft of this list sat them after reverbMod and silently miswired the
+    // 12 sigs — fixed 2026-10-14).
     return {reverbDecayMs, reverbPreMs, reverbTone, reverbSize, reverbWidth,
             reverbMode, reverbDensity, reverbMod, reverbSprings, reverbSag,
             reverbBright, reverbBloom, reverbEarly, reverbAir, reverbVolley,
             reverbBass, reverbBuild, reverbSpace,
-            reverbType0, reverbType1, reverbType2, reverbType3, reverbType4, reverbType5};
+            reverbType0, reverbType1, reverbType2, reverbType3, reverbType4, reverbType5,
+            reverbSharedMod, reverbWave};
   }
   // Convolution (EffectKind::Convolution): IR-driven convolution reverb (see
   // ConvolutionReverb.h). Five user controls, all normalised except the two

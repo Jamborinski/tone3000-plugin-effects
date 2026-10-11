@@ -171,6 +171,8 @@ struct ChainItem {
   int reverbMode = 0;
   double reverbDensity = 0.0;
   double reverbMod = 0.0;
+  double reverbSharedMod = 0.0;  // R2: the shared Mod knob depth (0 = off)
+  int reverbWave = 0;           // R2: the Mod LFO shape (0 = Sine anchor)
   double reverbSprings = 0.4;  // Springs 3
   double reverbSag = 0.4;
   double reverbBright = 0.5;

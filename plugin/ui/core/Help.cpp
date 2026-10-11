@@ -215,6 +215,8 @@ std::map<Key, String> buildTable() {
   t[Key::reverbSize] = knobDesktop("Size", "reverb size, scales all delay times for a bigger or smaller space.");
   t[Key::reverbWidth] = knobDesktop("Width", "reverb stereo width — 0 = mono (L == R), 1 = wide (decorrelated channels).");
   t[Key::reverbDry] = knobDesktop("Dry", "level of the DRY (un-processed) path that blends in under the Mix, -24..+24 dB (0.5 = unity). Does not touch the wet reverb tail; Mix and Dwell keep their usual roles.");
+  t[Key::reverbSharedMod] = knobDesktop("Mod", "a slow, optional swell on top of this mode's tail (0 = off, today's static behaviour; 1 = full). This is the user-facing waver; the mode's own rich swirl (plate spring-ness, plate smear) stays always on and is NOT this knob.");
+  t[Key::reverbShape] = knobDesktop("Shape", "Digital: the LFO shape of the tap waver: Sine, Triangle, Saw, Saw (Down) or Square. Sine = today's default.");
   t[Key::reverbDwell] = knobDesktop("Dwell", "increases the dwell of the reverb.");
   t[Key::reverbMode] = knobDesktop("Mode", "reverb type: Plate (dense 2D wash), Spring (1D metallic), Room (short early set), Chamber (diffuse + LF tail), Hall (long, wide, spatial), Digital (clean 8-comb, the fallback). Select to apply that mode's starting dials; the two signature knobs follow the mode.");
   t[Key::reverbType] = knobDesktop("Type", "a TYPE within the mode: a distinct character BUILT on that mode's engine (a sub-model -- its own laws and structure, not a knob preset). The choice is remembered per mode.");

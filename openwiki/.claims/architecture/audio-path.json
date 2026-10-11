@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:4726edbd0c3e096b1e1eaaccb2d4ea70484a037b2b1f8596a8107e17dc7e6aeb",
+  "pageVersion": "sha256:cecbf0335fb5c64f93fe65362d6cc027e57cdfede50e027fd40e63d2e9dafa30",
   "claims": [
     {
       "id": "claim_85d7c01917814cdd8ed3b245b004829d",
@@ -38,7 +38,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:9fbc18fa92a8615349b53c85b7aaa99b60008a5b4d43503686a82104445bcb07"
+          "version": "repo-file-v1:sha256:4ffcb3c0dd8ebc27be4684b11e2bf4e9d865df2ea82f184361fd97ea336f1df5"
         }
       ]
     },
@@ -48,7 +48,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:9fbc18fa92a8615349b53c85b7aaa99b60008a5b4d43503686a82104445bcb07"
+          "version": "repo-file-v1:sha256:4ffcb3c0dd8ebc27be4684b11e2bf4e9d865df2ea82f184361fd97ea336f1df5"
         }
       ]
     },
@@ -78,13 +78,13 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:28f52c62e18ac210f6d4cad1b4bfa63ef76d4b27aaa8586a0309c39ab600e271"
+          "version": "repo-file-v1:sha256:e7040d30d599ca451c1f204cb35a45245e30470632eb726debb4b89aa66ca8b8"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-11T15:58:48.204Z"
+    "at": "2026-10-11T17:47:30.537Z"
   }
 }

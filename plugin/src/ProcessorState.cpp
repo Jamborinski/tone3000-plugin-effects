@@ -266,7 +266,9 @@ juce::ValueTree TONE3000Processor::serializeBlockSettings(const ChainBlock& bloc
       blockState.setProperty("reverbType4", block.reverbType4, nullptr);
       blockState.setProperty("reverbType5", block.reverbType5, nullptr);
       blockState.setProperty("reverbDensity", block.reverbDensity, nullptr);
-      blockState.setProperty("reverbMod", block.reverbMod, nullptr);
+            blockState.setProperty("reverbMod", block.reverbMod, nullptr);
+      blockState.setProperty("reverbSharedMod", block.reverbSharedMod, nullptr);
+      blockState.setProperty("reverbWave", block.reverbWave, nullptr);
       blockState.setProperty("reverbSprings", block.reverbSprings, nullptr);
       blockState.setProperty("reverbSag", block.reverbSag, nullptr);
       blockState.setProperty("reverbBright", block.reverbBright, nullptr);
@@ -454,6 +456,8 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
       block.reverbType5 = static_cast<int>(blockState.getProperty("reverbType5", 0));  // state keeps the selection verbatim; the engine clamps
       block.reverbDensity = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbDensity", 0.0)));
       block.reverbMod = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbMod", 0.0)));
+      block.reverbSharedMod = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbSharedMod", 0.0)));
+      block.reverbWave = static_cast<int>(juce::jlimit(0, Reverb::kNumWaves - 1, static_cast<int>(blockState.getProperty("reverbWave", 0))));
       block.reverbSprings = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbSprings", 0.4)));
       block.reverbSag = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbSag", 0.4)));
       block.reverbBright = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbBright", 0.5)));

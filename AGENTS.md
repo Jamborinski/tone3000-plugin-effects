@@ -88,7 +88,9 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   (views, widgets, services) is excluded. A green DspTests does NOT prove the
   UI links — verify UI changes with a GUI build
   (`cmake --build build --target TONE3000_Standalone` or `_VST3`) or the
-  testbed (`UiTestbed --selftest`) before committing.
+  testbed (`script/test-ui.sh` — runs `UiTestbed --selftest` on an isolated
+  X display via xvfb-run, so the focus-policy tests exercise real keyboard
+  focus WITHOUT stealing your input on the live display) before committing.
   (See [`openwiki/build-and-ops/dsp-test-suite.md`](openwiki/build-and-ops/dsp-test-suite.md).)
 - **9p mtime:** after a Windows-side edit of a WSL repo file, `touch` it before
   building (`no work to do` otherwise); if a header edit didn't recompile,

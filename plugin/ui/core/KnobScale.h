@@ -698,6 +698,38 @@ inline const KnobScale& reverbDry() {
   }();
   return s;
 }
+// Shared Mod (R2, all six reverb modes): depth 0..1, 0 = off (bit-identical
+// to today), 1 = full. A slow post-mix LFO swell (Reverb::processSharedModSmear);
+// distinct from each mode's always-on signature (swirl) and from Digital's
+// own Sig B "Mod" read-tap waver. Shown 0..100%.
+inline const KnobScale& reverbSharedMod() {
+  static const KnobScale s = [] {
+    KnobScale c;
+    c.toDisplay = [](double n) { return n; };
+    c.fromDisplay = [](double d) { return d; };
+    c.format = [](double n) { return juce::String(juce::roundToInt(n * 100.0)) + "%"; };
+    c.editText = [](double n) { return juce::String(juce::roundToInt(n * 100.0)); };
+    return c;
+  }();
+  return s;
+}
+// Digital Sig B: Shape — the read-tap waver's LFO shape (Reverb::Params::wave),
+// the same 5-detent set as the chorus/tremolo "Shape" knobs.
+inline const KnobScale& reverbWave() {
+  static const char* const names[5] = {"Sine", "Triangle", "Saw", "Saw (Down)", "Square"};
+  static const KnobScale s = [] {
+    const int n = 4;  // 5 detents -> normalised 0, 1/4, 1/2, 3/4, 1
+    auto idx = [n](double v) { int i = (int)std::round(v * n); return i < 0 ? 0 : (i > n ? n : i); };
+    KnobScale c;
+    c.toDisplay = [n](double v) { return std::round(v * n); };
+    c.fromDisplay = [n](double d) { return d / n; };
+    c.format = [n, idx](double v) { return juce::String(names[idx(v)]); };
+    c.editText = [n, idx](double v) { return juce::String(names[idx(v)]); };
+    c.steps = n + 1;  // 5 detents -> the knob clicks between them
+    return c;
+  }();
+  return s;
+}
 
 // TONE: live peaking on the wet, -12..+12 dB (same shape as convGain at a
 // shorter span; 0 dB = exactly flat).

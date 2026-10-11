@@ -83,9 +83,9 @@ class EffectTile : public GalleryTile {
   // to the stored real units; the readout is the scale's format().
   Knob mix_, input_, output_;
   Knob knobA_, knobB_, knobC_, knobD_, knobE_;
-  // Two extra grid slots (the convolver's 9-knob surface is the only
-  // one that needs them; every other block uses at most A..E + sig + mod).
-  Knob knobF_, knobG_;
+  // Extra grid slots (the convolver's 9-knob surface needs F/G; the full
+  // reverb's 7-knob surface (R2: +Mod +Dry) needs F/G/H).
+  Knob knobF_, knobG_, knobH_;
   // Waveform strip (Phase C): edited-kernel envelope + fade curves.
   // FConv2's "Show Fade Curves". Full tile only.
   KernelPlot convPlot_;

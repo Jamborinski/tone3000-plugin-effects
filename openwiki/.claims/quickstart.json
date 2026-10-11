@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:a942224117516881ebdf80976b05dbfb60321a71134b66f9c1b973eed609af67",
+  "pageVersion": "sha256:ebee9e8366d44f1164c51aa8fa01cbe848c88a4e80c9384eee59f050367873ad",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -36,11 +36,11 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:625a91ecc4a0714c70d50eafb7557534a95b46a9c6595cce676df6a99d2e018c"
+          "version": "repo-file-v1:sha256:58a5841dca296ced6f580ad17c04fb6d72434c62a8fb7f90309ded0275478a39"
         },
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:598aadac1269a032a48459a033c845c61655c875d5f2c1719e332801ff482a2f"
+          "version": "repo-file-v1:sha256:37e3df448904f949cffcd808ad791dce43f05fe79149ce4e971504d616093c0f"
         }
       ]
     },
@@ -88,7 +88,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:9fbc18fa92a8615349b53c85b7aaa99b60008a5b4d43503686a82104445bcb07"
+          "version": "repo-file-v1:sha256:4ffcb3c0dd8ebc27be4684b11e2bf4e9d865df2ea82f184361fd97ea336f1df5"
         },
         {
           "resource": "repo://plugin/include/Processor.h",
@@ -121,6 +121,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-11T15:58:48.204Z"
+    "at": "2026-10-11T17:47:30.537Z"
   }
 }

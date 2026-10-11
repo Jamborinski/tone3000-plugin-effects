@@ -33,3 +33,6 @@ third_party/
 # OpenWiki tooling: we use the local pi openwiki tools, not this generated
 # GitHub Actions workflow (needs OPENAI_API_KEY; see AGENTS.md OpenWiki section)
 .github/workflows/openwiki-update.yml
+
+# Research track (docs/tickets/reverb-dry-mod-width-swing.md R4): local only
+/research/

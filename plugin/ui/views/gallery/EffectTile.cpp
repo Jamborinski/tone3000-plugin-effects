@@ -111,18 +111,21 @@ static const char* reverbSigParam(int mode, int localSlot) {
   static const char* p[Reverb::kNumModes][2] = {
       {"reverbBright", "reverbBloom"}, {"reverbSprings", "reverbSag"},
       {"reverbEarly", "reverbAir"},   {"reverbVolley", "reverbBass"},
-      {"reverbBuild", "reverbSpace"}, {"reverbDensity", "reverbMod"}};
+      {"reverbBuild", "reverbSpace"}, {"reverbDensity", "reverbWave"}};
   return p[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
 }
 static const char* reverbSigLabel(int mode, int localSlot) {
   static const char* n[Reverb::kNumModes][2] = {
       {"Bright", "Bloom"}, {"Springs", "Sag"}, {"Early", "Air"},
-      {"Volley", "Bass"}, {"Build", "Space"}, {"Density", "Mod"}};
+      {"Volley", "Bass"}, {"Build", "Space"}, {"Density", "Shape"}};
   return n[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
 }
 static const KnobScale* reverbSigScaleForMode(int mode, int localSlot) {
-  if (juce::jlimit(0, Reverb::kNumModes - 1, mode) == 1 && !localSlot)
+  const int m = juce::jlimit(0, Reverb::kNumModes - 1, mode);
+  if (m == 1 && !localSlot)
     return &scales::springs();  // the only stepped sig (Springs 1..6, mode 1)
+  if (m == 5 && localSlot)
+    return &scales::reverbWave();  // R2: Digital Sig B is now the 5-detent Shape
   return &scales::fraction01();
 }
 static help::Key reverbSigHelp(int mode, int localSlot) {
@@ -132,7 +135,7 @@ static help::Key reverbSigHelp(int mode, int localSlot) {
       {help::Key::reverbEarly, help::Key::reverbAir},
       {help::Key::reverbVolley, help::Key::reverbBass},
       {help::Key::reverbBuild, help::Key::reverbSpace},
-      {help::Key::reverbDensity, help::Key::reverbMod}};
+      {help::Key::reverbDensity, help::Key::reverbShape}};
   return k[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
 }
 static juce::String compactReverbModeName(int m) {
@@ -181,7 +184,7 @@ static double reverbSigRaw(const ChainItem& b, int mode, int localSlot) {
     case 2: return s ? b.reverbAir : b.reverbEarly;    break;
     case 3: return s ? b.reverbBass : b.reverbVolley;  break;
     case 4: return s ? b.reverbSpace : b.reverbBuild;  break;
-    default: return s ? b.reverbMod : b.reverbDensity; break;
+    default: return s ? (double)b.reverbWave : b.reverbDensity; break;
   }
 }
 
@@ -244,6 +247,10 @@ std::vector<EffectParams> paramsFor(const ChainItem& b, bool compact) {
         {&scales::reverbSize(), "reverbSize", "Size", b.reverbSize, help::Key::reverbSize},
         {&scales::reverbWidth(), "reverbWidth", "Width", b.reverbWidth, help::Key::reverbWidth},
         {&scales::reverbDry(), "reverbDry", "Dry", b.reverbDry, help::Key::reverbDry},
+        // R2: the SHARED Mod knob (all six modes, 0 = today's static tail,
+        // 1 = full optional waver on top); rides knobH_ on the full tile only
+        // (numParams_ gates it out compact, like Dry did at index 5).
+        {&scales::reverbSharedMod(), "reverbSharedMod", "Mod", b.reverbSharedMod, help::Key::reverbSharedMod},
     };
   if (k == "convolution") {
     // Full 6x2 surface (FogConvolver-2 parity): 12 knobs = the fixed
@@ -293,7 +300,7 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
                  : (block.effectKind == "convolution"
                     ? ((size <= gallery::kStereoTileSize) ? 5 : 9)
                     : (block.effectKind == "reverb"
-                       ? ((size <= gallery::kStereoTileSize) ? 5 : 6)  // Dry rides knobF_ on the full tile; hidden compact (like Pre/SigB)
+                       ? ((size <= gallery::kStereoTileSize) ? 5 : 7)  // R2: + shared Mod knob (knobH_), full tile only
                        : (block.effectKind == "delay" ||
                           block.effectKind == "chorus" ||
                           block.effectKind == "tremolo" ? 5
@@ -318,6 +325,8 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
       knobF_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
                   (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobG_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
+                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+      knobH_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
                   (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       power_(Icon::Power, ChromeIconButton::Tone::power, help::Key::blockPower),
       remove_(Icon::Trash2, ChromeIconButton::Tone::plain, help::Key::removeBlock),
@@ -349,13 +358,15 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
   Knob* knobs[5] = {&knobA_, &knobB_, &knobC_, &knobD_, &knobE_};
   const std::vector<EffectParams> ps = paramsFor(block_, compact_);
   auto knobAt = [=](int i) -> Knob* {
-    // Reverb full tile: index 5 is the Dry knob (knobF_), NOT sigKnob_ --
-    // reverb's sigs are separate widgets (sigKnob_/modKnob_ carry the
-    // per-mode Sig A/B, wired in the ctor, not via the param list).
+    // Reverb full tile: index 5 is the Dry knob (knobF_), index 6 is R2's
+    // shared Mod knob (knobH_) -- NOT sigKnob_/modKnob_, which carry the
+    // per-mode Sig A/B (wired in the ctor, not via the param list).
     if (block_.effectKind == "reverb" && !compact_ && i == 5)
       return &knobF_;
+    if (block_.effectKind == "reverb" && !compact_ && i == 6)
+      return &knobH_;
     return i < 5 ? knobs[i] : (i == 5 ? &sigKnob_ : (i == 6 ? &modKnob_
-                    : (i == 7 ? &knobF_ : &knobG_)));
+                    : (i == 7 ? &knobF_ : (i == 8 ? &knobG_ : &knobH_))));
   };
   for (int i = 0; i < numParams_ && i < (int)ps.size(); ++i) {
     Knob* k = knobAt(i);
@@ -721,15 +732,20 @@ void EffectTile::syncKnobs() {
   // threshold is a Thresh param knob, synced by the generic loop below.
   input_.setValue((float)block_.params.inputGain);
   output_.setValue((float)block_.params.outputGain);
-  Knob* slots[9] = {&knobA_, &knobB_, &knobC_, &knobD_, &knobE_,
-                    &sigKnob_, &modKnob_, &knobF_, &knobG_};
+  Knob* slots[10] = {&knobA_, &knobB_, &knobC_, &knobD_, &knobE_,
+                    &sigKnob_, &modKnob_, &knobF_, &knobG_, &knobH_};
   // Slot order mirrors the constructor's knobAt: param i lives in slot i,
-  // with i>=5 riding sig/mod/F/G (the compact conv's Dry/Width land there,
+  // with i>=5 riding sig/mod/F/G/H (the compact conv's Dry/Width land there,
   // not in knobD_/E -- keep the two passes agreeing).
   const std::vector<EffectParams> ps = paramsFor(block_, compact_);
   for (int i = 0; i < numParams_ && i < (int)ps.size(); ++i) {
-    // Reverb full tile: index 5 = Dry -> knobF_ (sigKnob_ belongs to the sigs).
-    Knob* k = (block_.effectKind == "reverb" && !compact_ && i == 5) ? &knobF_ : slots[i];
+    // Reverb full tile: index 5 = Dry -> knobF_, index 6 = shared Mod -> knobH_
+    // (sigKnob_/modKnob_ belong to the per-mode sigs, mapped by resized()).
+    Knob* k = slots[i];
+    if (block_.effectKind == "reverb" && !compact_) {
+      if (i == 5) k = &knobF_;
+      else if (i == 6) k = &knobH_;
+    }
     k->setValue((float)knobFromStored(*ps[i].scale, ps[i].raw));
   }
   if (block_.effectKind == "compressor") {
@@ -1201,16 +1217,18 @@ void EffectTile::resized() {
   const bool convFull = conv && !compact_;
   const bool convCompact = conv && compact_;
   const int cols = convFull ? 6
-                            : ((delayFull || compFull) ? 5 : (reverbFull ? 6 : (five ? 4 : 3)));
+                            : ((delayFull || compFull) ? 5 : (reverbFull ? 7 : (five ? 4 : 3)));
   const int colW = (W - 8) / cols;
 
   // Row 1: Mix, p0, p1, p2 [p3 on the full delay tile]. Reverb: full =
-  // Mix/Decay/Pre/SigA/Tone; compact = Mix/Decay/SigA/Tone (Pre + SigB hide).
+  // Mix/Decay/Pre/Mod/SigA/Tone (R2: Mod left of Tone, the ticket's spot);
+  // compact = Mix/Decay/SigA/Tone (Pre + SigB + Mod hide).
   int x = 4;
   mix_.setBounds(x, row1Y, colW, knobH); x += colW;
   knobA_.setBounds(x, row1Y, colW, knobH); x += colW;  // Decay
   if (reverbFull) {
     knobB_.setBounds(x, row1Y, colW, knobH); x += colW;   // Pre
+    knobH_.setBounds(x, row1Y, colW, knobH); x += colW;   // Mod (R2, left of Tone)
     sigKnob_.setBounds(x, row1Y, colW, knobH); x += colW; // Sig A
   } else if (reverbCompact) {
     sigKnob_.setBounds(x, row1Y, colW, knobH); x += colW; // Sig A (right of Decay)

@@ -504,3 +504,25 @@ TEST(PlateTexture, CpuWithinBaselineClass) {
   EXPECT_LE(us, 3.3 * 1.5)
       << "the plate must stay in its existing CPU class (baseline block + 50 %)";
 }
+
+// R2: the shared Mod knob ON (post-mix LFO + per-channel 1-pole LPF per
+// sample) must keep the plate in the same CPU class (ticket's guard).
+TEST(PlateTexture, R2_CpuWithSharedModOn) {
+  Reverb r;
+  r.prepare(48000.0);
+  r.reset();
+  Reverb::Params p = plateDefaults();
+  p.sharedMod = 1.0;  // ON, full depth — the worst case
+  r.setParams(p);
+  juce::AudioBuffer<float> buf(1, 128);
+  for (int i = 0; i < 128; ++i) buf.setSample(0, i, 0.3f);
+  for (int b = 0; b < 64; ++b) r.process(buf);   // warm
+  auto t0 = std::chrono::steady_clock::now();
+  for (int b = 0; b < 256; ++b) r.process(buf);
+  auto t1 = std::chrono::steady_clock::now();
+  const double us = std::chrono::duration<double, std::micro>(t1 - t0).count() / 256.0;
+  std::cout << "  [cpu] plate+sharedMod(1.0) 48k blk128 avg=" << us
+            << "us/block (baseline ~3.3us/block at blk128)" << std::endl;
+  EXPECT_LE(us, 3.3 * 1.5)
+      << "shared Mod ON must not push the plate out of its CPU class (baseline + 50 %)";
+}
