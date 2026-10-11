@@ -7,6 +7,8 @@ Shimmer with **Magnetic** (mode 4) and **MemGuy** (mode 5) — the final
 6-mode set (Digital/Tape/BBD/Mod/Magnetic/MemGuy). Compressor already carries the mode pattern
 (`Compressor::kNumModes`, `modeName`, per-mode defaults + the EffectTile combo/cycle
 + `enterMode` default application + clamped state + help keys + behavior pins).
+See also `docs/tickets/bbd-delay-redo-draft.md` — the BBD re-do ticket (full BBD artifact stack: sinc, clock glide, noise, level-independent distortion, compander pair, DMM subtype), drafted 2026-10-14 on top of the MGF Ibanez measured guard set.
+
 The delay block adopts the same pattern for **five** modes; shared dials and
 architecture are otherwise unchanged.
 

@@ -343,6 +343,46 @@ broad in its application."
   four-rejection chain + shipped multi-voice chorus + budget; Help.cpp Mod
   text = "Three slow, interweaving delayed voices"; plate_texture_tests.cpp
   bench rationale.
+## R2 fifth follow-up log (2026-10-15) — CHORD law (lush, added on top)
+User regression (m02371, verbatim): "the periodic clicking is back and it
+needs more body and warbly/exaggerated. It needs to come in a bit sooner and
+it reduces the volume at the beginning of the reverb. This tail approach
+isn't really what I'm looking for, rather a more full lush modulation added
+to the reverb."
+- **Root cause (the law, not the constants)**: the 4th cut's mix was a
+  CROSSFADE -- out = 0.5*wet + 0.5*(sum-of-delayed) with each tap sweeping
+  through a ZERO delay. Every LFO pass the delayed lines align in-phase
+  near the undelayed copy -> a coherent level pump (the period-1.2 Hz
+  "click"); loudest on the dense, in-phase early reflections (the
+  early-volume dip). And trading signal against its delayed copies is choppy
+  by construction -- nothing "layered" (the 1st/2nd/3rd level-swell and 4th
+  chorus rejections share this root). The earlier "crispy static" was the
+  single moving comb; the "tail only" was the crossfade's level trade.
+- **SHIPPED FINAL: CHORD-LAW chorus** (`Reverb::processSharedModSmear`):
+  out = 0.5*wet + (v1+v2+v3+v4)/4, four delayed voices. Each voice: tap FLOOR
+  `kModVoiceFloor` 0.30 (taps sweep 30%..100% of the voice depth, never
+  aligning in-phase at ~zero delay -> no coherent pump) over depth ratios
+  1.0/0.72/0.50/0.34, incommensurate rate factors 1.31/0.77/1.64x a 0.5 Hz
+  base sine (slower = a full warble per 2 s; exaggerated), tap max depth
+  12 ms at sharedMod 1 (doubled body over the 6 ms cut), its own 12 dB/oct
+  Butterworth biquad @6 kHz. Worst-coherent level law 0.5 + 4*0.25 = 1.0; on
+  real tails the lines stay decorrelated so the chorus LAYERS ON TOP of the
+  full reverb level (the "lush modulation added to the reverb" ask) instead
+  of a crossfade trade. sharedMod 0 still exits before any work (bit-exact
+  anchor), `wave` still shapes only Digital's Sig-B read-tap.
+- **CPU**: 7.8 us/block@128 sharedMod=1 on the 3.3 us plate baseline
+  (+4.5 us) -- ~3x under the convolver-class cap (avg 24.2 us/p95 335 us
+  @256, 5-6 s stereo IR, measured 2026-10-15; floor:
+  `BudgetConvolverCost` max<1000 us + avg<=75 us at a 39 s IR).
+- **Verified**: DspTests **478/478** (incl.
+  `ReverbTest.R2_SharedModChorusesTheTailNotTheAttack` level-law + 440 Hz
+  peak>1.4x-trough pins); `PlateTexture.R2_CpuWithSharedModOn` 7.8 us < 30 us
+  ceiling.
+- **Docs synced**: dsp-invariants.md DECLINED chain now has five rejects
+  (breathe, symmetric swell, downward swell, single-voice "static", 3-voice
+  crossfade "click+early-dip") + the CHORD law pinned; Help.cpp Mod text =
+  "Four slow, interweaving delayed voices warble under the reverb".
+
 ## R1 implementation log (2026-10-13)
 - **New param** `reverbDry` (stored 0..1, 0.5 = 0 dB, ±24 dB face, mirrors
   `convDry` exactly — same class: a gain on the DRY term of the Mix crossfade,

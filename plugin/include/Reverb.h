@@ -798,9 +798,9 @@ class Reverb {
     sharedOn_ = (params_.sharedMod > 0.0) && (sampleRate_ > 0.0);
     if (sharedOn_) {
       smInc_ = 2.0 * M_PI * kSharedModRate / sampleRate_;
-      // Biquad low-pass (RBJ, 12 dB/oct) on the summed delayed voices: fc =
-      // kModVoiceLpfHz, Q 0.707 (Butterworth). A musical, uniform darkening of
-      // each delay line's thin comb content instead of three cheap one-poles.
+      // Biquad low-pass (RBJ, 12 dB/oct), one per delayed voice: fc =
+      // kModVoiceLpfHz, Q 0.707 (Butterworth). A musical, uniform darkening
+      // of each line's thin comb content (replaces the earlier one-poles).
       const double w0 = 2.0 * M_PI * kModVoiceLpfHz / sampleRate_;
       const double cw = std::cos(w0);
       const double al = std::tan(w0 / 2.0) / 0.70710678;  // Q = 0.707
@@ -1046,14 +1046,29 @@ class Reverb {
   // (one-pole, fixed 6 kHz) to kill the thin high-beating residue. Total mixed
   // level stays <= 1.0 in magnitude at full depth, so it never feeds a
   // downstream saturator (the lesson of the level cuts).
-  static constexpr int kModVoices = 4;  // 3 delay lines (v=1..3) + the undelayed voice
-  static constexpr double kSharedModRate = 1.2;    // Hz, base LFO rate
-  static constexpr double kSharedModDepthMs = 6.0; // max depth of the DEEPEST voice (at sharedMod 1)
-  static constexpr double kModVoiceLpfHz = 6000.0; // allpass-free thinness filter on the delayed voices
+  static constexpr int kModVoices = 5;  // 4 delay lines (v=1..4) + the undelayed voice
+  static constexpr double kSharedModRate = 0.5;    // Hz, base LFO rate (a full warble per 2 s)
+  static constexpr double kSharedModDepthMs = 12.0; // max depth of the DEEPEST voice (at sharedMod 1)
+  static constexpr double kModVoiceLpfHz = 6000.0; // per-line 12 dB/oct darkening of the thin comb
+  static constexpr double kModVoiceFloor = 0.30;   // taps never dip below 30% of the voice depth:
+                                                   // coherent in-phase alignment at a near-zero
+                                                   // delay is what made each LFO pass pump the
+                                                   // level (the "clicking") and cut the dense
+                                                   // early reflections (the early-volume dip)
   // Per-voice depth ratio (share of the max depth), LFO rate factor, and phase offset:
-  static constexpr double kModVoiceD[]  = {1.00, 0.62, 0.40, 0.24};
-  static constexpr double kModVoiceR[]  = {1.00, 1.37, 0.79, 1.71};  // incommensurate -> slow beating
-  static constexpr double kModVoiceO[]  = {0.00, 0.38, 1.05, 1.96};   // rad, spread the peaks
+  // incommensurate rate factors + spread phase offsets -> the beatings smear
+  // into a slow, exaggerated swirl (single voice: "crispy static"; the
+  // crossfade sum of the 3-voice 1.2 Hz cut: "clicking + early-volume
+  // drop -- both rejected 2026-10-15").
+  static constexpr double kModVoiceD[]  = {1.00, 0.72, 0.50, 0.34};
+  static constexpr double kModVoiceR[]  = {1.00, 1.31, 0.77, 1.64};
+  static constexpr double kModVoiceO[]  = {0.00, 0.62, 1.55, 2.55};   // rad, spread the peaks
+  // Mixing law (the CHORD, not a crossfade): out = 0.5*wet + sum of the
+  // delayed voices / (kModVoices-1). Undelayed 0.5 + 4 * 0.25 * (unity-DC
+  // biquad) = 1.00 worst-coherent, and on real tails the lines are
+  // decorrelated so the level STAYS at the reverb's level -- the modulation
+  // is a lush layer ADDED ON TOP (the 2026-10-15 ask), never an amplitude
+  // trade, so it can't kill the early reflections or feed a saturator.
 
   static constexpr int kNumWaves = 5;  // same 5-detent law as Chorus/Tremolo
 
@@ -1873,16 +1888,19 @@ class Reverb {
       for (int i = 0; i < n; ++i) {
         wr[w] = in[i];
         w = (w + 1) & chMask_;
-        // Each delayed voice: wavering fractional tap, darkened by its own
-        // 12 dB/oct biquad (kills the thin comb residue per line). Level law:
-        // 0.5 (undelayed) + 0.1667*3 (delayed, DC-passed biquad = unity at
-        // 0 Hz) = 1.00 worst-coherent -- never amplifies the tail, so it
-        // cannot feed a downstream saturator (the lesson of the level-swell
-        // cuts). On real tails the lines are decorrelated, so summed level is
-        // ~flat, not a 1.0x peak.
+        // Each delayed voice: wavering fractional tap FLOORED at kModVoiceFloor
+        // (the taps never align in phase at a ~zero delay -> no coherent level
+        // pump = the old click), darkened by its own 12 dB/oct biquad
+        // (kills the thin comb residue per line). Chord law: 0.5 (undelayed)
+        // + 4 * 0.25 * (unity-DC biquad) = 1.00 worst-coherent; on real tails
+        // the lines stay decorrelated so the modulation layers ON TOP of the
+        // full reverb level instead of trading against it.
         double dsum = 0.0;
+        const double invN = 1.0 / (kModVoices - 1);
         for (int v = 1; v < kModVoices; ++v) {
-          const double D = (1.0 + std::sin(ph[v])) * 0.5 * maxDepth * kModVoiceD[v];  // 0..depth_v
+          const double sweep = 0.5 + 0.5 * std::sin(ph[v]);                 // 0..1
+          const double D = (kModVoiceFloor + (1.0 - kModVoiceFloor) * sweep)
+                            * maxDepth * kModVoiceD[v];                     // floor..depth_v
           const uint32_t d0 = static_cast<uint32_t>(juce::jlimit(0.0, (double)(chMask_ >> 1), D));
           const float frac = static_cast<float>(D - (double)d0);
           const uint32_t iA = (w - 1 - d0) & chMask_;
@@ -1890,7 +1908,7 @@ class Reverb {
           const double x = (double)wr[iA] + frac * ((double)wr[iB] - (double)wr[iA]);
           const double y = smB0_ * x + smB1_ * vt[v].x1 + smB2_ * vt[v].x2 - smA1_ * vt[v].y1 - smA2_ * vt[v].y2;
           vt[v].x2 = vt[v].x1; vt[v].x1 = x; vt[v].y2 = vt[v].y1; vt[v].y1 = y;
-          dsum += y * 0.16666667;
+          dsum += y * invN;
           ph[v] += smInc_ * kModVoiceR[v];
           if (ph[v] >= 2.0 * M_PI) ph[v] -= 2.0 * M_PI;
         }

@@ -198,12 +198,33 @@
   factors (1.37x/0.79x/1.71x the 1.2 Hz base SINE, advanced PER SAMPLE,
   wrap full 2*pi -- the partial-subtract was the old click bug) and distinct
   depths (0.62/0.40/0.24 x 6 ms max at sharedMod 1) + phase offsets, so the
-  beatings smear into a liquid swirl (a SINGLE voice read as "crispy
-  static" -- rejected 2026-10-15). Each delayed voice runs through its own
-  12 dB/oct Butterworth biquad LPF @ 6 kHz (per-voice, musical darkening
-  instead of three cheap one-poles). LEVEL LAW: 0.5 + (1/3)*3 = 1.0
-  worst-coherent -- never amplifies the tail, so it cannot feed a downstream
-  saturator (the lesson of the level-swell declines). Budget (2026-10-15
+  beatings smear into a liquid swell (a SINGLE voice read as "crispy
+  static" -- rejected 2026-10-15). The 3-voice crossfade mix (0.5*undelayed
+  + 0.5*sum-of-delayed, taps sweeping to ZERO delay) was ALSO DECLINED by
+  the ear (2026-10-15, "periodic clicking is back and it needs more body
+  and warbly/exaggerated ... it reduces the volume at the beginning of the
+  reverb. This tail approach isn't really what I'm looking for, rather a
+  more full lush modulation ADDED TO the reverb"): the root cause is the
+  LAW, not the constants -- a crossfade between undelayed and delayed
+  voices whose taps sweep through zero delay pumps the summed level at
+  every LFO pass (the "click"), loudest on the dense in-phase early
+  reflections (the early-volume dip), and a modulation that TRADES against
+  the signal is choppy by construction. SHIPPED FINAL (2026-10-15):
+  CHORD-LAW chorus -- out = 0.5*wet + sum(v1..4 delayed/4), each delayed
+  voice a 12 dB/oct Butterworth biquad @6 kHz on a tap that FLOORS at
+  30% of its voice depth (kModVoiceFloor: taps never align in phase at
+  ~zero delay -> no coherent level pump), incommensurate 1.31/0.77/1.64x
+  the 0.5 Hz base sine, depths 1.0/0.72/0.50/0.34 x 12 ms at sharedMod 1
+  (deeper + slower + exaggerated per the ear, still two orders of
+  magnitude under the convolver-class cap: +4.4 us/block@128). The
+  modulation now LAYERS ON TOP of the full reverb level instead of being
+  traded against it -- the "lush modulation added to the reverb" the user
+  asked for. Same pins, extended:
+  `ReverbTest.R2_SharedModChorusesTheTailNotTheAttack`
+  (a) level law -- on/off RMS ratio < 1.0 (no gain/feed) and > 0.15, peak
+  < 1.05x off peak; (b) a 440 Hz tone's block RMS sweeps peak > 1.4x trough
+  over the incommensurate-voice beat (a per-block-constant delay or flat
+  gain gives a flat envelope -- the regression this guards).  Budget (2026-10-15
   user directive, 9950X3D): quality first; the hard cap is
   `BudgetConvolver` on a 5-6 s stereo IR = avg ~24 us/block@256 (p95 ~335
   us); the shipped stage measures ~6.9 us/block@128 on top of the plate
