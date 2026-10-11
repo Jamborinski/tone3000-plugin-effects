@@ -623,6 +623,18 @@ class Reverb {
       inHistMask_ = static_cast<uint32_t>(n - 1);
       inHistWrite_ = 0;
     }
+    // Shared-Mod chorus rings (R2, 2026-10-15 second rewrite): one ring per
+    // channel, long enough for kSharedModDepthMs + a typical block (headroom so
+    // the fractional read never aliases this block's writes), power of two.
+    {
+      size_t minSize = static_cast<size_t>(sampleRate_ * kSharedModDepthMs * 0.001 + 4096.0) + 8;
+      size_t cn = 1;
+      while (cn < minSize) cn <<= 1;
+      for (int c = 0; c < kMaxChannels; ++c) chRing_[c].assign(cn, 0.0f);
+      chMask_ = static_cast<uint32_t>(cn - 1);
+      for (int c = 0; c < kMaxChannels; ++c) chWrite_[c] = 0;
+      chDelayMax_ = static_cast<uint32_t>(sampleRate_ * kSharedModDepthMs * 0.001);
+    }
     setParams(params_);  // recompute taps now that the rate is known
   }
 
@@ -655,6 +667,11 @@ class Reverb {
     for (int c = 0; c < kMaxChannels; ++c)
       std::fill(inHist_[c].begin(), inHist_[c].end(), 0.0f);
     inHistWrite_ = 0;
+    for (int c = 0; c < kMaxChannels; ++c)
+      std::fill(chRing_[c].begin(), chRing_[c].end(), 0.0f);
+    for (int c = 0; c < kMaxChannels; ++c)
+      chWrite_[c] = 0;
+    smPhase_ = 0.0f;
   }
 
   void setParams(const Params& p) {
@@ -1005,8 +1022,8 @@ class Reverb {
   // knob-independent). OFF (sharedMod 0, the default) -> the entire code path
   // is never entered, so the bit-exact anchor is preserved by construction.
   static constexpr int kNumWaves = 5;  // same 5-detent law as Chorus/Tremolo
-  static constexpr double kSharedModRate = 0.5;      // Hz, slow "breathing" rate
-  static constexpr double kSharedModDepth = 1.0;     // wet-swell depth fraction (downward-only full range)
+  static constexpr double kSharedModRate = 0.5;   // Hz, the shared Mod LFO rate
+  static constexpr double kSharedModDepthMs = 2.0; // max chorus delay depth (at sharedMod = 1)
   // The shared Mod is a DOWNWARD-ONLY LEVEL SWELL on the wet reverb sum
   // (a reevr/dattorro-style post-modulation: LFO x wet, 0.5 Hz, sine):
   // the tail dips to a fraction of the nominal level and swells back UP
@@ -1663,9 +1680,18 @@ class Reverb {
   // docs/tickets/reverb-dry-mod-width-swing.md. Strictly separate from
   // smearPhase_/fbDriftPhase_ (the always-on per-mode signature laws, untouched)
   // and from modOn_/modPhase_ (Digital's separate read-tap waver, untouched).
-  bool   sharedOn_      = false;
+      bool sharedOn_ = false;
   double smInc_         = 0.0;   // radians/sample, set in setParams()
-  float  smPhase_       = 0.0f;  // the ONE shared LFO phase (all channels, one global phase)
+  float  smPhase_       = 0.0f;  // the ONE shared LFO phase (both channels offset per-channel)
+  // Chorus stage (R2, 2026-10-15 second rewrite): the shared Mod is a CHORUS
+  // on the wet reverb (a modulated-delay second voice mixed level-preservingly),
+  // NOT a level swell. One ring per channel (power-of-two), sized for
+  // kSharedModDepthMs, written once per sample; both chorus voices read from it
+  // (voice A = 0 ms, voice B = a wavered tap). Zeroed on reset().
+  std::array<std::vector<float>, kMaxChannels> chRing_;
+  uint32_t chMask_      = 0;
+  std::array<uint32_t, kMaxChannels> chWrite_{};
+  uint32_t chDelayMax_  = 0;    // max delay samples (at current sample rate, sharedMod 1)
   // Spring state: the metallic boing resonator (2.4 kHz) per channel + the
   // onset-splash (drip) env per channel. Both are bounded (|r|<1, decaying env)
   // and reset in reset(). Only used when the Spring law path is live.
@@ -1738,48 +1764,70 @@ class Reverb {
 
   // Shared Mod (R2): the shared, slow, knob-gated post-mix swell (see the
   // state members above + DESIGN DECISION in
-  // docs/tickets/reverb-dry-mod-width-swing.md). Called from process()'s
-  // tail ONLY when `sharedOn_` is true (i.e. `sharedMod` > 0) — so at the
-  // default (0) this function is never entered, and every mode stays
-  // bit-identical to today. A one-pole lowpass on the wet reverb sum (both
-  // channels, in place), whose coefficient breathes with a slow LFO. The
-  // shared LFO uses SINE (`waveValue(0, ...)`), NOT `params_.wave` — the
-  // latter belongs to Digital's Sig B "Shape" read-tap waver (the Digital
-  // exception); coupling Digital's shape into the shared Mod would let the
-  // two knobs leak into each other. Keep the shared Mod shape uniform (sine)
-  // across all six modes so it stays the one shared, always-sine swell.
+  // docs/tickets/reverb-dry-mod-width-swing.md. The shared Mod is a CHORUS on
+  // the wet reverb: the tail is re-voiced through a pair of modulated delay
+  // lines and mixed back level-preservingly, so the resonances smear and the
+  // tail wobbles -- the classic "chorused reverb" (EMT/spring-verb chorus-pedal
+  // territory) the user asked for (2026-10-15: "I was thinking of more of a
+  // chorused reverb effect as Mod goes up"). Called from process()'s tail ONLY
+  // when `sharedOn_` is true (i.e. `sharedMod` > 0) -- so at the default (0)
+  // this function is never entered and every mode stays bit-identical to
+  // today.
+  //
+  // MECHANISM (per channel, in place, after the wet tail has replaced the dry):
+  //   out[n] = 0.5 * wet[n] + 0.5 * wet[n - D(t)] * 0.707
+  // where D(t) is a per-sample delay of (depth + depth * sin(2*pi*phase +
+  // chOffset)) samples, depth = kSharedModDepthMs * sharedMod * sampleRate *
+  // 0.001 (0..~96 samples at 48k, full dial), phase advancing PER SAMPLE with
+  // the shared 0.5 Hz LFO. The R channel's LFO runs +pi/2 offset (the usual
+  // stereo-chorus de-correlation). Level law: |out| <= 0.5*1 + 0.5*0.707 =
+  // 0.854 in the worst coherent case... actually at D = 0 (sin = -1) the two
+  // terms coincide and out = 0.854*wet -- the chorus only ever REDUCES or
+  // spreads the tail, never amplifies it (so no downstream-saturation feed,
+  // the earlier level-swell bug). Distinguishing this from the pre-R2
+  // lowpass-breath (declined: "just darkens") and the 2026-10-15
+  // downward-only level swell (declined: "cuts the attack, sounds like a
+  // delayed reverb"): the chorus spreads the tail in TIME, so its fresh
+  // attack is preserved and the modulation reads as pitch/timbre waver.
+  //
+  // The shared LFO shape is FIXED SINE -- it never reads params_.wave
+  // (Digital's Sig B "Shape" read-tap waver is a separate, mode-specific knob).
+  // The phase advances PER SAMPLE (shared by both channels, the R +pi/2
+  // offset) -- a per-block constant delay would read as a static echo, not a
+  // chorus. Wrap at the FULL 2*pi (the earlier wrap bug -- comparing 2*pi but
+  // subtracting 2.0 -- is gone with this rewrite). Read interpolation is
+  // LINEAR (fractional tap) to keep the D(t) motion zipper-free.
   void processSharedModSmear(juce::AudioBuffer<float>& buffer) {
     const int n = buffer.getNumSamples();
-    // Shared Mod is a DOWNWARD-ONLY LEVEL SWELL on the wet sum:
-    //   gain = 1 - k/2 * (1 - sin(2*pi*phase))   where k = kSharedModDepth * sharedMod
-    // so gain ranges in [1 - k, 1] — the reverb tail dips down to a fraction of
-    // the nominal level and swells back UP TO IT, but NEVER ABOVE it. That
-    // asymmetry is the ear-friendly part: the upward swing is toward the
-    // (un-modulated) nominal level the DAW already passes, so it can't feed a
-    // downstream saturator on the peaks (the bug that made the previous
-    // symmetric [1-k, 1+k] version feel "subtle/clicky" — the dip side was
-    // clean but the +k side was tripping outboard saturation on the tail peaks,
-    // eating the modulation). At sharedMod 1 the tail breathes from 0% to 100%
-    // of the nominal; at 0.25 it's a gentle 25% shimmer. Gated OFF (sharedOn_
-    // false) so the bit-exact anchor holds by construction (the whole stage is
-    // absent). The shared LFO shape is FIXED SINE — it never reads
-    // params_.wave (Digital's Sig B Shape — a separate, mode-specific knob).
-    // The phase advances PER SAMPLE (shared by both channels, one global LFO):
-    // a per-block constant gain would be a ~10 Hz buzz, not a slow swell.
-    // Wrap at the FULL 2*PI (not a partial subtract) — the old code compared
-    // to 2*PI but subtracted only 2.0, landing the phase at ~4.28 (a hard gain
-    // discontinuity, audible as a click every ~1.3 s at 0.25 Hz).
-    for (int i = 0; i < n; ++i) {
-      smPhase_ += static_cast<float>(smInc_);
-      if (smPhase_ >= 2.0f * M_PI_F) smPhase_ -= 2.0f * M_PI_F;  // keep the float near 0 for precision
-      const double ph = smPhase_ / (2.0 * M_PI);                  // normalised 0..1
-      const double w = waveValue(0, ph);                          // sine in [-1, 1]
-      const double k = kSharedModDepth * static_cast<double>(params_.sharedMod);  // 0..kSharedModDepth
-      // Downward-only: 1 - k/2 * (1 - w)  ->  [1 - k, 1] when w in [-1, 1].
-      const double gD = 1.0 - 0.5 * k * (1.0 - w);
-      const float g = static_cast<float>(juce::jlimit(0.0, 1.0, gD));
-      for (int c = 0; c < buffer.getNumChannels(); ++c)
-        buffer.getWritePointer(c)[i] *= g;
+    const int numCh = juce::jmin(buffer.getNumChannels(), kMaxChannels);
+    const double m = static_cast<double>(params_.sharedMod);  // 0..1
+    if (m <= 0.0) return;  // belt-and-braces (sharedOn_ already gates this)
+    const double depth = m * static_cast<double>(chDelayMax_);  // 0..~96 samples at 48k
+    for (int c = 0; c < numCh; ++c) {
+      float* out = buffer.getWritePointer(c);
+      std::vector<float> in(n);
+      for (int i = 0; i < n; ++i) in[i] = out[i];  // the wet tail (in-place)
+      float* wr = chRing_[c].data();
+      uint32_t w = chWrite_[c];
+      double ph = smPhase_ + (c == 0) ? 0.0 : M_PI * 0.5;
+      for (int i = 0; i < n; ++i) {
+        wr[w] = in[i];
+        w = (w + 1) & chMask_;
+        const double wv = static_cast<double>(waveValue(0, ph / (2.0 * M_PI)));  // [-1,1]
+        const double dF = depth * (0.5 + 0.5 * wv);  // 0..depth (the classic chorus depth law)
+        const double dClamped = juce::jlimit(0.5, static_cast<double>(chMask_ >> 1), dF);
+        const uint32_t d0 = static_cast<uint32_t>(dClamped);
+        const float frac = static_cast<float>(dClamped - static_cast<double>(d0));
+        const uint32_t iA = (w - 1 - d0) & chMask_;
+        const uint32_t iB = (w - 1 - d0 - 1u) & chMask_;
+        const float vA = wr[iA];
+        const float vB = wr[iB];
+        out[i] = static_cast<float>(0.5 * in[i] + 0.5 * (vA + frac * (vB - vA)) * 0.70710678);
+        ph += smInc_;
+        if (ph >= 2.0 * M_PI) ph -= 2.0 * M_PI;
+      }
+      chWrite_[c] = w;
     }
+    smPhase_ = static_cast<float>(fmod(smPhase_ + smInc_ * n, 2.0 * M_PI));
   }
 };

@@ -11,11 +11,17 @@ lowpass-cutoff first cut was rejected by the ear and rewritten 2026-10-15;
 the 2026-10-15 symmetric swell 0.25 Hz 1±0.6 was "subtle + periodic clicking"
 and rewritten 2026-10-15 to a downward-only 0.5 Hz gain 1−k·(1−s)/2 with
 k=1.0·s) plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave`
-"Shape" knob (0 = Sine = bit-exact anchor). Full DspTests **477/477**,
-UiTestbed selftest green (xvfb), reverb tile verified 6+6 (Width/Out
-no longer overlap), Windows exe staged 2026-10-15 (run
-`TONE3000-win-20261011-132411`, md5 `4f4625a7018b4ef14cafa30f51fcc778`).
-Commits: `57a5dba` (R2), `664965e` (follow-up fix). **R4
+"Shape" knob (0 = Sine = bit-exact anchor). **R2 THIRD follow-up 2026-10-15:** the
+level swell was rejected ("mostly just cuts the beginning attack of the wet
+reverb, almost sounding like a delayed reverb" — the user wanted a CHORUSED
+reverb) and rewritten as a POST-MIX CHORUS (`Reverb::processSharedModSmear`:
+undelayed voice 0.5 + delayed voice 0.5*0.707 tapped at a 0.5 Hz wavering
+0..2 ms delay per channel, R +pi/2 offset; level-preserving, attack kept,
+sharedMod 0 still bit-exact). Full DspTests **477/477**,
+UiTestbed selftest green (xvfb), reverb tile verified 6+6, Windows exe staged
+2026-10-15 (run `TONE3000-win-20261011-134940`, md5 `f7ebcfd70696ed5313157b213aaa4f87`).
+Commits: `57a5dba` (R2), `664965e` (follow-up fix), `5e71f5a` (second
+follow-up), plus this third follow-up. **R4
 (research skeleton) is COMPLETE** (`research/` gitignored, committed
 2026-10-13 alongside the ticket). **R3 (Width improvement) remains OPEN**.
 Follow-up to the
@@ -200,6 +206,76 @@ live UI even though the `--dump` grid was clean 6+6.
   when run from `plugin/ui/testbed` in a bg shell; use the absolute path.
 - **Open**: none. R3 (Width improvement) remains OPEN and is independent of
   this fix.
+  > **SUPERSEDED 2026-10-15 (third user report, m01743):** the downward-only
+  > level swell was declined by the ear ("mostly just cuts the beginning
+  > attack of the wet reverb... thinking of more of a chorused reverb"). See
+  > the "R2 third follow-up log" immediately below — this section's gain-law
+  > numbers are the intermediate state.
+
+## R2 third follow-up log (2026-10-15) — level swell → CHORUS
+User regression report (m01743, verbatim gist): "the clicking for the mod is
+gone and it does something noticeable now, but ... (when testing at max to
+A/B test) it mostly just cuts the beginning attack of the wet reverb almost
+sounding like a delayed reverb (that is just the tail). I was thinking of
+more of a chorused reverb effect as mod goes up, not whatever this is."
+- **Root cause**: a downward-only LEVEL SWELL is still amplitude chopping —
+  dipping the whole tail (including its fresh early part) down and back reads
+  as onsets disappearing / a delay. Amplitude modulation of a feedback tail
+  can never sound like chorus.
+- **Design (the user's explicit ask)**: Mod = CHORUS ON THE WET (EMT-140 /
+  spring-verb chorus-pedal class): a *modulated-delay second voice* under the
+  reverb, not a gain dip. All invariants retained: gated at `sharedMod==0`
+  (bit-exact anchor by construction), LFO phase advanced PER SAMPLE (the
+  per-block-constant buzz lesson), wrap a FULL 2π (the click lesson),
+  `wave` still shapes only Digital's Sig-B read-tap waver.
+- **Mechanism (`Reverb::processSharedModSmear`, Reverb.h)**:
+  `out[n] = 0.5·wet[n] + 0.5·0.707·wet[n − D(t)]`
+  - **Undelayed voice** (fresh attack preserved — the direct fix for the
+    "cuts the attack" complaint); **delayed voice** whose tap wavers with the
+    classic chorus depth law `D(t) = maxD·(0.5 + 0.5·cos(2π·ph))`,
+    `kSharedModRate = 0.5 Hz`, `kSharedModDepthMs = 2.0 ms`
+    (Dmax = 96 samples at 48 kHz; depth scales with the knob). The old
+    `kSharedModDepth` (level gain) is removed.
+  - Per-channel power-of-two rings: `chRing_[c]` allocated in `prepare()`
+    (2 ms + 4 k-sample headroom, sized so the fractional read never aliases
+    this block's writes), cleared in `reset()`; `chWrite_[]` per-channel
+    write indices; R channel LFO offset +π/2 (stereo chorus spread);
+    linear-interpolated fractional tap (no zipper).
+  - **Level-preserving at all phases**: `|out| ≤ 0.5|wet| +
+    0.5·0.707·|wet| = 0.854·|wet|` — can never feed a downstream saturator
+    (the lesson of cuts 2 and 3) and never cuts below 0.5·|wet|.
+- **Tests (`test/src/effect_tests.cpp`)**: `R2_SharedModEnvelopeIsPeriodicSwell`
+  renamed/rewritten to `R2_SharedModChorusesTheTailNotTheAttack`:
+  (a) **level law** — white noise, sharedMod 0 vs 1 full: per-channel RMS
+  ratio must stay in [0.55, 1.45] (a level-swell impl — dip to 0 or rise
+  above 1 — violates the band; measured ≈ 0.98 since the chorus output is a
+  delay sum and white-noise RMS is delay-invariant);
+  (b) **the LFO really moves** — 250 Hz tone (the unique rate at which the
+  96-sample depth sweeps exactly one full 0→max→0 cycle per LFO period,
+    `f·Dmax/sr = 0.5`), per-block RMS over 3 LFO cycles: peak > 2× trough
+  (constant-delay / no-LFO → ratio ≈ 1 and FAIL). Both pin the user-visible
+  contract: attack preserved (a) + real slow modulation (b).
+  Other R2 anchors (`R2_SharedModZeroIsBitExactAllSixModes`,
+  `R2_SharedModOnStaysSineInEveryMode`, `R2_WaveValue0IsExactSine`,
+  `DigitalModWaversAtTheLawRate`, `PlateTexture.R2_CpuWithSharedModOn`)
+  unchanged and green. **DspTests 477/477 PASSED** (68 suites).
+  - **Test-iteration lesson**: the first (b) attempt used 440 Hz — at 96
+    samples delay, 440 Hz sweeps only cos +1→+0.71 (gain 0.75→0.85, ratio
+    1.09 < 1.2 → FAIL); 440 Hz is simply the wrong frequency to expose the
+    depth sweep. The honest fix is the frequency choice, not a looser bound.
+- **Docs**: `plugin/ui/core/Help.cpp` Mod entry → "chorus the reverb tail... a
+  wavering delayed second voice ... level-preserving"; `docs/agents/dsp-
+  invariants.md` CONSIDERED & DECLINED (R2) entry now records ALL FIVE CUTS
+  and why each was declined (scale-the-existing-swirl / lowpass-breathe /
+  symmetric swell / downward-only swell), and the shipped chorus law + the
+  renamed pin test — so a future editor doesn't resurrect a declined cut.
+- **Verification**: `cmake --build build --target TONE3000_Standalone` and
+  `--build build-win --target TONE3000_Standalone` link (bg be3d47f9e);
+  staged `C:\Users\jambo\Downloads\TONE3000-win-20261011-134940\TONE3000.exe`
+  (md5 `f7ebcfd70696ed5313157b213aaa4f87`) — the Linux Standalone binary is
+  also rebuilt (24.6 MB, 13:49), available for a local A/B. UiTestbed
+  `--selftest` unaffected (no tile change). R2 base `57a5dba`, second
+  follow-up `5e71f5a` (downward-only, now superseded by this cut).
 
 ## R1 implementation log (2026-10-13)
 - **New param** `reverbDry` (stored 0..1, 0.5 = 0 dB, ±24 dB face, mirrors

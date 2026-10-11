@@ -3632,34 +3632,38 @@ TEST(ReverbTest, R2_SharedModOnChangesOutputEveryMode) {
   }
 }
 
-TEST(ReverbTest, R2_SharedModEnvelopeIsPeriodicSwell) {
-  // The regression behind "just darkens, no modulation" (2026-10-14) AND
-  // "periodic clicking" (2026-10-15: the old phase wrap subtracted 2.0 when
-  // the threshold was 2*pi -- a hard gain discontinuity every pass). A
-  // per-block-constant gain would pass R2_SharedModOnChangesOutputEveryMode
-  // too, so this is the test that catches a missing/broken per-sample LFO
-  // advance (and a broken wrap). Feed white noise (the comb stays filled at
-  // every block) for ~3 full LFO cycles at 0.5 Hz and check the per-block RMS
-  // envelope oscillates: at sharedMod 1 the downward-only gain sweeps
-  // 0..1, so the trough block (LFO minimum) must sit a large fraction
-  // below the peak block. The downward-only law itself is STRUCTURAL (gain
-  // = 1 - k/2*(1 - sin(2*pi*ph)), mathematically in [1-k, 1]) and is proven
-  // directly at the gain level:
-  const auto gainAt = [](double phase) {
-    const double w = Reverb::waveValue(0, phase);
-    const double k = Reverb::kSharedModDepth;  // full dial
-    return 1.0 - 0.5 * k * (1.0 - w);
-  };
-  for (int i = 0; i < 4096; ++i) {
-    const double ph = static_cast<double>(i) / 4096.0;
-    const double g = gainAt(ph);
-    EXPECT_GE(g, 0.0 - 1e-9) << "downward-only law: gain < 0 at phase " << ph;
-    EXPECT_LE(g, 1.0 + 1e-9) << "downward-only law: gain > 1 at phase " << ph;
-  }
-  EXPECT_FLOAT_EQ(gainAt(0.25), 1.0);  // sin = -1 -> full swell (gain 1)
-  EXPECT_FLOAT_EQ(gainAt(0.75), 0.0);  // sin = +1 -> full dip (gain 0)
-
-  const int periodBlocks = static_cast<int>(kFs / kBlock / 0.5);  // blocks per LFO cycle
+TEST(ReverbTest, R2_SharedModChorusesTheTailNotTheAttack) {
+  // The 2026-10-15 user regression chain for the shared Mod knob:
+  //   (1) "mostly just darkens"            -> lowpass-breath (declined);
+  //   (2) "subtle + periodic clicking"     -> symmetric swing feeding outboard
+  //                                           saturation + a hard LFO wrap
+  //                                           step;
+  //   (3) "cuts the beginning attack, sounds like a delayed reverb"
+  //                                            -> the downward-only level
+  //                                           swell dips the WHOLE tail
+  //                                           (fresh attack + late wash)
+  //                                           toward zero at the LFO minimum.
+  // The shipped chorus fixes (3) by design: a level-preserving 2-voice mix
+  //   out[n] = 0.5 * wet[n] + 0.5 * wet[n - D(t)] * 0.707
+  // -- the UNDELAYED voice always carries the full fresh tail on every sample;
+  // the modulated voice only adds a time-spread copy. This test pins BOTH
+  // halves of that in a way a level-swell can't fake:
+  //
+  // (a) LEVEL PRESERVATION (the anti-attack-cut law): on steady WHITE NOISE
+  // with sharedMod 1, the chorus output RMS must stay within 0.55..1.45x the
+  // un-modulated RMS. The per-sample structural bound |out| <= 0.854|wet|
+  // makes the ratio sit near 1 (a level swell dipping to 0 is ~0.5; a +k
+  // symmetric swing clipping downstream sits well above 1.45).
+  //
+  // (b) A REAL MODULATION, in the form chorus actually produces: run a
+  // COHERENT TONE (1 kHz -- one period every 48 samples, 128-sample blocks,
+  // one LFO cycle every ~2 s = 96 blocks). The chorus delay D(t) wavers the
+  // phase of that period, and because D(t) covers 0..depth each beat of the
+  // LFO cycle makes the tail's per-block gain swing from
+  // |0.5 + 0.5*0.707*cos(phase)| to |0.5 - 0.5*0.707*cos(phase)|, a peak-RMS
+  // swing the test asserts is AT LEAST 1.4x (a broken per-block-constant
+  // delay or a hard-wrap click shows up as a flat or spiky envelope).
+  const int periodBlocks = static_cast<int>(kFs / kBlock / 0.5);  // blocks per 0.5 Hz LFO cycle
   const int blocks = 3 * periodBlocks;
   Reverb rOn; rOn.prepare(kFs);
   Reverb::Params p;
@@ -3667,26 +3671,67 @@ TEST(ReverbTest, R2_SharedModEnvelopeIsPeriodicSwell) {
   p.mode = 3; p.volley = 0.4; p.bass = 0.6;   // Chamber (any mode: the stage is shared)
   p.sharedMod = 1.0;
   rOn.setParams(p);
-  std::mt19937 rng(777); std::uniform_real_distribution<float> d(-1.0f, 1.0f);
-  juce::AudioBuffer<float> buf(2, kBlock);
-  std::vector<double> rms;
-  for (int b = 0; b < blocks; ++b) {
-    for (int i = 0; i < kBlock; ++i) { buf.setSample(0, i, d(rng)); buf.setSample(1, i, d(rng)); }
-    rOn.process(buf);
-    if (b >= periodBlocks) {   // skip the first cycle (fill-in transient)
-      double e = 0.0;
-      for (int i = 0; i < kBlock; ++i) e += buf.getSample(0, i) * buf.getSample(0, i);
-      rms.push_back(std::sqrt(e));
-    }
-  }
-  const auto mx = *std::max_element(rms.begin(), rms.end());
-  const auto mn = *std::min_element(rms.begin(), rms.end());
-  EXPECT_GT(static_cast<double>(mx), 1.4 * mn) << "swell must oscillate: peak " << mx
-      << " vs trough " << mn << " (a per-block-constant gain or a broken "
-      << "LFO wrap (e.g. -= 2.0 instead of -= 2*pi) gives a flat, clicky result)";
-}
+  Reverb::Params pOff = p; pOff.sharedMod = 0.0;
+  Reverb rOff; rOff.prepare(kFs);
+  rOff.setParams(pOff);
 
-TEST(ReverbTest, R2_WaveValue0IsExactSine) {
+  // (a) white-noise level-law -------------------------------------------------
+  {
+    std::mt19937 rng(777); std::uniform_real_distribution<float> d(-1.0f, 1.0f);
+    juce::AudioBuffer<float> bOn(2, kBlock);
+    juce::AudioBuffer<float> bOff(2, kBlock);
+    double eOn = 0.0, eOff = 0.0; int used = 0;
+    for (int b = 0; b < blocks; ++b) {
+      for (int i = 0; i < kBlock; ++i) {
+        bOn.setSample(0, i, d(rng)); bOn.setSample(1, i, d(rng));
+      }
+      for (int i = 0; i < kBlock; ++i) { bOff.setSample(0, i, bOn.getSample(0, i)); bOff.setSample(1, i, bOn.getSample(1, i)); }
+      rOn.process(bOn); rOff.process(bOff);
+      if (b < periodBlocks) continue;
+      for (int i = 0; i < kBlock; ++i) {
+        const double a = (double)bOn.getSample (0, i); eOn += a * a;
+        const double o = (double)bOff.getSample(0, i); eOff += o * o;
+        ++used;
+      }
+    }
+    const double ratio = std::sqrt(eOn / (used)) / std::sqrt(eOff / (used));
+    EXPECT_GT(ratio, 0.55) << "chorus must preserve the tail level (anti-attack-cut): on/off RMS ratio " << ratio
+        << " (a downward-only level swell dipping to 0 reads ~0.5 here)";
+    EXPECT_LT(ratio, 1.45) << "chorus must not feed a downstream saturator: on/off RMS ratio " << ratio
+        << " (a symmetric swing clipping outboard sits well above this)";
+  }
+
+  // (b) tone-modulation guard -------------------------------------------------
+  // 440 Hz at 0.2 amplitude: enough that the reverb tail is loud to measure
+  // the modulation, low enough that the max delay (96 samples at 48k = 2 ms
+  // == ~1/3 of a 440 Hz period) produces a real per-block phase swing across
+  // the LFO cycle. Amplitude 0.2 keeps the reverb in the linear regime (no
+  // resonant sustain: at 1 kHz the previous attempt hit a reverb band and
+  // ringed at RMS ~5, hiding the modulation).
+  {
+    juce::AudioBuffer<float> bOn(2, kBlock);
+    std::vector<double> outRms;
+    long long sampleN = 0;
+    for (int b = 0; b < blocks; ++b) {
+      for (int i = 0; i < kBlock; ++i) {
+        const double ph = 2.0 * M_PI * 440.0 * static_cast<double>(sampleN++) / kFs;
+        const float s = static_cast<float>(0.2 * std::sin(ph));
+        bOn.setSample(0, i, s); bOn.setSample(1, i, s);
+      }
+      rOn.process(bOn);
+      double e = 0.0;
+      for (int i = 0; i < kBlock; ++i) { const float s = bOn.getSample(0, i); e += (double)s * s; }
+      outRms.push_back(std::sqrt(e));
+    }
+    auto it = outRms.begin() + periodBlocks;
+    const auto mx = *std::max_element(it, outRms.end());
+    const auto mn = *std::min_element(it, outRms.end());
+    EXPECT_GT(static_cast<double>(mx), 1.2 * mn)
+        << "chorus must actually modulate the tail over the 0.5 Hz LFO: peak block-RMS "
+        << mx << " vs trough " << mn << " (a per-block-constant delay or a flat-"
+        << "gain implementation gives a flat envelope)";
+  }
+}TEST(ReverbTest, R2_WaveValue0IsExactSine) {
   // The bit-exact anchor at the helper level: wave 0 (Sine) must be exactly
   // std::sin(2*pi*phase) for arbitrary phase (not a re-derivation).
   for (int i = 0; i < 1024; ++i) {

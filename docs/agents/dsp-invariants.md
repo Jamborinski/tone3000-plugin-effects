@@ -176,18 +176,28 @@
   (2026-10-15, "subtle + periodic clicking"): the +k side tripped outboard
   saturation on the tail peaks (eating the upward motion) and the phase wrap
   compared against 2*pi but subtracted only 2.0 (a hard gain discontinuity
-  every pass -- the click). The shipped mechanism is a POST-MIX, DOWNWARD-ONLY
-  level SWELL, gated fully at `sharedMod==0`
-  (`Reverb::processSharedModSmear`: 0.5 Hz fixed-SINE LFO advanced PER
-  SAMPLE, gain = 1 - k/2*(1 - sin(2*pi*ph)) with k = 1.0*sharedMod, so
-  [1-k, 1] -- the tail dips and swells back up to the nominal level but never
-  ABOVE it, so it can never feed a downstream saturator) -- audible tail
-  modulation, mode-independent; `wave` shapes ONLY Digital's Sig-B read-tap
-  waver (wave 0 = `std::sin` bit-exact). A per-block-constant gain reads as a
-  buzz, not a swell -- keep the LFO phase advance INSIDE the sample loop and
-  the wrap a FULL 2*pi (pinned by
-  `ReverbTest.R2_SharedModEnvelopeIsPeriodicSwell`, which also pins the
-  downward-only gain range [0, 1] at full dial).
+  every pass -- the click). A DOWNWARD-ONLY [1-k, 1] level swell shipped
+  third and was DECLINED by the ear (2026-10-15, "mostly just cuts the
+  beginning attack of the wet reverb, almost sounding like a delayed reverb"):
+  amplituding the tail down-and-back is still amplitude chopping, not chorus.
+  The shipped mechanism is a POST-MIX CHORUS on the wet tail
+  (`Reverb::processSharedModSmear`, rewritten 2026-10-15): out =
+  0.5*wet + 0.5*0.707*wet[n-D(t)] -- an undelayed voice (fresh attack
+  preserved) plus a delayed voice whose tap D(t) is a fixed-SINE LFO at
+  0.5 Hz (advanced PER SAMPLE, wrap a FULL 2*pi -- the partial-subtract is
+  the old click bug) ranging 0..kSharedModDepthMs(2 ms), the classic
+  d = maxD*(0.5+0.5*cos(2*pi*ph)) chorus depth law; R channel +pi/2 LFO
+  offset; linear-interpolated fractional tap (no zipper); per-channel
+  power-of-two rings (prepared in prepare(), cleared in reset()). The
+  undelayed voice keeps the attack; LEVEL IS PRESERVED (at full dial
+  |out| <= 0.854*|wet|) so it can never feed a downstream saturator. Gated
+  fully at `sharedMod==0` so the bit-exact anchor holds by construction;
+  `wave` shapes ONLY Digital's Sig-B read-tap waver (wave 0 = `std::sin`
+  bit-exact). Pinned by `ReverbTest.R2_SharedModChorusesTheTailNotTheAttack`
+  (a) white-noise on/off RMS ratio in 0.55..1.45 = the level law; (b) a 250 Hz
+  tone's block RMS sweeps peak > 2x trough = the LFO is actually moving
+  (250 Hz is the rate at which the 2 ms max depth sweeps a full 0..max..0
+  cycle).
 - **MODEL/SUBTYPE rule (general, all effects):** a mode + model/subtype (type)
   MAY carry its own knob defaults and tone law (permissive, not mandatory),
   tuned to its own reference, but it must never override the generic/shared path
