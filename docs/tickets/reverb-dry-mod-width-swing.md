@@ -2,27 +2,32 @@
 # better Width, and the "swirly / swelled" EMT-140 character gap
 # (with a clean-room research track)
 
-Status: **R1 + R2 SHIPPED** (R1 2026-10-13, R2 2026-10-14, SIX R2 Mod
+Status: **R1 + R2 SHIPPED** (R1 2026-10-13, R2 2026-10-14, EIGHT R2 Mod
 follow-ups 2026-10-14/15 — see the follow-up logs below). **R1 (Dry knob, all
 reverb modes) DONE 2026-10-13.**
-**R2 shared Mod DONE (sixth-cut final mechanism): WET-UNITY + ADDED CHORUS
-LAYER** (`sharedMod`/`reverbSharedMod`, 0..1, 0 = bit-exact today on every
-mode). `Reverb::processSharedModSmear`: out = wet (FULL level, every sample)
-+ amt · chorus-layer, where
-amt = kModChorusAmt(0.30) · m · taper, taper = 2m for m ≤ 0.5 else 1 (the
+**R2 shared Mod DONE (eighth-cut final mechanism): WET-UNITY + ADDED CHORUS
+LAYER, amplitude MEASURED** (`sharedMod`/`reverbSharedMod`, 0..1, 0 =
+bit-exact today on every mode). `Reverb::processSharedModSmear`:
+out = wet (FULL level, every sample) + amt · chorus-layer, where
+amt = kModChorusAmt(1.8) · m · taper, taper = 2m for m ≤ 0.5 else 1 (the
 user's "gradual first half of the sweep" request: 0→0.5 ramps the modulation
 in, 0.5→1 identical). The chorus layer = four delayed voices (12 dB/oct
 Butterworth biquad @6 kHz each, taps floored at 30% of voice depth,
 incommensurate 1.31/0.77/1.64× the 0.5 Hz base sine, depths
-1.0/0.72/0.50/0.34 × 12 ms max). The wet is never replaced → no volume drop,
-no anti-phase dip → the click class and the "big volume drop" are gone by
-construction. Worst-coherent ceiling 1.30× (+2.2 dB, measured 1.019 on the
-white-noise fixture) — musical, never feeds a saturator. Evolved by ear
-across SIX cuts (all recorded under CONSIDERED & DECLINED in
-docs/agents/dsp-invariants.md): lowpass-breathe → symmetric swell (clicking)
-→ downward-only swell ("delayed reverb") → single-voice chorus ("crispy
-static") → crossfade chord (volume drop + residual click) → this wet-unity
-added layer. Plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave`
+1.0/0.72/0.50/0.34 × 18 ms max). The wet is never replaced → no volume
+drop, no anti-phase dip → the click class and the "big volume drop" are
+gone by construction. Layer amplitude is MEASURED, not tuned by vibes:
+`R2_ModSonicProbe` found the 0.45 cut's layer at -23 dB under the wet
+(inaudible); `R2_ModSonicSweep` swept amount × depth in the real engine
+(amount is the lever; depth washes out) and set kModChorusAmt = 1.8
+(layer -15.1 dB, out +0.85 dB, sharpness ratio 1.053 → no added click
+energy). Structural ceiling 1.8+1 = 2.8× worst-coherent
+(measured coherent ~1.085×), the pin uses the 2.9× headroom. Evolved by
+ear + measurement across EIGHT cuts (all recorded under CONSIDERED &
+DECLINED in docs/agents/dsp-invariants.md): lowpass-breathe → symmetric
+swell (clicking) → downward-only swell ("delayed reverb") → single-voice
+chorus ("crispy static") → crossfade chord (volume drop + residual click)
+→ wet-unity added layer (subtle by LEVEL) → measured amplitude (this). Plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave`
 "Shape" knob (0 = Sine = bit-exact anchor; shapes only Digital's read-tap
 waver). **EIGHTH CUT (2026-10-15, MEASURED):** the "still quite subtle" report was taken
 to the lab: new `ReverbTest.R2_ModSonicProbe` renders the REAL engine and reports
