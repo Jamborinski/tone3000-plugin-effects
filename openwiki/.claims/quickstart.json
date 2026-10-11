@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:ebee9e8366d44f1164c51aa8fa01cbe848c88a4e80c9384eee59f050367873ad",
+  "pageVersion": "sha256:fb68a6a4c2fc146b99314a2b58b77d7539026fe351fff8fd0d117ad991faf9e5",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -36,11 +36,11 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:58a5841dca296ced6f580ad17c04fb6d72434c62a8fb7f90309ded0275478a39"
+          "version": "repo-file-v1:sha256:ba9374887382a8a7c252b06c1d1880da5f37b1639ded6f9fde2e93538b5e8679"
         },
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:37e3df448904f949cffcd808ad791dce43f05fe79149ce4e971504d616093c0f"
+          "version": "repo-file-v1:sha256:9610fa703c8d1a7bae56898d5661dc375128319086f0bcc99953d7edbfe1e80e"
         }
       ]
     },
@@ -121,6 +121,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-11T17:47:30.537Z"
+    "at": "2026-10-11T19:46:32.143Z"
   }
 }

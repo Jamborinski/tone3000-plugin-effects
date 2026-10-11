@@ -77,7 +77,7 @@ export LD_LIBRARY_PATH=/home/jambo/buildkit/stage/usr/lib/x86_64-linux-gnu${LD_L
 # or direct:
 LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
 ```
-- The suite **grows with features** (376 as of 2026-10-07) — **never assert a
+- The suite **grows with features** (477 as of 2026-10-15) — **never assert a
   stale total** on failure; check build RC and that the test names actually ran.
 - **gtest silent-0 trap:** a comma list like `--gtest_filter='A*,B*'` can run
   **0 tests with exit 0** (a green lie); a single `A*` works. Always confirm the
@@ -122,10 +122,12 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   (causal flux integrator OK; the NAB pair are exact inverses; NO oversampling);
   WingComp "LA-2A" (Desktop) is unusable — never pull from it.
 - **Model/subtype (type) tuning is permissive (CAN, not MUST) — 2026-10-13:** a mode + model (e.g. reverb Plate/"140" = mode 2, type 0 today — `Params::type[mode]` axis, `numTypes()`/`defaultDialsForType()`, the "140" chip) may carry its own neutral defaults (50 % dials; decay 2.0 s = reference length) + reference-IR law (LONGER = DARKER, the direction the EMT 140 family itself measures) — it must keep the generic/shared mechanism and the other modes separate (other modes stay bit-identical). The rule is GENERAL (any effect mode/subtype); full text + the plate/"140" instance + the biquad landmine: `docs/agents/ir-reverb-training.md`; one-liners: `dsp-invariants.md` § Reverb + `ui-wiring.md`.
-- **Never commit credentials.** Local machine rules (sudo password,
-  long-job patterns): pi → `/home/jambo/.pi/agent/AGENTS.md` (pi runs
-  natively inside WSL); Cline → `C:\Users\jambo\Documents\Cline\Rules\global.md`
-  (Cline is Windows-side; its shell is this same WSL).
+- **Never commit credentials.** Local-machine rules + session lessons
+  (long-job patterns, GPU, build env): the global pi AGENTS.md at
+  `C:\\Users\\jambo\\.pi\\agent\\AGENTS.md` (WSL path
+  `/mnt/c/Users/jambo/.pi/agent/AGENTS.md`); Cline →
+  `C:\\Users\\jambo\\Documents\\Cline\\Rules\\global.md`. Never write
+  passwords into either — ask for them when a task needs sudo.
 
 <!-- OPENWIKI:START -->
 

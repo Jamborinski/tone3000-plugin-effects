@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:2889b6bf1d2b918e1dd567a2e65832321fc1465e3c17965d675e2e8e4e0380ae",
+  "pageVersion": "sha256:aebe724e06fa30e76a4cb942430e96ee3b04d4b679e89865a45247657e41176a",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -96,27 +96,23 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:b8b1b6e4113a29a4e3880a6094d8127c448c5ef5be844526e493dc86930875c3"
+          "version": "repo-file-v1:sha256:2633664dec977277fdb69f2991fafffa3812f557945b1c6f7300d05ba5948bf0"
         }
       ]
     },
     {
       "id": "claim_300ac5ea181b41dea89458d0eb282864",
-      "statement": "After R2 (2026-10-14) the full reverb tile's generic param list is 7 entries (Decay, Pre, Tone, Size, Width, Dry, shared Mod): Dry = index 5 -> knobF_ (row 2, right of Dwell), shared Mod = index 6 -> knobH_ (row 1, left of Tone per the ticket), via the reverb-specific knobAt branches (EffectTile.cpp:364-367). numParams_ is 7 (full) or 5 (compact): compact row 2 is unchanged (In/Size/Width/Out) — Dry and Mod are bound in the param stream but have no visible slot on the compact surface, matching the compact 'silent extra param' pattern. Row layout: Mix/Decay/Pre/Mod/Sig A/Tone over Dwell/Dry/Size/Width/Sig B/Out (EffectTile.cpp:1225-1240). Other effect kinds keep the shared generic knobAt mapping unchanged.",
+      "statement": "After R2 + the 2026-10-15 R2 follow-up (commit 664965e) the full reverb tile's generic param list is 7 entries (Decay, Pre, Tone, Size, Width, shared Mod, Dry): shared Mod = index 5 -> knobH_ (row 1 right end), Dry = index 6 -> knobF_ (row 2, right of Dwell), via the reverb-specific knobAt branches (EffectTile.cpp ~:364-370). numParams_ is 7 (full) or 5 (compact): the full tile now shows 6 COLUMNS per row, matching conv's even 36px pitch (the 2026-10-15 user fix -- the 2026-10-14 first cut had cramped 7 columns); compact row 2 is unchanged -- Dry and Mod are bound in the param stream but have no visible slot on the compact surface, matching the compact 'silent extra param' pattern. Row layout: Mix/Decay/Pre/Tone/Sig A/Mod over Dwell/Dry/Sig B/Size/Width/Out. Other effect kinds keep the shared generic knobAt mapping unchanged. Goldens reverb.png/reverb-shift.png re-approved (TileShot --dump shows a clean 12-control grid at the conv pitch).",
       "evidence": [
         {
-          "resource": "repo://plugin/ui/core/Help.cpp",
-          "version": "repo-file-v1:sha256:50733b25741d8595abdddd195366be6d4992b6fbf041bed46b42a06b4edd9f77"
-        },
-        {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:b8b1b6e4113a29a4e3880a6094d8127c448c5ef5be844526e493dc86930875c3"
+          "version": "repo-file-v1:sha256:2633664dec977277fdb69f2991fafffa3812f557945b1c6f7300d05ba5948bf0"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-11T17:47:30.537Z"
+    "at": "2026-10-11T19:46:32.143Z"
   }
 }

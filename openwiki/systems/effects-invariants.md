@@ -13,12 +13,10 @@ sources:
     resource: repo://test/CMakeLists.txt
   - id: openwiki-source-0368da5a39fa50284e393846
     resource: repo://test/src/plate_family_tests.cpp
-  - id: openwiki-source-9ff2ef0f7a4a77aed9113ced
-    resource: repo://test/src/plate_texture_tests.cpp
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-11T17:47:30.537Z
+    at: 2026-10-11T19:46:32.143Z
 ---
 
 

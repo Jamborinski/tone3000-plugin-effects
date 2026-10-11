@@ -1,12 +1,8 @@
 # Reverb effect — 6-mode design (planning)
 
-Status: **TICKET 1 (SCAFFOLD) COMPLETE — builds clean (VST3/LV2/DspTests), 379 DspTests pass.**
-Mirrors the delay/compressor
-`mode` pattern (`Compressor::kNumModes`, `Delay::kNumModes`) and the
-`delay-modes.md` / `dsp-invariants.md` wiring rules. Research material in
-`/home/jambo/dev/.research/reverb/*/RESEARCH.md` (per-mode digests +
-cross-modes). Tickets 2-7 (the per-mode laws) are still PENDING — the scaffold
-has the mode set, state + UI, and the bit-identity anchor, every mode law-inert.
+Status: **SHIPPED (2026-10-07..15) — 6-mode reverb, R1 (Dry) + R2 (shared Mod / Digital Shape) landed.**
+V2 mode order: **0 Plate, 1 Spring, 2 Room, 3 Chamber, 4 Hall, 5 Digital**
+(`Reverb.h` case 0..5, `kMaxDecayMsByMode` in that order).
 
 ## The six modes
 
@@ -18,12 +14,26 @@ shared dials underneath — the delay/compressor precedent. Shared with all:
 
 | # | Mode    | Sig A *(row 1, right of Pre)* | Sig B *(row 2, right of Width)* | One-line character |
 |---|---------|-------------------------------|--------------------------------|--------------------|
-| 0 | Digital | **Density** (0..1)            | **Mod** (0..1)                  | clean FDN; Density = line cross-coupling (0 = today's combs), Mod = tap waver |
-| 1 | Spring  | **Springs** (stepped 1..6)    | **Sag** (0..1)                  | 1D metallic: blend of N spring lines (Springs) + transducer-attack drip + low-tone lag (Sag), boing ring |
-| 2 | Plate   | **Bright** (0..1)             | **Bloom** (0..1)                | 2D dense mode wash, fast onset; discrete mode ring (Bright) + dispersive bright→bloom (Bloom) |
-| 3 | Room    | **Early** (0..1)              | **Air** (0..1)                  | short sharp early-reflection set + per-tap air-absorption darkening, short tail |
-| 4 | Chamber | **Volley** (0..1)             | **Bass** (0..1)                 | short diffuse early cluster + **extended LF tail**, HF-limited, high density, no metallic |
-| 5 | Hall    | **Build** (0..1)              | **Space** (0..1)                | long wide early build-up (lateral energy) + longest RT + highest density |
+| 0 | Plate   | **Bright** (0..1)             | **Bloom** (0..1)               | 2D dense mode wash, fast onset; discrete mode ring (Bright) + dispersive bright→bloom (Bloom); '140' type chip (EMT 140 reference-tuned) |
+| 1 | Spring  | **Springs** (stepped 1..6)    | **Sag** (0..1)                 | 1D metallic: blend of N spring lines (Springs) + transducer-attack drip + low-tone lag (Sag); RV1 type chip |
+| 2 | Room    | **Early** (0..1)              | **Air** (0..1)                 | short sharp early-reflection set + per-tap air-absorption darkening, short tail |
+| 3 | Chamber | **Volley** (0..1)             | **Bass** (0..1)                | short diffuse early cluster + **extended LF tail**, HF-limited, high density, no metallic |
+| 4 | Hall    | **Build** (0..1)              | **Space** (0..1)               | long wide early build-up (lateral energy) + longest RT + highest density |
+| 5 | Digital | **Density** (0..1)            | **Shape** (5 detents, `reverbWave`) | clean FDN; Density = line cross-coupling (0 = today's combs); Shape = the tap-waver LFO waveform (Sine/Triangle/Saw/Saw↓/Square; Sine = bit-exact anchor) |
+
+**R2 additions (2026-10-14/15, ticket `docs/tickets/reverb-dry-mod-width-swing.md`):**
+- **Shared Mod** (`reverbSharedMod`, full tile only, hidden on compact): a
+  gated POST-MIX level SWELL — 0.25 Hz fixed-sine LFO advanced per sample,
+  gain 1 ± 0.6·sharedMod clamped 0..2, ON only when sharedMod > 0, so 0 is
+  bit-identical in all six modes. First cut was a lowpass cutoff-breathe,
+  DECLINED by the ear as static darkening. Never scales the per-mode
+  `kSmearAmt`/`kFbDriftAmt` swirl (CONSIDERED & DECLINED — see
+  `docs/agents/dsp-invariants.md`).
+- **Digital Sig B** is now the 5-detent **Shape** knob (`Reverb::wave`,
+  `waveValue()` mirrors `Chorus::shape`); it shapes ONLY the Digital read-tap
+  waver — never the shared Mod LFO.
+- **R1** added the **Dry** knob (`reverbDry`, full tile only) — 0 dB at 0.5,
+  ±24 dB face, mirroring `convDry`.
 
 ### Mode-selection defaults (enterMode starting points — ears-pass later)
 

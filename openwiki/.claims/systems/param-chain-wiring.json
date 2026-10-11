@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:3a153b10ff709f341606a1a2768504753ba88f388845b40501c22cbe1b36677c",
+  "pageVersion": "sha256:b82d8a1f3f44632357b65336c19dee812f03bd0b5e1b4929ab24ee9fa24762ea",
   "claims": [
     {
       "id": "claim_9e89474d48b14a2ca41323ea45516a5d",
@@ -14,11 +14,11 @@
     },
     {
       "id": "claim_5182e0a71fbd47bea2e298fb16e1de68",
-      "statement": "A block param field round-trips only if it exists in all FOUR state places: (1) getChainState in plugin/src/ProcessorChain.cpp (the BlockRow struct, the copyLane copy, AND params->setProperty('<field>',…) in serializeChain); (2) parseItem in plugin/ui/model/ChainState.cpp (item.<field> = num(v[\"params\"], \"<field>\", default)); (3) updateBlockParam in plugin/src/ProcessorChain.cpp (the param == \"<field>\" branch); (4) ProcessorState.cpp (blockState.setProperty + getProperty restore). Missing any one = 'works sonically, snaps back to default on sync'. Chain-layer dry-gain params (convDry, and reverbDry since the 2026-10-13 R1 pass) occupy these four places exactly like engine params but their updateBlockParam branch does NOT call an engine setParams — the gain is applied in the chain's mix loop on the dry term only (see the effects-invariants anchor laws).",
+      "statement": "A block param field round-trips only if it exists in all FOUR state places: (1) getChainState in plugin/src/ProcessorChain.cpp (the BlockRow struct, the copyLane copy, AND params->setProperty('<field>',…) in serializeChain); (2) parseItem in plugin/ui/model/ChainState.cpp (item.<field> = num(v[\"params\"], \"<field>\", default)); (3) updateBlockParam in plugin/src/ProcessorChain.cpp (the param == \"<field>\" branch); (4) ProcessorState.cpp (blockState.setProperty + getProperty restore). Missing any one = 'works sonically, snaps back to default on sync'. Two families sit in these four places: (a) CHAIN-LAYER dry-gain params — convDry, and reverbDry since the 2026-10-13 R1 pass — whose updateBlockParam branch does NOT call an engine setParams (the gain is applied in the chain's mix loop on the dry term only); (b) ENGINE params like reverbSharedMod (R2 shared Mod depth, 0..1 clamped) and reverbWave (R2 Digital Shape, int 0..kNumWaves-1 clamped), whose updateBlockParam branch stores the clamped value AND calls block->reverb.setParams(block->reverbParams()). The R2 reverbSigRaw Digital Sig B raw-value path also routes b.reverbWave (not the shared Mod).",
       "evidence": [
         {
           "resource": "repo://docs/agents/ui-wiring.md",
-          "version": "repo-file-v1:sha256:6819665026d582064972a46c304de363ee60e203f53ebb4392ebc2c9b272cb67"
+          "version": "repo-file-v1:sha256:987b689830d5715918342921f1eb525fc9afff80b289de1b2135bb60d1b372fb"
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
@@ -57,6 +57,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-11T17:47:30.537Z"
+    "at": "2026-10-11T19:46:32.143Z"
   }
 }

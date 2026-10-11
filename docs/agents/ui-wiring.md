@@ -83,3 +83,19 @@ The layout's `five`/`cols` flag is a SEPARATE gate — update both.
 The Dwell knob is the shared In/input-gain knob renamed for the reverb block
 (help key `reverbDwell`, label set in `EffectTile.cpp`). It is drive, not a
 retune knob; do not add a dedicated dwell parameter.
+
+## Reverb R1/R2 knobs (full tile only — 2026-10-14/15)
+Two reverb params are **full-tile-only** with the compact 'silent extra
+param' pattern (bound in the param stream, no visible slot on the compact
+surface): **Dry** (`reverbDry`, index 6 → `knobF_`) and the shared **Mod**
+(`reverbSharedMod`, index 5 → `knobH_`). Both are 0..1 stored with a toStored
+scale (Dry mirrors `convGain` ±24 dB). The full reverb tile shows **6 columns
+per row** (Mix/Decay/Pre/Tone/SigA/Mod over Dwell/Dry/SigB/Size/Width/Out)
+matching conv's 36px pitch — a 7th column was shipped once (R2 10-14) and
+removed by the ear (10-15, "smushed left"). `numParams_` full = 7 (6 decay-family
++ Dry + Mod), compact = 5; `knobAt()`/`syncKnobs()` special-case reverbFull
+i==5 → `knobH_`, i==6 → `knobF_`. The shared Mod is an ENGINE param
+(`Reverb::Params::sharedMod`, clamped in `setParams`) exposed as the chain
+state field `reverbSharedMod` — that state field needs the same
+FOUR state places as any other block field (see the rule above); Digital Sig B is
+`reverbWave` (5 detents, `scales::reverbWave()`, engine `Reverb::Params::wave`).

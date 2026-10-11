@@ -7,8 +7,6 @@ sources:
     resource: repo://plugin/docs/native-ui.md
   - id: openwiki-source-d03af21fb5ca3fcbf4437434
     resource: repo://plugin/ui/core/Design.h
-  - id: openwiki-source-e57b45326a18fab8a4fe2253
-    resource: repo://plugin/ui/core/Help.cpp
   - id: openwiki-source-2cc0983ddb88288e69accf75
     resource: repo://plugin/ui/core/KnobScale.h
   - id: openwiki-source-4ec0c8381f33cd3ba0cb99f5
@@ -30,7 +28,7 @@ sources:
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-11T17:47:30.537Z
+    at: 2026-10-11T19:46:32.143Z
 ---
 
 

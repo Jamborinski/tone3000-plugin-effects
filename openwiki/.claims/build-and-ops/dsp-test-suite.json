@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:675072ab054f4495fc7184f5fe2af0051a0998bbfba67b95f41b0e0b68471f8a",
+  "pageVersion": "sha256:f48f76cdbfe47e286c1353c9c2434f5c436fe9a9648f66e1f765c142fdfaa776",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -74,25 +74,17 @@
     },
     {
       "id": "claim_916532a025994ae585b6b8a9c6329055",
-      "statement": "The DspTests suite grew with features and passed at 476 tests as of the 2026-10-14 R2 (reverb shared Mod + Digital Shape) addition, which added TEST(ReverbTest, R2_SharedModZeroIsBitExactAllSixModes), R2_SharedModOnStaysSineInEveryMode, R2_SharedModOnChangesOutputEveryMode, R2_WaveValue0IsExactSine, R2_DigitalWaveShapesTheWaverNotTheSharedMod (test/src/effect_tests.cpp) and TEST(PlateTexture, R2_CpuWithSharedModOn) (test/src/plate_texture_tests.cpp); R1 (reverbDry) brought it to 470. Any count recorded here is a lower-bound snapshot, not a total to assert on a red run.",
+      "statement": "The DspTests suite grew with features: 470 after R1 (reverbDry), 476 after the 2026-10-14 R2 (reverb shared Mod + Digital 5-detent Shape; TEST(ReverbTest, R2_SharedModZeroIsBitExactAllSixModes), R2_SharedModOnStaysSineInEveryMode, R2_SharedModOnChangesOutputEveryMode, R2_WaveValue0IsExactSine, R2_DigitalWaveShapesTheWaverNotTheSharedMod in test/src/effect_tests.cpp plus TEST(PlateTexture, R2_CpuWithSharedModOn) in test/src/plate_texture_tests.cpp), and 477 after the 2026-10-15 R2 follow-up (commit 664965e), which added ReverbTest.R2_SharedModEnvelopeIsPeriodicSwell — a per-block RMS guard on the shared-Mod level swell requiring peak > 1.4 x trough (a per-block-constant-gain implementation would fail). Any count recorded here is a lower-bound snapshot, not a total to assert on a red run.",
       "evidence": [
         {
-          "resource": "repo://script/test-dsp.sh",
-          "version": "repo-file-v1:sha256:9687741a4aeff5266793a02cff1b407fb03cd1d9bba6a05aff8798a46366cf9e"
-        },
-        {
           "resource": "repo://test/src/effect_tests.cpp",
-          "version": "repo-file-v1:sha256:197e248b975d181fa2acb0ed6d9016ac220183a83993b6c0d9b3cb2b435bc1b5"
-        },
-        {
-          "resource": "repo://test/src/plate_texture_tests.cpp",
-          "version": "repo-file-v1:sha256:4e58e6fbd4019939c1db83a9951a03a78bfd59b10cede3b5cc643ae84cd9e46a"
+          "version": "repo-file-v1:sha256:ca5a85f3411f0b7a6991c4b8fcd9729e625b8afd301a4072570fd09537b07132"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-11T17:47:30.537Z"
+    "at": "2026-10-11T19:46:32.143Z"
   }
 }
