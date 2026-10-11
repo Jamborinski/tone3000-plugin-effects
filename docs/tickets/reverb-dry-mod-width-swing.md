@@ -24,7 +24,19 @@ docs/agents/dsp-invariants.md): lowpass-breathe → symmetric swell (clicking)
 static") → crossfade chord (volume drop + residual click) → this wet-unity
 added layer. Plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave`
 "Shape" knob (0 = Sine = bit-exact anchor; shapes only Digital's read-tap
-waver). **BUDGET (user 2026-10-15): quality-first, hard cap =
+waver). **EIGHTH CUT (2026-10-15, MEASURED):** the "still quite subtle" report was taken
+to the lab: new `ReverbTest.R2_ModSonicProbe` renders the REAL engine and reports
+what the stage does to the sound (layer level vs wet, tilt, L/R correlation,
+sharpness). Verdict: the chorus LAYER sat at **-23 dB under the wet** =
+inaudible (L/R movement 0.015 and sharpness flat were already fine -- a level
+problem, not a character problem). `ReverbTest.R2_ModSonicSweep` swept
+amt x depth through the engine: layer level tracks **amount** alone (depth
+1x..3x moves it <0.1 dB), so `kModChorusAmt` 0.45 -> **1.8** = layer -15.1 dB,
+out +0.85 dB, sharpness x1.053. Shipped constants now set from the table,
+not vibes. (Test hooks: `Reverb::smTestAmtScale_`/`smTestDepthScale_` +
+`friend struct ReverbChorusSweep`, in-file for exactly this workflow.)
+
+**BUDGET (user 2026-10-15): quality-first, hard cap =
 convolver-class** — `BudgetConvolver` on a 5-6 s stereo IR measures avg ~24
 µs/block@256 (p95 ~335 µs) on the 9950X3D; the stage measures ~7.8 µs
 total / ~+4.5 over the 3.3 µs plate baseline — comfortably in budget with

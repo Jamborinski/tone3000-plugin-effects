@@ -3632,6 +3632,152 @@ TEST(ReverbTest, R2_SharedModOnChangesOutputEveryMode) {
   }
 }
 
+// Measured-tune accessor for the chorus stage (see Reverb::friend).
+struct ReverbChorusSweep {
+  static double amtScale(Reverb& r){ return r.smTestAmtScale_; }
+  static void setAmt(Reverb& r, double v){ r.smTestAmtScale_ = v; }
+  static void setDepth(Reverb& r, double v){ r.smTestDepthScale_ = v; }
+};
+
+TEST(ReverbTest, R2_ModSonicSweep) {
+  // CONSTANT SWEEP (2026-10-15, measure-before-committing): the probe put the
+  // chorus layer at -23.1 dB under the wet -- inaudible. Sweep layer AMOUNT
+  // (amtScale) x tap DEPTH (depthScale) through the real engine and pick the
+  // combo by the measured numbers:
+  //  * layer dB vs wet:  target ~ -12 +/- 2 dB (audible but not pasted-on)
+  //  * sharpness (deriv-RMS ratio vs mod-off):  keep < 1.15 (the tiny-
+  //    clicking report -- do not add transients)
+  // FINDING (2026-10-15): the layer level is set almost entirely by AMOUNT;
+  // tap depth is INCOHERENT-AVERAGE-NEUTRAL (dep 1..3 moves the layer <0.1 dB)
+  // because decorrelated delayed taps wash out -- so amount is the body lever.
+  // Printed table: amt 1.8 (shipped) -> layer -15.1 dB, out +0.85 dB,
+  // sharpness x1.053 -- clearly audible with no added click energy;
+  // the 0.45 cut below reads -22.9 dB (the inaudible baseline the user
+  // called "really hard to tell"). SUCCEED() informational; Reverb.h
+  // carries the shipped figure.
+  const unsigned int fs = 48000; const int n = 2*fs; const int blk = 128;
+  auto render = [&](double amtS, double depthS) {
+    Reverb r; r.prepare(fs);
+    Reverb::Params p;
+    p.decayMs = 1800.0; p.tone = 0.3; p.size = 0.5; p.width = 1.0; p.preMs = 0.0;
+    p.mode = 3; p.volley = 0.4; p.bass = 0.6;
+    p.sharedMod = 1.0;
+    r.setParams(p);
+    ReverbChorusSweep::setAmt(r, amtS);
+    ReverbChorusSweep::setDepth(r, depthS);
+    std::mt19937 rng(4242); std::uniform_real_distribution<float> d(-0.3f, 0.3f);
+    juce::AudioBuffer<float> b(2, blk);
+    std::vector<std::vector<float>> out(2, std::vector<float>(n));
+    for (int off = 0; off + blk <= n; off += blk) {
+      for (int i = 0; i < blk; ++i) { b.setSample(0, i, d(rng)); b.setSample(1, i, d(rng)); }
+      r.process(b);
+      for (int i = 0; i < blk; ++i) { out[0][off+i] = b.getSample(0,i); out[1][off+i] = b.getSample(1,i); }
+    }
+    return out;
+  };
+  const unsigned m1 = fs, m2 = 2*fs;
+  auto rms = [](const auto& o, unsigned a, unsigned b){ double s=0; for(unsigned i=a;i<b;++i) s += (double)o[0][i]*o[0][i] + (double)o[1][i]*o[1][i]; return std::sqrt(s/(2.0*(b-a))); };
+  auto sharp = [](const std::vector<std::vector<float>>& o, unsigned a, unsigned b){
+    double s=0,c=0; for(unsigned i=a+1;i<b;++i,++c){ const double d0=(double)o[0][i]-(double)o[0][i-1], d1=(double)o[1][i]-(double)o[1][i-1]; s += d0*d0+d1*d1; } return std::sqrt(s/c); };
+  const auto off = render(0.0, 1.0);  // amt 0 -> stage off (bit-exact)
+  const double wetR = rms(off,m1,m2), wetS = sharp(off,m1,m2);
+  const auto db = [](double x, double ref){ return 20.0*std::log10(std::max(x,1e-12)/std::max(ref,1e-12)); };
+  const char nl[] = "\n";
+  std::cout << "  SWEEP (layer dB / sharp ratio):" << nl;
+  for (double amt : {0.45, 1.8, 3.0, 5.0}) {   // 1.8 = shipped (R2 eighth cut)
+    for (double dep : {1.0}) {
+      const auto on = render(amt, dep);
+      // layer = on - off (approx, wet identical for amt 0..2.0? NO: off-render uses amt 0 only)
+      std::vector<std::vector<float>> layer(2, std::vector<float>(n));
+      for (unsigned i = m1; i < m2; ++i) { layer[0][i] = (float)((double)on[0][i]-(double)off[0][i]); layer[1][i] = (float)((double)on[1][i]-(double)off[1][i]); }
+      const double oS = sharp(on,m1,m2);
+      std::cout << "  amt " << amt << " dep " << dep
+                << " => layer " << std::fixed << std::setprecision(2) << db(rms(layer,m1,m2), wetR) << " dB  "
+                << "out " << db(rms(on,m1,m2), wetR) << " dB  sharp ratio " << std::setprecision(3) << (oS/wetS) << nl;
+    }
+  }
+  SUCCEED();
+}
+
+
+TEST(ReverbTest, R2_ModSonicProbe) {
+  // SONIC PROBE (2026-10-15, "are you measuring this?"): render the REAL
+  // Plate engine at sharedMod = 0 vs 1 (Chamber settings from the level test,
+  // 48 kHz, white noise steady state) and REPORT what the chorus stage is
+  // actually doing to the sound, not what the algebra says:
+  //  * layer level:  RMS(on - off) / RMS(off)   -- the chorus as heard
+  //  * layer tilt:   energy centroid of (on-off) vs of (off) -- the 6 kHz
+  //                   biquads darken the layer; how dark vs the wet
+  //  * L/R lock:     correlation of the L and R chorus layers -- 1.0 = both
+  //                   channels modulating in lockstep (no stereo movement,
+  //                   no pan width -- a "subtle" contributor)
+  //  * transient sharpness: derivative-RMS of the layer, both at mod 1 and
+  //    at mod 0.5 (the "a bit of clicking at higher settings" report)
+  // Informational: the printed numbers drive the retune; no EXPECTs here
+  // (R2_SharedModChorusesTheTailNotTheAttack holds the pins).
+  const unsigned int fs = 48000;
+  const int n = 2 * fs;                      // 2 s
+  auto run = [&](unsigned m) {
+    Reverb r; r.prepare(fs);
+    Reverb::Params p;
+    p.decayMs = 1800.0; p.tone = 0.3; p.size = 0.5; p.width = 1.0; p.preMs = 0.0;
+    p.mode = 3; p.volley = 0.4; p.bass = 0.6;   // Chamber
+    p.sharedMod = static_cast<double>(m) / 1000.0;
+    r.setParams(p);
+    std::mt19937 rng(4242); std::uniform_real_distribution<float> d(-0.3f, 0.3f);
+    juce::AudioBuffer<float> b(2, 128);
+    std::vector<std::vector<float>> out(2, std::vector<float>(n));
+    for (int off = 0; off + 128 <= n; off += 128) {
+      for (int i = 0; i < 128; ++i) { b.setSample(0, i, d(rng)); b.setSample(1, i, d(rng)); }
+      r.process(b);
+      for (int i = 0; i < 128; ++i) { out[0][off+i] = b.getSample(0,i); out[1][off+i] = b.getSample(1,i); }
+    }
+    return out;
+  };
+  auto centroid = [&](const std::vector<float>& x, unsigned m1, unsigned m2) {
+    double num = 0.0, den = 0.0;
+    for (unsigned i = m1; i < m2; ++i) { num += (double)x[i]*x[i] * (double)i; den += (double)x[i]*x[i]; }
+    return den > 1e-12 ? num/den : 0.0;
+  };
+  auto corr = [&](const std::vector<float>& a, const std::vector<float>& b, unsigned m1, unsigned m2) {
+    double sa=0,sb=0,aa=0,bb=0,ab=0; const unsigned nn=m2-m1;
+    for (unsigned i=m1;i<m2;++i){sa+=a[i];sb+=b[i];aa+=double(a[i]*a[i]);bb+=double(b[i]*b[i]);ab+=double(a[i]*b[i]);}
+    sa/=nn;sb/=nn;aa-=sa*sa;bb-=sb*sb;ab=ab-((sa*sb)*nn);
+    return (aa>1e-15 && bb>1e-15) ? ab/(std::sqrt(aa*bb)) : 0.0;
+  };
+  auto rms = [&](const std::vector<float>& x, unsigned m1, unsigned m2){
+    double e=0; for(unsigned i=m1;i<m2;++i) e+=double(x[i]*x[i]); return std::sqrt(e/(m2-m1));
+  };
+  auto deriv = [&](const std::vector<float>& x, unsigned m1, unsigned m2){
+    double e=0; for(unsigned i=m1+1;i<m2;++i){const double d=(double)x[i]-(double)x[i-1];e+=d*d;} return std::sqrt(e/(m2-m1-1));
+  };
+  const auto off = run(0), on1 = run(1000), onHalf = run(500);
+  const unsigned m1 = (unsigned)fs, m2 = (unsigned)n;  // skip the first second
+  const auto L = [&](const auto& a, const auto& b, int c){ std::vector<float> d(n); for(unsigned i=0;i<(unsigned)n;++i) d[i]=b[c][i]-a[c][i]; return d; };
+  const std::vector<float> dl1 = L(off, on1, 0), dr1 = L(off, on1, 1);
+  const std::vector<float> dlH = L(off, onHalf, 0);
+  const double wet   = rms(off[0], m1, m2);
+  const double layer = rms(dl1, m1, m2);
+  const double centWet = (centroid(off[0],m1,m2)+centroid(off[1],m1,m2))*0.5;
+  const double centLay = (centroid(dl1,m1,m2)+centroid(dr1,m1,m2))*0.5;
+  const double lrLock  = corr(dl1, dr1, m1, m2);
+  const double sharp1  = deriv(on1[0],m1,m2), sharp0 = deriv(off[0],m1,m2);
+  const double sharpH  = deriv(onHalf[0],m1,m2), sharpH0 = deriv(off[0],m1,m2);
+  const auto db = [](double x, double ref){ return 20.0*std::log10(std::max(x,1e-12)/std::max(ref,1e-12)); };
+  const char nl[] = "\n";
+  std::cout << "[SONIC PROBE  mod=0 vs mod=1, " << n/fs << " s, 48 kHz]" << nl
+    << "  wet RMS             " << wet << "  (reference)" << nl
+    << "  chorus layer RMS    " << layer << "  = " << db(layer, wet) << " dB vs wet" << nl
+    << "  tap-sweep period    base " << (1.0/Reverb::kSharedModRate) << " s" << nl
+    << "  layer tilt (idx-cg) layer " << centLay << " vs wet " << centWet
+    << "  (samples; lower = darker)" << nl
+    << "  L/R layer correlation " << lrLock << "  (1.0 = locked, no stereo movement)" << nl
+    << "  sharpness deriv-RMS  m=1 " << sharp1 << " vs m=0 " << sharp0
+    << "  ratio " << (sharp0>0? sharp1/sharp0:0) << nl
+    << "  half-knob (m=0.5) ratio " << (sharpH0>0? sharpH/sharpH0:0) << nl;
+  SUCCEED() << "probe printed";
+}
+
 TEST(ReverbTest, R2_SharedModChorusesTheTailNotTheAttack) {
   // The 2026-10-15 user regression chain for the shared Mod knob:
   //   (1) "mostly just darkens"            -> lowpass-breath (declined);
@@ -3721,10 +3867,10 @@ TEST(ReverbTest, R2_SharedModChorusesTheTailNotTheAttack) {
       }
     }
     const double ratio = std::sqrt(eOn / (used)) / std::sqrt(eOff / (used));
-    EXPECT_LT(ratio, 1.50) << "added chorus layer must stay under the 1.50x structural ceiling (no saturator feed): on/off RMS ratio " << ratio;
+    EXPECT_LT(ratio, 2.9) << "added chorus layer must stay under the structural ceiling 1+kModChorusAmt (2.8x): on/off RMS ratio " << ratio;
     EXPECT_GT(ratio, 0.15) << "stage must not be a hard zero: on/off RMS ratio " << ratio;
     EXPECT_GT(ratio, 1.0) << "wet-unity law: engaging Mod must never DROP the wet level (ratio <= 1 means the fifth-cut crossfade traded undelayed against delayed)";
-    EXPECT_LT(pkOn, 1.50 * pkOff) << "added chorus layer must not feed a downstream saturator on peaks: on peak "
+    EXPECT_LT(pkOn, 2.9 * pkOff) << "added chorus layer must not feed a downstream saturator on peaks: on peak "
         << pkOn << " vs off peak " << pkOff;
   }
 

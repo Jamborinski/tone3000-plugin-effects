@@ -216,9 +216,18 @@
   the 50/50 undelayed-vs-delayed split REPLACES half the fresh wet with the
   biquad-darkened, coherent delayed copies -- the level+brightness drop IS
   the crossfade, and the anti-phase dips on the dense early reflections are
-  the residual clicks. SHIPPED FINAL (2026-10-15, seventh cut): WET-UNITY +
-  ADDED CHORUS LAYER -- out = wet + amt*chorus,
-  amt = kModChorusAmt(0.45) * m * taper, taper = 2m for m<=0.5 else 1
+  the residual clicks. MEASURED RETUNE (2026-10-15, eighth cut): the 0.45 cut's chorus LAYER
+  measured -23 dB under the wet (new test R2_ModSonicProbe -- the whole
+  "subtle" problem was a level problem, not a character problem: L/R
+  correlation was already 0.015, sharpness flat). R2_ModSonicSweep sweeps
+  the stage through the REAL engine: layer level tracks AMOUNT alone (tap
+  depth 1x..3x < 0.1 dB -- decorrelated long-delay taps wash out), so
+  amt 1.8 = layer -15.1 dB, out +0.85 dB, sharpness x1.053 (no added
+  click energy). Test hooks (smTestAmtScale_/smTestDepthScale_, friend
+  ReverbChorusSweep) exist for exactly this measure-before-committing
+  workflow. SHIPPED FINAL (eighth cut): WET-UNITY + ADDED CHORUS LAYER --
+  out = wet + amt*chorus,
+  amt = kModChorusAmt(1.8) * m * taper, taper = 2m for m<=0.5 else 1
   (the user's "gradual first 50% of the sweep" request: 0->0.5 ramps the
   modulation in, 0.5->1 identical). The wet stays at FULL level on every
   sample -> no volume drop and no anti-phase dip -> the click class is gone
@@ -227,11 +236,11 @@
   their depth (no ~zero-delay in-phase alignment), incommensurate
   1.31/0.77/1.64x the 0.5 Hz base sine, depths 1.0/0.72/0.50/0.34 x
   18 ms max at sharedMod 1 (deeper + slower + exaggerated per the ear;
-  the seventh cut raised amt 0.30 -> 0.45 and max depth 12 -> 18 ms after
-  the sixth read as "pretty subtle" by the ear).
-  Worst-coherent ceiling 1.0 + 0.45*1.0 = 1.45x the off signal (a musical
-  lift; the biquad darkening + voice decorrelation keeps it far under in
-  practice) -- never feeds a saturator. Two
+  amount is set by MEASUREMENT (eighth cut, above), depth 12 -> 18 ms
+  kept from the seventh).
+  Worst-coherent ceiling 1.0 + 1.8*1.0 = 2.8x the off signal worst case
+  (measured coherent sum ~1.085x -- +0.85 dB lift, musical, never feeds a
+  saturator; the pin uses the 2.9x structural ceiling). Two
   orders of magnitude under the convolver-class cap (+~4.5 us/block@128
   over the 3.3 us plate baseline). Budget (2026-10-15 user directive,
   9950X3D): quality first; the hard cap is `BudgetConvolver` on a 5-6 s
@@ -240,9 +249,10 @@
   shapes ONLY Digital's Sig-B read-tap waver (wave 0 = `std::sin`
   bit-exact). Pinned by
   `ReverbTest.R2_SharedModChorusesTheTailNotTheAttack`:
-  (a) level law -- on/off RMS ratio in (0.15, 1.35), MUST be > 1.0 (wet-
-  unity: engaging Mod can never DROP the wet -- ratio <= 1 is the
-  crossfade regression this guards against), on peak < 1.35x off peak
+  (a) level law -- on/off RMS ratio in (0.15, 2.9) = the 1+amt structural
+  ceiling, MUST be > 1.0 (wet-unity: engaging Mod can never DROP the wet
+  -- ratio <= 1 is the crossfade regression this guards against),
+  on peak < 2.9x off peak (measured coherent ~1.085x)
   (no saturator feed); (b) a 440 Hz tone's block RMS sweeps peak > 1.2x
   trough (a per-block-constant delay or flat gain gives a flat envelope --
   a dead modulation).

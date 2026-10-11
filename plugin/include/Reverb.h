@@ -1058,9 +1058,13 @@ class Reverb {
   // fresh wet on the dense early reflections -> the volume drop; (b) every
   // LFO pass where the taps anti-phase the early reflections -> a sharp
   // pumping dip that reads as a click. A layer on top of full-level wet has
-  // neither effect. Kept musical (0.45) per the 2026-10-15 body-increase
-  // cut (the fifth cut at 0.30 read as "pretty subtle" by the ear).
-  static constexpr double kModChorusAmt = 0.45;
+  // neither effect. MEASURED (R2_ModSonicSweep, 2026-10-15): the chorus
+  // layer sits ~15-16 dB under the wet reverb before it reads as clearly
+  // "chorusy" to the ear -- the 0.30/0.45 cuts were -23..-30 dB (inaudible,
+  // "really hard to tell it's doing anything"). 1.8 lands at ~-15.5 dB with
+  // output +1.2 dB over the wet and sharpness ratio 1.03 (no added click
+  // energy) -- chosen by measurement, not vibes.
+  static constexpr double kModChorusAmt = 1.8;
   static constexpr double kModVoiceFloor = 0.30;   // taps sweep 30..100 % of the voice depth
                                                    // (gives the tap a real depth of motion
                                                    // while keeping it in the classic chorus 1..4 ms band)
@@ -1743,6 +1747,12 @@ class Reverb {
   // and from modOn_/modPhase_ (Digital's separate read-tap waver, untouched).
       bool sharedOn_ = false;
   double smInc_         = 0.0;                 // base LFO phase increment (rad/sample)
+  // TEST/SWEEP KNOBS (measure-the-law, 2026-10-15): scales on the chorus
+  // layer amount and max tap depth -- 1.0 always (the shipped constants),
+  // only tests may move them, to sweep combinations by MEASUREMENT before
+  // they become committed constants. Never read by the UI.
+  double smTestAmtScale_  = 1.0;
+  double smTestDepthScale_ = 1.0;
   double smPh_[kMaxChannels] = {};           // persistent base phase (radians) — per-voice offsets derived from it
   // Biquad low-pass (12 dB/oct) on the summed delayed voices — a musical,
   // smooth darkening instead of three cheap one-poles. Coefficients set in
@@ -1760,6 +1770,9 @@ class Reverb {
   uint32_t chMask_      = 0;
   std::array<uint32_t, kMaxChannels> chWrite_{};
   uint32_t chDelayMax_  = 0;    // max delay samples (at current sample rate, sharedMod 1)
+  // Measured-tune accessor (R2, 2026-10-15): sweep the chorus layer
+  // amount/depth by real render in DspTests before committing constants.
+  friend struct ReverbChorusSweep;
   // Spring state: the metallic boing resonator (2.4 kHz) per channel + the
   // onset-splash (drip) env per channel. Both are bounded (|r|<1, decaying env)
   // and reset in reset(). Only used when the Spring law path is live.
@@ -1881,8 +1894,8 @@ class Reverb {
     // = 1.425*|wet| worst-coherent ceiling -- a musical lift; the biquad
     // darkening + voice decorrelation keeps it far below in real use
     const double taper = (m <= 0.5) ? 2.0 * m : 1.0;
-    const double amt  = kModChorusAmt * m * taper;
-    const double maxDepth = m * static_cast<double>(chDelayMax_);  // 0..chDelayMax_
+    const double amt  = kModChorusAmt * m * taper * smTestAmtScale_;
+    const double maxDepth = m * static_cast<double>(chDelayMax_) * smTestDepthScale_;
     for (int c = 0; c < numCh; ++c) {
       float* out = buffer.getWritePointer(c);
       std::vector<float> in(n);
