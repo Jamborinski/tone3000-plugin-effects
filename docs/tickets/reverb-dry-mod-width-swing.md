@@ -31,8 +31,9 @@ total / ~+4.5 over the 3.3 µs plate baseline — comfortably in budget with
 runway to spend. Full DspTests **478/478** (incl.
 `ChainRoundTrip.ReverbModeOrderMarkerSurvivesUiJsonRoundTrip`). UiTestbed
 selftest green (xvfb), reverb tile 6+6. Windows staged 2026-10-15
-`TONE3000-win-20261011-152245` (md5 `743d293cbaeca8ca28a9c3e169fda92f`,
-29 MB; earlier runs: `…-150332` md5 `fc8a1f416e217adf8a1c27e2a6329207`,
+`TONE3000-win-20261011-154020` (md5 `4a11edece934a46ec17d628fbfef1434`,
+29 MB, 7th cut; earlier runs: `…-152245` md5 `743d293cbaeca8ca28a9c3e169fda92f`
+(6th), `…-150332` md5 `fc8a1f416e217adf8a1c27e2a6329207` (5th),
 `…-145158`, `…-134940`, `…-132411`).
 Commits: `57a5dba` (R2), `664965e`, `5e71f5a`, `bd3166c`, `91256dd`,
 `904695b` (1st–5th Mod cuts), plus this sixth follow-up. **R4
