@@ -1035,3 +1035,5 @@ green-lit)
    (largest of the code items; needs rate A/B per mode).
 4. **R3** — Width realism (needs the EMT-140 S-M characterisation to set
    a target; measure first, design second).
+
+Ninth-cut staging run: `C:\Users\jambo\Downloads\TONE3000-win-20261011-164722\TONE3000.exe` (md5 d7120c5357398d720558d135c21d22ee, 29 MB, from 3e59618).
