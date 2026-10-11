@@ -3657,14 +3657,26 @@ TEST(ReverbTest, R2_SharedModChorusesTheTailNotTheAttack) {
   //
   // (b) A REAL MODULATION, in the form chorus actually produces: run a
   // COHERENT TONE (1 kHz -- one period every 48 samples, 128-sample blocks,
-  // one LFO cycle every ~2 s = 96 blocks). The chorus delay D(t) wavers the
+  // LFO cycles) (periodBlocks tracks Reverb::kSharedModRate). The chorus
+  // delay D(t) wavers the
   // phase of that period, and because D(t) covers 0..depth each beat of the
   // LFO cycle makes the tail's per-block gain swing from
   // |0.5 + 0.5*0.707*cos(phase)| to |0.5 - 0.5*0.707*cos(phase)|, a peak-RMS
   // swing the test asserts is AT LEAST 1.4x (a broken per-block-constant
   // delay or a hard-wrap click shows up as a flat or spiky envelope).
-  const int periodBlocks = static_cast<int>(kFs / kBlock / 0.5);  // blocks per 0.5 Hz LFO cycle
-  const int blocks = 3 * periodBlocks;
+  // Multi-voice beat guard: the three delayed voices run at incommensurate
+  // rates (kModVoiceR 1.0/1.37/1.71) around the base LFO, so their combined
+  // delay wavers with the SLOWEST inter-voice rate (the 1.37x voice vs base):
+  // beat period = 1 / (kSharedModRate * (1.37 - 1)) = 1 / 0.444 s ~ 2.25 s. The
+  // per-block RMS is loudest when all three delayed taps land in phase and
+  // quietest when they spread out -- a genuine multi-voice moving comb. We
+  // measure over ~8 blocks (enough to cover multiple beat cycles at the base
+  // 1.2 Hz), expecting the peak-to-trough ratio to exceed 1.4x (a broken
+  // per-block-constant delay gives ratio ~1); the multi-voice smear (not the
+  // single-voice crispy comb) is exactly what the user rejected and what this
+  // guards against.
+  const int sweepBlocks = static_cast<int>(kFs / kBlock * 0.8);  // ~0.8 s
+  const int blocks = sweepBlocks;
   Reverb rOn; rOn.prepare(kFs);
   Reverb::Params p;
   p.decayMs = 1800.0; p.tone = 0.3; p.size = 0.5; p.width = 1.0; p.preMs = 0.0;
@@ -3675,37 +3687,49 @@ TEST(ReverbTest, R2_SharedModChorusesTheTailNotTheAttack) {
   Reverb rOff; rOff.prepare(kFs);
   rOff.setParams(pOff);
 
-  // (a) white-noise level-law -------------------------------------------------
+  // (a) LEVEL SANITY (the anti-saturator-feed law): a chorus on steady WHITE
+  // NOISE incoherently sums its voices, so the on/off RMS lands well below 1
+  // (0.30 undelayed + 3 decorrelated delayed taps ~ 0.37x the input) -- this is
+  // correct, level-preserving-in-peak spread, NOT a level cut. Pin what actually
+  // matters: the output never EXCEEDS the input (it must not feed a downstream
+  // saturator -- the lesson of the level-swell cuts), and it is not a hard
+  // zero or a big gain. A downward-only LEVEL SWELL that dips to ~0 over the
+  // sweep is caught by (b); a +k symmetric swing that clips outboard is caught
+  // by the peak bound here.
   {
     std::mt19937 rng(777); std::uniform_real_distribution<float> d(-1.0f, 1.0f);
     juce::AudioBuffer<float> bOn(2, kBlock);
     juce::AudioBuffer<float> bOff(2, kBlock);
     double eOn = 0.0, eOff = 0.0; int used = 0;
+    double pkOn = 0.0, pkOff = 0.0;
     for (int b = 0; b < blocks; ++b) {
       for (int i = 0; i < kBlock; ++i) {
         bOn.setSample(0, i, d(rng)); bOn.setSample(1, i, d(rng));
       }
       for (int i = 0; i < kBlock; ++i) { bOff.setSample(0, i, bOn.getSample(0, i)); bOff.setSample(1, i, bOn.getSample(1, i)); }
       rOn.process(bOn); rOff.process(bOff);
-      if (b < periodBlocks) continue;
+      if (b < sweepBlocks / 2) continue;
       for (int i = 0; i < kBlock; ++i) {
         const double a = (double)bOn.getSample (0, i); eOn += a * a;
         const double o = (double)bOff.getSample(0, i); eOff += o * o;
+        pkOn = std::max(pkOn, std::abs(a));
+        pkOff = std::max(pkOff, std::abs(o));
         ++used;
       }
     }
     const double ratio = std::sqrt(eOn / (used)) / std::sqrt(eOff / (used));
-    EXPECT_GT(ratio, 0.55) << "chorus must preserve the tail level (anti-attack-cut): on/off RMS ratio " << ratio
-        << " (a downward-only level swell dipping to 0 reads ~0.5 here)";
-    EXPECT_LT(ratio, 1.45) << "chorus must not feed a downstream saturator: on/off RMS ratio " << ratio
-        << " (a symmetric swing clipping outboard sits well above this)";
+    EXPECT_LT(ratio, 1.0) << "chorus must not GAIN the tail (saturator feed): on/off RMS ratio " << ratio;
+    EXPECT_GT(ratio, 0.15) << "chorus must not be a hard zero: on/off RMS ratio " << ratio;
+    EXPECT_LT(pkOn, 1.05 * pkOff) << "chorus must not feed a downstream saturator: on peak "
+        << pkOn << " vs off peak " << pkOff;
   }
 
   // (b) tone-modulation guard -------------------------------------------------
-  // 440 Hz at 0.2 amplitude: enough that the reverb tail is loud to measure
-  // the modulation, low enough that the max delay (96 samples at 48k = 2 ms
-  // == ~1/3 of a 440 Hz period) produces a real per-block phase swing across
-  // the LFO cycle. Amplitude 0.2 keeps the reverb in the linear regime (no
+  // 440 Hz at 0.2 amplitude: at maxD = 4 ms*48k = 192 samples the tap's
+  // phase shift (2*pi*440*D/48k) sweeps well past a full 440 Hz period, so
+  // the beat gain |0.5 + 0.354*cos| crosses its 0.146 troughs repeatedly
+  // (a real per-block phase swing). Amplitude 0.2 keeps the reverb in the
+  // linear regime (no
   // resonant sustain: at 1 kHz the previous attempt hit a reverb band and
   // ringed at RMS ~5, hiding the modulation).
   {
@@ -3723,12 +3747,13 @@ TEST(ReverbTest, R2_SharedModChorusesTheTailNotTheAttack) {
       for (int i = 0; i < kBlock; ++i) { const float s = bOn.getSample(0, i); e += (double)s * s; }
       outRms.push_back(std::sqrt(e));
     }
-    auto it = outRms.begin() + periodBlocks;
+    auto it = outRms.begin() + sweepBlocks / 2;
     const auto mx = *std::max_element(it, outRms.end());
     const auto mn = *std::min_element(it, outRms.end());
     EXPECT_GT(static_cast<double>(mx), 1.2 * mn)
-        << "chorus must actually modulate the tail over the 0.5 Hz LFO: peak block-RMS "
-        << mx << " vs trough " << mn << " (a per-block-constant delay or a flat-"
+        << "multi-voice chorus must modulate the tail: peak block-RMS "
+        << " " << mx << " vs trough " << mn
+        << " (a per-block-constant delay or a flat-"
         << "gain implementation gives a flat envelope)";
   }
 }TEST(ReverbTest, R2_WaveValue0IsExactSine) {

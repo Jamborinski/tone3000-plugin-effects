@@ -623,9 +623,10 @@ class Reverb {
       inHistMask_ = static_cast<uint32_t>(n - 1);
       inHistWrite_ = 0;
     }
-    // Shared-Mod chorus rings (R2, 2026-10-15 second rewrite): one ring per
-    // channel, long enough for kSharedModDepthMs + a typical block (headroom so
-    // the fractional read never aliases this block's writes), power of two.
+    // Shared-Mod chorus rings (R2): one power-of-two ring per channel, long
+    // enough for the deepest voice (kSharedModDepthMs) + a block of headroom
+    // so the fractional read never aliases this block's writes; cleared in
+    // reset(). Four delay voices share each channel's ring (distinct taps).
     {
       size_t minSize = static_cast<size_t>(sampleRate_ * kSharedModDepthMs * 0.001 + 4096.0) + 8;
       size_t cn = 1;
@@ -671,7 +672,12 @@ class Reverb {
       std::fill(chRing_[c].begin(), chRing_[c].end(), 0.0f);
     for (int c = 0; c < kMaxChannels; ++c)
       chWrite_[c] = 0;
-    smPhase_ = 0.0f;
+    for (int c = 0; c < kMaxChannels; ++c) {
+      smPh_[c] = 0.0;
+      for (int v = 1; v < kModVoices; ++v) {
+        smBqX1_[c][v] = 0.0; smBqX2_[c][v] = 0.0; smBqY1_[c][v] = 0.0; smBqY2_[c][v] = 0.0;
+      }
+    }
   }
 
   void setParams(const Params& p) {
@@ -792,8 +798,18 @@ class Reverb {
     sharedOn_ = (params_.sharedMod > 0.0) && (sampleRate_ > 0.0);
     if (sharedOn_) {
       smInc_ = 2.0 * M_PI * kSharedModRate / sampleRate_;
+      // Biquad low-pass (RBJ, 12 dB/oct) on the summed delayed voices: fc =
+      // kModVoiceLpfHz, Q 0.707 (Butterworth). A musical, uniform darkening of
+      // each delay line's thin comb content instead of three cheap one-poles.
+      const double w0 = 2.0 * M_PI * kModVoiceLpfHz / sampleRate_;
+      const double cw = std::cos(w0);
+      const double al = std::tan(w0 / 2.0) / 0.70710678;  // Q = 0.707
+      const double a0 = 1.0 + al + cw;
+      smB0_ = ((1.0 - cw) / 2.0) / a0; smB1_ = (1.0 - cw) / a0; smB2_ = smB0_;
+      smA1_ = (-2.0 * cw) / a0;        smA2_ = (1.0 - al + cw) / a0;
     } else {
       smInc_ = 0.0;
+      smB0_ = smB1_ = smB2_ = smA1_ = smA2_ = 0.0;
     }
   }
 
@@ -1021,18 +1037,39 @@ class Reverb {
   // inside the Plate/Spring signature paths, which stay bit-identical and
   // knob-independent). OFF (sharedMod 0, the default) -> the entire code path
   // is never entered, so the bit-exact anchor is preserved by construction.
+  // Shared-Mod chorus constants (R2, 2026-10-15). Four VOICES per channel
+  // (the classic multi-voice chorus pedal): undelayed + three delay lines with
+  // distinct depth ratios / phase offsets / LFO-rate factors, so the
+  // instantaneous comb spacing differs per voice and the beatings smear into
+  // a liquid swirl instead of one moving comb (single-voice = the "crispy
+  // static" artifact the user rejected). Each delay tap is low-passed
+  // (one-pole, fixed 6 kHz) to kill the thin high-beating residue. Total mixed
+  // level stays <= 1.0 in magnitude at full depth, so it never feeds a
+  // downstream saturator (the lesson of the level cuts).
+  static constexpr int kModVoices = 4;  // 3 delay lines (v=1..3) + the undelayed voice
+  static constexpr double kSharedModRate = 1.2;    // Hz, base LFO rate
+  static constexpr double kSharedModDepthMs = 6.0; // max depth of the DEEPEST voice (at sharedMod 1)
+  static constexpr double kModVoiceLpfHz = 6000.0; // allpass-free thinness filter on the delayed voices
+  // Per-voice depth ratio (share of the max depth), LFO rate factor, and phase offset:
+  static constexpr double kModVoiceD[]  = {1.00, 0.62, 0.40, 0.24};
+  static constexpr double kModVoiceR[]  = {1.00, 1.37, 0.79, 1.71};  // incommensurate -> slow beating
+  static constexpr double kModVoiceO[]  = {0.00, 0.38, 1.05, 1.96};   // rad, spread the peaks
+
   static constexpr int kNumWaves = 5;  // same 5-detent law as Chorus/Tremolo
-  static constexpr double kSharedModRate = 0.5;   // Hz, the shared Mod LFO rate
-  static constexpr double kSharedModDepthMs = 2.0; // max chorus delay depth (at sharedMod = 1)
-  // The shared Mod is a DOWNWARD-ONLY LEVEL SWELL on the wet reverb sum
-  // (a reevr/dattorro-style post-modulation: LFO x wet, 0.5 Hz, sine):
-  // the tail dips to a fraction of the nominal level and swells back UP
-  // to it — never above it, so the upward motion can never trip
-  // (a) the user's outboard saturation on the tail peaks (the previous
-  // symmetric [1-k, 1+k] version tripped it on the +k side and read as
-  // "subtle"), and (b) any downstream limiter. Full depth is 1.0 (a pure
-  // dip-to-zero swell at full dial); low dial settings give a gentle
-  // shimmer proportional to the knob.
+
+  // The shared Mod is a MULTI-VOICE CHORUS on the wet reverb sum (EMT-140 /
+  // spring-verb chorus-pedal class, the user's explicit 2026-10-15 ask): the
+  // tail is re-voiced through kModVoices delay lines of differing depth / rate
+  // / phase and mixed back level-preservingly (0.30*undelayed + 0.175*each
+  // delayed*0.707 = 0.854 peak, never amplifying). The undelayed voice keeps
+  // the fresh attack intact (a level-swell cut it -- rejected); the incommensurate
+  // per-voice LFO factors smear the beatings into a swirling texture (single
+  // voice gave "crispy static" -- rejected). Per-channel independent rings,
+  // fractional-tap interpolation (no zipper), the delayed voice is low-passed
+  // to kill the thin comb residue. Gated fully by `sharedOn_` (sharedMod>0);
+  // `wave` still shapes only Digital's Sig-B read-tap waver. Pinned by
+  // `ReverbTest.R2_SharedModChorusesTheTailNotTheAttack` (level law + periodic
+  // RMS swing > 1.4x).
 
   // One LFO shape over [0,1) phase, in [-1,1]. wave 0 = Sine (bit-identical
   // to the pre-R2 fixed-shape behaviour, the anchor); waves 1..4 match
@@ -1681,13 +1718,20 @@ class Reverb {
   // smearPhase_/fbDriftPhase_ (the always-on per-mode signature laws, untouched)
   // and from modOn_/modPhase_ (Digital's separate read-tap waver, untouched).
       bool sharedOn_ = false;
-  double smInc_         = 0.0;   // radians/sample, set in setParams()
-  float  smPhase_       = 0.0f;  // the ONE shared LFO phase (both channels offset per-channel)
-  // Chorus stage (R2, 2026-10-15 second rewrite): the shared Mod is a CHORUS
-  // on the wet reverb (a modulated-delay second voice mixed level-preservingly),
-  // NOT a level swell. One ring per channel (power-of-two), sized for
-  // kSharedModDepthMs, written once per sample; both chorus voices read from it
-  // (voice A = 0 ms, voice B = a wavered tap). Zeroed on reset().
+  double smInc_         = 0.0;                 // base LFO phase increment (rad/sample)
+  double smPh_[kMaxChannels] = {};           // persistent base phase (radians) — per-voice offsets derived from it
+  // Biquad low-pass (12 dB/oct) on the summed delayed voices — a musical,
+  // smooth darkening instead of three cheap one-poles. Coefficients set in
+  // setParams(); state (x1, x2, y1, y2) per channel, zeroed in reset().
+  double smB0_ = 0.0, smB1_ = 0.0, smB2_ = 0.0, smA1_ = 0.0, smA2_ = 0.0;
+  double smBqX1_[kMaxChannels][kModVoices] = {}; double smBqX2_[kMaxChannels][kModVoices] = {};
+  double smBqY1_[kMaxChannels][kModVoices] = {}; double smBqY2_[kMaxChannels][kModVoices] = {};
+  // Chorus stage (R2, 2026-10-15 multi-voice rewrite): the shared Mod is a
+  // MULTI-VOICE CHORUS on the wet reverb (kModVoices delay lines of distinct
+  // depth / rate / phase per channel, mixed level-preservingly with the
+  // undelayed voice), NOT a level swell. One ring per channel (power-of-two),
+  // sized for the deepest voice, written once per sample; all voices read from
+  // it. Zeroed on reset().
   std::array<std::vector<float>, kMaxChannels> chRing_;
   uint32_t chMask_      = 0;
   std::array<uint32_t, kMaxChannels> chWrite_{};
@@ -1778,8 +1822,8 @@ class Reverb {
   //   out[n] = 0.5 * wet[n] + 0.5 * wet[n - D(t)] * 0.707
   // where D(t) is a per-sample delay of (depth + depth * sin(2*pi*phase +
   // chOffset)) samples, depth = kSharedModDepthMs * sharedMod * sampleRate *
-  // 0.001 (0..~96 samples at 48k, full dial), phase advancing PER SAMPLE with
-  // the shared 0.5 Hz LFO. The R channel's LFO runs +pi/2 offset (the usual
+  // 0.001 (0..~192 samples at 48k, full dial), phase advancing PER SAMPLE with
+  // the shared 1.5 Hz LFO. The R channel's LFO runs +pi/2 offset (the usual
   // stereo-chorus de-correlation). Level law: |out| <= 0.5*1 + 0.5*0.707 =
   // 0.854 in the worst coherent case... actually at D = 0 (sin = -1) the two
   // terms coincide and out = 0.854*wet -- the chorus only ever REDUCES or
@@ -1802,32 +1846,63 @@ class Reverb {
     const int numCh = juce::jmin(buffer.getNumChannels(), kMaxChannels);
     const double m = static_cast<double>(params_.sharedMod);  // 0..1
     if (m <= 0.0) return;  // belt-and-braces (sharedOn_ already gates this)
-    const double depth = m * static_cast<double>(chDelayMax_);  // 0..~96 samples at 48k
+    // Level law (worst-coherent): 0.30 (undelayed) + 3*0.175*0.707 (delayed,
+    // the one-pole passes DC) = 0.833 -- the stage only reaches or spreads the
+    // tail, never amplifies it, so it cannot feed a downstream saturator.
+    const double maxDepth = m * static_cast<double>(chDelayMax_);  // 0..chDelayMax_
     for (int c = 0; c < numCh; ++c) {
       float* out = buffer.getWritePointer(c);
       std::vector<float> in(n);
       for (int i = 0; i < n; ++i) in[i] = out[i];  // the wet tail (in-place)
+      // Per-voice phases, derived this block from the persistent base phase.
+      // Voice v (1..3): depth ratio kModVoiceD[v], rate factor kModVoiceR[v],
+      // offset kModVoiceO[v] rad. Incommensurate rates -> the beatings between
+      // voices smear into a slow swirling texture instead of one crisp comb
+      // (single-voice was the "crispy static" the user rejected).
+      double ph[kModVoices];
+      for (int v = 1; v < kModVoices; ++v)
+        ph[v] = smPh_[c] * kModVoiceR[v] + kModVoiceO[v];
       float* wr = chRing_[c].data();
       uint32_t w = chWrite_[c];
-      double ph = smPhase_ + (c == 0) ? 0.0 : M_PI * 0.5;
+      // Per-voice biquad state registers (kModVoices - 1 delayed lines).
+      struct Vt { double x1, x2, y1, y2; } vt[kModVoices];
+      for (int v = 1; v < kModVoices; ++v) {
+        vt[v].x1 = smBqX1_[c][v]; vt[v].x2 = smBqX2_[c][v];
+        vt[v].y1 = smBqY1_[c][v]; vt[v].y2 = smBqY2_[c][v];
+      }
       for (int i = 0; i < n; ++i) {
         wr[w] = in[i];
         w = (w + 1) & chMask_;
-        const double wv = static_cast<double>(waveValue(0, ph / (2.0 * M_PI)));  // [-1,1]
-        const double dF = depth * (0.5 + 0.5 * wv);  // 0..depth (the classic chorus depth law)
-        const double dClamped = juce::jlimit(0.5, static_cast<double>(chMask_ >> 1), dF);
-        const uint32_t d0 = static_cast<uint32_t>(dClamped);
-        const float frac = static_cast<float>(dClamped - static_cast<double>(d0));
-        const uint32_t iA = (w - 1 - d0) & chMask_;
-        const uint32_t iB = (w - 1 - d0 - 1u) & chMask_;
-        const float vA = wr[iA];
-        const float vB = wr[iB];
-        out[i] = static_cast<float>(0.5 * in[i] + 0.5 * (vA + frac * (vB - vA)) * 0.70710678);
-        ph += smInc_;
-        if (ph >= 2.0 * M_PI) ph -= 2.0 * M_PI;
+        // Each delayed voice: wavering fractional tap, darkened by its own
+        // 12 dB/oct biquad (kills the thin comb residue per line). Level law:
+        // 0.5 (undelayed) + 0.1667*3 (delayed, DC-passed biquad = unity at
+        // 0 Hz) = 1.00 worst-coherent -- never amplifies the tail, so it
+        // cannot feed a downstream saturator (the lesson of the level-swell
+        // cuts). On real tails the lines are decorrelated, so summed level is
+        // ~flat, not a 1.0x peak.
+        double dsum = 0.0;
+        for (int v = 1; v < kModVoices; ++v) {
+          const double D = (1.0 + std::sin(ph[v])) * 0.5 * maxDepth * kModVoiceD[v];  // 0..depth_v
+          const uint32_t d0 = static_cast<uint32_t>(juce::jlimit(0.0, (double)(chMask_ >> 1), D));
+          const float frac = static_cast<float>(D - (double)d0);
+          const uint32_t iA = (w - 1 - d0) & chMask_;
+          const uint32_t iB = (w - 1 - d0 - 1u) & chMask_;
+          const double x = (double)wr[iA] + frac * ((double)wr[iB] - (double)wr[iA]);
+          const double y = smB0_ * x + smB1_ * vt[v].x1 + smB2_ * vt[v].x2 - smA1_ * vt[v].y1 - smA2_ * vt[v].y2;
+          vt[v].x2 = vt[v].x1; vt[v].x1 = x; vt[v].y2 = vt[v].y1; vt[v].y1 = y;
+          dsum += y * 0.16666667;
+          ph[v] += smInc_ * kModVoiceR[v];
+          if (ph[v] >= 2.0 * M_PI) ph[v] -= 2.0 * M_PI;
+        }
+        out[i] = static_cast<float>(0.5 * in[i] + dsum);
       }
       chWrite_[c] = w;
+      for (int v = 1; v < kModVoices; ++v) {
+        smBqX1_[c][v] = vt[v].x1; smBqX2_[c][v] = vt[v].x2;
+        smBqY1_[c][v] = vt[v].y1; smBqY2_[c][v] = vt[v].y2;
+      }
+      smPh_[c] += smInc_ * static_cast<double>(n);  // persistent base phase
+      if (smPh_[c] >= 2.0 * M_PI) smPh_[c] = std::fmod(smPh_[c], 2.0 * M_PI);
     }
-    smPhase_ = static_cast<float>(fmod(smPhase_ + smInc_ * n, 2.0 * M_PI));
   }
 };

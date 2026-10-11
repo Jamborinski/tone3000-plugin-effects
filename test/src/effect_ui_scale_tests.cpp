@@ -367,3 +367,32 @@ TEST(ChainRoundTrip, ReverbModeAndHallsSigsSurviveRoundTrip) {
   const juce::var state3 = proc.getChainState(-1);
   EXPECT_LE(paramFromState(state3, "reverbBuild"), 1.0) << "sig must clamp to 1.0";
 }
+
+// The UI JSON (getChainState) round trip MUST carry the mode-order v2 marker
+// ("reverbModeOrderV1") -- without it, ChainState::parseItem mis-fires the
+// old-order->new-order remap (ChainState.cpp:203), shuffling stored modes
+// (Hall 4 -> Chamber 3). The ValueTree save path already carries it
+// (ProcessorState.cpp); this pins the getChainState path to match.
+TEST(ChainRoundTrip, ReverbModeOrderMarkerSurvivesUiJsonRoundTrip) {
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto id = proc.addEffectBlock(EffectKind::Reverb, "left", 0);
+  ASSERT_FALSE(id.empty());
+  ASSERT_TRUE(proc.setBlockParam(id, "reverbMode", 4.0));  // Hall (v2 order)
+  const juce::var state = proc.getChainState(-1);
+  // Find the reverb block's params subtree.
+  juce::Array<juce::var> chain;
+  for (int i = 0; i < state["chain"].size(); ++i) {
+    const juce::var item = state["chain"][i];
+    if (item["kind"].toString() == "effect" &&
+        item["effectKind"].toString() == "reverb")
+      chain.add(item);
+  }
+  ASSERT_FALSE(chain.isEmpty());
+  juce::var p = chain.getFirst()["params"];
+  EXPECT_TRUE(p["reverbModeOrderV1"].isInt() && (int)p["reverbModeOrderV1"] == 1)
+      << "v2 marker must be present in the UI JSON save path";
+  EXPECT_EQ((int)p["reverbMode"], 4)
+      << "Hall stored as 4; a missing v2 marker would remap it to 3 (Chamber)";
+}

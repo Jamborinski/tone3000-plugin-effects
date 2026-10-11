@@ -147,6 +147,16 @@
   the 250 ms reference; clamped 50 Hz..Nyquist; applied to the WET READ.
   `bbdLawNorm_` = dimensionless `2π·fc_ref·refMs·0.001` (norm =
   `bbdLawNorm_/cur` reproduces `2π·fc/sr` exactly — `sr` cancels).
+- **FUTURE — performance headroom for the delay redesign (note, NOT a
+  current requirement — 2026-10-15):** when we get around to redesigning the
+  delay engine, apply the SAME performance framework we used for the reverb's
+  shared-Mod chorus in this pass: the hard cap is the cost of
+  `BudgetConvolver` convolving a 5–6 s stereo IR (measured 2026-10-15 on the
+  9950X3D: avg ~24 µs/block@256, p95 ~335 µs with occasional ~370 µs tail
+  spikes from the spread-OLA schedule). Design for QUALITY first, spend CPU
+  and RAM freely up to that cap — do not half-optimize for CPU at the cost of
+  timbre. This is an open invitation, not a task to start now; the ticket
+  for it does not exist yet.
 ## Reverb (plate / "140" model -- full text in `docs/agents/ir-reverb-training.md`)
 - Plate/"140" (mode 0, type 0 = the EMT 140 model) is tuned against the EMT 140
   2.0 s IR reference (house convolver, peak-normalised): 50 % NEUTRAL start
@@ -180,24 +190,31 @@
   third and was DECLINED by the ear (2026-10-15, "mostly just cuts the
   beginning attack of the wet reverb, almost sounding like a delayed reverb"):
   amplituding the tail down-and-back is still amplitude chopping, not chorus.
-  The shipped mechanism is a POST-MIX CHORUS on the wet tail
-  (`Reverb::processSharedModSmear`, rewritten 2026-10-15): out =
-  0.5*wet + 0.5*0.707*wet[n-D(t)] -- an undelayed voice (fresh attack
-  preserved) plus a delayed voice whose tap D(t) is a fixed-SINE LFO at
-  0.5 Hz (advanced PER SAMPLE, wrap a FULL 2*pi -- the partial-subtract is
-  the old click bug) ranging 0..kSharedModDepthMs(2 ms), the classic
-  d = maxD*(0.5+0.5*cos(2*pi*ph)) chorus depth law; R channel +pi/2 LFO
-  offset; linear-interpolated fractional tap (no zipper); per-channel
-  power-of-two rings (prepared in prepare(), cleared in reset()). The
-  undelayed voice keeps the attack; LEVEL IS PRESERVED (at full dial
-  |out| <= 0.854*|wet|) so it can never feed a downstream saturator. Gated
-  fully at `sharedMod==0` so the bit-exact anchor holds by construction;
-  `wave` shapes ONLY Digital's Sig-B read-tap waver (wave 0 = `std::sin`
-  bit-exact). Pinned by `ReverbTest.R2_SharedModChorusesTheTailNotTheAttack`
-  (a) white-noise on/off RMS ratio in 0.55..1.45 = the level law; (b) a 250 Hz
-  tone's block RMS sweeps peak > 2x trough = the LFO is actually moving
-  (250 Hz is the rate at which the 2 ms max depth sweeps a full 0..max..0
-  cycle).
+  SHIPPED (2026-10-15 final, after the user set QUALITY-FIRST within a
+  hard budget): a MULTI-VOICE CHORUS on the wet tail
+  (`Reverb::processSharedModSmear`): out = 0.5*wet (undelayed voice, fresh
+  attack preserved) + three delayed voices whose taps D(t) =
+  (0.5+0.5*sin(base+O_v)) * maxDepth * D_v waver with incommensurate rate
+  factors (1.37x/0.79x/1.71x the 1.2 Hz base SINE, advanced PER SAMPLE,
+  wrap full 2*pi -- the partial-subtract was the old click bug) and distinct
+  depths (0.62/0.40/0.24 x 6 ms max at sharedMod 1) + phase offsets, so the
+  beatings smear into a liquid swirl (a SINGLE voice read as "crispy
+  static" -- rejected 2026-10-15). Each delayed voice runs through its own
+  12 dB/oct Butterworth biquad LPF @ 6 kHz (per-voice, musical darkening
+  instead of three cheap one-poles). LEVEL LAW: 0.5 + (1/3)*3 = 1.0
+  worst-coherent -- never amplifies the tail, so it cannot feed a downstream
+  saturator (the lesson of the level-swell declines). Budget (2026-10-15
+  user directive, 9950X3D): quality first; the hard cap is
+  `BudgetConvolver` on a 5-6 s stereo IR = avg ~24 us/block@256 (p95 ~335
+  us); the shipped stage measures ~6.9 us/block@128 on top of the plate
+  baseline (~3.3 us) -- comfortably in budget. Gated fully at
+  `sharedMod==0` so the bit-exact anchor holds by construction; `wave`
+  shapes ONLY Digital's Sig-B read-tap waver (wave 0 = `std::sin` bit-exact).
+  Pinned by `ReverbTest.R2_SharedModChorusesTheTailNotTheAttack`:
+  (a) level law -- on/off RMS ratio < 1.0 (no gain/feed) and > 0.15, peak
+  < 1.05x off peak; (b) a 440 Hz tone's block RMS sweeps peak > 1.4x trough
+  over the incommensurate-voice beat (a per-block-constant delay or flat
+  gain gives a flat envelope -- the regression this guards). 
 - **MODEL/SUBTYPE rule (general, all effects):** a mode + model/subtype (type)
   MAY carry its own knob defaults and tone law (permissive, not mandatory),
   tuned to its own reference, but it must never override the generic/shared path

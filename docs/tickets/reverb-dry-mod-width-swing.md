@@ -2,26 +2,33 @@
 # better Width, and the "swirly / swelled" EMT-140 character gap
 # (with a clean-room research track)
 
-Status: **R1 + R2 SHIPPED** (R1 2026-10-13, R2 2026-10-14, R2 follow-up fix
-2026-10-15, R2 second follow-up 2026-10-15). **R1 (Dry knob, all reverb modes)
-DONE 2026-10-13.**
-**R2 shared Mod DONE** — a gated POST-MIX level SWELL (`sharedMod`/
-`reverbSharedMod`, 0 = bit-exact today on every mode; the 2026-10-14
-lowpass-cutoff first cut was rejected by the ear and rewritten 2026-10-15;
-the 2026-10-15 symmetric swell 0.25 Hz 1±0.6 was "subtle + periodic clicking"
-and rewritten 2026-10-15 to a downward-only 0.5 Hz gain 1−k·(1−s)/2 with
-k=1.0·s) plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave`
-"Shape" knob (0 = Sine = bit-exact anchor). **R2 THIRD follow-up 2026-10-15:** the
-level swell was rejected ("mostly just cuts the beginning attack of the wet
-reverb, almost sounding like a delayed reverb" — the user wanted a CHORUSED
-reverb) and rewritten as a POST-MIX CHORUS (`Reverb::processSharedModSmear`:
-undelayed voice 0.5 + delayed voice 0.5*0.707 tapped at a 0.5 Hz wavering
-0..2 ms delay per channel, R +pi/2 offset; level-preserving, attack kept,
-sharedMod 0 still bit-exact). Full DspTests **477/477**,
-UiTestbed selftest green (xvfb), reverb tile verified 6+6, Windows exe staged
-2026-10-15 (run `TONE3000-win-20261011-134940`, md5 `f7ebcfd70696ed5313157b213aaa4f87`).
-Commits: `57a5dba` (R2), `664965e` (follow-up fix), `5e71f5a` (second
-follow-up), plus this third follow-up. **R4
+Status: **R1 + R2 SHIPPED** (R1 2026-10-13, R2 2026-10-14, four R2 Mod
+follow-ups 2026-10-14/15 — see the follow-up logs below). **R1 (Dry knob, all
+reverb modes) DONE 2026-10-13.**
+**R2 shared Mod DONE (final mechanism): a MULTI-VOICE POST-MIX CHORUS**
+(`sharedMod`/`reverbSharedMod`, 0..1, 0 = bit-exact today on every mode).
+`Reverb::processSharedModSmear`: undelayed voice 0.5 (fresh attack kept) +
+three delayed voices (each 1/3 after its own 12 dB/oct Butterworth biquad @6
+kHz) tapped at incommensurate wavering delays 0..6 ms (base SINE 1.2 Hz, rate
+factors 1.37/0.79/1.71x, depth ratios 0.62/0.40/0.24, phase-offset spread) —
+the liquid, swirly chorused wash. Level law 0.5 + 1/3*3 = 1.0 worst-coherent
+(never feeds a saturator). Evolved by ear across four cuts: lowpass-breathe →
+symmetric swell (clicking) → downward-only swell (sounded like a delayed
+reverb) → single-voice chorus ("crispy static") → this multi-voice chorus.
+Plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave` "Shape" knob
+(0 = Sine = bit-exact anchor; shapes only Digital's read-tap waver).
+**BUDGET (user 2026-10-15): quality-first, hard cap = convolver-class** —
+`BudgetConvolver` on a 5-6 s stereo IR measures avg ~24 µs/block@256 (p95
+~335 µs) on the 9950X3D; the shipped stage adds ~6.9 µs/block@128 over the
+3.3 µs plate baseline — comfortably in budget. Full DspTests **478/478**
+(477 + `ChainRoundTrip.ReverbModeOrderMarkerSurvivesUiJsonRoundTrip`, locking
+the mode-order v2 marker fix in `ProcessorChain.cpp::getChainState`).
+UiTestbed selftest green (xvfb), reverb tile 6+6, Windows exe built
+2026-10-15 (md5 `fb00a44c7ce215cae22a1c18a5e4c06f`, prior staged runs:
+`TONE3000-win-20261011-134940` md5 `f7ebcfd70696ed5313157b213aaa4f87`,
+`TONE3000-win-20261011-132411` md5 `4f4625a7018b4ef14cafa30f51fcc778`).
+Commits: `57a5dba` (R2), `664965e`, `5e71f5a`, `bd3166c` (1st–3rd Mod cuts),
+plus this fourth follow-up. **R4
 (research skeleton) is COMPLETE** (`research/` gitignored, committed
 2026-10-13 alongside the ticket). **R3 (Width improvement) remains OPEN**.
 Follow-up to the
@@ -277,6 +284,65 @@ more of a chorused reverb effect as mod goes up, not whatever this is."
   `--selftest` unaffected (no tile change). R2 base `57a5dba`, second
   follow-up `5e71f5a` (downward-only, now superseded by this cut).
 
+## R2 fourth follow-up log (2026-10-15) — multi-voice chorus + budget + mode-save bug
+User regression (m02081, verbatim gist): "the modulation effect is becoming
+more noticeable, but it has some 'crispy' sounding artifacting that sounds
+almost like static and it could use more of a swirly texture and movement to
+it. I noticed it seems to be targeted at the tail and it should be a bit more
+broad in its application."
+- **Root cause**: a single moving-comb voice decorrelates a dense tail into
+  rapid beatings = the static texture. FIX = classic chorus answer: multiple
+  voices at incommensurate rates — `kModVoices` 4 (1 undelayed + 3 delayed),
+  rate factors 1.37/0.79/1.71x the 1.2 Hz base (m01906 raised rate/depth over
+  the earlier 0.5 Hz/2 ms cut), depth ratios 0.62/0.40/0.24 x 6 ms max, phase
+  offsets 0.38/1.05/1.96 rad; the beatings now smear into slow swirl instead
+  of static, and the undelayed 0.5 voice plus the 3/3-split delayed voices
+  spread the modulation over the whole wet (attack kept, not just the tail).
+- **QUALITY-FIRST BUDGET (user m02180/m02200/m02327, verbatim gist)**:
+  "the system we are running on is a 9950x3d... if you can get higher quality
+  by sacrificing some CPU and RAM when it comes to the modulation or the
+  overall reverb engine that is fine" — and "as long as the reverb engine
+  doesn't exceed what our convolver engine uses when convolving a 5-6s stereo
+  IR and our reverb engine remains zero latency, you can design within that
+  framework... I'm giving you a pretty big runway" (the final number expected
+  "between the current performance and the convolver budget"). Zero-latency
+  law unchanged. **Measured cap** (throwaway probe, since deleted):
+  `BudgetConvolver` 5 s stereo IR @48k blk256 avg **24.2 µs** p95 **335 µs**
+  max 371 µs; 6 s: avg 24.9 µs p95 336 µs (spread-OLA schedule spikes). Note
+  the existing floor `BudgetConvolverCost` test: max<1000 µs + avg≤75 µs at a
+  39 s IR — the cap is deliberately generous.
+- **Filtering upgrade**: three cheap one-poles (per-voice) → one 12 dB/oct
+  Butterworth biquad (RBJ, fc 6 kHz, Q 0.707) per delayed voice on the SUM —
+  musical, uniform darkening; state `smBq*_[kMaxChannels]`, zeroed in
+  reset(), coefficients in setParams().
+- **CPU bench**: `PlateTexture.R2_CpuWithSharedModOn` ceiling raised from
+  3.3*1.5 µs to **30 µs/block@128** with the rationale comment (convolver-
+  class cap, two-order-of-magnitude headroom, still catches a runaway).
+  Measured: 6.9 µs/block@128 with sharedMod=1.0 on 48k white tone — ~2x
+  baseline, far under budget.
+- **Bug fixed — reverb mode not saved (user m01874 "the state of the mode is
+  not being saved for the reverb effect, defaulting to hall")**: the UI JSON
+  round trip (`getChainState` → `ChainState::parseItem`) read the v1→v2 mode-
+  order remap marker `reverbModeOrderV1` (ChainState.cpp:203-207: no marker
+  → remap 0→5,2→0,3→2,4→3,5→4) but `ProcessorChain.cpp::getChainState`
+  (~:1470) only wrote `reverbMode` — so every UI-side preset save/load
+  re-fired the remap on ALREADY-v2 values (Hall 4 → Chamber 3, etc.). The
+  ValueTree store/restore (ProcessorState.cpp:261/:444) carried the marker
+  and was always fine. FIX: `params->setProperty("reverbModeOrderV1", 1);`
+  in getChainState after reverbMode (+ comment). PINNED: new test
+  `ChainRoundTrip.ReverbModeOrderMarkerSurvivesUiJsonRoundTrip`.
+- **Also recorded for the FUTURE** (user m02258): the same convolver-class
+  cap + quality-first framework applies to the DELAY engine redesign when
+  that happens (not now, no ticket yet) — noted in
+  docs/agents/dsp-invariants.md under Delay.
+- **Verification (all 2026-10-15)**: DspTests **478/478** (68 suites);
+  `TONE3000_Standalone` links (build/ 16/16 ninja, build-win/ 18/18);
+  UiTestbed `--selftest` via script/test-ui.sh 122/122 categories 0 failed;
+  Windows exe 30,083,758 B md5 `fb00a44c7ce215cae22a1c18a5e4c06f`.
+- Docs synced: dsp-invariants.md CONSIDERED & DECLINED entry = full
+  four-rejection chain + shipped multi-voice chorus + budget; Help.cpp Mod
+  text = "Three slow, interweaving delayed voices"; plate_texture_tests.cpp
+  bench rationale.
 ## R1 implementation log (2026-10-13)
 - **New param** `reverbDry` (stored 0..1, 0.5 = 0 dB, ±24 dB face, mirrors
   `convDry` exactly — same class: a gain on the DRY term of the Mix crossfade,

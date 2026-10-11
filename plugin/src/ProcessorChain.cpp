@@ -1468,6 +1468,11 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
         params->setProperty("reverbSize", row.reverbSize);
         params->setProperty("reverbWidth", row.reverbWidth);
         params->setProperty("reverbMode", row.reverbMode);
+        // 2026-10-15: the UI JSON round trip must carry the same mode-order v2
+        // marker the ValueTree save does (ProcessorState.cpp) -- without it the
+        // ChainState::parseItem remap (ChainState.cpp:203) misfired on every UI
+        // save/load, shuffling stored modes (e.g. Hall 4 -> Chamber 3).
+        params->setProperty("reverbModeOrderV1", 1);
         params->setProperty("reverbType0", row.reverbType0);
         params->setProperty("reverbType1", row.reverbType1);
         params->setProperty("reverbType2", row.reverbType2);
