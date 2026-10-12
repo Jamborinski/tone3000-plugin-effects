@@ -1054,3 +1054,5 @@ green-lit)
    a target; measure first, design second).
 
 Ninth-cut staging run: `C:\Users\jambo\Downloads\TONE3000-win-20261011-164722\TONE3000.exe` (md5 d7120c5357398d720558d135c21d22ee, 29 MB, from 3e59618).
+
+Tenth-cut staging run: `C:\Users\jambo\Downloads\TONE3000-win-20261011-173143\TONE3000.exe` (md5 de662d0e8aa6012bf55c06e1fbc9c998, 29 MB, from 037c1f5).
