@@ -2,7 +2,8 @@
 # better Width, and the "swirly / swelled" EMT-140 character gap
 # (with a clean-room research track)
 
-Status: **R1 + R2 + R3 SHIPPED** (R1 2026-10-13, R2 2026-10-14, THIRTEEN R2 Mod
+Status: **COMPLETED — TICKET CLOSED 2026-10-16** (moved to `complete/`). **R1 + R2 + R3
+SHIPPED** (R1 2026-10-13, R2 2026-10-14, THIRTEEN R2 Mod
 follow-ups 2026-10-14/15 — see the follow-up logs below). Current Mod
 mechanism = the ELEVENTH-CUT structure retuned by TWELFTH/THIRTEENTH CUTS
 (wet-unity added chorus layer + write-path smoothing that obliterates
@@ -180,7 +181,10 @@ pass; Windows exe staged in this closeout:
 `C:\Users\jambo\Downloads\TONE3000-win-20261012-054520\TONE3000.exe` (md5
 032405f673d668a7f060e21f63891463, 29 MB, staged 2026-10-16 from the R3
 working tree over base f9b6a0a).
-Open: none on R3. R4 (research track) unchanged.
+Open: none on R3. R4 (research track) — **DROPPED by user decision 2026-10-16**; ticket
+closed R1+R2+R3. (R4's research SKELLETON itself was already landed 2026-10-13,
+per the status block — `research/` is gitignored.)
+
 
 ## R2 implementation log (2026-10-14)
 > **SUPERSEDED IN PART** (2026-10-15 user regression report): the shared Mod
