@@ -3201,22 +3201,44 @@ TEST(ReverbTest, AllModesBoundedAcrossDecaySweep) {
 // preset -- defaultDialsForType stays false until a type with its own
 // starting point lands).
 TEST(ReverbTest, TypeScaffoldIsOnePerModeAndClamped) {
-  for (int m = 0; m < Reverb::kNumModes; ++m)
-    EXPECT_EQ(Reverb::numTypes(m), 1) << "scaffold: mode " << m << " has one type";
+  // Mode 5 (Digital) owns 6 character subtypes (DIG/SPR/PLT/SML/CHM/HAL);
+  // the other modes keep their single self-type (the scaffold).
+  for (int m = 0; m < Reverb::kNumModes; ++m) {
+    const int expect = (m == 5) ? 6 : 1;
+    EXPECT_EQ(Reverb::numTypes(m), expect) << "mode " << m << " type count";
+  }
+  // The subtype->law-mode map (type list order: DIG SPR PLT SML CHM HAL).
+  EXPECT_EQ(Reverb::typeLawMode(5, 0), 5);
+  EXPECT_EQ(Reverb::typeLawMode(5, 1), 1);
+  EXPECT_EQ(Reverb::typeLawMode(5, 2), 0);
+  EXPECT_EQ(Reverb::typeLawMode(5, 3), 2);
+  EXPECT_EQ(Reverb::typeLawMode(5, 4), 3);
+  EXPECT_EQ(Reverb::typeLawMode(5, 5), 4);
+  // Other modes: identity (type is always 0 for them).
+  for (int m = 0; m < 5; ++m) EXPECT_EQ(Reverb::typeLawMode(m, 0), m);
 
   Reverb::Params p;
-  for (int m = 0; m < Reverb::kNumModes; ++m) p.type[m] = m + 1;  // out of range
+  for (int m = 0; m < Reverb::kNumModes; ++m) p.type[m] = m + 2;  // out of range for m<5; 7 is out of range for 5
   Reverb r;
   r.prepare(kFs);
   r.reset();
   r.setParams(p);
-  for (int m = 0; m < Reverb::kNumModes; ++m)
-    EXPECT_EQ(r.params().type[m], 0)
-        << "type for mode " << m << " must clamp out of range to type 0";
+  for (int m = 0; m < Reverb::kNumModes; ++m) {
+    const int cap = (m == 5) ? 5 : 0;
+    EXPECT_EQ(r.params().type[m], cap)
+        << "type for mode " << m << " must clamp out of range to its last valid type";
+  }
 
-  double d = 0.0;
-  EXPECT_FALSE(Reverb::defaultDialsForType(2, 0, d, d, d, d, d))
-      << "a type must not override the dials until it has its own starting point";
+  // DIG type 0 owns no starting-point override; subtypes land the character's dials.
+  double d = 1234.0, pr = 1234.0, tn = -1.0, sz = -1.0, wd = -1.0;
+  EXPECT_FALSE(Reverb::defaultDialsForType(5, 0, d, pr, tn, sz, wd))
+      << "DIG (type 0) must not override the dials (sub-model switch, not a preset)";
+  EXPECT_TRUE(Reverb::defaultDialsForType(5, 1, d, pr, tn, sz, wd))
+      << "a SPR subtype lands its character's dials";
+  EXPECT_DOUBLE_EQ(pr, 0.0) << "the subtype contract: pre is off";
+  // Type 0 must not be selectable as a subtype in any other mode.
+  EXPECT_FALSE(Reverb::defaultDialsForType(2, 0, d, pr, tn, sz, wd))
+      << "a non-Digital mode's self-type must not override the dials";
 }
 
 TEST(ReverbTest, LatencyTracksThePreDelay) {

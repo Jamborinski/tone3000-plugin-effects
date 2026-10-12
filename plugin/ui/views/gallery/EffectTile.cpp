@@ -139,7 +139,7 @@ static help::Key reverbSigHelp(int mode, int localSlot) {
   return k[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
 }
 static juce::String compactReverbModeName(int m) {
-  static const char* n[6] = {"PLT", "SPR", "RM", "CHM", "HALL", "DAT"};
+  static const char* n[6] = {"PLT", "SPR", "RM", "CHM", "HALL", "DIG"};
   return n[juce::jlimit(0, 5, m)];
 }
 // ---- Reverb TYPE faces (a sub-model within a mode; Reverb::numTypes owns
@@ -148,9 +148,13 @@ static juce::String compactReverbModeName(int m) {
 // product name). A second type = a new row per mode (id + blurb + engine
 // branch + count bump; the plate pass is the reference implementation).
 static const char* compactReverbTypeName(int m, int t) {
-  static const char* n[Reverb::kNumModes] = {"PLT", "SPR", "SML", "CHM", "HAL", "DAT"};
-  (void)t;  // one type per mode today
-  return n[juce::jlimit(0, Reverb::kNumModes - 1, m)];
+  // The mode's TYPE face is the subtype's own short name. Mode 5 (DIG) owns
+  // six character subtypes (DIG/SPR/PLT/SML/CHM/HAL); the other modes each
+  // carry their own single self-type (same name as the mode today).
+  static const char* digTypes[6] = {"DIG", "SPR", "PLT", "SML", "CHM", "HAL"};
+  if (m == 5) return digTypes[juce::jlimit(0, 5, t)];
+  static const char* self[Reverb::kNumModes] = {"PLT", "SPR", "SML", "CHM", "HAL", "DIG"};
+  return self[juce::jlimit(0, Reverb::kNumModes - 1, m)];
 }
 static const char* reverbTypeBlurb(int m, int t) {
   static const char* b[Reverb::kNumModes] = {
@@ -158,9 +162,15 @@ static const char* reverbTypeBlurb(int m, int t) {
       "single-can spring tank -- crisp metallic boing, high bite, long shimmer tail",
       "small room -- fast early set, short decay, drier than it looks",
       "open stone chamber -- tight body, long bright tail, LF blooming off",
-      "concert hall -- slow to build, long and wide, low end hangs",
-      "clean comb field -- flat to the top, dense, even repeats"};
-  (void)t;  // one type per mode today
+      "concert hall -- slow to build, long and wide, low end hangs"};
+  static const char* digBlurb[6] = {
+      "clean comb field -- flat to the top, dense, even repeats (digital)",
+      "single-can spring tank -- crisp metallic boing, high bite, long shimmer tail",
+      "dense flat-plate body -- deep low-mid sustain, bright early slap, huge smooth tail",
+      "small room -- fast early set, short decay, drier than it looks",
+      "open stone chamber -- tight body, long bright tail, LF blooming off",
+      "concert hall -- slow to build, long and wide, low end hangs"};
+  if (m == 5) return digBlurb[juce::jlimit(0, 5, t)];
   return b[juce::jlimit(0, Reverb::kNumModes - 1, m)];
 }
 // The block's remembered type for a mode (per-mode field, the sig pattern).
@@ -576,17 +586,19 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
     // Sig A (sigKnob_) -- the mode's primary character. Mode-aware so the
     // write lands on the live mode's Sig A (density/springs/bright/...).
     sigKnob_.onChange = [this](float v) {
-      const auto* sc = reverbSigScaleForMode(this->block_.reverbMode, 0);
+      const int ch = Reverb::typeLawMode(this->block_.reverbMode, reverbTypeOf(this->block_, this->block_.reverbMode));
+      const auto* sc = reverbSigScaleForMode(ch, 0);
       const double real = knobToStored(*sc, (double)v);
-      this->services().chain.setBlockParam(blockId(), reverbSigParam(this->block_.reverbMode, 0), real);
+      this->services().chain.setBlockParam(blockId(), reverbSigParam(ch, 0), real);
     };
     addAndMakeVisible(sigKnob_);
 
     // Sig B (modKnob_) -- the mode's secondary character (full tile only).
     modKnob_.onChange = [this](float v) {
-      const auto* sc = reverbSigScaleForMode(this->block_.reverbMode, 1);
+      const int ch = Reverb::typeLawMode(this->block_.reverbMode, reverbTypeOf(this->block_, this->block_.reverbMode));
+      const auto* sc = reverbSigScaleForMode(ch, 1);
       const double real = knobToStored(*sc, (double)v);
-      this->services().chain.setBlockParam(blockId(), reverbSigParam(this->block_.reverbMode, 1), real);
+      this->services().chain.setBlockParam(blockId(), reverbSigParam(ch, 1), real);
     };
     addAndMakeVisible(modKnob_);
 
@@ -601,11 +613,22 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
     typeCycle_.setButtonText(compactReverbTypeName(tm0, tt0));
     typeCycle_.setHelpText(help::text(help::Key::reverbType) + " -- " +
                            reverbTypeBlurb(tm0, tt0) +
-                           " -- click to cycle " +
+                           " -- click to choose " +
                            juce::String(Reverb::modeName(tm0).data()) + " type");
     typeCycle_.onClick = [this] {
       const int m = this->block_.reverbMode;
-      this->enterReverbType(m, reverbTypeOf(this->block_, m) + 1);
+      const int cur = reverbTypeOf(this->block_, m);
+      const int n = Reverb::numTypes(m);
+      juce::PopupMenu menu;
+      for (int i = 0; i < n; ++i)
+        menu.addItem(i + 1, juce::String(compactReverbTypeName(m, i)) + " — " + reverbTypeBlurb(m, i),
+                     true, (i == cur));
+      menu.showMenuAsync(
+          juce::PopupMenu::Options().withTargetComponent(typeCycle_),
+          [this, m] (int choice) {
+            if (choice > 0)
+              this->enterReverbType(m, choice - 1);
+          });
     };
     addAndMakeVisible(typeCycle_);
 
@@ -958,7 +981,7 @@ void EffectTile::syncReverbTypeButton(int m) {
   const int t = reverbTypeOf(block_, m);
   typeCycle_.setButtonText(compactReverbTypeName(m, t));
   typeCycle_.setHelpText(help::text(help::Key::reverbType) + " -- " +
-                         reverbTypeBlurb(m, t) + " -- click to cycle " +
+                         reverbTypeBlurb(m, t) + " -- click to choose " +
                          juce::String(Reverb::modeName(m).data()) + " type");
 }
 
@@ -983,6 +1006,29 @@ void EffectTile::enterReverbType(int mode, int type) {
     knobC_.setDefaultValue((float)knobFromStored(scales::reverbTone(), tone));
     knobD_.setDefaultValue((float)knobFromStored(scales::reverbSize(), size));
     knobE_.setDefaultValue((float)knobFromStored(scales::reverbWidth(), width));
+
+    // Land the CHARACTER's sig pair: 50 % for the mapped character's
+    // non-DIG pair; the DIG-own Density/Mod pair is always cleared (so the
+    // engine only routes through the selected character's law branch).
+    const int lawChar = Reverb::typeLawMode(m, type);
+    for (int chm = 0; chm < Reverb::kNumModes; ++chm) {
+      // DIG-own (chm==5): always 0 (Mod off / Density off), regardless.
+      if (chm == 5) {
+        services().chain.setBlockParam(blockId(), reverbSigParam(5, 0), 0.0);
+        services().chain.setBlockParam(blockId(), reverbSigParam(5, 1), 0.0);
+        continue;
+      }
+      // Non-DIG characters: 50 % if this is the active character, else 0.
+      const double v = (chm == lawChar) ? 0.5 : 0.0;
+      services().chain.setBlockParam(blockId(), reverbSigParam(chm, 0), v);
+      services().chain.setBlockParam(blockId(), reverbSigParam(chm, 1), v);
+    }
+    if (lawChar < 5) {  // non-DIG character: set the knob default values for alt-click
+      const auto* sca = reverbSigScaleForMode(lawChar, 0);
+      const auto* sb  = reverbSigScaleForMode(lawChar, 1);
+      sigKnob_.setDefaultValue((float)knobFromStored(*sca, 0.5));
+      modKnob_.setDefaultValue((float)knobFromStored(*sb, 0.5));
+    }
   }
 
   // Remember the choice PER MODE (its own field, the sig-family pattern).
@@ -995,6 +1041,17 @@ void EffectTile::enterReverbType(int mode, int type) {
     default: block_.reverbType5 = type; break;
   }
   services().chain.setBlockParam(blockId(), ("reverbType" + juce::String(m)), (double)type);
+  // Re-sync the sig knobs to the ACTIVE CHARACTER (mode 5's type arms a
+  // different character's pair; other modes have the same label/scale).
+  const int lawChar = Reverb::typeLawMode(m, type);
+  const char* lblA = reverbSigLabel(lawChar, 0);
+  const char* lblB = reverbSigLabel(lawChar, 1);
+  const auto* sca = reverbSigScaleForMode(lawChar, 0);
+  const auto* sb  = reverbSigScaleForMode(lawChar, 1);
+  sigKnob_.setScale(sca);  sigKnob_.setLabel(lblA); sigKnob_.setHelp(reverbSigHelp(lawChar, 0));
+  sigKnob_.setValue((float)knobFromStored(*sca, reverbSigRaw(block_, lawChar, 0)));
+  modKnob_.setScale(sb);   modKnob_.setLabel(lblB); modKnob_.setHelp(reverbSigHelp(lawChar, 1));
+  modKnob_.setValue((float)knobFromStored(*sb, reverbSigRaw(block_, lawChar, 1)));
   syncReverbTypeButton(m);
 }
 
@@ -1007,26 +1064,28 @@ void EffectTile::syncReverbMode() {
   syncReverbTypeButton(m);  // the type face remembers its own per-mode choice (both views)
 
   // Sig A (sigKnob_, slot 0) + Sig B (modKnob_, slot 1) -- scale/label/steps/
-  // value follow the mode.
-  const char* lblA = reverbSigLabel(m, 0);
-  const auto* sca = reverbSigScaleForMode(m, 0);
+  // value follow the ACTIVE CHARACTER (for mode 5 the type's law mode; all
+  // other modes are their own character).
+  const int lawChar = Reverb::typeLawMode(m, reverbTypeOf(block_, m));
+  const char* lblA = reverbSigLabel(lawChar, 0);
+  const auto* sca = reverbSigScaleForMode(lawChar, 0);
   sigKnob_.setScale(sca);
   sigKnob_.setSteps(sca->steps);
   sigKnob_.setLabel(lblA);
-  sigKnob_.setHelp(reverbSigHelp(m, 0));
-  sigKnob_.setValue((float)knobFromStored(*sca, reverbSigRaw(block_, m, 0)));
-  const char* lblB = reverbSigLabel(m, 1);
-  const auto* sb = reverbSigScaleForMode(m, 1);
+  sigKnob_.setHelp(reverbSigHelp(lawChar, 0));
+  sigKnob_.setValue((float)knobFromStored(*sca, reverbSigRaw(block_, lawChar, 0)));
+  const char* lblB = reverbSigLabel(lawChar, 1);
+  const auto* sb = reverbSigScaleForMode(lawChar, 1);
   modKnob_.setScale(sb);
   modKnob_.setSteps(sb->steps);
   modKnob_.setLabel(lblB);
-  modKnob_.setHelp(reverbSigHelp(m, 1));
-  modKnob_.setValue((float)knobFromStored(*sb, reverbSigRaw(block_, m, 1)));
+  modKnob_.setHelp(reverbSigHelp(lawChar, 1));
+  modKnob_.setValue((float)knobFromStored(*sb, reverbSigRaw(block_, lawChar, 1)));
 
   syncKnobs();  // refresh the shared dials (Decay/Pre/Tone/Size/Width, + Dry on the full tile)
 
   // Per-mode contextual label: Spring's Size reads as the spring's "Length".
-  knobD_.setLabel(m == 1 ? "Length" : "Size");
+  knobD_.setLabel(lawChar == 1 ? "Length" : "Size");
 
   // Visibility: Sig A is always shown (the full-tile row-1 slot / the compact
   // right-of-Decay slot); Sig B + Pre are full-tile only.

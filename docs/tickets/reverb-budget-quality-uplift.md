@@ -565,3 +565,38 @@ in pass 1.
   finish — incremental Reverb.h rebuild + standalone link).
 
 
+
+
+## Follow-up (2026-10-16): Digital mode type-subtype dropdown (user directive, m01117 spec)
+
+The Digital mode's type cycler became a dropdown (identical look pre-click):
+DIG (the existing digital comb-bank, default) / SPR / PLT / SML / CHM / HAL —
+the five existing characters, selectable *inside* Digital (they retain the
+existing character; sig knobs land at 50 %, pre off, other dials at the
+character's own defaults). The other five modes keep an unchanged single
+self-type entry (scaffold for the later per-mode engine replacements).
+
+- Engine (plugin/include/Reverb.h): numTypes(5) = 6 (others 1); 
+  typeLawMode(5,t) = {5,1,0,2,3,4} for the DIG/SPR/PLT/SML/CHM/HAL rows;
+  defaultDialsForType lands the character's defaultDialsForMode dials
+  (pre forced 0) for subtypes only; setParams caps decay by the character's
+  own per-mode max; process() routes every law arm + modOn_ via lawCh, so a
+  Digital subtype arms exactly its character's sig pair and stays fully
+  dialable — no sig coercion, no other-mode change (modes 0–4 type always
+  clamps to 0, identical dispatch path).
+- UI (plugin/ui/views/gallery/EffectTile.cpp): type cycler = juce::TextButton
+  + PopupMenu (JUCE 9: showMenuAsync + withTargetComponent — modal loops are
+  not permitted in plugins); sig knobs' label/scale/value now follow the
+  active character (typeLawMode); Size vs Length knobD label follows it;
+  DAT renamed DIG everywhere it was a *type* face name.
+- Guard: effect_tests.cpp "ReverbTest.TypeScaffoldIsOnePerModeAndClamped"
+  re-scoped: 6-vs-1 type counts, the 6-entry typeLawMode map,
+  out-of-range clamps, DIG type 0 = no dial override, SPR subtype lands
+  dials + pre 0; a non-Digital self-type never overrides.
+- Verified: DspTests 503/503 PASSED (108.7 s), TONE3000_Standalone link
+  green, UiTestbed --selftest green (0 failed), help/blurbs (the reverb
+  type face, the DIG sub-rows, the other modes' self-rows) all
+  character-accurate.
+- Dat → Dig rename (type face name only — the "Digital" mode name is unchanged).
+- commit (4 files + ticket + openwiki: reverb engine + effect tile UI +
+  effect test + reverb mode doc; no scratch notes):

@@ -287,14 +287,28 @@ IDs). Each mode REMEMBERS its own type (six independent state
 fields, the sig-family precedent). Type 0 = the mode's MODELED character
 (hover blurbs are tonal wordings ONLY, never the modeled product):
 
-| mode    | type-0 ID | the modeled character (internal name) |
-|---------|-----------|----------------------------------------|
-| Digital | `DAT`     | the clean 8-comb field (placeholder; DAT to sound like PLT later) |
-| Spring  | `SPR`     | the single-can spring tank             |
-| Plate   | `PLT`     | the dense flat plate (this session's pass) |
-| Room    | `SML`     | the small close room                   |
-| Chamber | `CHM`     | the open stone chamber                 |
-| Hall    | `HAL`     | the long wide hall                     |
+**Digital (DIG) owns six character subtypes** — the type dropdown lists:
+
+| type | ID  | character (the existing engine law, hosted inside Digital) |
+|------|-----|--------------------------------------------------------------|
+| 0    | `DIG` | the clean 8-comb field — a **comb filter algorithm** (flat to the top, dense, even repeats) — the Digital default |
+| 1    | `SPR` | the existing Spring character — single-can spring tank (metallic boing, high bite) |
+| 2    | `PLT` | the existing Plate character — dense flat plate (deep low-mid sustain, huge smooth tail) |
+| 3    | `SML` | the existing Room character — small close room, fast early set |
+| 4    | `CHM` | the existing Chamber character — open stone chamber, long bright tail |
+| 5    | `HAL` | the existing Hall character — long wide hall, slow to build |
+
+Every other mode keeps a **single self-type** (its own dropdown shows one
+entry) — those six engine characters are scaffold that will be replaced by
+more specific, tailored algorithms over time; until then they remain
+selectable exactly as they are today, both on their own mode and, for the
+mapped character, inside Digital.
+Selecting a Digital subtype (types 1-5) lands that character's default
+dials per mode (Decay per character, Pre **off**, the character's Tone/
+Size/Width) and sets its two signature knobs to **50 %**, zeroing all other
+characters' pairs (the engine routes only through the selected character's
+law branch, gated by its pair > 0). The sig knobs stay fully dialable — the
+landing values are starting points, not a lock.
 
 **Engine** (`Reverb.h`): `Params::type[6]` (appended after the 12 sigs,
 zero-init); `setParams` clamps each `type[i]` via

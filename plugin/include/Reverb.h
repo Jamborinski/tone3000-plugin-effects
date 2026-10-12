@@ -546,18 +546,42 @@ class Reverb {
   // goes to 2 when its second sub-model lands (the plate pass is the
   // reference implementation).
   static constexpr int numTypes(int mode) {
-    (void)mode;
-    return 1;  // scaffold: one type per mode so far
+    return (mode == 5) ? 6 : 1;  // Digital owns 6 character subtypes; the other modes keep their scaffold (one self-type today).
   }
-  // A type's characteristic dial defaults, if it has any. false = the dials
-  // are left as the user left them (a type switch is a sub-model switch,
-  // not a preset); a later type with its own starting point returns true
-  // and the tile lands those values (the compressor enterMode contract).
+  // A type's law-routing mode (mode 5's type t -> mode t's law; other modes identity):
+  // this lets the Digital dropdown arm the existing Plate/Spring/Room/Chamber/Hall
+  // law + sig pair without touching mode 0-4's own dispatch.
+  static constexpr int typeLawMode(int mode, int type) {
+    if (mode == 5) {
+      // Subtype order DIG SPR PLT SML CHM HAL -> law branches 5 1 0 2 3 4.
+      switch (juce::jlimit(0, 5, type)) {
+        case 0: return 5;
+        case 1: return 1;
+        case 2: return 0;
+        case 3: return 2;
+        case 4: return 3;
+        default: return 4;
+      }
+    }
+    return mode;  // other modes: identity (type always 0 for them)
+  }
+  // A type's characteristic dial defaults. For mode 5 (DIG) with type > 0:
+  // land the character's defaultDialsForMode (tone/size/width). For any
+  // other mode or DIG type 0: no dial override (sub-model switch, not a
+  // preset -- the dials stay as the user left them).
   static bool defaultDialsForType(int mode, int type, double& decayMs, double& preMs,
                                   double& tone, double& size, double& width) {
+    if (mode == 5 && type > 0) {
+      double cDecay = 0.0, cPre = 0.0, cTone = 0.0, cSize = 0.0, cWidth = 0.0;
+      const int ch = typeLawMode(5, type);  // the character's own mode number
+      defaultDialsForMode(ch, cDecay, cPre, cTone, cSize, cWidth);
+      cPre = 0.0;  // the subtype contract: pre is OFF (character defaults vary)
+      decayMs = cDecay; preMs = cPre; tone = cTone; size = cSize; width = cWidth;
+      return true;
+    }
     (void)mode; (void)type; (void)decayMs; (void)preMs;
     (void)tone; (void)size; (void)width;
-    return false;  // no type overrides dials yet
+    return false;
   }
 
   // enterMode starting points (the doc's mode table) + the default value of
@@ -574,6 +598,9 @@ class Reverb {
       default: decayMs = 1200.0; preMs = 0.0; tone = 0.40; size = 0.60; width = 1.00; break; // Digital
     }
   }
+  // A subtype's characteristic sig default (the dropdown landing point):
+  // 50 % for the mapped character's pair; DIG-own (type 0) is 0 (Mod off).
+  // Other modes (single self-type) have none -> the caller leaves them alone.
   static double defaultSigForMode(int mode, int localSlot) {
     const int m = juce::jlimit(0, kNumModes - 1, mode);
     const int slot = (localSlot == 1) ? 1 : 0;
@@ -737,8 +764,14 @@ class Reverb {
     // Per-mode cap: the decay knob is clamped to the active mode's stability /
     // sound boundary (the user's ears-pass onset). E.g. Spring 2750, Plate 2500,
     // Hall 3500. The global 5000 ms ceiling still applies as the outer clamp.
-    if (params_.decayMs > maxDecayForMode(params_.mode))
-      params_.decayMs = maxDecayForMode(params_.mode);
+    // Cap the decay by the ACTIVE CHARACTER's per-mode max (mode 5 with a
+    // nonzero type routes to that character's law branch -> that character's
+    // own decay cap applies).
+    {
+      const int chCap = (params_.mode == 5) ? typeLawMode(5, params_.type[5]) : params_.mode;
+      if (params_.decayMs > maxDecayForMode(chCap))
+        params_.decayMs = maxDecayForMode(chCap);
+    }
     params_.density = juce::jlimit(0.0, 1.0, p.density);
     params_.mod = juce::jlimit(0.0, 1.0, p.mod);
     params_.springs = juce::jlimit(0.0, 1.0, p.springs);
@@ -759,9 +792,14 @@ class Reverb {
       const double sizeScale = 0.5 + 1.0 * params_.size;
     // Per-mode type selectors (sub-model within a mode). Clamped per mode
     // by numTypes -- the engine law: state/UI may name any value, the
-    // engine never exceeds the mode's type count (all 1 today -> all 0).
+    // engine never exceeds the mode's type count.
     for (int i = 0; i < kNumModes; ++i)
       params_.type[i] = static_cast<int>(juce::jlimit(0, numTypes(i) - 1, p.type[i]));
+
+    // NOTE: Digital (mode 5) law routing is the lawCh gate in process() --
+    // a subtype arms ONLY its character's sig pair (stored values, driven by
+    // the sig knobs), so the character stays fully dialable after the
+    // dropdown lands its starting point. No sig coercion happens here.
 
       const double preSamples = params_.preMs * 0.001 * sampleRate_;
       for (int i = 0; i < kNumLines; ++i)
@@ -826,7 +864,12 @@ class Reverb {
     // Mod 0 so the plain integer read stays bit-exact (the anchor). Only the
     // depth scales with the knob (the delay's sigMod convention); the rate is
     // the Digital law. Not Digital -> off, so no other mode ever touches it.
-    modOn_ = (params_.mode == 5) && (params_.mod > 0.0) && (sampleRate_ > 0.0);
+    // modOn_: DIG only (mode 5, type 0 -> DIG-own law); other modes' types
+    // never arm the Digital Mod (those types own their own sig pair).
+    {
+      const int chMod = (params_.mode == 5) ? typeLawMode(5, params_.type[5]) : params_.mode;
+      modOn_ = (chMod == 5) && (params_.mod > 0.0) && (sampleRate_ > 0.0);
+    }
     if (modOn_) {
       modDepthSamples_ = static_cast<float>(
           kDigitalModWaverMs * 0.001 * sampleRate_ * params_.mod);
@@ -925,6 +968,12 @@ class Reverb {
     const int numChannels = juce::jmin(buffer.getNumChannels(), kMaxChannels);
     const int numSamples = buffer.getNumSamples();
     if (numSamples == 0) return;
+    // ACTIVE CHARACTER: mode 5 + nonzero type -> that character's law branch;
+    // other modes -> identity (type is always 0 for them today). This single
+    // value drives every per-mode law arm below, so a DIG/SPR/PLT/SML/CHM/HAL
+    // subtype routes through the correct processXxx + sig arm without touching
+    // the other modes' dispatch.
+    const int lawCh = (params_.mode == 5) ? typeLawMode(5, params_.type[5]) : params_.mode;
 
     // Feedback (Decay): see decayFb() -- [50,3000] bit-identical to before, the
     // 3000..5000 top segment nudges the tail just a touch longer (still |fb| < 1).
@@ -944,12 +993,12 @@ class Reverb {
     // identity at 0, so when NEITHER is on the plain comb-bank path below is
     // byte-identical to the current engine (and every other mode uses it too
     // -> the law-inert anchor).
-    const bool densityOn = (params_.mode == 5) && (params_.density > 0.0);
+    const bool densityOn = (lawCh == 5) && (params_.density > 0.0);
     // Spring (mode 1) is law-live only when armed (springs>0 or sag>0); at both
     // 0 it runs the shared plain path (the anchor + the law-inert scaffold pin
     // stay intact). Plate/Room/Chamber/Hall are still law-inert (their sigs do
     // nothing yet) -> they too fall through to the plain path.
-    const bool springOn = (params_.mode == 1) &&
+    const bool springOn = (lawCh == 1) &&
         (params_.springs > 0.0 || params_.sag > 0.0);
     if (springOn) {
       processSpring(buffer);
@@ -959,7 +1008,7 @@ class Reverb {
     }
     // Plate (mode 0) is law-live when armed (Bright>0 or Bloom>0); at both 0 it
     // runs the shared plain path (the anchor + the law-inert premise hold).
-    const bool plateOn = (params_.mode == 0) &&
+    const bool plateOn = (lawCh == 0) &&
         (params_.bright > 0.0 || params_.bloom > 0.0);
     if (plateOn) {
       processPlate(buffer);
@@ -969,7 +1018,7 @@ class Reverb {
     }
     // Room (mode 3) is law-live when armed (Early>0 or Air>0); at both 0 it runs
     // the shared plain path (the Digital anchor + kNumModes==6 hold).
-    const bool roomOn = (params_.mode == 2) &&
+    const bool roomOn = (lawCh == 2) &&
         (params_.early > 0.0 || params_.air > 0.0);
     if (roomOn) {
       processRoom(buffer);
@@ -979,7 +1028,7 @@ class Reverb {
     }
     // Chamber (mode 4) is law-live when armed (Volley>0 or Bass>0); at both 0 it
     // runs the shared plain path (the Digital anchor + kNumModes==6 hold).
-    const bool chamberOn = (params_.mode == 3) &&
+    const bool chamberOn = (lawCh == 3) &&
         (params_.volley > 0.0 || params_.bass > 0.0);
     if (chamberOn) {
       processChamber(buffer);
@@ -991,7 +1040,7 @@ class Reverb {
     // runs the shared plain path (the Digital anchor + kNumModes==6 hold).
     // Hall is the LONGEST RT by design (default 3000 ms, within its 50..5000
     // range); at both 0 it shares the plain path (the anchor holds at any decay).
-    const bool hallOn = (params_.mode == 4) &&
+    const bool hallOn = (lawCh == 4) &&
         (params_.build > 0.0 || params_.space > 0.0);
     if (hallOn) {
       processHall(buffer);
