@@ -272,4 +272,24 @@
   (no saturator feed); (b) a 440 Hz tone's block RMS sweeps peak > 1.2x
   trough (a per-block-constant delay or flat gain gives a flat envelope --
   a dead modulation).
- 
+
+  ELEVENTH CUT (2026-10-15, measured: the clicks were WET-TRANSIENT
+  RE-EMISSION -- finally the right mechanism): the tenth-cut averaging cut
+  peak *density* but the user's ears (loud sustained chords at varying
+  volume, MAX Mod) still heard clicks: R2_ModTransientHunt (white noise;
+  ear-click index = LAYER jump-RMS relative to the WET'S OWN jump-RMS)
+  measured the 8th cut 5.5x and the 10th cut 6.75x WORSE -- the layer
+  re-emits the wet's transients because the DELAY TAP IS A RAW COPY OF THE
+  TAIL (averaging only divides peak density ~1/sqrtN; amt re-amplifies the
+  spikes with the body). ELEVENTH FIX (structural REMOVAL, not reduction):
+  write the SMOOTHED wet into the delay ring -- per-channel one-pole
+  smWriteCoef_ = exp(-1/(fs * kModWriteTauMs)), state smWritePrev_[c],
+  tau 4.0 ms ship (kModWriteTauMs; hook 0 = off -> bit-exact anchor; 2.0 ms = click 0.218, nearly no change). R2_ModChordClickHunt
+  (THE USER'S OWN METHODOLOGY: sustained 5-partial guitar chord, 30 ms
+  attack, amplitudes 0.25/0.5/0.75/1.0, max Mod, layer = on-minus-off in
+  the steady window): tenth-cut reference index 0.218 @ body x0.956 vs
+  eleventh ship 0.132 @ body x0.982 -- ~39 % less transient energy AT
+  EVERY AMPLITUDE (amp-invariant ratio = matches the user's "louder chords
+  click harder") while body is preserved. All other levers (darkening,
+  voice count, rate, tap floor) measured and declined: none removed the
+  re-emitted wet spikes. 

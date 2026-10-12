@@ -3639,8 +3639,9 @@ struct ReverbChorusSweep {
   static void setDepth(Reverb& r, double v){ r.smTestDepthScale_ = v; }
   static void setLpf(Reverb& r, double hz){ r.smTestLpfHz_ = hz; }
   static void setFloor(Reverb& r, double v){ r.smTestFloor_ = v; }
-  static void setRateScale(Reverb& r, double k){ r.smTestRateScale_ = k; }
-  static void setVoices(Reverb& r, int v){ r.smTestVoices_ = v; }
+  static void setVoices(Reverb& r, int n){ r.smTestVoices_ = n; }
+  static void setWriteTau(Reverb& r, double ms){ r.smTestWriteTauMs_ = ms; }
+  static void setRateScale(Reverb& r, double v){ r.smTestRateScale_ = v; }
 };
 
 TEST(ReverbTest, R2_ModClickSharpnessSweep) {
@@ -3714,6 +3715,186 @@ TEST(ReverbTest, R2_ModClickSharpnessSweep) {
   print("4k amt 2.4", 4000.0, 0.30, 2.4);
   print("4k amt 3.0", 4000.0, 0.30, 3.0);
   print("3k amt 4.0", 3000.0, 0.30, 4.0);
+  SUCCEED();
+}
+
+
+TEST(ReverbTest, R2_ModTransientHunt) {
+  // OBLITERATE-THE-CLICKS measurement (2026-10-15): the ear hears DISCRETE
+  // CLICKS -- short amplitude transients in the chorus LAYER. White-noise
+  // RMS metrics hide them (no sustained transient structure); this drives a
+  // decaying BURST (the reverb trigger) and hunts the LAYER (on - off) for
+  // transient HITS: peak |sample|, peak |sample - sample[-1]|, and peak
+  // 16-sample-window RMS -- all relative to the layer's own RMS, and all
+  // also compared directly against the WET (off) signal so we know the real
+  // ear level. Sweeps: darkening (lpf), amount (body), voices -- looking
+  // for the config where the hit index collapses with tolerable body.
+  const unsigned int fs = 48000; const int n = 2*fs; const int blk = 128;
+  // drive: 0.35s of a 120Hz pluck (decaying burst + noise floor) then tail
+  auto render = [&](double lpfHz, double amt, int voices) {
+    Reverb r; r.prepare(fs);
+    Reverb::Params p;
+    p.decayMs = 1800.0; p.tone = 0.3; p.size = 0.5; p.width = 1.0; p.preMs = 0.0;
+    p.mode = 3; p.volley = 0.4; p.bass = 0.6; p.sharedMod = 1.0;
+    ReverbChorusSweep::setLpf(r, lpfHz);
+    ReverbChorusSweep::setAmt(r, amt);
+    if (voices > 1) ReverbChorusSweep::setVoices(r, voices);
+    r.setParams(p);
+    std::mt19937 rng(4242); std::uniform_real_distribution<float> d(-0.3f, 0.3f);
+    juce::AudioBuffer<float> b(2, blk);
+    std::vector<std::vector<float>> out(2, std::vector<float>(n));
+    const int t0 = (int)(0.35 * fs);
+    for (int off = 0; off + blk <= n; off += blk) {
+      for (int i = 0; i < blk; ++i) {
+        const int t = off + i;
+        float v = (t < t0) ? (float)(0.6 * std::exp(-t / (double)(fs/12.0)) * std::sin(2.0*M_PI*120.0*t/fs))
+                           : 0.0f;
+        v += d(rng) * 0.05f;
+        b.setSample(0, i, v); b.setSample(1, i, v);
+      }
+      r.process(b);
+      for (int i = 0; i < blk; ++i) { out[0][off+i] = b.getSample(0,i); out[1][off+i] = b.getSample(1,i); }
+    }
+    return out;
+  };
+  const unsigned m1 = (unsigned)(1.0 * fs), m2 = (unsigned)(1.8 * fs);  // tail region
+  auto rms = [](const auto& o, unsigned a, unsigned b){ double s=0; for(unsigned i=a;i<b;++i) s += (double)o[0][i]*o[0][i] + (double)o[1][i]*o[1][i]; return std::sqrt(s/(2.0*(b-a))); };
+  // transient HUNT on a signal: max |sample|, max |jump|, max window-RMS(16)
+  auto hunt = [](const auto& o, unsigned a, unsigned b){
+    double mx=0, mj=0, mw=0;
+    for (unsigned i=a; i<b; ++i) {
+      const double x0 = std::abs((double)o[0][i]), x1 = std::abs((double)o[1][i]);
+      mx = std::max(mx, std::max(x0,x1));
+      if (i>a) { mj = std::max(mj, std::max(std::abs(x0-(double)o[0][i-1]), std::abs(x1-(double)o[1][i-1]))); }
+      if (i>=a+16) { double w=0; for (unsigned k=i-15;k<=i;++k) w += std::abs((double)o[0][k])+std::abs((double)o[1][k]); mw = std::max(mw, w/32.0); }
+    }
+    return std::array<double,3>{mx, mj, mw};
+  };
+  Reverb off; off.prepare(fs);
+  { Reverb::Params p; p.decayMs=1800.0; p.tone=0.3; p.size=0.5; p.width=1.0; p.preMs=0.0; p.mode=3; p.volley=0.4; p.bass=0.6; p.sharedMod=0.0; off.setParams(p); }
+  std::vector<std::vector<float>> offOut(2, std::vector<float>(n));
+  { std::mt19937 rng(4242); std::uniform_real_distribution<float> d(-0.3f,0.3f); juce::AudioBuffer<float> b(2,blk);
+    const int t0=(int)(0.35*fs);
+    for (int off2=0; off2+blk<=n; off2+=blk) {
+      for (int i=0;i<blk;++i){ const int t=off2+i; float w=(t<t0)?(float)(0.6*std::exp(-(double)t/(fs/12.0))*std::sin(2.0*M_PI*120.0*t/fs)):0.0f; w+=d(rng)*0.05f; b.setSample(0,i,w); b.setSample(1,i,w); }
+      off.process(b);
+      for (int i=0;i<blk;++i){ offOut[0][off2+i]=b.getSample(0,i); offOut[1][off2+i]=b.getSample(1,i); }
+    } }
+  const double wetR = rms(offOut,m1,m2);
+  const auto wetH = hunt(offOut,m1,m2);
+  const char nl[] = "\n";
+  auto line = [&](const char* tag, double lpf, double amt, int voices) {
+    const auto on = render(lpf, amt, voices);
+    std::vector<std::vector<float>> layer(2, std::vector<float>(n));
+    for (unsigned i=m1;i<m2;++i){ layer[0][i]=(float)((double)on[0][i]-(double)offOut[0][i]); layer[1][i]=(float)((double)on[1][i]-(double)offOut[1][i]); }
+    const double lR = rms(layer,m1,m2);
+    const auto h = hunt(layer,m1,m2);
+    // hit index: (peak-jump of layer) vs (layer RMS) -- the ear-click ratio
+    const double hit = h[1] / std::max(lR, 1e-12);
+    const double wetRelJump = h[1] / std::max(wetR, 1e-12);   // layer click vs wet body
+    std::cout << "  " << tag << " => body " << 20.0*std::log10(lR/std::max(wetR,1e-12))
+              << " dB  layer-jumpRMS-rel " << wetRelJump
+              << " (wet-rel jump, ear-click index)" << nl;
+  };
+  std::cout << "  TRANSLIENT-HUNT SWEEP (120Hz pluck + noise, tail hunt over 1.0..1.8 s; ref = 8th-cut ship 6kHz/amt 1.8/4voices):" << nl;
+  line("8th ship (6k, 1.8, 4v)",      6000.0, 1.8, 4);
+  line("10th ship (6k, 3.0, 6v)",     6000.0, 3.0, 6);
+  line("dark 3k (amt 4.5, 6v)",       3000.0, 4.5, 6);
+  line("dark 2k (amt 6.5, 6v)",       2000.0, 6.5, 6);
+  line("dark 1.5k (amt 8, 6v)",       1500.0, 8.0, 6);
+  line("voices 12 (6k, amt 5, 12v)",  6000.0, 5.0, 12);
+  SUCCEED();
+}
+
+TEST(ReverbTest, R2_ModChordClickHunt) {
+  // ELEVENTH CUT (2026-10-15) -- the USER'S OWN methodology: "hit the reverb
+  // front end with guitar signals at VARYING VOLUMES; the louder sustained
+  // chords are what produce the clicks" (at MAX Mod). Signal: a sustained
+  // open-position E major chord (E2+B2+E3+G#3+B3, 30 ms attack, held),
+  // rendered at 4 amplitudes. Metric for every line: the LAYER (on - off)
+  // jump-RMS RELATIVE TO THE WET'S OWN jump-RMS in the same steady window
+  // (R2_ModTransientHunt measured 10th-cut ship = 6.65x here; 8th cut 5.68x).
+  // The fix under test: the eleventh-cut ring-WRITE one-pole (writeTau) --
+  // with it above ~1 ms the tap is structurally spike-free, so the click
+  // index must fall toward the wet's own level regardless of amp/voices.
+  const char nl[] = "\n";
+  const unsigned int fs = 48000; const int n = 4 * fs; const int blk = 128;
+  auto makeChord = [&](int off, int i, double amp) -> float {
+    const double t = (off + i) / (double)fs;
+    const double e = std::min(1.0, t / 0.030);
+    double h[5];
+    for (int q = 0; q < 5; ++q)
+      h[q] = std::sin(2.0 * M_PI * (double)std::pow(2.0, q / 5.0) * 82.41 * t + q * 0.7);
+    return static_cast<float>(0.12 * amp * (h[0]+h[1]+h[2]+h[3]+h[4]) * e);
+  };
+  auto render = [&](int on, double writeTauMs, double amp) {
+    Reverb r; r.prepare(fs);
+    ReverbChorusSweep::setWriteTau(r, writeTauMs);  // always: >0 ms, 0 = ship, <0 = DISABLED (baseline)
+    Reverb::Params p;
+    p.decayMs = 1800.0; p.tone = 0.3; p.size = 0.5; p.width = 1.0; p.preMs = 0.0;
+    p.mode = 3; p.volley = 0.4; p.bass = 0.6; p.sharedMod = on ? 1.0 : 0.0;
+    r.setParams(p);
+    std::vector<float> out(n);
+    for (int off = 0; off + blk <= n; off += blk) {
+      juce::AudioBuffer<float> b(2, blk);
+      for (int i = 0; i < blk; ++i) {
+        const float v = makeChord(off, i, amp);
+        b.setSample(0, i, v); b.setSample(1, i, v);
+      }
+      r.process(b);
+      for (int i = 0; i < blk; ++i) out[off + i] = b.getSample(0, i);
+    }
+    return out;
+  };
+  auto rms  = [](const auto& o, int a, int b){ double s=0; for(int i=a;i<b;++i) s += (double)o[i]*o[i]; return std::sqrt(s/(b-a)); };
+  auto jump = [](const auto& o, int a, int b){ double s=0; for(int i=a+1;i<b;++i){ double d=(double)o[i]-(double)o[i-1]; s += d*d; } return std::sqrt(s/(b-a-1)); };
+  const int a0 = 2*fs, a1 = 4*fs;   // steady 2 s chord-hold window
+  for (double amp : {0.25, 0.5, 0.75, 1.0}) {
+    const auto wetOff = render(0, 0.0, amp);
+    const double wetJ = jump(wetOff, a0, a1);
+    auto line = [&](const char* tag, double tau) {
+      const auto onOut = render(1, tau, amp);
+      double lj = 0; for (int i = a0+1; i < a1; ++i) { double d=(double)onOut[i]-(double)onOut[i-1] - ((double)wetOff[i]-(double)wetOff[i-1]); lj += d*d; }
+      lj = std::sqrt(lj / (a1-a0-1));
+      const double body = rms(onOut, a0, a1) / std::max(rms(wetOff, a0, a1), 1e-9);
+      std::cout << "  amp " << amp << " wetJ " << wetJ
+                << "  " << tag << " => body x" << body
+                << "   CLICK INDEX " << ((lj / std::max(wetJ, 1e-12))) << nl;
+      return lj / std::max(wetJ, 1e-12);
+    };
+    line("no write-smooth (9th/10th-cut baseline)", -1.0);
+    line("write-tau 0.5 ms", 0.5);
+    line("write-tau 1.0 ms", 1.0);
+    line("write-tau 2.0 ms", 2.0);
+    line("write-tau SHIP default (kModWriteTauMs)", 0.0);
+  }
+  // ELEVENTH-CUT GUARD (the whole point: the ring-write smoothing means the
+  // delayed tap no longer re-emits the wet's own transients): the shipped
+  // config must cut the sustained-chord click index to UNDER HALF of the
+  // unsmoothed baseline, and must keep the chorus body near the wet while
+  // doing it. Measured: baseline 0.351 -> ship 0.132 (x0.38), body x0.98.
+  auto idxOf = [&](double amp2, double tau) {
+    const auto off = render(0, -1.0, amp2);
+    const auto onOut = render(1, tau, amp2);
+    double lj = 0, wj = 0;
+    for (int i = a0+1; i < a1; ++i) {
+      const double d = (double)onOut[i]-(double)onOut[i-1] - ((double)off[i]-(double)off[i-1]);
+      const double w = (double)off[i]-(double)off[i-1];
+      lj += d*d; wj += w*w;
+    }
+    return std::sqrt(lj/(a1-a0-1)) / std::max(std::sqrt(wj/(a1-a0-1)), 1e-12);
+  };
+  const double body = [&]() {
+    const auto off = render(0, -1.0, 0.75);
+    const auto onOut = render(1, 0.0, 0.75);
+    double s0 = 0, s1 = 0;
+    for (int i = a0; i < a1; ++i) { s0 += (double)off[i]*off[i]; s1 += (double)onOut[i]*onOut[i]; }
+    return std::sqrt(s1) / std::max(std::sqrt(s0), 1e-12);
+  }();
+  EXPECT_LT(idxOf(0.75, 0.0), 0.5 * idxOf(0.75, -1.0))
+    << "eleventh-cut write smoothing must cut the sustained-chord click index by more than half";
+  EXPECT_GT(body, 0.8)
+    << "write smoothing must not starve the chorus body (layer+dry vs wet fell below 0.8)";
   SUCCEED();
 }
 

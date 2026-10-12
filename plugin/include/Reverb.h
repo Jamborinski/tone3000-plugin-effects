@@ -1057,7 +1057,14 @@ class Reverb {
   // only -5.9 dB of layer body; lower still buys little more per dB
   // (3 kHz: -61 % sharp at -10 dB body = hollow). 4 kHz = the best
   // trade; amt 1.8 keeps the net body close to the 8th-cut ship.
-  static constexpr double kModVoiceLpfHz = 6000.0; // per-line 12 dB/oct darkening (tenth cut: 8th-cut 6 kHz restored -- darkening cuts body, not spikes, per the spike sweep; the AVERAGED VOICE COUNT is the click lever)
+  static constexpr double kModVoiceLpfHz = 6000.0;
+  // per-line WRITE-side one-pole time constant (ms) -- ELEVENTH CUT (2026-10-15,
+  // the click obliteration): R2_ModChordClickHunt (user methodology: loud
+  // sustained chords at max Mod, 5 amps) = click index 0.132 @ body x0.98
+  // vs the 10th-cut reference 0.217, at EVERY input amp (0.25/0.5/0.75/1.0);
+  // tau 2.0 = 0.218 (nearly no change) -- the delayed tap structurally cannot
+  // re-emit the wet's transients once the ring contents are smoothed.
+  static constexpr double kModWriteTauMs = 4.0;
   // Chorus LAYER gain: the delayed voices ADD ON TOP of the full (unity)
   // undelayed wet -- this is the "lush modulation ADDED to the reverb"
   // (2026-10-15) and is what kills BOTH the level drop and the clicking.
@@ -1794,6 +1801,9 @@ class Reverb {
   double smTestFloor_ = 0.0;  // >0: override kModVoiceFloor (measured-tune hook)
   double smTestRateScale_ = 1.0;  // !=1: scale kSharedModRate (measured-tune hook)
   int smTestVoices_ = 0;  // >1: number of delay voices to average (measured-tune hook)
+  double smTestWriteTauMs_ = 0.0; // >0: ms time constant on the ring WRITE (eleventh-cut hook)
+  float smWriteCoef_ = 0.0f;      // per-sample one-pole on the ring write (0 = off -> bit-exact anchor)
+  std::array<float, kMaxChannels> smWritePrev_{};
   friend struct ReverbChorusSweep;
   // Spring state: the metallic boing resonator (2.4 kHz) per channel + the
   // onset-splash (drip) env per channel. Both are bounded (|r|<1, decaying env)
@@ -1943,8 +1953,19 @@ class Reverb {
         vt[v].x1 = smBqX1_[c][v]; vt[v].x2 = smBqX2_[c][v];
         vt[v].y1 = smBqY1_[c][v]; vt[v].y2 = smBqY2_[c][v];
       }
+      // smTestWriteTauMs_: >0 = explicit ms, 0 = ship default, <0 = DISABLED
+      // (the chord-hunt's unsmoothed reference / pre-eleventh-cut baseline).
+      const double wMs = smTestWriteTauMs_ < 0.0 ? 0.0
+                        : (smTestWriteTauMs_ > 0.0 ? smTestWriteTauMs_ : kModWriteTauMs);
+      if (wMs > 0.0 && sampleRate_ > 0.0)
+        smWriteCoef_ = static_cast<float>(std::exp(-1.0 / (sampleRate_ * wMs * 1e-3)));
+      else
+        smWriteCoef_ = 0.0f;   // write-tau disabled (bit-exact anchor path)
+      float& wp = smWritePrev_[c];   // per-channel one-pole state on the ring write
       for (int i = 0; i < n; ++i) {
-        wr[w] = in[i];
+        if (smWriteCoef_ > 0.0)   // ELEVENTH CUT: write a SMOOTHED wet into the ring --
+          wp = smWriteCoef_ * wp + (1.0f - smWriteCoef_) * in[i];    // taps can no longer re-emit its transients
+        wr[w] = (smWriteCoef_ > 0.0) ? wp : in[i];
         w = (w + 1) & chMask_;
         // Each delayed voice: wavering fractional tap (30..100 % of the voice
         // depth), darkened by its own 12 dB/oct biquad (kills the thin comb

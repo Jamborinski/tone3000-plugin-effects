@@ -2,8 +2,11 @@
 # better Width, and the "swirly / swelled" EMT-140 character gap
 # (with a clean-room research track)
 
-Status: **R1 + R2 SHIPPED** (R1 2026-10-13, R2 2026-10-14, EIGHT R2 Mod
-follow-ups 2026-10-14/15 — see the follow-up logs below). **R1 (Dry knob, all
+Status: **R1 + R2 SHIPPED** (R1 2026-10-13, R2 2026-10-14, ELEVEN R2 Mod
+follow-ups 2026-10-14/15 — see the follow-up logs below). Current Mod
+mechanism = the ELEVENTH CUT (wet-unity added chorus layer + write-path
+smoothing that obliterates click transients at the source; tau 4.0 ms,
+six averaged delay taps, natural full-sweep taper). **R1 (Dry knob, all
 reverb modes) DONE 2026-10-13.**
 **R2 shared Mod DONE (eighth-cut final mechanism): WET-UNITY + ADDED CHORUS
 LAYER, amplitude MEASURED** (`sharedMod`/`reverbSharedMod`, 0..1, 0 =
@@ -43,8 +46,25 @@ kModVoices 5 -> **7** (6 delay lines, incommensurate rate/phase spread) +
 kModChorusAmt 1.8 -> **3.0** (probe: layer -9.2 dB vs wet -- 2 dB LOUDER
 than the 8th-cut -11.1 dB; sharp x1.047) + kModVoiceLpfHz BACK to 6 kHz.
 Row-2 Sig-B <-> Width swap (user preference, TileShot dump + golden verified).
+
+**ELEVENTH CUT (2026-10-15, MEASURED -- the clicks were WET-TRANSIENT
+RE-EMISSION, finally found):** user report: the clicks survived every cut
+and may have gotten WORSE (the 10th cut's layer is louder -> more spike
+copies). `R2_ModTransientHunt` (ear-click index = LAYER jump-RMS vs the
+WET'S OWN jump-RMS): 8th cut 5.5x, 10th cut 6.75x -- the delayed tap is a
+RAW COPY of the tail, so every transient in the wet gets re-emitted by the
+chorus layer, scaled by amt. Averaging only divided peak density ~1/sqrtN.
+FIX (structural removal): write the SMOOTHED wet (per-channel one-pole
+`smWriteCoef_`, `smWritePrev_[c]`) into the delay ring (kModWriteTauMs), tau = 4.0 ms
+(0 = off -> bit-exact anchor). `R2_ModChordClickHunt` = the USER'S OWN
+METHOD (sustained 5-partial guitar chord, 30 ms attack, amplitudes 0.25 /
+0.5 / 0.75 / 1.0, max Mod): tenth-cut reference click index 0.218 @ body
+x0.956 -> eleventh ship **0.132 @ body x0.982** (~39 % less transient
+energy, at EVERY amplitude -- amp-invariant, matching "louder chords click
+harder"). DspTests 486/486; bit-exact anchor `R2_SharedModZeroIsBitExactAllSixModes`
+holds (gate unchanged: `sharedMod==0` skips the stage).
 Pins at 3.3x (below the 4.0x structural ceiling, above measured ~1.05x).
-484/484 green, selftest 122/122.
+486/486 green, selftest 122/122.
 **NINTH CUT (2026-10-15, MEASURED -- SUPERSEDED BY THE TENTH ON THE CLICK
 LEVER; the smoothstep taper from it STAYS):** the "nearly perfect, minus a few
 clickly transients (lessened)" report + "make the 0->100% ramp more natural
