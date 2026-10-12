@@ -2,11 +2,13 @@
 # better Width, and the "swirly / swelled" EMT-140 character gap
 # (with a clean-room research track)
 
-Status: **R1 + R2 SHIPPED** (R1 2026-10-13, R2 2026-10-14, ELEVEN R2 Mod
+Status: **R1 + R2 SHIPPED** (R1 2026-10-13, R2 2026-10-14, TWELVE R2 Mod
 follow-ups 2026-10-14/15 — see the follow-up logs below). Current Mod
-mechanism = the ELEVENTH CUT (wet-unity added chorus layer + write-path
-smoothing that obliterates click transients at the source; tau 4.0 ms,
-six averaged delay taps, natural full-sweep taper). **R1 (Dry knob, all
+mechanism = the ELEVENTH-CUT structure retuned by the TWELFTH CUT
+(wet-unity added chorus layer + write-path smoothing that obliterates
+click transients at the source; tau 12.0 ms ship -- measured headroom
+sweep 4 ms = 0.132/0.982, 12 ms = 0.048/0.998, 20 ms = 0.029/0.999, body
+near unity at ship; six averaged delay taps, natural full-sweep taper). **R1 (Dry knob, all
 reverb modes) DONE 2026-10-13.**
 **R2 shared Mod DONE (eighth-cut final mechanism): WET-UNITY + ADDED CHORUS
 LAYER, amplitude MEASURED** (`sharedMod`/`reverbSharedMod`, 0..1, 0 =
@@ -61,7 +63,14 @@ METHOD (sustained 5-partial guitar chord, 30 ms attack, amplitudes 0.25 /
 0.5 / 0.75 / 1.0, max Mod): tenth-cut reference click index 0.218 @ body
 x0.956 -> eleventh ship **0.132 @ body x0.982** (~39 % less transient
 energy, at EVERY amplitude -- amp-invariant, matching "louder chords click
-harder"). DspTests 486/486; bit-exact anchor `R2_SharedModZeroIsBitExactAllSixModes`
+harder"). **TWELFTH CUT (2026-10-15, user: "nearly completely gone, a
+little bit remains at the same instances"): the write-tau sweep shows
+nearly unlimited headroom — 4 ms = 0.132 @ x0.982, 8 ms = 0.071 @ x0.995,
+12 ms = 0.048 @ x0.998, 20 ms = 0.029 @ x0.999 (body only gets BETTER as
+tau rises: the smoothing was the old body cost, not a new one). SHIPPED
+kModWriteTauMs = 12.0: the residual click is halved again and body is
+effectively unity (0.998). Guard in R2_ModChordClickHunt holds with >2x
+slack (0.048 < 0.5 x 0.351). DspTests 486/486; selftest 122/122 green. DspTests 486/486; bit-exact anchor `R2_SharedModZeroIsBitExactAllSixModes`
 holds (gate unchanged: `sharedMod==0` skips the stage).
 Pins at 3.3x (below the 4.0x structural ceiling, above measured ~1.05x).
 486/486 green, selftest 122/122.

@@ -284,12 +284,12 @@
   spikes with the body). ELEVENTH FIX (structural REMOVAL, not reduction):
   write the SMOOTHED wet into the delay ring -- per-channel one-pole
   smWriteCoef_ = exp(-1/(fs * kModWriteTauMs)), state smWritePrev_[c],
-  tau 4.0 ms ship (kModWriteTauMs; hook 0 = off -> bit-exact anchor; 2.0 ms = click 0.218, nearly no change). R2_ModChordClickHunt
+  tau 12.0 ms ship (kModWriteTauMs; hook 0 = off -> bit-exact anchor; 4.0 ms = click 0.132; 12.0 ms = click 0.048 @ body x0.998 -- twelfth-cut measured sweep, flat to 20 ms). R2_ModChordClickHunt
   (THE USER'S OWN METHODOLOGY: sustained 5-partial guitar chord, 30 ms
   attack, amplitudes 0.25/0.5/0.75/1.0, max Mod, layer = on-minus-off in
   the steady window): tenth-cut reference index 0.218 @ body x0.956 vs
-  eleventh ship 0.132 @ body x0.982 -- ~39 % less transient energy AT
-  EVERY AMPLITUDE (amp-invariant ratio = matches the user's "louder chords
-  click harder") while body is preserved. All other levers (darkening,
+  eleventh ship 0.132 @ body x0.982 @ tau 4 ms vs twelfth ship
+  0.048 @ body x0.998 @ tau 12 ms -- amp-invariant at every level (louder chords
+  click harder; body never starved). All other levers (darkening,
   voice count, rate, tap floor) measured and declined: none removed the
   re-emitted wet spikes. 

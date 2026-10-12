@@ -3866,13 +3866,20 @@ TEST(ReverbTest, R2_ModChordClickHunt) {
     line("write-tau 0.5 ms", 0.5);
     line("write-tau 1.0 ms", 1.0);
     line("write-tau 2.0 ms", 2.0);
+    line("write-tau 4.0 ms", 4.0);
+    line("write-tau 8.0 ms", 8.0);
+    line("write-tau 12.0 ms", 12.0);
+    line("write-tau 20.0 ms", 20.0);
     line("write-tau SHIP default (kModWriteTauMs)", 0.0);
   }
   // ELEVENTH-CUT GUARD (the whole point: the ring-write smoothing means the
   // delayed tap no longer re-emits the wet's own transients): the shipped
   // config must cut the sustained-chord click index to UNDER HALF of the
   // unsmoothed baseline, and must keep the chorus body near the wet while
-  // doing it. Measured: baseline 0.351 -> ship 0.132 (x0.38), body x0.98.
+  // doing it. Measured at ship (tau 12 ms, twelfth cut 2026-10-15):
+  // baseline 0.351 -> ship 0.048 (x0.137), body x0.998 -- the sweep keeps
+  // monotone improvement to at least 20 ms (0.029 @ x0.999) with body near
+  // unity, so this 2x slack guard also holds if tau is retuned down.
   auto idxOf = [&](double amp2, double tau) {
     const auto off = render(0, -1.0, amp2);
     const auto onOut = render(1, tau, amp2);
