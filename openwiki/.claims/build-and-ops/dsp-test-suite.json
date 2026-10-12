@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:f48f76cdbfe47e286c1353c9c2434f5c436fe9a9648f66e1f765c142fdfaa776",
+  "pageVersion": "sha256:163312c5a849d9c4f239a3aca95e305d70233a0faaf85f343aaeaa104c6fd9bb",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -74,17 +74,21 @@
     },
     {
       "id": "claim_916532a025994ae585b6b8a9c6329055",
-      "statement": "The DspTests suite grew with features: 470 after R1 (reverbDry), 476 after the 2026-10-14 R2 (reverb shared Mod + Digital 5-detent Shape; TEST(ReverbTest, R2_SharedModZeroIsBitExactAllSixModes), R2_SharedModOnStaysSineInEveryMode, R2_SharedModOnChangesOutputEveryMode, R2_WaveValue0IsExactSine, R2_DigitalWaveShapesTheWaverNotTheSharedMod in test/src/effect_tests.cpp plus TEST(PlateTexture, R2_CpuWithSharedModOn) in test/src/plate_texture_tests.cpp), and 477 after the 2026-10-15 R2 follow-up (commit 664965e), which added ReverbTest.R2_SharedModEnvelopeIsPeriodicSwell — a per-block RMS guard on the shared-Mod level swell requiring peak > 1.4 x trough (a per-block-constant-gain implementation would fail). Any count recorded here is a lower-bound snapshot, not a total to assert on a red run.",
+      "statement": "The DspTests suite grows with features (a count here is a lower-bound snapshot, never assert a stale total on a red run): 470 after R1 (reverbDry), 476 after R2 (reverb shared Mod + Digital 5-detent Shape), 477 after the first R2 follow-up, and 487 after the thirteenth/final R2 cut (2026-10-15, commit 1aa620e). The R2 measurement infrastructure is standing: 15 tests in test/src/effect_tests.cpp — R2_SharedModZeroIsBitExactAllSixModes, R2_SharedModOnStaysSineInEveryMode, R2_SharedModOnChangesOutputEveryMode, R2_ModClickSharpnessSweep, R2_ModTransientHunt, R2_ModWriteTauSonicSweep (body/tilt/sharpness vs write-tau 12/20/40/80 ms), R2_ModChordClickHunt (click-index guard; 0.048 @12ms → 0.0073 @80ms vs 0.351 unsmoothed), R2_ModVoicesSpikeSweep, R2_ModClickSpikeSweep, R2_ModTailClickSweep, R2_ModSonicSweep, R2_ModSonicProbe, R2_SharedModChorusesTheTailNotTheAttack, R2_WaveValue0IsExactSine, R2_DigitalWaveShapesTheWaverNotTheSharedMod — plus TEST(PlateTexture, R2_CpuWithSharedModOn) in plate_texture_tests.cpp. These tests are deliberate measurement infrastructure (sweeps + guarded pins), per docs/agents/dsp-invariants.md, because the R2 Mod mechanism was chosen by user A/B on shipped Windows exes, not by metric alone.",
       "evidence": [
         {
           "resource": "repo://test/src/effect_tests.cpp",
-          "version": "repo-file-v1:sha256:ca5a85f3411f0b7a6991c4b8fcd9729e625b8afd301a4072570fd09537b07132"
+          "version": "repo-file-v1:sha256:f5b44df8a85137d2387c48b22e5df70294cffecc31a472c12757d7084361e496"
+        },
+        {
+          "resource": "repo://test/src/plate_texture_tests.cpp",
+          "version": "repo-file-v1:sha256:d32f39ae8beca88c8c9f33b33ad2092ee9c2631f035a08738b4dddbd6f6f185b"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-11T19:46:32.143Z"
+    "at": "2026-10-12T03:32:00.416Z"
   }
 }

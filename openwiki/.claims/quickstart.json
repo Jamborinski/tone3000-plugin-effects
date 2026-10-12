@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:fb68a6a4c2fc146b99314a2b58b77d7539026fe351fff8fd0d117ad991faf9e5",
+  "pageVersion": "sha256:b2b4adff593b205e23899c1885a4d5167edd5e15ed38496407b95110c476ddd9",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -27,20 +27,6 @@
         {
           "resource": "repo://plugin/ui/NativeUi.cmake",
           "version": "repo-file-v1:sha256:92a7dae2cdfbf88dc8db07b65c6894ce60fb2b43453ff5c5b98b46a81efb766d"
-        }
-      ]
-    },
-    {
-      "id": "claim_05d9b798ab394409b315ebe564524c7a",
-      "statement": "Per-repo rules for AI agents live in the repo-root AGENTS.md, an INDEX whose task-specific rules are in docs/agents/*.md: dsp-invariants.md (DSP engines), ui-wiring.md (params/knobs/chains), ir-reverb-training.md (reverb-vs-IR-reference protocol), windows-build.md (MinGW cross-build), linux-build-deep.md, merge-upstream.md, ui-snapshots.md (testbed/goldens). Per-mode DSP laws and every CONSIDERED & DECLINED item in dsp-invariants.md are user-eared contracts to preserve — never silently simplify a law back to a naive form.",
-      "evidence": [
-        {
-          "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:ba9374887382a8a7c252b06c1d1880da5f37b1639ded6f9fde2e93538b5e8679"
-        },
-        {
-          "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:9610fa703c8d1a7bae56898d5661dc375128319086f0bcc99953d7edbfe1e80e"
         }
       ]
     },
@@ -97,8 +83,26 @@
       ]
     },
     {
-      "id": "claim_d058954116f94c6d90d45fcb4d08fdb2",
-      "statement": "The DSP test loop is ./script/test-dsp.sh [gtest-filter]: configure-if-needed to cmake --build build --target DspTests to running build/test/DspTests_artefacts/.../DspTests. The suite compiles the REAL plugin sources (not copies) against the fixtures in test/files/ (NAM A2 captures a2-amp-test.nam / a2-amp-cab-test.nam / a2-am-test-2.nam, cab-ir-test(-2).wav, reverb-ir-mono/stereo-test.wav, em240-gold-plate-5s.wav); from plugin/ui it pulls in only core/Labels.cpp (KnobScale readout formatter for the scale-contract tests), so a green DspTests does NOT prove the UI links (verify with the GUI target, e.g. TONE3000_Standalone). As of the 2026-10-13 R1 reverbDry pass the suite runs 470 tests (was 469 after the plate '140' final pass; +1 for TEST(ProcessorTest, ReverbDryScalesOnlyTheDryPathAllModes), a 6-mode loop mirror of the existing convolver ConvDryScalesOnlyTheDryPath anchor), including the test/src/plate_family_tests.cpp guard suite (P1 EMT140 family table, P2 cross-model, P4 knob laws incl. the plate SizeLaw, P5 stereo image, P6 cap/CPU); the plate guards re-pin to that state (level baseline 78.23, comb baseline 19.39, decay-law monotone-darkening 1.0 to 2.5 s pin, cap no-growth). Full record: docs/tickets/plate-140-final-training-pass-closeout.md and plugin/docs/reverb-modes.md (140 row); the reverbDry anchor law lives in docs/tickets/reverb-dry-mod-width-swing.md (R1).",
+      "id": "claim_623f56b75c304049a70268e28d9df3cd",
+      "statement": "Per-repo rules for AI agents live in the repo-root AGENTS.md, an INDEX whose task-specific rules are in docs/agents/*.md: dsp-invariants.md (DSP engines), ui-wiring.md (params/knobs/chains), ir-reverb-training.md (reverb-vs-IR-reference protocol), audio-testing.md (the sonic MEASUREMENT protocol: click-index/jump metrics, comb &amp; dropout laws, per-effect probe matrix, the hunt-&gt;measure-&gt;guard loop), windows-build.md (MinGW cross-build), linux-build-deep.md, merge-upstream.md, ui-snapshots.md (testbed/goldens). Per-mode DSP laws and every CONSIDERED &amp; DECLINED item in dsp-invariants.md are user-eared contracts to preserve — never silently simplify a law back to a naive form. STANDING RULE (AGENTS.md hard-rules, added 2026-10-15 by user request m02589): always MEASURE DSP changes sonically (probe/sweep tests in the real engine) before shipping — a metric ladder plus a user A/B beats an algebraic guess; the R2 Mod 'killed-the-clicks' decision (write-tau 80 ms) landed exactly this way.",
+      "evidence": [
+        {
+          "resource": "repo://AGENTS.md",
+          "version": "repo-file-v1:sha256:cd35a788c1548e6c887b2cbd95c909e70ea63d47cea22b82be3af6a4ed2dfd24"
+        },
+        {
+          "resource": "repo://docs/agents/audio-testing.md",
+          "version": "repo-file-v1:sha256:ad6b0e9f69d5ca40d8dc0ae192acc21cc5b2c51e4fb7d1dadb48ce8926afa101"
+        },
+        {
+          "resource": "repo://docs/agents/dsp-invariants.md",
+          "version": "repo-file-v1:sha256:6817ee133a6ff05596ac340c05f623ade1b6938232b073ceb3fe2e12c8ecfa86"
+        }
+      ]
+    },
+    {
+      "id": "claim_7fcce23552fe4599949ca0fdfab7458f",
+      "statement": "The DSP test loop is ./script/test-dsp.sh [gtest-filter]: configure-if-needed to cmake --build build --target DspTests to running build/test/DspTests_artefacts/.../DspTests. The suite compiles the REAL plugin sources (not copies) against the fixtures in test/files/ (NAM A2 captures a2-amp-test.nam / a2-amp-cab-test.nam / a2-am-test-2.nam, cab-ir-test(-2).wav, reverb-ir-mono/stereo-test.wav, em240-gold-plate-5s.wav); from plugin/ui it pulls in only core/Labels.cpp (KnobScale readout formatter for the scale-contract tests), so a green DspTests does NOT prove the UI links (verify with the GUI target, e.g. TONE3000_Standalone, or the testbed). The suite grows with features — a count is a LOWER-BOUND snapshot, never assert a stale total on a red run: 469 after the plate '140' final pass, 470 after R1 (reverbDry anchor), 477 after the first R2 follow-up, and 487 after the thirteenth/final R2 cut (2026-10-15, commit 1aa620e) which added the R2_Mod* sonic-measurement infrastructure in test/src/effect_tests.cpp. The plate guard suite (test/src/plate_family_tests.cpp: P1 EMT140 family table, P2 cross-model, P4 knob laws incl. the plate SizeLaw, P5 stereo image, P6 cap/CPU) re-pins to the final plate state (level baseline 78.23, comb baseline 19.39, decay-law monotone-darkening pin, cap no-growth). Full record: docs/tickets/plate-140-final-training-pass-closeout.md and plugin/docs/reverb-modes.md (140 row); the reverbDry anchor + R2 Mod contract live in docs/tickets/reverb-dry-mod-width-swing.md.",
       "evidence": [
         {
           "resource": "repo://script/test-dsp.sh",
@@ -109,18 +113,18 @@
           "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
         },
         {
-          "resource": "repo://test/src/plate_family_tests.cpp",
-          "version": "repo-file-v1:sha256:434a66a7286b3bf873efbc6324012889213c7addea33ef5257bce9d3225e2c9c"
+          "resource": "repo://test/src/effect_tests.cpp",
+          "version": "repo-file-v1:sha256:f5b44df8a85137d2387c48b22e5df70294cffecc31a472c12757d7084361e496"
         },
         {
-          "resource": "repo://test/src/processor_tests.cpp",
-          "version": "repo-file-v1:sha256:9f37bb818a587222edae85fe6d12ecb4b88578df3b167a5babbdced02573ebb4"
+          "resource": "repo://test/src/plate_family_tests.cpp",
+          "version": "repo-file-v1:sha256:434a66a7286b3bf873efbc6324012889213c7addea33ef5257bce9d3225e2c9c"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-11T19:46:32.143Z"
+    "at": "2026-10-12T03:32:00.416Z"
   }
 }

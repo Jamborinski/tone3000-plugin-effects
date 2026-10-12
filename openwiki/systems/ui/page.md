@@ -3,6 +3,8 @@ type: "Reference"
 title: "Native UI: architecture and screens"
 openwiki_generated: true
 sources:
+  - id: openwiki-source-f42fc55d83e6151f6984ab0d
+    resource: repo://docs/agents/ui-snapshots.md
   - id: openwiki-source-bd1c7579d37b2f053f6955d3
     resource: repo://plugin/docs/native-ui.md
   - id: openwiki-source-d03af21fb5ca3fcbf4437434
@@ -17,6 +19,10 @@ sources:
     resource: repo://plugin/ui/services/Services.h
   - id: openwiki-source-3f6e8a6ed2edd60ef99f8565
     resource: repo://plugin/ui/testbed/CMakeLists.txt
+  - id: openwiki-source-71ac8a1702fff1043f490e1c
+    resource: repo://plugin/ui/testbed/goldens/reverb-shift.png
+  - id: openwiki-source-416293bc26c4a66bb253aab0
+    resource: repo://plugin/ui/testbed/goldens/reverb.png
   - id: openwiki-source-adf8cc0014ed2fd3ed9fe7d4
     resource: repo://plugin/ui/views/block/BlockCard.h
   - id: openwiki-source-7fb62e48416333f990bd3d93
@@ -28,7 +34,7 @@ sources:
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-11T19:46:32.143Z
+    at: 2026-10-12T03:32:00.416Z
 ---
 
 

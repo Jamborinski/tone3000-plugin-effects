@@ -7,16 +7,20 @@ sources:
     resource: repo://docs/agents/dsp-invariants.md
   - id: openwiki-source-087e13e369c1d3edf1b937d1
     resource: repo://docs/agents/ir-reverb-training.md
+  - id: openwiki-source-2c5595f2daaf6fcb72c0419e
+    resource: repo://docs/tickets/reverb-dry-mod-width-swing.md
   - id: openwiki-source-4d6792d483f6b9821830338e
     resource: repo://plugin/include/Reverb.h
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
+  - id: openwiki-source-9122ffeb8c7fc8e2457955ce
+    resource: repo://test/src/effect_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
     resource: repo://test/src/plate_family_tests.cpp
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-11T19:46:32.143Z
+    at: 2026-10-12T03:32:00.416Z
 ---
 
 

@@ -1,17 +1,7 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:b82d8a1f3f44632357b65336c19dee812f03bd0b5e1b4929ab24ee9fa24762ea",
+  "pageVersion": "sha256:0a17fe848a4aa5cd9ba21c8206776c54370f6dd93fdf504d9a563b13420b058b",
   "claims": [
-    {
-      "id": "claim_9e89474d48b14a2ca41323ea45516a5d",
-      "statement": "KnobScale (plugin/ui/core/KnobScale.h, port of knobScale.ts) keeps three domains separate: normalised 0..1 knob position, a DISPLAY unit (ms/dB/%/name) for the drag readout and type-in, and a STORAGE contract via toStored/fromStored that is what actually goes into the block param. knobToStored()/knobFromStored() fall back to toDisplay/fromDisplay when no explicit storage pair is declared — bit-identical legacy behaviour for real-unit-stored and identity-stored fraction knobs. Knobs whose stored domain is 0..1 but whose display unit is human (delayHeads 1..4 heads, compClip 0..2 raw depth behind a 0..200 % face, convGain ±24 dB, reverbDry ±24 dB (added 2026-10-13 R1; a SEPARATE scale that mirrors convGain() exactly — identity toStored/fromStored, own scale face so the tile names them independently), convPitch 0.25x..4x, spring lines 1..6) MUST declare toStored/fromStored or the tile writes the display unit into a 0..1 param, the engine clamps it to 1.0, and the next resync snaps the knob back to max — the 2026-10-06 Heads glitch.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:a5805ef9cb674d789aa8aee8d75a83cae8a25b267ed5fcbd5b8147aabdd1472d"
-        }
-      ]
-    },
     {
       "id": "claim_5182e0a71fbd47bea2e298fb16e1de68",
       "statement": "A block param field round-trips only if it exists in all FOUR state places: (1) getChainState in plugin/src/ProcessorChain.cpp (the BlockRow struct, the copyLane copy, AND params->setProperty('<field>',…) in serializeChain); (2) parseItem in plugin/ui/model/ChainState.cpp (item.<field> = num(v[\"params\"], \"<field>\", default)); (3) updateBlockParam in plugin/src/ProcessorChain.cpp (the param == \"<field>\" branch); (4) ProcessorState.cpp (blockState.setProperty + getProperty restore). Missing any one = 'works sonically, snaps back to default on sync'. Two families sit in these four places: (a) CHAIN-LAYER dry-gain params — convDry, and reverbDry since the 2026-10-13 R1 pass — whose updateBlockParam branch does NOT call an engine setParams (the gain is applied in the chain's mix loop on the dry term only); (b) ENGINE params like reverbSharedMod (R2 shared Mod depth, 0..1 clamped) and reverbWave (R2 Digital Shape, int 0..kNumWaves-1 clamped), whose updateBlockParam branch stores the clamped value AND calls block->reverb.setParams(block->reverbParams()). The R2 reverbSigRaw Digital Sig B raw-value path also routes b.reverbWave (not the shared Mod).",
@@ -22,7 +12,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:e7040d30d599ca451c1f204cb35a45245e30470632eb726debb4b89aa66ca8b8"
+          "version": "repo-file-v1:sha256:2558fbd10b7acf9b91a67966513536dd9e46e8453c2dd0a70e8552326c7d4e36"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
@@ -53,10 +43,20 @@
           "version": "repo-file-v1:sha256:d327a4768d49570ff99b8b149671a9da1bda67e664544b35156c1bdd6625911c"
         }
       ]
+    },
+    {
+      "id": "claim_548d237b5d4f4064806ccba47e6a08fc",
+      "statement": "KnobScale (plugin/ui/core/KnobScale.h, port of knobScale.ts) keeps three domains separate: normalised 0..1 knob position, a DISPLAY unit (ms/dB/%/name) for the drag readout and type-in, and a STORAGE contract via toStored/fromStored that is what actually goes into the block param. knobToStored()/knobFromStored() fall back to toDisplay/fromDisplay when no explicit storage pair is declared — bit-identical legacy behaviour for real-unit-stored and identity-stored fraction knobs. Knobs whose stored domain is 0..1 but whose display unit is human (delayHeads 1..4 heads, compClip 0..2 raw depth behind a 0..200 % face, convGain ±24 dB, reverbDry ±24 dB (added 2026-10-13 R1; SEPARATE scale mirroring convGain() exactly — identity toStored/fromStored, own scale face so the tile names them independently), convPitch 0.25x..4x, spring lines 1..6) MUST declare toStored/fromStored or the tile writes the display unit into a 0..1 param, then the engine clamps it to 1.0, then the next resync snaps the knob back to max — the 2026-10-06 Heads glitch. reverbSharedMod and reverbWave (R2) have NO custom scale: sharedMod is a plain 0..1 depth (OFF at 0 by default) and wave is an int 0..4 detent (Reverb::kNumWaves = 5, the same 5-detent law as Chorus/Tremolo; wave 0 = the exact-sine bit-exact anchor), both identity-bound.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/core/KnobScale.h",
+          "version": "repo-file-v1:sha256:a5805ef9cb674d789aa8aee8d75a83cae8a25b267ed5fcbd5b8147aabdd1472d"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-11T19:46:32.143Z"
+    "at": "2026-10-12T03:32:00.416Z"
   }
 }

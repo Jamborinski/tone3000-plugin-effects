@@ -10,6 +10,8 @@ sources:
     resource: repo://AGENTS.md
   - id: openwiki-source-d44494ef3e497fea81240ef8
     resource: repo://CMakeLists.txt
+  - id: openwiki-source-3b8dd0f00b19b1100dcc6f63
+    resource: repo://docs/agents/audio-testing.md
   - id: openwiki-source-7bffef5a8b4bf505c090b70d
     resource: repo://docs/agents/dsp-invariants.md
   - id: openwiki-source-54aa3f4134fa6c214762f246
@@ -32,14 +34,14 @@ sources:
     resource: repo://scripts/win-standalone.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
+  - id: openwiki-source-9122ffeb8c7fc8e2457955ce
+    resource: repo://test/src/effect_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
     resource: repo://test/src/plate_family_tests.cpp
-  - id: openwiki-source-a95d9a96cf87c30a610c9c3b
-    resource: repo://test/src/processor_tests.cpp
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-11T19:46:32.143Z
+    at: 2026-10-12T03:32:00.416Z
 ---
 
 # TONE3000

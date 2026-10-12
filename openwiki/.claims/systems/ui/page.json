@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:aebe724e06fa30e76a4cb942430e96ee3b04d4b679e89865a45247657e41176a",
+  "pageVersion": "sha256:f478d2b92f27d0a5d72d88e9a75c56a238edd8f9e212f8ca902444c270832424",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -96,23 +96,35 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:2633664dec977277fdb69f2991fafffa3812f557945b1c6f7300d05ba5948bf0"
+          "version": "repo-file-v1:sha256:323ff3afdfcf8f17df631a5ee054e26edfcb2472b71bba057fc970c5d5b4e144"
         }
       ]
     },
     {
-      "id": "claim_300ac5ea181b41dea89458d0eb282864",
-      "statement": "After R2 + the 2026-10-15 R2 follow-up (commit 664965e) the full reverb tile's generic param list is 7 entries (Decay, Pre, Tone, Size, Width, shared Mod, Dry): shared Mod = index 5 -> knobH_ (row 1 right end), Dry = index 6 -> knobF_ (row 2, right of Dwell), via the reverb-specific knobAt branches (EffectTile.cpp ~:364-370). numParams_ is 7 (full) or 5 (compact): the full tile now shows 6 COLUMNS per row, matching conv's even 36px pitch (the 2026-10-15 user fix -- the 2026-10-14 first cut had cramped 7 columns); compact row 2 is unchanged -- Dry and Mod are bound in the param stream but have no visible slot on the compact surface, matching the compact 'silent extra param' pattern. Row layout: Mix/Decay/Pre/Tone/Sig A/Mod over Dwell/Dry/Sig B/Size/Width/Out. Other effect kinds keep the shared generic knobAt mapping unchanged. Goldens reverb.png/reverb-shift.png re-approved (TileShot --dump shows a clean 12-control grid at the conv pitch).",
+      "id": "claim_0028108cd7c547c1afe67367a1609c39",
+      "statement": "FINAL reverb full-tile layout (after R2 + the 2026-10-15 R2 follow-ups through commit 1aa620e): the tile runs a 6+6 COLUMN grid (6 even columns per row, matching conv's pitch — the 2026-10-15 user fix; the first cut had cramped 7 columns, and a second fix restored a missing `x += colW;` after knobE_ that had made Dry/Out overlap). Row 1: Mix / Decay / Pre / Tone / SigA (sigKnob_) / Mod (knobH_, row right end). Row 2: Dwell / Dry (knobF_) / Width (knobE_) / SigB (modKnob_) / Size (knobD_) / Out — the SigB<->Width row-2 swap is the tenth-cut user preference (EffectTile.cpp resized(), reverbFull branches ~:1315-1340). The generic param stream has 7 entries (Decay, Pre, Tone, Size, Width, reverbSharedMod, reverbDry) so sharedMod=Dry index 6 gates out compact; on the compact surface (4 cols) Mod + Dry are bound in the param stream but have NO visible slot (the 'silent extra param' pattern), SigB + Pre + Size hide, compact row 1 = Mix/Decay/SigA/Tone. The two SIGATURE knobs are mode-specific (reverbSigParam/Label/ScaleForMode, EffectTile.cpp:110-180): Digital's SigB now binds the 5-detent reverbWave Shape scale (R2 Sig-B became Shape), re-voiced by syncReverbSig() on every mode change. TileShot goldens plugin/ui/testbed/goldens/reverb.png + reverb-shift.png were re-shot and re-approved after the final layout (see docs/agents/ui-snapshots.md: TileShot owns --dump/--tile, runs from the build-ui tree, goldens paths RELATIVE to plugin/ui/testbed, bare names).",
       "evidence": [
         {
+          "resource": "repo://docs/agents/ui-snapshots.md",
+          "version": "repo-file-v1:sha256:51d5b904060259673e1cf585f878f4b09a38481b3f192b2a9de035544569a909"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/goldens/reverb-shift.png",
+          "version": "repo-file-v1:sha256:f846ef428da75ee194c3fde273767a91c32b96cd99e25e94247e87c922036d6a"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/goldens/reverb.png",
+          "version": "repo-file-v1:sha256:7cbd8b9e0ebcaa08cb80b8d0d173a0425333d5ff0009cb00b1eca5416d3f6d80"
+        },
+        {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:2633664dec977277fdb69f2991fafffa3812f557945b1c6f7300d05ba5948bf0"
+          "version": "repo-file-v1:sha256:323ff3afdfcf8f17df631a5ee054e26edfcb2472b71bba057fc970c5d5b4e144"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-11T19:46:32.143Z"
+    "at": "2026-10-12T03:32:00.416Z"
   }
 }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:02d88b3cc392f16f9e4ad8c85e44388db46d8afbfc9a84dc7fd1735868c16839",
+  "pageVersion": "sha256:6a4a6fc1579badd5ff7eb5d447851e27d2da4df0452820404e7347a8052dd2b5",
   "claims": [
     {
       "id": "claim_bcd3a636e7fe47c7aba00662347b2681",
@@ -8,7 +8,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:18b53e35e220725774e4588d1b8c377ae205cec7be3f5db0e3d47c6984bfcf0f"
+          "version": "repo-file-v1:sha256:f6aaa20044bc3fc771913e5f0c4ca11676ba9748b1f585b3117d8a26b583029a"
         }
       ]
     },
@@ -18,11 +18,11 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:9610fa703c8d1a7bae56898d5661dc375128319086f0bcc99953d7edbfe1e80e"
+          "version": "repo-file-v1:sha256:6817ee133a6ff05596ac340c05f623ade1b6938232b073ceb3fe2e12c8ecfa86"
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:18b53e35e220725774e4588d1b8c377ae205cec7be3f5db0e3d47c6984bfcf0f"
+          "version": "repo-file-v1:sha256:f6aaa20044bc3fc771913e5f0c4ca11676ba9748b1f585b3117d8a26b583029a"
         }
       ]
     },
@@ -32,7 +32,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:18b53e35e220725774e4588d1b8c377ae205cec7be3f5db0e3d47c6984bfcf0f"
+          "version": "repo-file-v1:sha256:f6aaa20044bc3fc771913e5f0c4ca11676ba9748b1f585b3117d8a26b583029a"
         }
       ]
     },
@@ -42,7 +42,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:18b53e35e220725774e4588d1b8c377ae205cec7be3f5db0e3d47c6984bfcf0f"
+          "version": "repo-file-v1:sha256:f6aaa20044bc3fc771913e5f0c4ca11676ba9748b1f585b3117d8a26b583029a"
         }
       ]
     },
@@ -56,7 +56,7 @@
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:18b53e35e220725774e4588d1b8c377ae205cec7be3f5db0e3d47c6984bfcf0f"
+          "version": "repo-file-v1:sha256:f6aaa20044bc3fc771913e5f0c4ca11676ba9748b1f585b3117d8a26b583029a"
         }
       ]
     },
@@ -66,7 +66,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:18b53e35e220725774e4588d1b8c377ae205cec7be3f5db0e3d47c6984bfcf0f"
+          "version": "repo-file-v1:sha256:f6aaa20044bc3fc771913e5f0c4ca11676ba9748b1f585b3117d8a26b583029a"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
@@ -75,18 +75,48 @@
       ]
     },
     {
-      "id": "claim_26a9bff355cc41cfa5ae91f83c3e4325",
-      "statement": "Each effect mode is a distinct DSP engine, not a preset, and its per-mode law + every CONSIDERED-&-DECLINED item in docs/agents/dsp-invariants.md and docs/agents/ir-reverb-training.md is a user-eared CONTRACT pinned by tests in test/src/: effect_tests.cpp, convolution_reverb_tests.cpp, plate_comb_tests.cpp, plate_texture_tests.cpp, plate_family_tests.cpp, budget_convolver_cost_tests.cpp, and more -- do NOT silently simplify the law back to a naive form (e.g. Compressor ratio law: detent 4:1 is the bit-identical keeper anchor, do NOT simplify to (n-1)/R which treated R as softness = INVERTED; chorus/tremolo kNumWaves must stay 5 together; BBD fc ~ 1/T from the SLEWED base tap). The R2 shared-Mod contract is also a DECLINED-item pin: the knob gates a post-mix level swell (0.25 Hz fixed-sine LFO advanced per sample, gain 1 +/- 0.6*sharedMod clamped 0..2, gated at sharedMod==0) and never scales the per-mode kSmearAmt/kFbDriftAmt swirl; the lowpass-breathe first cut was DECLINED by the ear (2026-10-15, static darkening). The delay design lives in plugin/docs/delay-modes.md; the IR training protocol + the plate/'140' instance + the biquad landmine live in docs/agents/ir-reverb-training.md.",
+      "id": "claim_9c6f8afc68d34500bf778a2da1af5f07",
+      "statement": "Each effect mode is a distinct DSP engine, not a preset, and its per-mode law + every CONSIDERED-&-DECLINED item in docs/agents/dsp-invariants.md and docs/agents/ir-reverb-training.md is a user-eared CONTRACT pinned by tests in test/src/: effect_tests.cpp, convolution_reverb_tests.cpp, plate_comb_tests.cpp, plate_texture_tests.cpp, plate_family_tests.cpp, budget_convolver_cost_tests.cpp, and more -- do NOT silently simplify the law back to a naive form (e.g. Compressor ratio law: detent 4:1 is the bit-identical keeper anchor, do NOT simplify to (n-1)/R which treated R as softness = INVERTED; chorus/tremolo kNumWaves must stay 5 together; BBD fc ~ 1/T from the SLEWED base tap). The delay design lives in plugin/docs/delay-modes.md; the IR training protocol + the plate/'140' instance + the biquad landmine live in docs/agents/ir-reverb-training.md.",
       "evidence": [
+        {
+          "resource": "repo://docs/agents/dsp-invariants.md",
+          "version": "repo-file-v1:sha256:6817ee133a6ff05596ac340c05f623ade1b6938232b073ceb3fe2e12c8ecfa86"
+        },
+        {
+          "resource": "repo://docs/agents/ir-reverb-training.md",
+          "version": "repo-file-v1:sha256:6e4fda9f00982ab53c4436884ab707d3565ac54c031be3a54be7af6610788530"
+        },
         {
           "resource": "repo://test/CMakeLists.txt",
           "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
+        }
+      ]
+    },
+    {
+      "id": "claim_69c8611254374294829b7dd2483e29e2",
+      "statement": "The R2 shared-Mod contract (2026-10-15, SHIPPED at the thirteenth/final cut, commit 1aa620e): `Reverb::Params::sharedMod` (0..1, clamped in setParams) gates `processSharedModSmear` -- a post-mix, wet-unity ADDED multi-voice chorus layer on the WET reverb output (`out = wet + amt*dsum`; NEVER a crossfade, which the ear rejected for volume drop + anti-phase clicks). Mechanism constants (plugin/include/Reverb.h, region ~1050-1131 + processSharedModSmear at ~1913): kModVoices = 7 (6 delay lines v=1..6 of incommensurate depth/rate + the undelayed voice), kSharedModDepthMs = 18.0 (deepest voice at sharedMod 1), kModWriteTauMs = 80.0 (the CLICK FIX: ring-write one-pole smoothing `prev += coef*(x-prev)`, coef = 1-exp(-1/(sr*tauMs)) on each voice's ring write), kModChorusAmt = 3.0 (layer amount, measured), a 6 kHz 1-pole/tap-filter per voice, and a smoothstep output taper m*m*(3-2m) so the layer is inaudible below ~50 % Mod. The fixed-sine Mod LFO uses `waveValue(0, phase)` (wave 0 = exact sine, the Digital read-tap anchor). OFF (sharedMod == 0, the default) the WHOLE path (incl. the per-voice biquad + delay state) is never entered -> all 6 modes bit-identical to the pre-R2 engine (pinned by R2_SharedModZeroIsBitExactAllSixModes at 15-digit level). The per-mode kSmearAmt/kFbDriftAmt swirl laws are NEVER scaled by the Mod knob (always-on, unchanged, bit-identity anchor). CONSIDERED & DECLINED (R2 cascade, 2026-10-15): (1) lowpass-breathe Mod (static 4 kHz darkening -- DECLINED by ear, first cut); (2) level-swell modulation (the R2 base mechanism -- superseded: downward-only swell read as pumping, not chorus); (3) a wet/dry CrossFADE split (volume drop + anti-phase clicks -- DECLINED by ear); (4) the single-voice first mechanism (clicks under sustained chords at max Mod -- user rejection m03111/m03127); (5) darkening/rate/floor/voice-count sweeps alone to kill clicks (they only rescale the layer; the real fix was #6); (6) SHIPPED instead of a per-mode law: write-path one-pole smoothing. Anti-click was MEASURED with the click-index metric (layer jump-RMS on-off RELATIVE to the wet's own jump-RMS) on sustained E chords in R2_ModChordClickHunt (test/src/effect_tests.cpp): unsmoothed ~0.351 -> 0.048 (12 ms) -> 0.0145 (40 ms) -> 0.0073 (80 ms); the R2_ModWriteTauSonicSweep ladder (12/40/80 ms) gave +~2.2 dB body and 6.6x less sharpness from 12 to 80 ms, and the user A/B'd the shipped Windows exes: 80 ms won ('killed the clicks completely', 'no 80 ms is great'). The standing rule (user m02589, written into docs/agents/dsp-invariants.md): ALWAYS MEASURE DSP changes sonically (probe/sweep tests in the real engine) -- never ship an ear-guess without the measured ladder.",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/dsp-invariants.md",
+          "version": "repo-file-v1:sha256:6817ee133a6ff05596ac340c05f623ade1b6938232b073ceb3fe2e12c8ecfa86"
+        },
+        {
+          "resource": "repo://docs/tickets/reverb-dry-mod-width-swing.md",
+          "version": "repo-file-v1:sha256:926a931116b901cdabbdd4011119454e8430aa28bde03a5aec5246e7a5b5d386"
+        },
+        {
+          "resource": "repo://plugin/include/Reverb.h",
+          "version": "repo-file-v1:sha256:f6aaa20044bc3fc771913e5f0c4ca11676ba9748b1f585b3117d8a26b583029a"
+        },
+        {
+          "resource": "repo://test/src/effect_tests.cpp",
+          "version": "repo-file-v1:sha256:f5b44df8a85137d2387c48b22e5df70294cffecc31a472c12757d7084361e496"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-11T19:46:32.143Z"
+    "at": "2026-10-12T03:32:00.416Z"
   }
 }
