@@ -141,6 +141,12 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   spurious "content drift" even when the oldText is verbatim. On failure:
   re-check with `grep -n`/`sed -n`, then apply via `python3` `str.replace`
   (`assert s.count(old)==1`) or `sed -i`, and verify with `grep -n`.
+- **Research corpus lives in `research/`** (probe scripts `*.py` + data
+  `*-data.txt` + reference docs `*.md`); feature/research tickets link into
+  it from their References section (e.g. `research/overdrive-references.md`,
+  `research/rack-reverb-references.md`). Prose docs there are hand-written
+  (NOT generated); idea-level external references carry a license/provenance
+  table and the clean-room posture (no verbatim code/const copy).
 - **Never commit credentials.** Local-machine rules + session lessons
   (long-job patterns, GPU, build env): the global pi AGENTS.md at
   `C:\\Users\\jambo\\.pi\\agent\\AGENTS.md` (WSL path
@@ -179,3 +185,8 @@ The scheduled OpenWiki GitHub Actions workflow refreshes the repository wiki. Do
   so the `openwiki/` evidence index reflects what just shipped.
   When in doubt which pages need rewriting, the page job's `seedPaths` +
   `instructions` are the ground truth.
+  **Caveat (global AGENTS.md, verified 2026-10-15):** update mode only
+  reconciles claims + the page's `sources:`/`verified.at` — it does NOT
+  refresh the human-facing `.md` prose. If new facts need to be visible in
+  the page text (a new law/constant/section), hand-edit the page `.md` and
+  commit it with the claims.
