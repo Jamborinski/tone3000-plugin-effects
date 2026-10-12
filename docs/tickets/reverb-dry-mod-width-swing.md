@@ -29,7 +29,24 @@ swell (clicking) → downward-only swell ("delayed reverb") → single-voice
 chorus ("crispy static") → crossfade chord (volume drop + residual click)
 → wet-unity added layer (subtle by LEVEL) → measured amplitude (this). Plus the Digital Sig-B rebind to a 5-detent `wave`/`reverbWave`
 "Shape" knob (0 = Sine = bit-exact anchor; shapes only Digital's read-tap
-waver). **NINTH CUT (2026-10-15, MEASURED):** the "nearly perfect, minus a few
+waver). **TENTH CUT (2026-10-15, MEASURED -- the clicks were NOT a brightness
+problem):** the real spike metric (layer jump-RMS/layer RMS + worst single
+jump -- derivative-RMS undercounts discrete clicks) proved the ninth cut was
+chasing the wrong lever: darkening did NOT reduce spikes (4 kHz = x1.00 on
+the spike metric while costing body; 2.5 kHz WORSE); LFO rate / tap floor
+flat. ROOT CAUSE: peak comb-summation of the incoherent delayed voices; the
+one leaver that cuts peaks at constant RMS is AVERAGING MORE VOICES
+(peaks ~1/sqrt(N)). `R2_ModVoicesSpikeSweep`: 4 voices = spike/worst x1.0;
+6 voices = x0.78; 8 voices = x0.56 (the ~1/sqrt(N) law; body loss = pure
+averaging, recovered via amt which does not re-sharpen peaks). SHIPPED:
+kModVoices 5 -> **7** (6 delay lines, incommensurate rate/phase spread) +
+kModChorusAmt 1.8 -> **3.0** (probe: layer -9.2 dB vs wet -- 2 dB LOUDER
+than the 8th-cut -11.1 dB; sharp x1.047) + kModVoiceLpfHz BACK to 6 kHz.
+Row-2 Sig-B <-> Width swap (user preference, TileShot dump + golden verified).
+Pins at 3.3x (below the 4.0x structural ceiling, above measured ~1.05x).
+484/484 green, selftest 122/122.
+**NINTH CUT (2026-10-15, MEASURED -- SUPERSEDED BY THE TENTH ON THE CLICK
+LEVER; the smoothstep taper from it STAYS):** the "nearly perfect, minus a few
 clickly transients (lessened)" report + "make the 0->100% ramp more natural
 (no 50% plateau; 50->100% behaviour should resemble the ramp)".
 `R2_ModClickSharpnessSweep` (true layer-level + layer-sharpness metric vs the

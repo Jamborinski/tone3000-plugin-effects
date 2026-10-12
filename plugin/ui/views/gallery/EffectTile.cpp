@@ -1263,9 +1263,9 @@ void EffectTile::resized() {
     x += colW;
   } else if (reverbFull) {
     knobF_.setBounds(x, row2Y, colW, knobH); x += colW;   // Dry (right of Dwell)
+    knobE_.setBounds(x, row2Y, colW, knobH); x += colW;   // Width (R2 tenth: swapped with Sig B -- user preference)
     modKnob_.setBounds(x, row2Y, colW, knobH); x += colW; // Sig B
-    knobD_.setBounds(x, row2Y, colW, knobH); x += colW;   // Size
-    knobE_.setBounds(x, row2Y, colW, knobH); x += colW;    // Width (6 slots: Dwell/Dry/SigB/Size/Width/Out, matching conv's 6+6)
+    knobD_.setBounds(x, row2Y, colW, knobH); x += colW;   // Size (6 slots: Dwell/Dry/Width/SigB/Size/Out, matching conv's 6+6)
   } else if (reverbCompact) {
     knobD_.setBounds(x, row2Y, colW, knobH); x += colW;   // Size
     knobE_.setBounds(x, row2Y, colW, knobH); x += colW;   // Width

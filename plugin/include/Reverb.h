@@ -797,7 +797,7 @@ class Reverb {
     // character and do not move with this knob).
     sharedOn_ = (params_.sharedMod > 0.0) && (sampleRate_ > 0.0);
     if (sharedOn_) {
-      smInc_ = 2.0 * M_PI * kSharedModRate / sampleRate_;
+      smInc_ = 2.0 * M_PI * kSharedModRate * smTestRateScale_ / sampleRate_;
       // Biquad low-pass (RBJ, 12 dB/oct), one per delayed voice: fc =
       // kModVoiceLpfHz, Q 0.707 (Butterworth). A musical, uniform darkening
       // of each line's thin comb content (replaces the earlier one-poles).
@@ -1047,7 +1047,7 @@ class Reverb {
   // (one-pole, fixed 6 kHz) to kill the thin high-beating residue. Total mixed
   // level stays <= 1.0 in magnitude at full depth, so it never feeds a
   // downstream saturator (the lesson of the level cuts).
-  static constexpr int kModVoices = 5;  // 4 delay lines (v=1..4) + the undelayed voice
+  static constexpr int kModVoices = 7;  // 6 delay lines (v=1..6) + the undelayed voice -- TENTH CUT: more incoherent-averaged voice lines = lower peak sharpness at the same layer level (measured)
   static constexpr double kSharedModRate = 0.5;    // Hz, base LFO rate (a full warble per 2 s)
   static constexpr double kSharedModDepthMs = 18.0; // max depth of the DEEPEST voice (at sharedMod 1)
   // MEASURED (R2_ModClickSharpnessSweep, 2026-10-15, ninth cut): the
@@ -1057,7 +1057,7 @@ class Reverb {
   // only -5.9 dB of layer body; lower still buys little more per dB
   // (3 kHz: -61 % sharp at -10 dB body = hollow). 4 kHz = the best
   // trade; amt 1.8 keeps the net body close to the 8th-cut ship.
-  static constexpr double kModVoiceLpfHz = 4000.0; // per-line 12 dB/oct darkening of the thin comb
+  static constexpr double kModVoiceLpfHz = 6000.0; // per-line 12 dB/oct darkening (tenth cut: 8th-cut 6 kHz restored -- darkening cuts body, not spikes, per the spike sweep; the AVERAGED VOICE COUNT is the click lever)
   // Chorus LAYER gain: the delayed voices ADD ON TOP of the full (unity)
   // undelayed wet -- this is the "lush modulation ADDED to the reverb"
   // (2026-10-15) and is what kills BOTH the level drop and the clicking.
@@ -1078,7 +1078,7 @@ class Reverb {
   // amt 3.5 -> x1.075 (the 8th-cut ship). 2.8 = sharp x1.05 (~7% below the
   // 8th-cut transient energy = the "lessened clickly transients") at the
   // same ~-13 dB body the eighth cut measured.
-  static constexpr double kModChorusAmt = 2.8;
+  static constexpr double kModChorusAmt = 3.0;   // TENTH CUT: 1.8 x 1.63 (re-compensate for the added avg lines; measured body level)
   static constexpr double kModVoiceFloor = 0.30;   // taps sweep 30..100 % of the voice depth
                                                    // (gives the tap a real depth of motion
                                                    // while keeping it in the classic chorus 1..4 ms band)
@@ -1087,9 +1087,13 @@ class Reverb {
   // into a slow, exaggerated swirl (single voice: "crispy static"; the
   // crossfade sum of the 3-voice 1.2 Hz cut: "clicking + early-volume
   // drop -- both rejected 2026-10-15").
-  static constexpr double kModVoiceD[]  = {1.00, 0.72, 0.50, 0.34};
-  static constexpr double kModVoiceR[]  = {1.00, 1.31, 0.77, 1.64};
-  static constexpr double kModVoiceO[]  = {0.00, 0.62, 1.55, 2.55};   // rad, spread the peaks
+  // TENTH CUT (measured spike lesson, 2026-10-15): 8 incoherent averaged
+  // delay voices in place of 4 -- the SUM of N decorrelated lines has
+  // peaks ~1/sqrt(N) but RMS unchanged, so averaging is the one anti-click
+  // lever that costs no body (darkening/rate/floor measured: no help).
+  static constexpr double kModVoiceD[]  = {0.0, 1.00, 0.72, 0.50, 0.34, 0.61, 0.42};  // index 0 unused (v=1..6)
+  static constexpr double kModVoiceR[]  = {1.00, 1.31, 0.77, 1.64, 1.93, 0.58};
+  static constexpr double kModVoiceO[]  = {0.00, 0.62, 1.55, 2.55, 3.40, 4.18};   // rad, spread the peaks
   // Mixing law (the CHORD, not a crossfade): out = 0.5*wet + sum of the
   // delayed voices / (kModVoices-1). Undelayed 0.5 + 4 * 0.25 * (unity-DC
   // biquad) = 1.00 worst-coherent, and on real tails the lines are
@@ -1788,6 +1792,8 @@ class Reverb {
   // amount/depth by real render in DspTests before committing constants.
   double smTestLpfHz_ = 0.0;  // >0: override kModVoiceLpfHz (measured-tune hook)
   double smTestFloor_ = 0.0;  // >0: override kModVoiceFloor (measured-tune hook)
+  double smTestRateScale_ = 1.0;  // !=1: scale kSharedModRate (measured-tune hook)
+  int smTestVoices_ = 0;  // >1: number of delay voices to average (measured-tune hook)
   friend struct ReverbChorusSweep;
   // Spring state: the metallic boing resonator (2.4 kHz) per channel + the
   // onset-splash (drip) env per channel. Both are bounded (|r|<1, decaying env)
@@ -1926,7 +1932,8 @@ class Reverb {
       // voices smear into a slow swirling texture instead of one crisp comb
       // (single-voice was the "crispy static" the user rejected).
       double ph[kModVoices];
-      for (int v = 1; v < kModVoices; ++v)
+      const int nv = (smTestVoices_ > 1) ? smTestVoices_ : kModVoices;
+      for (int v = 1; v < nv; ++v)
         ph[v] = smPh_[c] * kModVoiceR[v] + kModVoiceO[v];
       float* wr = chRing_[c].data();
       uint32_t w = chWrite_[c];
@@ -1945,8 +1952,8 @@ class Reverb {
         // biquad'd delayed voices) -- the wet itself is never reduced (the
         // fifth-cut fix for the engage-volume-drop + anti-phase click).
         double dsum = 0.0;
-        const double invN = 1.0 / (kModVoices - 1);
-        for (int v = 1; v < kModVoices; ++v) {
+        const double invN = 1.0 / (nv - 1);   // nv: the averaged voice count (hook-overridable)
+        for (int v = 1; v < nv; ++v) {
           const double sweep = 0.5 + 0.5 * std::sin(ph[v]);                 // 0..1
           const double floor = smTestFloor_ > 0.0 ? smTestFloor_ : kModVoiceFloor;
           const double D = (floor + (1.0 - floor) * sweep)

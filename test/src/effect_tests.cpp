@@ -3639,6 +3639,8 @@ struct ReverbChorusSweep {
   static void setDepth(Reverb& r, double v){ r.smTestDepthScale_ = v; }
   static void setLpf(Reverb& r, double hz){ r.smTestLpfHz_ = hz; }
   static void setFloor(Reverb& r, double v){ r.smTestFloor_ = v; }
+  static void setRateScale(Reverb& r, double k){ r.smTestRateScale_ = k; }
+  static void setVoices(Reverb& r, int v){ r.smTestVoices_ = v; }
 };
 
 TEST(ReverbTest, R2_ModClickSharpnessSweep) {
@@ -3712,6 +3714,238 @@ TEST(ReverbTest, R2_ModClickSharpnessSweep) {
   print("4k amt 2.4", 4000.0, 0.30, 2.4);
   print("4k amt 3.0", 4000.0, 0.30, 3.0);
   print("3k amt 4.0", 3000.0, 0.30, 4.0);
+  SUCCEED();
+}
+
+TEST(ReverbTest, R2_ModVoicesSpikeSweep) {
+  // VOICE-AVERAGING SWEEP (tenth cut, 2026-10-15): the one anti-click
+  // lever that should not cost body -- average the delayed voices 4 vs 8
+  // (sum of N incoherent lines: peaks ~1/sqrt(N), RMS unchanged). Same
+  // spike metric as R2_ModClickSpikeSweep (spike = layer jump-RMS /
+  // layer RMS; worst = max |jump|). ref = 4 voices at the ship config
+  // (6 kHz, floor .30, amt 1.8, 0.5 Hz).
+  const unsigned int fs = 48000; const int n = 2*fs; const int blk = 128;
+  auto render = [&](int voices) {
+    Reverb r; r.prepare(fs);
+    Reverb::Params p;
+    p.decayMs = 1800.0; p.tone = 0.3; p.size = 0.5; p.width = 1.0; p.preMs = 0.0;
+    p.mode = 3; p.volley = 0.4; p.bass = 0.6;
+    p.sharedMod = 1.0;
+    if (voices > 1) ReverbChorusSweep::setVoices(r, voices);
+    r.setParams(p);
+    std::mt19937 rng(4242); std::uniform_real_distribution<float> d(-0.3f, 0.3f);
+    juce::AudioBuffer<float> b(2, blk);
+    std::vector<std::vector<float>> out(2, std::vector<float>(n));
+    for (int off = 0; off + blk <= n; off += blk) {
+      for (int i = 0; i < blk; ++i) { b.setSample(0, i, d(rng)); b.setSample(1, i, d(rng)); }
+      r.process(b);
+      for (int i = 0; i < blk; ++i) { out[0][off+i] = b.getSample(0,i); out[1][off+i] = b.getSample(1,i); }
+    }
+    return out;
+  };
+  const unsigned m1 = fs, m2 = 2*fs;
+  auto rms = [](const auto& o, unsigned a, unsigned b){ double s=0; for(unsigned i=a;i<b;++i) s += (double)o[0][i]*o[0][i] + (double)o[1][i]*o[1][i]; return std::sqrt(s/(2.0*(b-a))); };
+  auto jstats = [](const auto& o, unsigned a, unsigned b) {
+    double sum = 0.0; double mx = 0.0; unsigned c = 0;
+    for (unsigned i = a+1; i < b; ++i, ++c) {
+      const double d0 = std::abs((double)o[0][i] - (double)o[0][i-1]);
+      const double d1 = std::abs((double)o[1][i] - (double)o[1][i-1]);
+      const double dv = (d0 > d1) ? d0 : d1;
+      sum += dv*dv;
+      if (dv > mx) mx = dv;
+    }
+    return std::make_pair(std::sqrt(sum/(double)c), mx);
+  };
+  Reverb off; off.prepare(fs);
+  { Reverb::Params p; p.decayMs=1800.0; p.tone=0.3; p.size=0.5; p.width=1.0; p.preMs=0.0; p.mode=3; p.volley=0.4; p.bass=0.6; p.sharedMod=0.0; off.setParams(p); }
+  std::vector<std::vector<float>> offOut(2, std::vector<float>(n));
+  { std::mt19937 rng(4242); std::uniform_real_distribution<float> d(-0.3f, 0.3f);
+    juce::AudioBuffer<float> b(2, blk);
+    for (int off2 = 0; off2 + blk <= n; off2 += blk) {
+      for (int i = 0; i < blk; ++i) { b.setSample(0, i, d(rng)); b.setSample(1, i, d(rng)); }
+      off.process(b);
+      for (int i = 0; i < blk; ++i) { offOut[0][off2+i] = b.getSample(0,i); offOut[1][off2+i] = b.getSample(1,i); }
+    } }
+  const double wetR = rms(offOut, m1, m2);
+  const auto db = [](double x, double ref){ return 20.0*std::log10(std::max(x,1e-12)/std::max(ref,1e-12)); };
+  auto line = [&](const std::vector<std::vector<float>>& on) {
+    std::vector<std::vector<float>> layer(2, std::vector<float>(n));
+    for (unsigned i = m1; i < m2; ++i) { layer[0][i] = (float)((double)on[0][i]-(double)offOut[0][i]); layer[1][i] = (float)((double)on[1][i]-(double)offOut[1][i]); }
+    const auto j = jstats(layer, m1, m2);
+    return std::make_tuple(rms(layer, m1, m2), j.first, j.second);
+  };
+  const auto refLine = line(render(4));
+  const double refR = std::get<0>(refLine), refS = std::get<1>(refLine), refW = std::get<2>(refLine);
+  const char nl[] = "\n";
+  std::cout << "  VOICE-AVERAGING (rel 4-voice ship):" << nl;
+  for (int vv : {4, 6, 8}) {
+    const auto v = line(render(vv));
+    std::cout << "  voices " << vv << " => layer " << db(std::get<0>(v), wetR)
+              << " dB  spike x" << (std::get<1>(v)/refS) << "  worst x" << (std::get<2>(v)/refW) << nl;
+  }
+  (void)refR;
+  SUCCEED();
+}
+
+TEST(ReverbTest, R2_ModClickSpikeSweep) {
+  // CLICK-SPIKE SWEEP (tenth cut, 2026-10-15): the user says the residual
+  // "clicks" are REDUCED but NOT GONE after the 4 kHz darkening. Clicks are
+  // DISCRETE SPIKES, not fine RMS structure -- so this sweeps the levers
+  // under the REAL spike metric: the LAYER's (on - off) sample-jump RMS
+  // ratio (sharp = jRMS / lRMS; high = spiky) and its worst single jump,
+  // both relative to the shipped 9th-cut config (4 kHz, floor .30,
+  // amt 2.8, 0.5 Hz base rate). Sweep axes: LFO RATE (smTestRateScale_,
+  // never tuned before) and darkening, at the shipped amt so the body is
+  // comparable.
+  const unsigned int fs = 48000; const int n = 2*fs; const int blk = 128;
+  auto render = [&](double lpfHz, double rateScale, double amt) {
+    Reverb r; r.prepare(fs);
+    Reverb::Params p;
+    p.decayMs = 1800.0; p.tone = 0.3; p.size = 0.5; p.width = 1.0; p.preMs = 0.0;
+    p.mode = 3; p.volley = 0.4; p.bass = 0.6;
+    p.sharedMod = 1.0;
+    ReverbChorusSweep::setLpf(r, lpfHz);      // hooks READ in setParams -> first
+    ReverbChorusSweep::setRateScale(r, rateScale);
+    ReverbChorusSweep::setAmt(r, amt);
+    r.setParams(p);
+    std::mt19937 rng(4242); std::uniform_real_distribution<float> d(-0.3f, 0.3f);
+    juce::AudioBuffer<float> b(2, blk);
+    std::vector<std::vector<float>> out(2, std::vector<float>(n));
+    for (int off = 0; off + blk <= n; off += blk) {
+      for (int i = 0; i < blk; ++i) { b.setSample(0, i, d(rng)); b.setSample(1, i, d(rng)); }
+      r.process(b);
+      for (int i = 0; i < blk; ++i) { out[0][off+i] = b.getSample(0,i); out[1][off+i] = b.getSample(1,i); }
+    }
+    return out;
+  };
+  const unsigned m1 = fs, m2 = 2*fs;
+  auto rms = [](const auto& o, unsigned a, unsigned b){ double s=0; for(unsigned i=a;i<b;++i) s += (double)o[0][i]*o[0][i] + (double)o[1][i]*o[1][i]; return std::sqrt(s/(2.0*(b-a))); };
+  auto jump = [](const auto& o, unsigned a, unsigned b) {
+    double s=0,w=0; for(unsigned i=a+1;i<b;++i){ const double d0=(double)o[0][i]-(double)o[0][i-1], d1=(double)o[1][i]-(double)o[1][i-1]; const double m2=d0*d0+d1*d1; s+=m2; w=std::max(w,m2); }
+    return std::make_pair(std::sqrt(s/(b-a-1.0)), std::sqrt(w));
+  };
+  Reverb off; off.prepare(fs);
+  { Reverb::Params p; p.decayMs=1800.0; p.tone=0.3; p.size=0.5; p.width=1.0; p.preMs=0.0; p.mode=3; p.volley=0.4; p.bass=0.6; p.sharedMod=0.0; off.setParams(p); }
+  std::vector<std::vector<float>> offOut(2, std::vector<float>(n));
+  { std::mt19937 rng(4242); std::uniform_real_distribution<float> d(-0.3f, 0.3f);
+    juce::AudioBuffer<float> b(2, blk);
+    for (int off2 = 0; off2 + blk <= n; off2 += blk) {
+      for (int i = 0; i < blk; ++i) { b.setSample(0, i, d(rng)); b.setSample(1, i, d(rng)); }
+      off.process(b);
+      for (int i = 0; i < blk; ++i) { offOut[0][off2+i] = b.getSample(0,i); offOut[1][off2+i] = b.getSample(1,i); }
+    } }
+  const double wetR = rms(offOut,m1,m2);
+  const auto db = [](double x, double ref){ return 20.0*std::log10(std::max(x,1e-12)/std::max(ref,1e-12)); };
+  const char nl[] = "\n";
+  auto line = [&](const std::vector<std::vector<float>>& on) {
+    std::vector<std::vector<float>> layer(2, std::vector<float>(n));
+    for (unsigned i = m1; i < m2; ++i) { layer[0][i] = (float)((double)on[0][i]-(double)offOut[0][i]); layer[1][i] = (float)((double)on[1][i]-(double)offOut[1][i]); }
+    const double lR = rms(layer,m1,m2);
+    const auto j = jump(layer,m1,m2);
+    return std::make_tuple(lR, j.first/ std::max(lR,1e-12), j.second/ std::max(lR,1e-12));  // (level, spike-ratio, worst-jump-ratio)
+  };
+  const auto ref = line(render(4000.0, 1.0, 2.8));  // the 9th-cut ship
+  auto print = [&](const char* tag, double lpf, double rate, double amt) {
+    const auto v = line(render(lpf, rate, amt));
+    std::cout << "  " << tag << " => layer " << db(std::get<0>(v), wetR)
+              << " dB  spike x" << (std::get<1>(v)/std::get<1>(ref))
+              << "  worst x" << (std::get<2>(v)/std::get<2>(ref)) << " (rel 9th-cut ship)" << nl;
+  };
+  std::cout << "  CLICK-SPIKE SWEEP (ref = 9th cut: 4 kHz, .30 floor, amt 2.8, 0.5 Hz):" << nl;
+  print("ship   (rate 1.0x )", 4000.0, 1.00, 2.8);
+  print("rate 0.5x (~25cps)", 4000.0, 0.50, 2.8);
+  print("rate 0.35x       ", 4000.0, 0.35, 2.8);
+  print("rate 0.25x       ", 4000.0, 0.25, 2.8);
+  print("2.5kHz rate 1.0 ", 2500.0, 1.00, 2.8);
+  print("2.5kHz rate 0.5 ", 2500.0, 0.50, 2.8);
+  SUCCEED();
+}
+
+TEST(ReverbTest, R2_ModTailClickSweep) {
+  // TAIL-CLICK SWEEP (tenth cut, 2026-10-15): clicks on a REAL tail.
+  // White noise drives the reverb's own transient machinery, so it has been
+  // masking the modulation character the user hears on a guitar-like PLUCK.
+  // Fixture now: a 1-s 440 Hz pluck (amp 0.3, exp decay 80 ms) into the
+  // 1800 ms Plate tail, Mod at full, measured AFTER the pluck (t in
+  // [1.05 s, 2.0 s]) = pure modulated tail. Metrics on the LAYER (on - off):
+  //   spike = jump-RMS / RMS        (spike-ness of the tail modulation)
+  //   worst = max jump / RMS        (the loudest single click)
+  // Swept: LFO rate scale (never tuned before), darkening, tap floor --
+  // all relative to the 9th-cut ship (4 kHz, .30 floor, 0.5 Hz base).
+  const unsigned int fs = 48000; const int n = 2*fs; const int blk = 128;
+  auto tone = [](unsigned i, unsigned fs) {
+    const double t = (double)i / (double)fs;
+    const double env = std::exp(-t * 12.0);  // ~80 ms
+    return (float)(0.3 * env * std::sin(2.0 * M_PI * 440.0 * t));
+  };
+  auto render = [&](double lpfHz, double rateScale, double floor, double amt) {
+    Reverb r; r.prepare(fs);
+    Reverb::Params p;
+    p.decayMs = 1800.0; p.tone = 0.4; p.size = 0.5; p.width = 1.0; p.preMs = 0.0;
+    p.mode = 3; p.volley = 0.4; p.bass = 0.6;
+    p.sharedMod = 1.0;
+    ReverbChorusSweep::setLpf(r, lpfHz);   // hooks READ in setParams -> first
+    ReverbChorusSweep::setRateScale(r, rateScale);
+    ReverbChorusSweep::setFloor(r, floor);
+    ReverbChorusSweep::setAmt(r, amt);
+    r.setParams(p);
+    juce::AudioBuffer<float> b(2, blk);
+    std::vector<std::vector<float>> out(2, std::vector<float>(n));
+    const int drive = 1 * fs;  // 1 s pluck, then 1 s pure tail
+    for (int off = 0; off + blk <= n; off += blk) {
+      for (int i = 0; i < blk; ++i) {
+        const unsigned idx = (unsigned)(off + i);
+        const float s = idx < (unsigned)drive ? tone(idx, fs) : 0.0f;
+        b.setSample(0, i, s); b.setSample(1, i, s);
+      }
+      r.process(b);
+      for (int i = 0; i < blk; ++i) { out[0][off+i] = b.getSample(0,i); out[1][off+i] = b.getSample(1,i); }
+    }
+    return out;
+  };
+  const unsigned m1 = (unsigned)(unsigned)(1.05 * fs), m2 = (unsigned)(2.0 * fs);
+  auto rms = [](const auto& o, unsigned a, unsigned b){ double s=0; for(unsigned i=a;i<b;++i) s += (double)o[0][i]*o[0][i] + (double)o[1][i]*o[1][i]; return std::sqrt(s/(2.0*(b-a))); };
+  auto jump = [](const auto& o, unsigned a, unsigned b) {
+    double s=0,w=0; for(unsigned i=a+1;i<b;++i){ const double d0=(double)o[0][i]-(double)o[0][i-1], d1=(double)o[1][i]-(double)o[1][i-1]; const double m2=d0*d0+d1*d1; s+=m2; w=std::max(w,m2); }
+    return std::make_pair(std::sqrt(s/(b-a-1.0)), std::sqrt(w));
+  };
+  Reverb off; off.prepare(fs);
+  { Reverb::Params p; p.decayMs=1800.0; p.tone=0.4; p.size=0.5; p.width=1.0; p.preMs=0.0; p.mode=3; p.volley=0.4; p.bass=0.6; p.sharedMod=0.0; off.setParams(p); }
+  std::vector<std::vector<float>> offOut(2, std::vector<float>(n));
+  { juce::AudioBuffer<float> b(2, blk);
+    for (int off2 = 0; off2 + blk <= n; off2 += blk) {
+      for (int i = 0; i < blk; ++i) {
+        const unsigned idx = (unsigned)(off2 + i);
+        const float s = idx < (unsigned)fs ? tone(idx, fs) : 0.0f;
+        b.setSample(0, i, s); b.setSample(1, i, s);
+      }
+      off.process(b);
+      for (int i = 0; i < blk; ++i) { offOut[0][off2+i] = b.getSample(0,i); offOut[1][off2+i] = b.getSample(1,i); }
+    } }
+  const double wetR = rms(offOut,m1,m2);
+  const auto db = [](double x, double ref){ return 20.0*std::log10(std::max(x,1e-12)/std::max(ref,1e-12)); };
+  const char nl[] = "\n";
+  auto line = [&](const std::vector<std::vector<float>>& on) {
+    std::vector<std::vector<float>> layer(2, std::vector<float>(n));
+    for (unsigned i = m1; i < m2; ++i) { layer[0][i] = (float)((double)on[0][i]-(double)offOut[0][i]); layer[1][i] = (float)((double)on[1][i]-(double)offOut[1][i]); }
+    const double lR = std::max(rms(layer,m1,m2),1e-12);
+    const auto j = jump(layer,m1,m2);
+    return std::make_tuple(lR, j.first/lR, j.second/lR);  // (level, spike, worst)
+  };
+  const auto ref = line(render(4000.0, 1.0, 0.30, 2.8));   // the 9th-cut ship
+  auto print = [&](const char* tag, double lpf, double rate, double fr, double amt) {
+    const auto v = line(render(lpf, rate, fr, amt));
+    std::cout << "  " << tag << " => layer " << db(std::get<0>(v), wetR)
+              << " dB  spike x" << (std::get<1>(v)/std::get<1>(ref))
+              << "  worst x" << (std::get<2>(v)/std::get<2>(ref)) << " (rel 9th-cut ship)" << nl;
+  };
+  std::cout << "  TAIL-CLICK SWEEP (440 Hz pluck + 1.8 s tail, ref = 9th cut)" << nl;
+  print("ship     (4k, r1.0, .30)", 4000.0, 1.00, 0.30, 2.8);
+  print("rate 0.5x ( 4k        )", 4000.0, 0.50, 0.30, 2.8);
+  print("rate 0.75x( 4k        )", 4000.0, 0.75, 0.30, 2.8);
+  print("floor .10 ( 4k r1.0   )", 4000.0, 1.00, 0.10, 2.8);
+  print("2.5k r1.0 (  .30      )", 2500.0, 1.00, 0.30, 2.8);
+  print("4k r0.5 floor .10     ", 4000.0, 0.50, 0.10, 2.8);
   SUCCEED();
 }
 
@@ -3943,10 +4177,10 @@ TEST(ReverbTest, R2_SharedModChorusesTheTailNotTheAttack) {
       }
     }
     const double ratio = std::sqrt(eOn / (used)) / std::sqrt(eOff / (used));
-    EXPECT_LT(ratio, 4.1) << "added chorus layer must stay under the structural ceiling 1+kModChorusAmt (4.5x): on/off RMS ratio " << ratio;
+    EXPECT_LT(ratio, 3.3) << "added chorus layer must stay under the structural ceiling 1+kModChorusAmt (3.0x): on/off RMS ratio " << ratio;
     EXPECT_GT(ratio, 0.15) << "stage must not be a hard zero: on/off RMS ratio " << ratio;
     EXPECT_GT(ratio, 1.0) << "wet-unity law: engaging Mod must never DROP the wet level (ratio <= 1 means the fifth-cut crossfade traded undelayed against delayed)";
-    EXPECT_LT(pkOn, 4.1 * pkOff) << "added chorus layer must not feed a downstream saturator on peaks: on peak "
+    EXPECT_LT(pkOn, 3.3 * pkOff) << "added chorus layer must not feed a downstream saturator on peaks: on peak "
         << pkOn << " vs off peak " << pkOff;
   }
 

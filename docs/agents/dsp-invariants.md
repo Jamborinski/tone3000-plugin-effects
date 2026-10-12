@@ -238,19 +238,25 @@
   18 ms max at sharedMod 1 (deeper + slower + exaggerated per the ear;
   amount is set by MEASUREMENT (eighth cut, above), depth 12 -> 18 ms
   kept from the seventh).
-  NINTH CUT (2026-10-15, measured, residual CLICKLY TRANSIENTS + natural
-  taper): R2_ModClickSharpnessSweep (true layer-level + layer-sharpness
-  metric, ref = 6 kHz / floor 0.30 = the 8th-cut ship): the tap-floor sweep
-  was flat within 0.1 % (floor 0.30 stays); the DARKENING is the lever --
-  6 kHz = sharp x1.0 @ layer -11.0 dB; 4 kHz = sharp x0.58 @ -16.9 dB;
-  3 kHz = sharp x0.39 @ -21.2 dB (hollow). SHIPPED: kModVoiceLpfHz 6 -> 4
-  kHz (best sharpness-per-body-dB; -42 % transient energy) +
-  kModChorusAmt 1.8 -> 2.8 restoring the body (probe: layer -13.1 dB,
-  sharp x1.055 ~ the 8th-cut body, "the sound otherwise is right"). TAPER:
-  smoothstep m^2(3-2m) across the WHOLE 0..1 sweep (user: no 50 % plateau --
-  make 0->100 % natural; keep past-50 % behaviour similar to the ramp).
-  Ceilings: worst-coherent 1.0 + 2.8 = 3.8x; pin uses the 4.1x structural
-  ceiling (measured coherent stays ~1.05x). Two
+  TENTH CUT (2026-10-15, measured, the clicks were NOT a brightness problem):
+  the spike metric (layer jump-RMS / layer RMS + worst single jump, the
+  real "click" measure -- derivative-RMS undercounts discrete spikes)
+  showed the ninth cut was chasing the wrong lever: DARKENING did not
+  reduce spikes (4 kHz = x1.00 vs 6 kHz on the spike metric while costing
+  body; 2.5 kHz got WORSE) and LFO rate / tap floor were flat. ROOT CAUSE:
+  the click energy is PEAK COMB-SUMMATION of the incoherent delayed voices,
+  and the one structural lever that cuts peaks at constant RMS is
+  AVERAGING MORE VOICES (sum of N decorrelated lines: peaks ~1/sqrt(N)).
+  R2_ModVoicesSpikeSweep (same config, amt fixed): 4 voices = spike x1.0 /
+  worst x1.0; 6 voices = spike x0.78 / worst x0.78; 8 voices = spike x0.56 /
+  worst x0.57 -- the ~1/sqrt(N) law, body loss = pure averaging (linear dB,
+  recoverable via amt which does not re-sharpen peaks). SHIPPED: 6 delay
+  voices (kModVoices = 7 incl. undelayed; D/R/O incompressible-rate spread
+  {1.31,0.77,1.64,1.93,0.58}) + kModChorusAmt 1.8 -> 3.0 restoring the
+  body (probe: layer -9.2 dB vs wet, sharp x1.047; the 8th-cut reference
+  was -11.1 dB x1.068 at 1/1.63 the amount) + kModVoiceLpfHz back to 6 kHz.
+  Ceilings: worst-coherent 1.0 + 3.0 = 4.0x; test pin uses the 3.3x
+  structural ceiling (coherent stays ~1.05x). Two
   orders of magnitude under the convolver-class cap (+~4.5 us/block@128
   over the 3.3 us plate baseline). Budget (2026-10-15 user directive,
   9950X3D): quality first; the hard cap is `BudgetConvolver` on a 5-6 s
@@ -259,10 +265,10 @@
   shapes ONLY Digital's Sig-B read-tap waver (wave 0 = `std::sin`
   bit-exact). Pinned by
   `ReverbTest.R2_SharedModChorusesTheTailNotTheAttack`:
-  (a) level law -- on/off RMS ratio in (0.15, 2.9) = the 1+amt structural
+  (a) level law -- on/off RMS ratio in (0.15, 3.3) = the 1+amt structural
   ceiling, MUST be > 1.0 (wet-unity: engaging Mod can never DROP the wet
   -- ratio <= 1 is the crossfade regression this guards against),
-  on peak < 2.9x off peak (measured coherent ~1.085x)
+  on peak < 3.3x off peak (measured coherent ~1.05x)
   (no saturator feed); (b) a 440 Hz tone's block RMS sweeps peak > 1.2x
   trough (a per-block-constant delay or flat gain gives a flat envelope --
   a dead modulation).

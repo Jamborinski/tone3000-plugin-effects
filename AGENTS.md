@@ -126,9 +126,11 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   (causal flux integrator OK; the NAB pair are exact inverses; NO oversampling);
   WingComp "LA-2A" (Desktop) is unusable — never pull from it.
 - **Model/subtype (type) tuning is permissive (CAN, not MUST) — 2026-10-13:** a mode + model (e.g. reverb Plate/"140" = mode 2, type 0 today — `Params::type[mode]` axis, `numTypes()`/`defaultDialsForType()`, the "140" chip) may carry its own neutral defaults (50 % dials; decay 2.0 s = reference length) + reference-IR law (LONGER = DARKER, the direction the EMT 140 family itself measures) — it must keep the generic/shared mechanism and the other modes separate (other modes stay bit-identical). The rule is GENERAL (any effect mode/subtype); full text + the plate/"140" instance + the biquad landmine: `docs/agents/ir-reverb-training.md`; one-liners: `dsp-invariants.md` § Reverb + `ui-wiring.md`.
-- **Always MEASURE DSP changes sonically, not just algebraically** (lesson 2026-10-15,
-  Reverb Mod took 7 cuts because every prior gate was level-law math + CPU —
-  "subtle", "clicking", "wrong colour" are measurement gaps, not taste):
+- **Always MEASURE DSP changes sonically, not just algebraically — STANDING
+  RULE for every effect (DSP engine, modulation, any audio-stage work)**
+  (lesson 2026-10-15: the Reverb Mod took 9 ear-cuts because every prior gate
+  was level-law math + CPU — "subtle", "clicking", "wrong colour" are
+  measurement GAPS, not taste):
   render the REAL engine with the knob off/on, white noise + a 440 Hz tone,
   and report numbers for: added-layer level vs the wet (dB), layer spectral
   tilt (Hz centroid of `on - off`), L-vs-R independence/correlation, and a
