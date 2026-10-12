@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:3109c18af22cb9b179ea791287a0ea9e8f547b97617eef448e08a7f193b3c963",
+  "pageVersion": "sha256:0f0979002852f69bd6cc62dd72554cb0d1042c855f58cd1a0bba53108a381045",
   "claims": [
     {
       "id": "claim_bcd3a636e7fe47c7aba00662347b2681",
       "statement": "The Reverb engine has kNumModes = 6 in V2 mode order (Plate 0, Spring 1, Room 2, Chamber 3, Hall 4, Digital 5; Reverb.h case 0..5). Decay caps kMaxDecayMsByMode[6] = {2500 (Plate), 2500 (Spring), 2000 (Room), 3000 (Chamber), 3500 (Hall), 2750 (Digital)} ms. UI type chips (m00398 rename, EffectTile.cpp:142,151): mode-name row {PLT, SPR, RM, CHM, HALL, DAT} and type-name row {PLT, SPR, SML, CHM, HAL, DAT} — Plate '140' -> PLT, Spring 'RV1' -> SPR, Digital 'DIG' -> DAT. P2 density-uplift constants (2026-10-16, reverb-budget-quality-uplift pass): Room kRoomWashRef = 1.20 (P2.3 fullness norm; the P1 row measured HALF the reference's fullness) and Chamber kChamberWashFrac = 1.60 (P2.4 body-level uplift), both with public test hooks (roomNormTest_, chamberWashFracTest_) and probe-suite guards. Spring (P2.2), Hall (P2.5), and Digital (P2.6) were DECLINED in-family — the P1 baseline rows already sat inside or above their reference IRs.",
       "evidence": [
         {
-          "resource": "repo://docs/tickets/reverb-budget-quality-uplift.md",
-          "version": "repo-file-v1:sha256:5a176f52f88e16c058216be7fee290feb0aca4ba4287e591d16fba90600e7c06"
+          "resource": "repo://docs/tickets/complete/reverb-budget-quality-uplift.md",
+          "version": "repo-file-v1:sha256:35bdfc2d6400cbd71fd4f68d3b795dc0a4e3e9fa6491ee66f1b5fd2d25d74dd8"
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
+          "version": "repo-file-v1:sha256:6ccf859c62881c901b91e5b0a94d3c4c74aa5bdec335856b7cdb9fd5635e969c"
         }
       ]
     },
@@ -26,7 +26,7 @@
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
+          "version": "repo-file-v1:sha256:6ccf859c62881c901b91e5b0a94d3c4c74aa5bdec335856b7cdb9fd5635e969c"
         }
       ]
     },
@@ -36,7 +36,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
+          "version": "repo-file-v1:sha256:6ccf859c62881c901b91e5b0a94d3c4c74aa5bdec335856b7cdb9fd5635e969c"
         }
       ]
     },
@@ -45,12 +45,12 @@
       "statement": "Plate/'140' (mode 0 in V2 mode order, type 0 = EMT 140 model) is tuned against the EMT 140 2.0 s IR convolved through the house BudgetConvolver, BOTH sides peak-normalised, with the reference's OWN numbers measured first (the reference itself drifts +4.85 dB and carries 4.3 dB of steady comb, so the guard must pass for the reference). SHIPPED constants (2026-10-13 final pass, density uplift 2026-10-16): air law kPlateAirHzBright = 4900, kPlateAirHzDark = 3600, kPlateAirStages = 2 (two 1st-order OUT-stage LPF stages, LONGER = DARKER is the MEASURED direction across the EMT 140 family); body kPlateBodyHz = 550; onset 3 taps kPlateOnsetDelayMs = {14.2, 26.9, 51.3} ms; wash kPlateWashAp = 0.62 / kPlateWashRef = 0.244; bloom kPlateBloomFrac = 0.32; kPlateColorAmt = 0.3. P2.1 DENSITY UPLIFT (2026-10-16, reverb-budget-quality-uplift pass): kPlateDecayLift = 1.15 (was 1.104 — the WINNING axis: sweep 1.104 -> full 27.2 / comb 35.8; 1.15 -> full 32.5 / comb 34.8, t2000 lands AT the EMT 140 reference's OWN 1.0 s level = inside the family, not overshoot; 1.20+ beats the ref's 2 s number or saturates, DECLINED) and kPlateFbCeilingUp = 0.965 (was 0.940; drift-safe: 0.965*1.03 = 0.994 < 1 under the shared +-3% fbDrift — the 0.975 value would be UNSTABLE, DECLINED; the ceiling binds only >=~2400 ms dials). Public test hooks plateCeilTest_ / plateLiftTest_ (0 = shipped const) gate the sweeps (Reverb.h:1299-1300). Guard re-pins 2026-10-16 (user-authorized leeway, same-family-not-IR target): level-law baseline 93.95 @2000 ms (was 78.23), comb cap 21.98 @2500 ms (was 19.39+1dB). All other five reverb modes bit-identical; R2's shared Mod lives in a separate gated post-mix stage (processSharedModSmear), not inside the plate law.",
       "evidence": [
         {
-          "resource": "repo://docs/tickets/reverb-budget-quality-uplift.md",
-          "version": "repo-file-v1:sha256:5a176f52f88e16c058216be7fee290feb0aca4ba4287e591d16fba90600e7c06"
+          "resource": "repo://docs/tickets/complete/reverb-budget-quality-uplift.md",
+          "version": "repo-file-v1:sha256:35bdfc2d6400cbd71fd4f68d3b795dc0a4e3e9fa6491ee66f1b5fd2d25d74dd8"
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
+          "version": "repo-file-v1:sha256:6ccf859c62881c901b91e5b0a94d3c4c74aa5bdec335856b7cdb9fd5635e969c"
         }
       ]
     },
@@ -64,7 +64,7 @@
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
+          "version": "repo-file-v1:sha256:6ccf859c62881c901b91e5b0a94d3c4c74aa5bdec335856b7cdb9fd5635e969c"
         }
       ]
     },
@@ -74,7 +74,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
+          "version": "repo-file-v1:sha256:6ccf859c62881c901b91e5b0a94d3c4c74aa5bdec335856b7cdb9fd5635e969c"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
@@ -114,11 +114,11 @@
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
+          "version": "repo-file-v1:sha256:6ccf859c62881c901b91e5b0a94d3c4c74aa5bdec335856b7cdb9fd5635e969c"
         },
         {
           "resource": "repo://test/src/effect_tests.cpp",
-          "version": "repo-file-v1:sha256:f5b44df8a85137d2387c48b22e5df70294cffecc31a472c12757d7084361e496"
+          "version": "repo-file-v1:sha256:f4ad1335b3f3d17256929cd55d7714086c0230e7f5806e90212c1d84ad504cdd"
         }
       ]
     },
@@ -132,7 +132,7 @@
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
+          "version": "repo-file-v1:sha256:6ccf859c62881c901b91e5b0a94d3c4c74aa5bdec335856b7cdb9fd5635e969c"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
@@ -143,6 +143,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-12T21:41:51.351Z"
+    "at": "2026-10-12T23:07:19.188Z"
   }
 }

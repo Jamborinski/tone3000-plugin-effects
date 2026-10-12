@@ -10,7 +10,7 @@ sources:
   - id: openwiki-source-a57c88194aa852db387a04a3
     resource: repo://docs/tickets/complete/reverb-dry-mod-width-swing.md
   - id: openwiki-source-f394ea0013cb04b60e39f7b4
-    resource: repo://docs/tickets/reverb-budget-quality-uplift.md
+    resource: repo://docs/tickets/complete/reverb-budget-quality-uplift.md
   - id: openwiki-source-4d6792d483f6b9821830338e
     resource: repo://plugin/include/Reverb.h
   - id: openwiki-source-4b8e7dce368774e92d99ea30
@@ -19,10 +19,10 @@ sources:
     resource: repo://test/src/effect_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
     resource: repo://test/src/plate_family_tests.cpp
-generated: { by: "pi", at: "2026-10-12T21:41:51.351Z" }
+generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-12T21:41:51.351Z
+    at: 2026-10-12T23:07:19.188Z
 ---
 
 
@@ -30,8 +30,8 @@ verified:
 
 The self-contained effect engines live in `plugin/include/`:
 `Compressor.h/.cpp` (6 modes), `Delay.h/.cpp` (6 modes, design at
-`plugin/docs/delay-modes.md`), `Chorus.h`, `Tremolo.h`, `Reverb.h` (6 modes:
-Digital / Spring / **Plate** / Room / Chamber / Hall; `kNumModes = 6`),
+`plugin/docs/delay-modes.md`), `Chorus.h`, `Tremolo.h`, `Reverb.h` (6 modes in V2 order: **Plate 0 /
+Spring 1 / Room 2 / Chamber 3 / Hall 4 / Digital 5**; `kNumModes = 6`),
 and `ConvolutionReverb.h` (loaded-IR playback, the house engine). Each
 mode is a **distinct DSP engine, not a preset**, and its behavior is pinned
 by tests — the laws below are user A/B-calibrated **contracts**
@@ -42,26 +42,28 @@ plate/"140" training protocol is in
 ## Reverb (`Reverb.h`) — six modes, decay caps, neutral start row
 
 `kMaxDecayMsByMode[6]` (clamped EXACTLY at the user's stated onset;
-stabilised above by a decay-gated HF softener, `kSoftenerAmt = 0.12`):
+stabilised above by a decay-gated HF softener, `kSoftenerAmt = 0.12`). V2
+mode order (shipped 2026-10-13, `Params::mode` axis):
 
 | Mode | Name | Max decay | Onset meaning |
 |---|---|---|---|
-| 0 | Digital | **2750 ms** | slow RINGING starts |
+| 0 | **Plate** | **2500 ms** | metallic sheen starts |
 | 1 | Spring  | **2500 ms** | metallic build-up starts |
-| 2 | **Plate** | **2500 ms** | metallic sheen starts |
-| 3 | Room    | **2000 ms** | sound boundary (stable above) |
-| 4 | Chamber | **3000 ms** | slow RINGING starts |
-| 5 | Hall    | **3500 ms** | sound boundary (stable above) |
+| 2 | Room    | **2000 ms** | sound boundary (stable above) |
+| 3 | Chamber | **3000 ms** | slow RINGING starts |
+| 4 | Hall    | **3500 ms** | sound boundary (stable above) |
+| 5 | Digital | **2750 ms** | slow RINGING starts |
 
-Neutral start dials (the 50 % row; `defaultDialsForMode`):
+Neutral start dials (the 50 % row; `defaultDialsForMode`, V2 order):
 
 | Mode | decay | pre | tone | size | width |
 |---|---|---|---|---|---|
+| 0 **Plate** | **2000 ms** (= the EMT 140 2.0 s reference length, the tuning target, 2026-10-13) | 0.5 | **0.50 / 0.50 / 0.50 all NEUTRAL** |  |
 | 1 Spring  | 2000 ms | 0.0 | 0.60 | 0.60 | 0.90 |
-| 2 **Plate** | **2000 ms** (= the EMT 140 2.0 s reference length, the tuning target, 2026-10-13) | 0.5 | **0.50 / 0.50 / 0.50 all NEUTRAL** |  |
-| 3 Room    | 500 ms  | 0.0 | 0.40 | 0.30 | 0.70 |
-| 4 Chamber | 1800 ms | 1.0 | 0.50 | 0.45 | 0.85 |
-| 5 Hall    | 3000 ms | 2.0 | 0.60 | 0.90 | 0.95 |
+| 2 Room    | 500 ms  | 0.0 | 0.40 | 0.30 | 0.70 |
+| 3 Chamber | 1800 ms | 1.0 | 0.50 | 0.45 | 0.85 |
+| 4 Hall    | 3000 ms | 2.0 | 0.60 | 0.90 | 0.95 |
+| 5 Digital | 1200 ms | 0.0 | 0.40 | 0.60 | 1.00 |
 
 ### Plate / "140" model (mode 2, type 0 — the EMT 140 subtype)
 
@@ -157,6 +159,36 @@ own knob defaults AND its own tone law tuned against its own reference IR —
 generic/shared path and from the other modes (bit-identical pins keep them
 separate — a retune to one mode must never leak into another). The same rule
 applies to delay subtypes, compressor subtypes, chorus/tape subtypes, etc.
+
+### Digital subtype host (shipped 2026-10-16, `Reverb.h`)
+
+The **Digital** mode (V2 order mode 5) is now a *subtype host*: the UI type
+cycler (pre-click look unchanged, JUCE-9 async popup menu — modal loops are
+not permitted in plugins) exposes six entries **DIG / SPR / PLT / SML / CHM /
+HAL**. Engine side (`Reverb.h`):
+
+- `numTypes(5) == 6` (modes 0–4 stay single-type); `typeLawMode(5, t)` maps
+  the six entries to law characters **{5, 1, 0, 2, 3, 4}** — DIG is the
+  existing digital comb-bank (sig OFF, the anchor), the other five ROUTE to
+  the mapped character's `processXxx` law arm (SPR→1, PLT→0, SML→2,
+  CHM→3, HAL→4). The map is **not the identity** (mode 5 is Digital, not
+  the first row).
+- `defaultDialsForType(5, t)` lands the character's `defaultDialsForMode`
+dials with **Pre forced to 0** (subtypes only; type 0 = no override);
+  `setParams` caps decay by the *character's* own `kMaxDecayMsByMode`.
+- `process()` resolves one `lawCh` const and arms the character's sig pair
+  + `modOn_` through it — a Digital subtype sounds exactly like that
+  character and stays fully dialable (no sig coercion).
+- **Modes 0–4 are identity**: `type` always clamps to 0 there, so their
+dispatch path is bit-identical to pre-subtype; their single self-type UI
+entry is *scaffolding* for the later per-mode engine replacements (the
+non-Digital subtypes' knob defaults are placeholders — per-mode decay, pre
+off, mod off, sigs ~50 %).
+- Guard: `effect_tests.cpp` `ReverbTest.TypeScaffoldIsOnePerModeAndClamped`
+(6-vs-1 counts, the `typeLawMode` map, clamps, the landing contract, the
+non-Digital identity). Type face names: DIG/SPR/PLT/SML/CHM/HAL (the
+earlier DAT face name was renamed DIG; the "Digital" *mode* name is
+unchanged).
 
 ## Compressor (`Compressor.h`) — six signature modes, one shared law scale
 

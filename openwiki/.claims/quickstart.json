@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:3a35645e5f5780cddef1da50823fde20a88b100252697fbab92d04e2cc3d0455",
+  "pageVersion": "sha256:31a216702ce7ef6cebcd40bf64215c628a3c4013d7058b24f0afc27972133790",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -88,7 +88,7 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:77b3d98f912f2554e6029a23c6a04f2eebe4a3851e5ff88891e9c51a0f177fda"
+          "version": "repo-file-v1:sha256:06a3ea2a60df4deebbfb676646e1260860ac3d5e0853f5046226e594b784b02d"
         },
         {
           "resource": "repo://docs/agents/audio-testing.md",
@@ -114,7 +114,7 @@
         },
         {
           "resource": "repo://test/src/effect_tests.cpp",
-          "version": "repo-file-v1:sha256:f5b44df8a85137d2387c48b22e5df70294cffecc31a472c12757d7084361e496"
+          "version": "repo-file-v1:sha256:f4ad1335b3f3d17256929cd55d7714086c0230e7f5806e90212c1d84ad504cdd"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
@@ -125,6 +125,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-12T21:41:51.351Z"
+    "at": "2026-10-12T23:07:19.188Z"
   }
 }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:3286e73cbd4789142b53c6533b231163a32cc5e901cc16b4da5ac891383021c3",
+  "pageVersion": "sha256:41e1965d9d7afa4749be0a5ee2f79bd50d5091dc72cf4badc94706c6020bf9b6",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -86,7 +86,7 @@
       "evidence": [
         {
           "resource": "repo://test/src/effect_tests.cpp",
-          "version": "repo-file-v1:sha256:f5b44df8a85137d2387c48b22e5df70294cffecc31a472c12757d7084361e496"
+          "version": "repo-file-v1:sha256:f4ad1335b3f3d17256929cd55d7714086c0230e7f5806e90212c1d84ad504cdd"
         },
         {
           "resource": "repo://test/src/reverb_ceiling_p0_tests.cpp",
@@ -103,8 +103,8 @@
       "statement": "The P2 probe suites added by the 2026-10-16 reverb-budget-quality-uplift pass are registered in test/CMakeLists.txt (src/reverb_probe_tmp.cpp Plate Probe suite W1 lift sweep ship 1.15, src/room_probe_tmp.cpp Room Probe suite W2 wash norm 1.20, src/chamber_probe_tmp.cpp Chamber Probe suite W2 washFrac 1.60 + 8.0 kHz cap sweep 12000->8000 Hz). They compile the real plugin sources and guard the shipped constant values so a regression in the plate lift, room wash normalization, or chamber wash fraction fails the suite.",
       "evidence": [
         {
-          "resource": "repo://docs/tickets/reverb-budget-quality-uplift.md",
-          "version": "repo-file-v1:sha256:5a176f52f88e16c058216be7fee290feb0aca4ba4287e591d16fba90600e7c06"
+          "resource": "repo://docs/tickets/complete/reverb-budget-quality-uplift.md",
+          "version": "repo-file-v1:sha256:35bdfc2d6400cbd71fd4f68d3b795dc0a4e3e9fa6491ee66f1b5fd2d25d74dd8"
         },
         {
           "resource": "repo://test/CMakeLists.txt",
@@ -115,6 +115,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-12T21:41:51.351Z"
+    "at": "2026-10-12T23:07:19.188Z"
   }
 }

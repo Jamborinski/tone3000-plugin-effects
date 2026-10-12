@@ -5,7 +5,7 @@ description: The GoogleTest suite under test/ that compiles the real plugin sour
 tags: [testing, dsp-tests, googletest, fixtures, script]
 sources:
   - id: openwiki-source-f394ea0013cb04b60e39f7b4
-    resource: repo://docs/tickets/reverb-budget-quality-uplift.md
+    resource: repo://docs/tickets/complete/reverb-budget-quality-uplift.md
   - id: openwiki-source-fbe20d668cd183c9fb53adb2
     resource: repo://script/test-dsp.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
@@ -22,10 +22,10 @@ sources:
     resource: repo://test/src/reverb_ceiling_p0_tests.cpp
   - id: openwiki-source-5f01f50f7fc33afc7f561a56
     resource: repo://test/src/reverb_probe_tmp.cpp
-generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
+generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-12T21:41:51.351Z
+    at: 2026-10-12T23:07:19.188Z
 ---
 
 # DSP test suite (DspTests)
@@ -60,14 +60,34 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
 One file per subsystem, all in `test/src/`: NAM/IR loading and classification
 (`local_load_tests`, `ir_classification_tests`, `padless_wav_tests`), the six
 self-contained effects (`effect_tests`, `convolution_reverb_tests`,
-`plate_comb_tests`, `plate_texture_tests`), IR convolver cost and block-size
-law (`budget_convolver_cost_tests`, `ir_block_size_tests`), the worker pool
+`plate_comb_tests`, `plate_texture_tests`, `plate_family_tests`) plus the
+2026-10-16 reverb quality probes — the P0 CPU-ceiling guard suite
+(`reverb_ceiling_p0_tests`, suite `ReverbCeiling`, 4 tests pinning
+23 µs/block@128 per mode with Spring ≤ 46), the P1 six-mode vs
+reference-IR baseline table (`reverb_quality_p1_tests`,
+`ReverbQuality.TableBaseline_SixModes`, reference IRs under
+`/mnt/c/Impulse Responses/Convolution Reverb IRs/`), and the per-mode P2
+probe suites (`reverb_probe_tmp.cpp` Plate lift-1.15 ship, `room_probe_tmp.cpp`
+Room wash-norm-1.20, `chamber_probe_tmp.cpp` Chamber washFrac-1.60 + the
+8.0 kHz cap sweep), — IR convolver cost and block-size law
+(`budget_convolver_cost_tests`, `ir_block_size_tests`), the worker pool
 (`multicore_tests`, `worker_pool_tests`), latency/PDC
 (`latency_tests`, `pitch_shift_tests`), chain behavior
 (`branch_tests`, `duplicate_tests`, `dual_mono_tests`, `swap_fade_tests`,
 `chain_test_helpers.h`), presets and state (`preset_tests`,
 `factory_preset_tests`, `state_cache_tests`, `clipboard_tests`), MIDI
 (`midi_map_tests`), host-program behavior (`host_program_tests`), and more.
+
+Reverb guard re-pins from the same pass (user-authorized leeway): the plate
+level-law baseline is **93.95** @2000 ms (`plate_texture_tests`,
+`plate_family_tests`) and the plate comb cap @2.5 s is **21.98**
+(`plate_family_tests`); `plate_comb_tests`' `PlateComb.OtherModesStayBitIdentical`
+carries the mode-3 (Room post-wash) pin **162470.64443779 /
+162470.64443779 / 1109398.14947898**; `effect_tests.cpp`'s
+`ReverbTest.TypeScaffoldIsOnePerModeAndClamped` guards the Digital subtype
+scaffold (6 types on mode 5, `typeLawMode` map {5,1,0,2,3,4}, clamps,
+`defaultDialsForType` landing contract, non-Digital modes stay
+single-type).
 
 **Real-source rule:** the suite compiles the *real* plugin sources
 (`plugin/src/*.cpp`, `plugin/include` headers) against the fixtures — never
@@ -97,6 +117,9 @@ confirm the "Running N tests" line is non-zero before trusting the result.**
 
 ## Suite size
 
-The suite grows with features (~376 tests as of 2026-10-07). On a failure
-or count mismatch, **never assert a stale total** — check the build RC and
-that the test names you expect actually ran.
+The suite grows with features — **503 tests as of the 2026-10-16
+reverb-budget-quality-uplift + Digital-subtype closeout** (487 after the
+2026-10-15 R2 final cut; 493 after the P2.1 plate density uplift; 503 after
+the full pass 1 + the `TypeScaffold` re-scope). On a failure or count
+mismatch, **never assert a stale total** — check the build RC and that the
+test names you expect actually ran.

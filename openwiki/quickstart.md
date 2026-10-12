@@ -38,10 +38,10 @@ sources:
     resource: repo://test/src/effect_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
     resource: repo://test/src/plate_family_tests.cpp
-generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
+generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-12T21:41:51.351Z
+    at: 2026-10-12T23:07:19.188Z
 ---
 
 # TONE3000
@@ -219,3 +219,12 @@ is available on this machine for smoke-testing the staged exe.
   and the working guide at `plugin/ui/README.md`.
 - **DSP test suite detail** — `openwiki/build-and-ops/dsp-test-suite.md`.
 - **Windows release** — `openwiki/build-and-ops/windows-release.md`.
+- **Reverb (built-in, six modes + Digital subtype host)** —
+  `openwiki/systems/effects-invariants.md` for the per-mode law invariants
+  (Plate /"140" air/body/onset/wash/bloom constants, the 2026-10-16 P2.1
+  density-uplift pass (kPlateDecayLift 1.15 / kPlateFbCeilingUp 0.965),
+  the P2.3 Room and P2.4 Chamber density passes, and the Digital subtype
+  host (DIG/SPR/PLT/SML/CHM/HAL, the `typeLawMode` map, the landing
+  contract).  The 2026-10-16 ticket lives at
+  `docs/tickets/complete/reverb-budget-quality-uplift.md` (moved to
+  complete/ on close-out).

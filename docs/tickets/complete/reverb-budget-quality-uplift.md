@@ -599,4 +599,16 @@ self-type entry (scaffold for the later per-mode engine replacements).
   character-accurate.
 - Dat → Dig rename (type face name only — the "Digital" mode name is unchanged).
 - commit (4 files + ticket + openwiki: reverb engine + effect tile UI +
-  effect test + reverb mode doc; no scratch notes):
+  effect test + reverb mode doc; no scratch notes): **ca301da** — already
+  on main (user committed this session).
+- **Windows exe (stage-A, every closeout):** /mnt/c/Users/jambo/Downloads/
+  **TONE3000-win-20261012-160727**/TONE3000.exe (29 MB, md5
+  **0f7f76deffd12e5244c4933616e823c2**, staged after the ca301da build;
+  scripts/win-standalone.sh bg b7dabd598 exit 0).
+- OpenWiki UPDATE for the follow-up: run a6cabcd2-4ef4-4bb1-a6a7-9dd158b3c46e
+  (5 pages: effects-invariants, ui/page, param-chain-wiring, quickstart,
+  dsp-test-suite) finished with sourceChanged:true; hand-edited prose
+  (the Digital-subtype sections in effects-invariants.md,
+  param-chain-wiring.md, and ui/page.md) + the ticket move to
+  `docs/tickets/complete/` (git mv) + the openwiki source/claim path bumps
+  land in the closeout commit.

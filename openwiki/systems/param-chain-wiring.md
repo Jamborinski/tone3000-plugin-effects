@@ -17,10 +17,10 @@ sources:
     resource: repo://plugin/ui/services/ParamBinding.cpp
   - id: openwiki-source-5b6ba89ac0a58ff2acd95eed
     resource: repo://plugin/ui/services/ParamBinding.h
-generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
+generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-12T03:32:00.416Z
+    at: 2026-10-12T23:07:19.188Z
 ---
 
 
@@ -89,6 +89,54 @@ four** of these, or it works sonically but snaps back to default on sync:
 A knob whose stored domain is 0..1 but shows a human unit **MUST** declare
 `toStored`/`fromStored` — missing either is "works sonically, snaps back on
 resync."
+
+### Reverb `type` (per-mode integer, shipped 2026-10-16) — state places
+
+The reverb's `Reverb::Params::type[kNumModes]` (one `int` PER MODE,
+12-sig precedent — the 12 sig fields sit in the same `Params` struct at
+`Reverb.h::609+`) is a block field that follows the FOUR-STATE-PLACES law
+exactly, plus the setParams clamp loop. The four places:
+
+1. `getChainState` — `BlockRow` carries `reverbType0`…`reverbType5` (one
+   per mode) + `params->setProperty("reverbType<i>", …)` for each in
+   `serializeChain`.
+2. `parseItem` — `item.reverbType<i> = num(v["params"], "reverbType<i>",
+   0, 5)` for each of the six modes.
+3. `updateBlockParam` — `param == "reverbType<i>"` branch per mode.
+4. `ProcessorState.cpp` — `blockState.setProperty("reverbType<i>", …)` +
+   `getProperty` restore — the four-place invariant holds for BOTH the
+   host-parameter path AND the standalone state path.
+
+`setParams` (Reverb.h) contains an explicit **clamp loop** covering the whole
+`type` array: `for (int i=0; i<kNumModes; ++i) params_.type[i] =
+jlimit(0, numTypes(i)-1, p.type[i])` — a single mode retuning its subtype
+space must never leak into another, and the clamp is what guarantees that:
+`numTypes(i)==1` for modes 0–4, so a preset written against the old shape
+that carries a stray non-zero type for those modes gets clamped to 0 and
+dispatches bit-identically to pre-subtype. `numTypes(5)==6` for Digital (the
+subtype host, shipped 2026-10-16):
+
+- **Digital subtypes** (`type[5]` 0..5): 0 = DIG (the existing digital
+  comb-bank, sigs OFF, `defaultDialsForType` returns false/no-override —
+  the mode's own anchor); 1..5 = SPR/PLT/SML/CHM/HAL which route via
+  `typeLawMode(5, t)` to law characters `{1,0,2,3,4}` respectively. The
+  routing is the `lawCh` const in `process()` (a subtype arms ONLY its
+  character's sig pair + law arm, and `modOn_` is gated by it), NOT sig
+  coercion — the subtype stays fully dialable, and each character's sig
+  pair's param routing is `reverbSigParam(mode, slot)` where slot is the
+  character's local sig index. The sig knobs' **stored fields remain the
+  shared 12-field `Params`** (density, mod, springs, sag, bright, bloom,
+  early, air, volley, bass, build, space, one per mode — the 12-sig
+  precedent); the routing just *reads* the mapped character's two.
+- **Other modes (0–4)**, `type` clamps to 0 always: their single self-type
+  UI chip (a placeholder for the later per-mode engine replacement) is the
+  scaffolding, not a second engine.
+- The UI cycler is a `EffectTile` `typeCycle_` TextButton (same pre-click
+  look, the compact face name DIG/SPR/PLT/SML/CHM/HAL); a click opens a
+  JUCE-9 **async** popup menu (`showMenuAsync` +
+  `Options().withTargetComponent(typeCycle_)`). Modal loops are off-limits
+  for plugins — `juce_PopupMenu.h` guards the sync `showMenu` path with
+  `#if JUCE_MODAL_LOOPS_PERMITTED` and the plugin build disables it.
 
 ## A representative knob end-to-end (reverb mix)
 

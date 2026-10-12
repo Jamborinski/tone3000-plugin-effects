@@ -31,10 +31,10 @@ sources:
     resource: repo://plugin/ui/views/PluginRoot.h
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
-generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
+generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-12T21:41:51.351Z
+    at: 2026-10-12T23:07:19.188Z
 ---
 
 
@@ -156,6 +156,57 @@ The testbed is how UI changes are *proven* — a green `DspTests` run does
 NOT link `plugin/ui` (DspTests includes only
 `plugin/ui/core/Labels.cpp`); a UI change must be validated with the
 testbed or a GUI plugin build.
+
+## Reverb tile: mode + type (subtype) selectors (2026-10-16)
+
+The reverb tile carries TWO independent selectors, both in
+`views/gallery/EffectTile.cpp`:
+
+- **Mode** (unchanged): full-tile `modeCombo_` (a JUCE `ComboBox`) / compact
+  `modeCycle_` (a wrapping 3-char button) — the six-mode V2 order Plate /
+  Spring / Room / Chamber / Hall / Digital. `enterReverbMode` (`:944`) lands
+  each mode's `defaultDialsForMode` + `defaultSigForMode` dials and calls
+  `syncReverbMode()` (`:1058`).
+- **Type / subtype** (new, shipped 2026-10-16): `typeCycle_` — a JUCE
+  `TextButton` that **keeps the same pre-click look** as the compact mode
+  cycler (face names DIG/SPR/SML/CHM/HAL/… via `compactReverbTypeName`,
+  `:150`). Clicking opens a JUCE popup menu with one ticked entry per type
+  (`menu.addItem(id, face + " — " + reverbTypeBlurb(m, i), true, i == cur)`,
+  `:618-630`). **JUCE 9 constraint:** plugin builds disable modal loops
+  (`#if JUCE_MODAL_LOOPS_PERMITTED` guards the sync `showMenu` path in
+  `libs/juce/modules/juce_gui_basics/menus/juce_PopupMenu.h`), so the menu
+  is shown **asynchronously**: `menu.showMenuAsync(
+  juce::PopupMenu::Options().withTargetComponent(typeCycle_), [&]` — the
+  callback runs `enterReverbType(m, choice - 1)` on the message thread.
+  `reverbTypeBlurb` (`:159`) supplies the per-entry one-line help; the
+  button's standing helpText is `help::text(help::Key::reverbType)` (defined
+  in `plugin/ui/core/Help.cpp:222`, the 'a TYPE within the mode: a distinct
+  character BUILT on that mode's engine … reminder per mode' blurb).
+- `enterReverbType(m, type)` (`EffectTile.cpp:988`): wraps the choice
+  within `numTypes(m)`, and when `Reverb::defaultDialsForType` returns true
+  (only mode 5 with type > 0 today) lands the **character's**
+  `defaultDialsForMode` dials (Decay/Pre/Tone/Size/Width, with Pre forced
+  to 0 by the engine) via `chain.setBlockParam` + `setDefaultValue` on
+  knobA_..knobE_, then lands **the character's sig pair at 50 %** (via the
+  `reverbSigParam(chm, slot)` loop, which also zeroes the other characters'
+  sig pairs so the engine only routes through the active character's law
+  branch), then stores the choice in the **per-mode** `block_.reverbType<m>`
+  field + `chain.setBlockParam("reverbType" + juce::String(m))`, and finally
+  **re-points** `sigKnob_`/`modKnob_` at the active character's
+  scale/label/help value (`reverbSigScaleForMode(lawChar, slot)`,
+  `reverbSigLabel`, `reverbSigRaw(block_, lawChar, slot)`) — i.e. the sig
+  knobs are *repurposed* to the character's sig slots, not new knobs. The
+  face + helpText refresh through `syncReverbTypeButton(m)` (`:978`), which
+  is also called from `syncReverbMode()` so the face keeps its per-mode
+  memory when the user switches modes without touching the type.
+- Sizing: full-tile `typeCycle_.setBounds(W - 14 - 44, 44, 44, 26)` (`:1225`);
+  compact `typeCycle_.setBounds(66, 4, 34, 20)` right of `modeCycle_`
+  (`:1236`). The compact face is the 3-char subtype id (DIG / SPR / PLT /
+  SML / CHM / HAL for Digital; a single self-type `PLT/SPR/RM/CHM/HALL`
+  face for modes 0–4 scaffolding).
+- `modeCycle_` / `modeCombo_` themselves are **unchanged** by the subtype
+  work — the six-mode row is the mode axis, and the type axis is the new
+  second chip beside it.
 
 ## DspTests vs. UI linkage (the load-bearing distinction)
 
