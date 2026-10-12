@@ -778,6 +778,17 @@ all-pass/comb field cannot.
   like one control across the block family.
 - Guard: width 0 = mono bit-identical to today; width 1 within measured
   S-M band (re-pin after changes).
+- **R3 scope addendum (2026-10-15, user m03522):** the reverb full-tile's
+  knob face + label font should match the convolver tile's — i.e. reverb
+  full tile should use `kCompactKnobFace` (32 px) + `o.labelSize = 12.0f`
+  (the values convolver already uses via the
+  `compact_ || block_.effectKind == "convolution"` ternary at
+  `EffectTile.cpp:311`) instead of the current `kKnobSizeSecondary`
+  (36 px) + Knob default label size. Concretely: extend that ternary's
+  condition (or add a parallel `k == "reverb"` check) so the reverb full
+  tile passes `kCompactKnobFace` + `labelSize 12.0f` for all 12 knobs.
+  This is a UI-only change (no DSP); re-shoot TileShot goldens
+  `reverb.png` + `reverb-shift.png` after the change per ui-snapshots.md.
 
 ### R4 — Clean-room research track (START NOW, no code)
 - Create `research/` **at repo root** and add it to a **local ignore
