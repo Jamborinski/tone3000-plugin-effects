@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:8f126acced3c9b3de58a9966b114c09362d16e06c19edef76401cb8432b3e56b",
+  "pageVersion": "sha256:3a35645e5f5780cddef1da50823fde20a88b100252697fbab92d04e2cc3d0455",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -84,11 +84,11 @@
     },
     {
       "id": "claim_623f56b75c304049a70268e28d9df3cd",
-      "statement": "Per-repo rules for AI agents live in the repo-root AGENTS.md, an INDEX whose task-specific rules are in docs/agents/*.md: dsp-invariants.md (DSP engines), ui-wiring.md (params/knobs/chains), ir-reverb-training.md (reverb-vs-IR-reference protocol), audio-testing.md (the sonic MEASUREMENT protocol: click-index/jump metrics, comb &amp; dropout laws, per-effect probe matrix, the hunt-&gt;measure-&gt;guard loop), windows-build.md (MinGW cross-build), linux-build-deep.md, merge-upstream.md, ui-snapshots.md (testbed/goldens). Per-mode DSP laws and every CONSIDERED &amp; DECLINED item in dsp-invariants.md are user-eared contracts to preserve — never silently simplify a law back to a naive form. STANDING RULE (AGENTS.md hard-rules, added 2026-10-15 by user request m02589): always MEASURE DSP changes sonically (probe/sweep tests in the real engine) before shipping — a metric ladder plus a user A/B beats an algebraic guess; the R2 Mod 'killed-the-clicks' decision (write-tau 80 ms) landed exactly this way.",
+      "statement": "Per-repo rules for AI agents live in the repo-root AGENTS.md, an INDEX whose task-specific rules are in docs/agents/*.md: dsp-invariants.md (DSP engines), ui-wiring.md (params/knobs/chains), ir-reverb-training.md (reverb-vs-IR-reference protocol), audio-testing.md (the sonic MEASUREMENT protocol: click-index/jump metrics, comb & dropout laws, per-effect probe matrix, the hunt->measure->guard loop), windows-build.md (MinGW cross-build), linux-build-deep.md, merge-upstream.md, ui-snapshots.md (testbed/goldens). Per-mode DSP laws and every CONSIDERED & DECLINED item in dsp-invariants.md are user-eared contracts to preserve — never silently simplify a law back to a naive form. STANDING RULE (AGENTS.md hard-rules, added 2026-10-15 by user request): always MEASURE DSP changes sonically (probe/sweep tests in the real engine) before shipping — a metric ladder plus a user A/B beats an algebraic guess; the R2 Mod 'killed-the-clicks' decision (write-tau 80 ms) landed exactly this way. 2026-10-16 reverb-budget-quality-uplift pass (docs/tickets/reverb-budget-quality-uplift.md, now in docs/tickets/complete/): P0 pinned the per-mode CPU ceiling at 23 us/block@128 (Spring <= 46) in AGENTS.md + docs/agents/dsp-invariants.md; P1 built the six-mode baseline table vs reference IRs; P2 shipped Plate (1.15 lift / 0.965 ceiling), Room (kRoomWashRef 1.20), and Chamber (kChamberWashFrac 1.60) density uplifts, and DECLINED Spring/Hall/Digital in-family (P1 rows already inside/above their references); UI type chips renamed 140/RV1/DIG -> PLT/SPR/DAT.",
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:b7c68e2c4a95ba3e92ca22ede1bb1634e65242fcc3a3e1379636957e4d9f2cbb"
+          "version": "repo-file-v1:sha256:77b3d98f912f2554e6029a23c6a04f2eebe4a3851e5ff88891e9c51a0f177fda"
         },
         {
           "resource": "repo://docs/agents/audio-testing.md",
@@ -96,13 +96,13 @@
         },
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:6817ee133a6ff05596ac340c05f623ade1b6938232b073ceb3fe2e12c8ecfa86"
+          "version": "repo-file-v1:sha256:c4c0617f6d4d0c4d4d952713d217636fbb20be7bd386397fe15b0eb31c2ba257"
         }
       ]
     },
     {
       "id": "claim_7fcce23552fe4599949ca0fdfab7458f",
-      "statement": "The DSP test loop is ./script/test-dsp.sh [gtest-filter]: configure-if-needed to cmake --build build --target DspTests to running build/test/DspTests_artefacts/.../DspTests. The suite compiles the REAL plugin sources (not copies) against the fixtures in test/files/ (NAM A2 captures a2-amp-test.nam / a2-amp-cab-test.nam / a2-am-test-2.nam, cab-ir-test(-2).wav, reverb-ir-mono/stereo-test.wav, em240-gold-plate-5s.wav); from plugin/ui it pulls in only core/Labels.cpp (KnobScale readout formatter for the scale-contract tests), so a green DspTests does NOT prove the UI links (verify with the GUI target, e.g. TONE3000_Standalone, or the testbed). The suite grows with features — a count is a LOWER-BOUND snapshot, never assert a stale total on a red run: 469 after the plate '140' final pass, 470 after R1 (reverbDry anchor), 477 after the first R2 follow-up, and 487 after the thirteenth/final R2 cut (2026-10-15, commit 1aa620e) which added the R2_Mod* sonic-measurement infrastructure in test/src/effect_tests.cpp. The plate guard suite (test/src/plate_family_tests.cpp: P1 EMT140 family table, P2 cross-model, P4 knob laws incl. the plate SizeLaw, P5 stereo image, P6 cap/CPU) re-pins to the final plate state (level baseline 78.23, comb baseline 19.39, decay-law monotone-darkening pin, cap no-growth). Full record: docs/tickets/plate-140-final-training-pass-closeout.md and plugin/docs/reverb-modes.md (140 row); the reverbDry anchor + R2 Mod contract live in docs/tickets/reverb-dry-mod-width-swing.md.",
+      "statement": "The DSP test loop is ./script/test-dsp.sh [gtest-filter]: configure-if-needed to cmake --build build --target DspTests to running build/test/DspTests_artefacts/.../DspTests. The suite compiles the REAL plugin sources (not copies) against the fixtures in test/files/ (NAM A2 captures a2-amp-test.nam / a2-amp-cab-test.nam / a2-am-test-2.nam, cab-ir-test(-2).wav, reverb-ir-mono/stereo-test.wav, em240-gold-plate-5s.wav); from plugin/ui it pulls in only core/Labels.cpp (KnobScale readout formatter for the scale-contract tests), so a green DspTests does NOT prove the UI links (verify with the GUI target, e.g. TONE3000_Standalone, or the testbed). The suite grows with features — a count is a LOWER-BOUND snapshot, never assert a stale total on a red run: 469 after the plate '140' final pass, 470 after R1 (reverbDry anchor), 477 after the first R2 follow-up, 487 after the thirteenth/final R2 cut (2026-10-15), and 503 / 73 suites after the 2026-10-16 reverb-budget-quality-uplift pass (6 new probe tests across reverb_probe_tmp.cpp, room_probe_tmp.cpp, and chamber_probe_tmp.cpp). The plate guard suite re-pins to the 2026-10-16 density state (level-law baseline 93.95 @2000 ms, comb cap 21.98 @2500 ms). Full record: docs/tickets/reverb-budget-quality-uplift.md (now in docs/tickets/complete/) and plugin/docs/reverb-modes.md (the PLT row, renamed from '140').",
       "evidence": [
         {
           "resource": "repo://script/test-dsp.sh",
@@ -110,7 +110,7 @@
         },
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
+          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
         },
         {
           "resource": "repo://test/src/effect_tests.cpp",
@@ -118,13 +118,13 @@
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
-          "version": "repo-file-v1:sha256:434a66a7286b3bf873efbc6324012889213c7addea33ef5257bce9d3225e2c9c"
+          "version": "repo-file-v1:sha256:d0db7ac88b8f3aa03e403b4a0d967439a969f7aee4be49f292779f70f0c9fe38"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-12T12:49:50.699Z"
+    "at": "2026-10-12T21:41:51.351Z"
   }
 }

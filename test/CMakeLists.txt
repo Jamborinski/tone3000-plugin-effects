@@ -26,6 +26,11 @@ target_sources(DspTests PRIVATE
     src/duplicate_tests.cpp
     src/effect_tests.cpp
     src/spring_full_family.cpp
+    src/reverb_ceiling_p0_tests.cpp
+    src/reverb_quality_p1_tests.cpp
+    src/reverb_probe_tmp.cpp
+    src/room_probe_tmp.cpp
+    src/chamber_probe_tmp.cpp
     src/spring_noise_burst.cpp
     src/spring_conv_compare.cpp
     src/spring_ir_test.cpp

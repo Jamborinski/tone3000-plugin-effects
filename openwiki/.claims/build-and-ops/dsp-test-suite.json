@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:163312c5a849d9c4f239a3aca95e305d70233a0faaf85f343aaeaa104c6fd9bb",
+  "pageVersion": "sha256:3286e73cbd4789142b53c6533b231163a32cc5e901cc16b4da5ac891383021c3",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -18,7 +18,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
+          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
         }
       ]
     },
@@ -28,7 +28,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
+          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
         }
       ]
     },
@@ -38,7 +38,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
+          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
         }
       ]
     },
@@ -48,17 +48,25 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
+          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
         }
       ]
     },
     {
       "id": "claim_8ddfa533a06748b88500ee5da886842f",
-      "statement": "The plate guard suite lives in three registered test files in test/CMakeLists.txt: src/plate_comb_tests.cpp, src/plate_family_tests.cpp (added 2026-10-13 final pass: P1 EMT140 family table, P2 cross-model, P4 knob laws incl. SizeLaw, P5 stereo image, P6 cap/CPU, with guards re-pinned to the final Plate/'140' state), and src/plate_texture_tests.cpp (baselines re-pinned that pass: level 78.23, comb 19.39).",
+      "statement": "The plate guard suite lives in three registered test files in test/CMakeLists.txt: src/plate_comb_tests.cpp, src/plate_family_tests.cpp (P1 EMT140 family table, P2 cross-model, P4 knob laws incl. SizeLaw, P5 stereo image, P6 cap/CPU; baselines re-pinned 2026-10-16 by the P2.1 density uplift: level-law baseline 93.95 @2000 ms, comb cap 21.98 @2500 ms), and src/plate_texture_tests.cpp (baselines re-pinned 2026-10-16: level 93.95 (was 78.23 pre-uplift), comb kModelComb 19.39 @2000 ms retained as the final-pass anchor).",
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
+          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
+        },
+        {
+          "resource": "repo://test/src/plate_family_tests.cpp",
+          "version": "repo-file-v1:sha256:d0db7ac88b8f3aa03e403b4a0d967439a969f7aee4be49f292779f70f0c9fe38"
+        },
+        {
+          "resource": "repo://test/src/plate_texture_tests.cpp",
+          "version": "repo-file-v1:sha256:bf38bd0ebdeac716ad43789e3c446e629e5e8658b970f5e5a2aeac4432f594a1"
         }
       ]
     },
@@ -74,21 +82,39 @@
     },
     {
       "id": "claim_916532a025994ae585b6b8a9c6329055",
-      "statement": "The DspTests suite grows with features (a count here is a lower-bound snapshot, never assert a stale total on a red run): 470 after R1 (reverbDry), 476 after R2 (reverb shared Mod + Digital 5-detent Shape), 477 after the first R2 follow-up, and 487 after the thirteenth/final R2 cut (2026-10-15, commit 1aa620e). The R2 measurement infrastructure is standing: 15 tests in test/src/effect_tests.cpp — R2_SharedModZeroIsBitExactAllSixModes, R2_SharedModOnStaysSineInEveryMode, R2_SharedModOnChangesOutputEveryMode, R2_ModClickSharpnessSweep, R2_ModTransientHunt, R2_ModWriteTauSonicSweep (body/tilt/sharpness vs write-tau 12/20/40/80 ms), R2_ModChordClickHunt (click-index guard; 0.048 @12ms → 0.0073 @80ms vs 0.351 unsmoothed), R2_ModVoicesSpikeSweep, R2_ModClickSpikeSweep, R2_ModTailClickSweep, R2_ModSonicSweep, R2_ModSonicProbe, R2_SharedModChorusesTheTailNotTheAttack, R2_WaveValue0IsExactSine, R2_DigitalWaveShapesTheWaverNotTheSharedMod — plus TEST(PlateTexture, R2_CpuWithSharedModOn) in plate_texture_tests.cpp. These tests are deliberate measurement infrastructure (sweeps + guarded pins), per docs/agents/dsp-invariants.md, because the R2 Mod mechanism was chosen by user A/B on shipped Windows exes, not by metric alone.",
+      "statement": "The DspTests suite grows with features (a count here is a lower-bound snapshot, never assert a stale total on a red run): 487 after the R2 thirteenth/final cut (2026-10-15, commit 1aa620e), 493 after the P2.1 plate density uplift (2026-10-16, +ReverbCeiling P0 guard suite + PlateProbe P2.1 probes), and 503 after the full reverb-budget-quality-uplift pass (P0 ceiling pin test/src/reverb_ceiling_p0_tests.cpp suite ReverbCeiling 4 tests at 23 us/block@128 per mode with Spring <= 46; P1 per-mode table test/src/reverb_quality_p1_tests.cpp; P2.1/P2.3/P2.4 probe suites test/src/reverb_probe_tmp.cpp, room_probe_tmp.cpp, chamber_probe_tmp.cpp; P2.2 Spring / P2.5 Hall / P2.6 Digital declined in-family per user leeway). The R2 measurement infrastructure is standing in test/src/effect_tests.cpp.",
       "evidence": [
         {
           "resource": "repo://test/src/effect_tests.cpp",
           "version": "repo-file-v1:sha256:f5b44df8a85137d2387c48b22e5df70294cffecc31a472c12757d7084361e496"
         },
         {
-          "resource": "repo://test/src/plate_texture_tests.cpp",
-          "version": "repo-file-v1:sha256:d32f39ae8beca88c8c9f33b33ad2092ee9c2631f035a08738b4dddbd6f6f185b"
+          "resource": "repo://test/src/reverb_ceiling_p0_tests.cpp",
+          "version": "repo-file-v1:sha256:4145987b9ce48cc42b3cfb9b2ea2d14101d25e024622084fb0fe95ae84c6c881"
+        },
+        {
+          "resource": "repo://test/src/reverb_probe_tmp.cpp",
+          "version": "repo-file-v1:sha256:02fb43ede194d370002a8f13336992a8d8fb09cb5c873fafd98d4cfb176b3c44"
+        }
+      ]
+    },
+    {
+      "id": "claim_3a509d209b1b4b2aae6190e94a245b3a",
+      "statement": "The P2 probe suites added by the 2026-10-16 reverb-budget-quality-uplift pass are registered in test/CMakeLists.txt (src/reverb_probe_tmp.cpp Plate Probe suite W1 lift sweep ship 1.15, src/room_probe_tmp.cpp Room Probe suite W2 wash norm 1.20, src/chamber_probe_tmp.cpp Chamber Probe suite W2 washFrac 1.60 + 8.0 kHz cap sweep 12000->8000 Hz). They compile the real plugin sources and guard the shipped constant values so a regression in the plate lift, room wash normalization, or chamber wash fraction fails the suite.",
+      "evidence": [
+        {
+          "resource": "repo://docs/tickets/reverb-budget-quality-uplift.md",
+          "version": "repo-file-v1:sha256:5a176f52f88e16c058216be7fee290feb0aca4ba4287e591d16fba90600e7c06"
+        },
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-12T03:32:00.416Z"
+    "at": "2026-10-12T21:41:51.351Z"
   }
 }

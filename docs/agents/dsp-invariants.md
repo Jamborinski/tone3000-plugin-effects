@@ -293,3 +293,15 @@
   click harder; body never starved). All other levers (darkening,
   voice count, rate, tap floor) measured and declined: none removed the
   re-emitted wet spikes. 
+- **CPU budget law (reverb, pinned 2026-10-16, `reverb-budget-quality-uplift.md`):
+  per-mode average ≤ **23 us/block @128** (48 kHz, mono drive, 600-block OLA
+  warm, 256 timed blocks — the house `BudgetConvolver` convolving a 5.95 s
+  *and* a 4.80 s stereo IR both measure avg 22.9 us/block, p95 ~19 us,
+  max ~390 us, 0 over 1 ms; the engine's segment padding makes cost
+  length-insensitive at these lengths). **Spring gets 2x: 46 us/block**
+  (user decision D2). Max per-call cap ~410 us (measured convolver spike).
+  This REPLACES the old "30 us/block@128 (convolver-class budget)" line in
+  `AGENTS.md`; the convolver's own 256-sample block cap (`kMaxCall`) is
+  UNAFFECTED — we raised what a MODE may cost, not what the convolver may
+  cost. Zero-latency law unchanged (no OLA-style latency, no oversampling).
+  Guards: `test/src/reverb_ceiling_p0_tests.cpp` (ReverbCeiling.ModeCpuGuard).

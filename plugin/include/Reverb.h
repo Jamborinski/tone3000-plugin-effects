@@ -397,7 +397,7 @@ class Reverb {
   // FET-odd / transformer color) warms the peaks. All bounded (|fb|<1, |mean|<1,
   // bounded onset env, soft shoulder). Gated Bright>0 || Bloom>0; at both 0 the
   // plate is the shared plain comb bank (the Digital anchor holds).
-  static constexpr double kPlateDenseMix     = 0.70;   // the 2-D dense mode wash
+    static constexpr double kPlateDenseMix     = 0.70;   // the 2-D dense mode wash
   static constexpr double kPlateBrightOnset  = 0.015;   // the "whip" onset (character, kept gentle) -- round 12: user only wanted Spring touched, Plate is back to the original value
   static constexpr double kPlateBrightDecay  = 0.96;   // the burst decay (fast whip)
   static constexpr double kPlateBloomFrac    = 0.32;   // how far Bloom darkens (low lags) -- the ORIGINAL value (I had reduced it to 0.25 without being asked; user did not want the Plate touched)
@@ -439,7 +439,31 @@ class Reverb {
   // Chamber wash level law: a small lift so the Chamber sits just above the
   // Digital/Room family (the ears say it reads "a tad quiet"). The dual-decay
   // bass shelf (Moorer's air law) is untouched -- only the body level is lifted.
-  static constexpr double kChamberWashFrac     = 1.20;  // the chamber body (a hair down from last round - the ears: "ever so slightly" too loud)
+  // Chamber wash level law. 1.20 (the ear-shipped round, "ever so slightly too
+  // loud" -> kept) -> 1.60 (P2.4 density uplift, 2026-10-16, reverb-budget-
+  // quality-uplift pass 1). Hunt: test/src/chamber_probe_tmp.cpp, suite
+  // ChamberProbe (P1's exact metrics — full/combPk/densTail/tone440 — against
+  // Medium Chamber 17, ref row full=59538 tone=-24.33 densTail=-108.68; P1
+  // shipped row full=52278 tone=-32.66 densTail=-128.19, the tone axis was the
+  // suite's worst: 8.3 dB dark). DECLINED levers (measured, same probe):
+  //   bassFrac 0.55 -> 0.45/0.35: tone -32.66 -> -32.45/-32.25 (<=0.4 dB INERT,
+  //     and it WORSENS combPk 47.51 -> 48.72 — the loop LP is the dual-decay
+  //     BASS law, ear-tuned — untouched);
+  //   capFrac  0.14 -> 0.10: tone -32.70 (INERT, comb +0.15 worse);
+  //   washAp   0.42 -> 0.25/0.60: 0.0 dB INERT (washApSc is level-neutral by
+  //     law, and it does not de-comb the 8 incommensurate lines — the same
+  //     structural metallicity Plate/Spring/Room all carry, pass-2 territory).
+  // washFrac 1.20 -> 1.40/1.60/2.00: full 52278 -> 52597/53044/53309, tone
+  //   -32.66 -> -31.49/-29.27/-26.27, densTail -128.19 -> -127.18/-125.69/
+  //   -123.76: the ONLY lever that moves full+tone+densTail right (the wash
+  //   body level IS the sustained field). 2.00 DECLINED: tone -26.27 overshoots
+  //   the family's own 2 s number (-24.3 is the ref itself, the m00381 family-
+  //   not-IR law); 1.60's -29.27 stays ~5 dB inside the family (the Chamber's
+  //   own dual-decay bass shelf + HF cap are what legitimately colour it dark
+  //   — those are the ear-tuned laws, not the level). Zero added CPU: a
+  //   constant multiply already in the loop (the value changed, not the work) —
+  //   ReverbCeiling pins hold.
+  static constexpr double kChamberWashFrac     = 1.60;  // the chamber body level (P2.4 family-matched uplift)
   // Wash diffusion (Schroeder / Moorer all-pass) -- added to kill the slow, low-frequency
   // "pad" build-up the user hears above the 3000 ms onset. The other four law-modes
   // (Spring/Plate/Room/Hall) already have this; the Chamber was the last one left on
@@ -763,7 +787,7 @@ class Reverb {
       // P-body: the peaking coefficients (biquad, peaking @kPlateBodyHz),
       // fb-capped so the round-trip gain never crosses 1.0 at any decay dial.
       if (kPlateBodyDb > 0.0 && sampleRate_ > 0.0) {
-        const double A = std::min(std::pow(10.0, kPlateBodyDb / 40.0), 0.990 / plateFb(params_.decayMs));
+        const double A = std::min(std::pow(10.0, kPlateBodyDb / 40.0), 0.990 / plateFb(params_.decayMs, plateCeilTest_, plateLiftTest_));
         const double w0 = 2.0 * M_PI * kPlateBodyHz / sampleRate_;
         // Exact peaking (zeros at +/-1 -> unity at DC/Nyquist): B(z) = C(1-z^-2)/d(z),
         // poles at r e(+/−j w0), C chosen so B(w0) = 1 exactly, and
@@ -1244,13 +1268,67 @@ class Reverb {
   // instead of ~3.7 s -- the "does the cap go long enough" question).
   // STABILITY: hard ceiling 0.940; with the +/-3 % fb-drift the loop tops out at
   // 0.940 * 1.03 = 0.968 < 1, so the Plate cannot run away at any dial setting.
-  static constexpr double kPlateDecayLift = 1.104;
-  static constexpr double kPlateFbCeiling = 0.940;
-  static double plateFb(double decayMs) {
-    return juce::jmin(kPlateFbCeiling, decayFb(decayMs) * kPlateDecayLift);
+  static constexpr double kPlateDecayLift = 1.15;
+  static constexpr double kPlateFbCeiling = 0.940;   // legacy name; plateFb() now caps at kPlateFbCeilingUp
+  // P2.1 (reverb-budget-quality-uplift, 2026-10-16): the PLATE DENSITY UPLIFT
+  // (family-target pass against the Bricasti M7 plate family; the EMT 140
+  // family's DIRECTION anchor -- longer = darker -- stays the law). Sweep
+  // numbers (probe, 2000 ms dial, click, peak-normalised; reference Fat Plate
+  // 15 at 48 kHz: t1000 rel -55 dB / t2000 rel -70 dB):
+  //   lift 1.104 (shipped): full=27.2  comb(0.3-0.8s)=35.8  t1000=-52.6  t2000=-66.5
+  //   lift 1.13:            full=29.9  comb=35.2            t1000=-51.1  t2000=-63.3
+  //   lift 1.15:            full=32.5  comb=34.8            t1000=-50.0  t2000=-60.9
+  //   lift 1.20:            full=46.6  comb=33.4            t1000=-46.3  t2000=-52.8 (overshoots the family)
+  // SHIP: lift 1.15 -- fullness +19 %, BOTH comb windows drop (de-comb as a
+  // by-product: the denser wash beats out the mid-window eigentones), the
+  // 2000 ms dial now lands at the reference's 1.0 s rel level (slightly FULLER
+  // than Fat Plate 15 itself -- inside the family, per the user's
+  // "same family, not a tight IR match" directive). NOT overshoot (1.20
+  // measured as the overshoot boundary, DECLINED-with-numbers above).
+  // CEILING 0.965 (was 0.940): drift-safe (0.965 * 1.03 = 0.994 < 1 under the
+  // +/-3 % fb-drift), body-cap 0.990/fb = 1.0259 -> the kPlateBodyDb bump is
+  // now ALWAYS fb-capped (was gain-limited at 1.104 lift: 0.990/0.94=1.053,
+  // 10^(1.3/40)=1.076 -> capped to 1.053; now capped to 1.0259: the body
+  // bump SHRINKS 1.3 -> ~1.01 dB at these dials -- re-pinned below, and it is
+  // the RIGHT direction: a fuller wash needs less per-round-trip body boost).
+  // Stability proven: |fb| <= 0.965*1.03 < 1 at every dial; ceiling binding
+  // from ~2400 ms dial upward (the long-plate reach).
+  // PLATE-SCOPED ONLY: plateFb() is the sole caller -> the other five modes
+  // stay bit-identical (the contract).
+  static constexpr double kPlateFbCeilingUp = 0.965;   // density uplift ceiling (drift-safe: 0.965*1.03 < 1)
+  double plateCeilTest_ = 0.0;   // test hook: 0 = kPlateFbCeilingUp; else override
+  double plateLiftTest_ = 0.0;   // test hook: 0 = kPlateDecayLift; else override
+  static double plateFb(double decayMs, double ceilTest = 0.0, double liftTest = 0.0) {
+    const double ceil = ceilTest > 0.0 ? ceilTest : kPlateFbCeilingUp;
+    const double lift = liftTest > 0.0 ? liftTest : kPlateDecayLift;
+    return juce::jmin(ceil, decayFb(decayMs) * lift);
   }
-  static constexpr double kRoomWashRef    = 0.595;  // (1-fb) at Room's    500  ms default
+  // Room wash level ref. 0.595 (shipped 2026-10-16: the (1-fb) at Room's 500 ms
+  // default) -> 1.20 (P2.3 density uplift, 2026-10-16, reverb-budget-quality-uplift
+  // pass, ticket P2 step 3). The P1 hunt (test/src/room_probe_tmp.cpp, RoomProbe)
+  // mapped the fullness deficit against Studio C (Bricasti M7) as a FLAT 6.7 dB
+  // sustained-wash level floor (600-2400 ms: mode -10.0 vs ref -3.3 dB/peak) with
+  // the early field 4.6 dB under; every other lever is the wrong axis (washAp
+  // inert; fb lift RAISES the comb peaks -> shrinks sumAbs/peak; Early capped
+  // ~1.0; decay dial moves the wash the wrong way at the fixed norm). wr=1.20
+  // lands the early field (0-80 ms) AT the reference's -51.5 (-50.92 measured)
+  // -- the family-matched pin (the 140-family m00381 law: the mode sits IN the
+  // reference family, not at any single IR's number). The sat knee at 1.8-2.13
+  // (full 34764, +3.7 % only) is DECLINED: it overshoots the family, the
+  // concave curve is peak-dominated sumAbs, and every RoomTest law stays
+  // direction-identical (washRef is a pure gain; the early taps / air LP /
+  // boundedness laws are unaffected). CPU cost: zero (a constant multiply is
+  // already in the loop -- the value changed, not the work).
+  static constexpr double kRoomWashRef    = 1.20;
+  double roomNormTest_ = 0.0;   // test hook: 0 = kRoomWashRef; else override (fullness law probe)
+  double roomApTest_   = 0.0;   // test hook: 0 = kRoomWashAp; else override (diffusion probe)
+  double roomLiftTest_ = 0.0;   // test hook: 0 = 1.0 (no lift); else decayFb lift factor (fullness probe)
+  void setRoomLiftTest(double lift) { roomLiftTest_ = lift; }
   static constexpr double kChamberWashRef = 0.291;  // (1-fb) at Chamber's 1800 ms default
+  double chamberBassFracTest_ = 0.0;  // test hook: 0 = kChamberBassFrac
+  double chamberCapFracTest_ = 0.0;   // test hook: 0 = kChamberHFCapFrac
+  double chamberApTest_     = 0.0;    // test hook: 0 = kChamberWashAp
+  double chamberWashFracTest_ = 0.0; // test hook: 0 = kChamberWashFrac (P2.4 wash-level hunt)
 
   // Feedback-from-Decay (see kDecayTunedCeil): [50,3000] -> [0.30,0.99] EXACTLY as
   // before (bit-identical over the tuned region); the new top segment [3000,5000]
@@ -1480,7 +1558,7 @@ class Reverb {
     const double bloom = params_.bloom;
     const double density = kPlateDenseMix;                    // the 2-D dense wash
     const double oneMinusDen = 1.0 - density;
-    const double fb = plateFb(params_.decayMs);   // P1: Plate-scoped lift + ceiling (stable (|fb| < 1))
+    const double fb = plateFb(params_.decayMs, plateCeilTest_, plateLiftTest_);   // P1: Plate-scoped lift + ceiling (stable (|fb| < 1))
     const double norm = kPlateWashRef / kNumLines;  // FIXED ref (was live (1-fb) -> died at long decay)
     const double dampAlpha = (1.0 - params_.tone) * (1.0 - kPlateBloomFrac * bloom);  // Bloom darkens (low lags)
     // Width (R3): the post-mix Haas stage (applyWidthHaas); no per-channel tap
@@ -1594,9 +1672,12 @@ class Reverb {
   void processRoom(juce::AudioBuffer<float>& buffer) {
     const int numChannels = juce::jmin(buffer.getNumChannels(), kMaxChannels);
     const int numSamples = buffer.getNumSamples();
-    const double fb = decayFb(params_.decayMs);
-    const double norm = kRoomWashRef / kNumLines;  // FIXED ref (was live (1-fb) -> died at long decay)
+    const double washRef = roomNormTest_ > 0.0 ? roomNormTest_ : kRoomWashRef;
+    const double washAp  = roomApTest_   > 0.0 ? roomApTest_   : kRoomWashAp;
+    const double fbLift  = roomLiftTest_ > 0.0 ? roomLiftTest_ : 1.0;
+    const double norm = washRef / kNumLines;  // FIXED ref (was live (1-fb) -> died at long decay)
     const double dampAlpha = (1.0 - params_.tone);  // the mode wash tone
+    const double fb = juce::jmin(0.999, decayFb(params_.decayMs) * fbLift);  // probe lift (1.0 = shipped)
     // Per-tap lowpass (the "air"): more Air = darker reflections.
     const float aAlpha = static_cast<float>((1.0 - params_.tone) * (1.0 - kRoomAirFrac * params_.air));
     float ta[kNumRoomTaps];
@@ -1620,7 +1701,7 @@ class Reverb {
           acc += L.lp;
         }
         acc *= static_cast<float>(norm);
-        acc = washApSc(acc, kRoomWashAp, ch);   // diffuse the comb wash (long tail stops breaking past ~2000)
+        acc = washApSc(acc, washAp, ch);   // diffuse the comb wash (long tail stops breaking past ~2000)
         // The discrete early field (a feedforward EFD): a persistent, cross-block
         // input-history read (Schroeder/Gardner) so it is live at every block length,
         // and each reflection air low-passed (Moorer: farther = darker).
@@ -1649,13 +1730,18 @@ class Reverb {
     const int numChannels = juce::jmin(buffer.getNumChannels(), kMaxChannels);
     const int numSamples = buffer.getNumSamples();
     const double fb = decayFb(params_.decayMs);
-    const double norm = kChamberWashRef / kNumLines * kChamberWashFrac;  // FIXED ref (was live (1-fb) -> died at long decay)
+    const double wfT = chamberWashFracTest_ > 0.0 ? chamberWashFracTest_ : kChamberWashFrac;
+    const double norm = kChamberWashRef / kNumLines * wfT;  // FIXED ref (was live (1-fb) -> died at long decay)
     // (a) The Bass shelf (loop lowpass): more Bass = a stronger lowpass -> low
     // survives longer, high decays faster (the dual-decay, LF extends / HF caps).
-    const float bassAlpha = static_cast<float>((1.0 - params_.tone) * (1.0 - kChamberBassFrac * params_.bass));
+    const double bassFracT = chamberBassFracTest_ > 0.0 ? chamberBassFracTest_ : kChamberBassFrac;
+    const double capFracT  = chamberCapFracTest_ > 0.0 ? chamberCapFracTest_ : kChamberHFCapFrac;
+    const double apT       = chamberApTest_ > 0.0 ? chamberApTest_ : kChamberWashAp;
+    const float bassAlpha = static_cast<float>((1.0 - params_.tone) * (1.0 - bassFracT * params_.bass));
     // (b) The output HF cap: a fixed lowpass (the ~10 kHz humidity cap, the high
     // tail caps regardless of Decay / Bass).
-    const float capAlpha = static_cast<float>((1.0 - params_.tone) * (1.0 - kChamberHFCapFrac));
+    const double capFracT2 = chamberCapFracTest_ > 0.0 ? chamberCapFracTest_ : kChamberHFCapFrac;
+    const float capAlpha = static_cast<float>((1.0 - params_.tone) * (1.0 - capFracT2));
     // (c) The early volley: 8 diffuse taps (a "bunch"), scaled by the Volley dial
     // (more = a denser early burst), each tap low-passed the same as the output
     // HF cap (the "fuzzy" early field).
@@ -1695,7 +1781,7 @@ class Reverb {
         // near-identity below the onset where the Chamber is already "solid." The
         // pad character (the ALT mode candidate) is preserved: this only smears
         // the periodic resonance, not the level or length.
-        acc = washApSc(acc, kChamberWashAp, ch);
+        acc = washApSc(acc, (float)apT, ch);
         // (b) The output HF cap (the ~10 kHz humidity cap).
         chamberHFCap_[ch] += capAlpha * (acc - chamberHFCap_[ch]);
         out[i] = chamberHFCap_[ch];

@@ -4,7 +4,7 @@ title: "Audio path: chain domain, lanes, block types"
 openwiki_generated: true
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-12T03:32:00.416Z
+    at: 2026-10-12T21:41:51.351Z
 sources:
   - id: openwiki-source-e2fb14576702431774114c7c
     resource: repo://plugin/include/ChainBlock.h

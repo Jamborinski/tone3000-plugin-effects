@@ -445,17 +445,17 @@ TEST(PlateTexture, DecayTracksTheReferenceFamilyLaw) {
 
 TEST(PlateTexture, LevelLawWithinOneDbOfBaseline) {
   // LEVEL LAW: <= +/-1 dB vs the CURRENT model baseline at the default.
-  // The baseline was RE-PINNED by the final pass (2026-10-13): the onset
-  // C re-attack (sparse pings over a QUIETER incoherent floor -- see the
-  // CONSIDERED & DECLINED block in plugin/include/Reverb.h) lowered the raw
-  // sum-abs from the pre-final as-shipped plate 83.5977 to 78.23 (that IS
-  // the level cost of sparser, quieter-floor onset, not a hidden tail cut:
-  // body 7.50 dB -- the low-mid body is intact and the comb law still holds).
+  // Baseline history: pre-final 83.5977 -> final pass (2026-10-13, onset C
+  // quieter floor) 78.23 -> P2.1 density uplift (2026-10-16, plateFb lift
+  // 1.104 -> 1.15, the fuller in-loop wash) 93.95. The UP lift is the
+  // reverb-budget-quality-uplift ticket's whole point (tail fullness toward
+  // the Bricasti plate family); the body is intact (BodySurvives guard) and
+  // the comb law holds within the re-pinned cap (PlateLawsHold).
   const int n = static_cast<int>(2.5 * kFs);
   const double lvl = sumAbs(plateRun(plateDefaults(), click(n)));
-  std::cout << "  [level] rawAbs=" << lvl << " (final-pass baseline 78.23, +/-1 dB)"
+  std::cout << "  [level] rawAbs=" << lvl << " (density-uplift baseline 93.95, +/-1 dB)"
             << std::endl;
-  const double base = 78.23;
+  const double base = 93.95;   // RE-PINNED 2026-10-16 (P2.1 plate density uplift, lift 1.104->1.15: raw sum-abs 78.23 -> 93.95, +2.9 dB -- the fuller wash IS the ticket goal; user leeway per ticket Log)
   EXPECT_GE(lvl, base * std::pow(10.0, -1.0 / 20.0))
       << "plate level must not drop more than 1 dB below the baseline";
   EXPECT_LE(lvl, base * std::pow(10.0, 1.0 / 20.0))

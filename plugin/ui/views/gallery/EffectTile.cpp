@@ -139,7 +139,7 @@ static help::Key reverbSigHelp(int mode, int localSlot) {
   return k[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
 }
 static juce::String compactReverbModeName(int m) {
-  static const char* n[6] = {"PLT", "SPR", "RM", "CHM", "HALL", "DIG"};
+  static const char* n[6] = {"PLT", "SPR", "RM", "CHM", "HALL", "DAT"};
   return n[juce::jlimit(0, 5, m)];
 }
 // ---- Reverb TYPE faces (a sub-model within a mode; Reverb::numTypes owns
@@ -148,7 +148,7 @@ static juce::String compactReverbModeName(int m) {
 // product name). A second type = a new row per mode (id + blurb + engine
 // branch + count bump; the plate pass is the reference implementation).
 static const char* compactReverbTypeName(int m, int t) {
-  static const char* n[Reverb::kNumModes] = {"140", "RV1", "SML", "CHM", "HAL", "DIG"};
+  static const char* n[Reverb::kNumModes] = {"PLT", "SPR", "SML", "CHM", "HAL", "DAT"};
   (void)t;  // one type per mode today
   return n[juce::jlimit(0, Reverb::kNumModes - 1, m)];
 }

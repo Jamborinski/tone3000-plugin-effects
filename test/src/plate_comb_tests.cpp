@@ -408,8 +408,8 @@ struct ModePin { int mode; double sum, sumAbs, energy; };  // mode = OLD-order i
 const ModePin kModePins[] = {
     {0, 69202.7841184139, 69202.7841184139, 202472.99315673},   // old Digital
     {1, 21371.545198828, 21371.545198828, 19559.284667016},    // Spring (1 -> 1)
-    {3, 87113.8745889664, 87113.8745889664, 318805.647552788},  // old Room
-    {4, 91743.9036078453, 91743.9036078453, 352806.093163308},  // old Chamber
+    {3, 162470.64443779, 162470.64443779, 1109398.14947898},  // old Room (re-pinned 2026-10-16 P2.3: kRoomWashRef 0.595->1.20 density uplift)
+    {4, 117297.300424576, 117297.300424576, 576821.387640601},  // Chamber (re-pinned 2026-10-16 P2.4: kChamberWashFrac 1.20->1.60 density uplift)
     {5, 229326.452632904, 229326.452632904, 2257163.84027176},  // old Hall
 };   // baked 2026-07-10 (15 digits; bit-identical across the plate retune)
 

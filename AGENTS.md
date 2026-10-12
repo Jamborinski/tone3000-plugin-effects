@@ -81,7 +81,7 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   foreground tool calls start with a **minimal env**: `cmake: command not
   found`, missing stage libs. Export the two canonical lines (`PATH` +
   `LD_LIBRARY_PATH`) at the top of EVERY build/test command.
-- The suite **grows with features** (487 as of the 2026-10-15 R2 thirteenth-cut closeout) — **never assert a
+- The suite **grows with features** (503 as of the 2026-10-16 reverb-budget-quality-uplift pass; 487 was the 2026-10-15 R2 thirteenth-cut closeout) — **never assert a
   stale total** on failure; check build RC and that the test names actually ran.
 - **gtest silent-0 trap:** a comma list like `--gtest_filter='A*,B*'` can run
   **0 tests with exit 0** (a green lie); a single `A*` works. Always confirm the
@@ -109,7 +109,7 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
 | **Merge / sync `upstream`**, or push branches/tags | `docs/agents/merge-upstream.md` | `upstream`=tone-3000, `origin`=fork; resolve per-function; DspTests + Win link BEFORE committing; commit only conflicted files; push only when told |
 | Fresh-configure, **GUI** link, ALSA/X11/freetype errors, VST3 helper, add/remove sources | `docs/agents/linux-build-deep.md` | ALSA `-lasound` resolves via pkg-config (the shim — don't revert); `--sysroot` on the helper; never hand-edit `build.ninja` |
 | Touch any **param / knob / scale / tile / chain state** | `docs/agents/ui-wiring.md` | A block field needs all FOUR state places; 0..1-stored human-unit knobs MUST declare `toStored`; new 5-knob kinds need `numParams_` |
-| Change any **DSP engine** (Delay/Chorus/Tremolo/Compressor/Reverb) | `docs/agents/dsp-invariants.md` | Per-mode laws + CONSIDERED & DECLINED items are contracts; shared Mod = **wet-unity + added chorus layer, never a crossfade law**; stage CPU ceiling 30 us/block@128 (convolver-class budget); delay design at `plugin/docs/delay-modes.md` |
+| Change any **DSP engine** (Delay/Chorus/Tremolo/Compressor/Reverb) | `docs/agents/dsp-invariants.md` | Per-mode laws + CONSIDERED & DECLINED items are contracts; shared Mod = **wet-unity + added chorus layer, never a crossfade law**; stage CPU ceiling (reverb, pinned 2026-10-16): **23 us/block@128** per mode (house convolver @ 5–6 s stereo IR, avg 22.94 us measured); spring **46 us** (2x); measured max-spike cap ~410 us — zero-latency unchanged; delay design at `plugin/docs/delay-modes.md` |
 | **Train a reverb mode against a convolved IR reference** (Plate now; Spring/Digital/Chamber next) — retune `Reverb.h`, add a reference-IR test, comb/decay metric, plate-vs-conv A/B or CPU bench | `docs/agents/ir-reverb-training.md` | Convolve the reference with the **house** `BudgetConvolver`; **peak-normalise both sides**; **measure the reference's own numbers first** — the guard must pass for the reference (EMT 140 itself drifts +4.85 dB) |
 
 ## Hard rules (always apply, no file needed)

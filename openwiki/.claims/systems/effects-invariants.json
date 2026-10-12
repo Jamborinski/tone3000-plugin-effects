@@ -1,14 +1,18 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:861f7318feb6b107c68bed4dba5418e73b8695ff78678e808c935238fdd3f4c4",
+  "pageVersion": "sha256:3109c18af22cb9b179ea791287a0ea9e8f547b97617eef448e08a7f193b3c963",
   "claims": [
     {
       "id": "claim_bcd3a636e7fe47c7aba00662347b2681",
-      "statement": "The Reverb engine has kNumModes = 6 in V2 mode order (Plate 0, Spring 1, Room 2, Chamber 3, Hall 4, Digital 5; Reverb.h case 0..5). Decay caps kMaxDecayMsByMode[6] = {2500 (Plate), 2500 (Spring), 2000 (Room), 3000 (Chamber), 3500 (Hall), 2750 (Digital)} ms, clamped EXACTLY at the user's stated onset (stabilised above by a decay-gated HF softener kSoftenerAmt = 0.12). enterMode default dials: Plate (mode 0, '140' instance) NEUTRAL 50% tone/size/width, decay 2000 ms = the EMT 140 2.0 s reference length (tuning target, 2026-10-13); Spring decay 2000 / tone 0.60 / size 0.60 / width 0.90 (the user's ears); Room 500 ms / 0.40 / 0.30 / 0.70; Chamber 1800 / 1.0 pre / 0.50 / 0.45 / 0.85; Hall 3000 / 2.0 pre / 0.60 / 0.90 / 0.95; Digital default dials per defaultDialsForMode.",
+      "statement": "The Reverb engine has kNumModes = 6 in V2 mode order (Plate 0, Spring 1, Room 2, Chamber 3, Hall 4, Digital 5; Reverb.h case 0..5). Decay caps kMaxDecayMsByMode[6] = {2500 (Plate), 2500 (Spring), 2000 (Room), 3000 (Chamber), 3500 (Hall), 2750 (Digital)} ms. UI type chips (m00398 rename, EffectTile.cpp:142,151): mode-name row {PLT, SPR, RM, CHM, HALL, DAT} and type-name row {PLT, SPR, SML, CHM, HAL, DAT} — Plate '140' -> PLT, Spring 'RV1' -> SPR, Digital 'DIG' -> DAT. P2 density-uplift constants (2026-10-16, reverb-budget-quality-uplift pass): Room kRoomWashRef = 1.20 (P2.3 fullness norm; the P1 row measured HALF the reference's fullness) and Chamber kChamberWashFrac = 1.60 (P2.4 body-level uplift), both with public test hooks (roomNormTest_, chamberWashFracTest_) and probe-suite guards. Spring (P2.2), Hall (P2.5), and Digital (P2.6) were DECLINED in-family — the P1 baseline rows already sat inside or above their reference IRs.",
       "evidence": [
         {
+          "resource": "repo://docs/tickets/reverb-budget-quality-uplift.md",
+          "version": "repo-file-v1:sha256:5a176f52f88e16c058216be7fee290feb0aca4ba4287e591d16fba90600e7c06"
+        },
+        {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
+          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
         }
       ]
     },
@@ -18,11 +22,11 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:6817ee133a6ff05596ac340c05f623ade1b6938232b073ceb3fe2e12c8ecfa86"
+          "version": "repo-file-v1:sha256:c4c0617f6d4d0c4d4d952713d217636fbb20be7bd386397fe15b0eb31c2ba257"
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
+          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
         }
       ]
     },
@@ -32,17 +36,21 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
+          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
         }
       ]
     },
     {
       "id": "claim_6c88d47100f24d97a79aff7c64f4383b",
-      "statement": "Plate/'140' (mode 0 in V2 mode order, type 0 = EMT 140 model) is tuned against the EMT 140 2.0 s IR convolved through the house BudgetConvolver, BOTH sides peak-normalised, with the reference's OWN numbers measured first (the reference itself drifts +4.85 dB and carries 4.3 dB of steady comb, so the guard must pass for the reference). SHIPPED constants (2026-10-13 final pass): air law kPlateAirHzBright = 4900, kPlateAirHzDark = 3600, kPlateAirStages = 2 (two 1st-order OUT-stage LPF stages, -6 dB/oct each; LONGER = DARKER is the MEASURED direction across the EMT 140 family); body kPlateBodyHz = 550, kPlateBodyDb = 1.30, kPlateBodyQ = 0.60; onset 3 taps kPlateOnsetDelayMs = {14.2, 26.9, 51.3} ms, kPlateOnsetAmps = {0.42, 0.30, 0.16} (sum 0.88), kPlateOnsetLpA = 0.33, kPlateBrightOnset = 0.015; dwell kPlatePresence = 1.189; wash kPlateWashAp = 0.62 / kPlateWashRef = 0.244; bloom kPlateBloomFrac = 0.32; kPlateColorAmt = 0.3 (soft-shoulder OFF). Guard re-pins at the final state (plate_texture_tests.cpp): level baseline 78.23, comb baseline 19.39; all other five reverb modes bit-identical. These constants are unchanged through R1/R2 (2026-10-14/15): R2's shared Mod lives in a separate gated post-mix stage (processSharedModSmear), not inside the plate law.",
+      "statement": "Plate/'140' (mode 0 in V2 mode order, type 0 = EMT 140 model) is tuned against the EMT 140 2.0 s IR convolved through the house BudgetConvolver, BOTH sides peak-normalised, with the reference's OWN numbers measured first (the reference itself drifts +4.85 dB and carries 4.3 dB of steady comb, so the guard must pass for the reference). SHIPPED constants (2026-10-13 final pass, density uplift 2026-10-16): air law kPlateAirHzBright = 4900, kPlateAirHzDark = 3600, kPlateAirStages = 2 (two 1st-order OUT-stage LPF stages, LONGER = DARKER is the MEASURED direction across the EMT 140 family); body kPlateBodyHz = 550; onset 3 taps kPlateOnsetDelayMs = {14.2, 26.9, 51.3} ms; wash kPlateWashAp = 0.62 / kPlateWashRef = 0.244; bloom kPlateBloomFrac = 0.32; kPlateColorAmt = 0.3. P2.1 DENSITY UPLIFT (2026-10-16, reverb-budget-quality-uplift pass): kPlateDecayLift = 1.15 (was 1.104 — the WINNING axis: sweep 1.104 -> full 27.2 / comb 35.8; 1.15 -> full 32.5 / comb 34.8, t2000 lands AT the EMT 140 reference's OWN 1.0 s level = inside the family, not overshoot; 1.20+ beats the ref's 2 s number or saturates, DECLINED) and kPlateFbCeilingUp = 0.965 (was 0.940; drift-safe: 0.965*1.03 = 0.994 < 1 under the shared +-3% fbDrift — the 0.975 value would be UNSTABLE, DECLINED; the ceiling binds only >=~2400 ms dials). Public test hooks plateCeilTest_ / plateLiftTest_ (0 = shipped const) gate the sweeps (Reverb.h:1299-1300). Guard re-pins 2026-10-16 (user-authorized leeway, same-family-not-IR target): level-law baseline 93.95 @2000 ms (was 78.23), comb cap 21.98 @2500 ms (was 19.39+1dB). All other five reverb modes bit-identical; R2's shared Mod lives in a separate gated post-mix stage (processSharedModSmear), not inside the plate law.",
       "evidence": [
         {
+          "resource": "repo://docs/tickets/reverb-budget-quality-uplift.md",
+          "version": "repo-file-v1:sha256:5a176f52f88e16c058216be7fee290feb0aca4ba4287e591d16fba90600e7c06"
+        },
+        {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
+          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
         }
       ]
     },
@@ -56,7 +64,7 @@
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
+          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
         }
       ]
     },
@@ -66,11 +74,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
+          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
-          "version": "repo-file-v1:sha256:434a66a7286b3bf873efbc6324012889213c7addea33ef5257bce9d3225e2c9c"
+          "version": "repo-file-v1:sha256:d0db7ac88b8f3aa03e403b4a0d967439a969f7aee4be49f292779f70f0c9fe38"
         }
       ]
     },
@@ -80,7 +88,7 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:6817ee133a6ff05596ac340c05f623ade1b6938232b073ceb3fe2e12c8ecfa86"
+          "version": "repo-file-v1:sha256:c4c0617f6d4d0c4d4d952713d217636fbb20be7bd386397fe15b0eb31c2ba257"
         },
         {
           "resource": "repo://docs/agents/ir-reverb-training.md",
@@ -88,25 +96,25 @@
         },
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:48c5ba63eea528f604e8358093728461701f8f900853099b159568179c455240"
+          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
         }
       ]
     },
     {
       "id": "claim_69c8611254374294829b7dd2483e29e2",
-      "statement": "The R2 shared-Mod contract (2026-10-15, SHIPPED at the thirteenth/final cut, commit 1aa620e): `Reverb::Params::sharedMod` (0..1, clamped in setParams) gates `processSharedModSmear` -- a post-mix, wet-unity ADDED multi-voice chorus layer on the WET reverb output (`out = wet + amt*dsum`; NEVER a crossfade, which the ear rejected for volume drop + anti-phase clicks). Mechanism constants (plugin/include/Reverb.h, region ~1050-1131 + processSharedModSmear at ~1913): kModVoices = 7 (6 delay lines v=1..6 of incommensurate depth/rate + the undelayed voice), kSharedModDepthMs = 18.0 (deepest voice at sharedMod 1), kModWriteTauMs = 80.0 (the CLICK FIX: ring-write one-pole smoothing `prev += coef*(x-prev)`, coef = 1-exp(-1/(sr*tauMs)) on each voice's ring write), kModChorusAmt = 3.0 (layer amount, measured), a 6 kHz 1-pole/tap-filter per voice, and a smoothstep output taper m*m*(3-2m) so the layer is inaudible below ~50 % Mod. The fixed-sine Mod LFO uses `waveValue(0, phase)` (wave 0 = exact sine, the Digital read-tap anchor). OFF (sharedMod == 0, the default) the WHOLE path (incl. the per-voice biquad + delay state) is never entered -> all 6 modes bit-identical to the pre-R2 engine (pinned by R2_SharedModZeroIsBitExactAllSixModes at 15-digit level). The per-mode kSmearAmt/kFbDriftAmt swirl laws are NEVER scaled by the Mod knob (always-on, unchanged, bit-identity anchor). CONSIDERED & DECLINED (R2 cascade, 2026-10-15): (1) lowpass-breathe Mod (static 4 kHz darkening -- DECLINED by ear, first cut); (2) level-swell modulation (the R2 base mechanism -- superseded: downward-only swell read as pumping, not chorus); (3) a wet/dry CrossFADE split (volume drop + anti-phase clicks -- DECLINED by ear); (4) the single-voice first mechanism (clicks under sustained chords at max Mod -- user rejection m03111/m03127); (5) darkening/rate/floor/voice-count sweeps alone to kill clicks (they only rescale the layer; the real fix was #6); (6) SHIPPED instead of a per-mode law: write-path one-pole smoothing. Anti-click was MEASURED with the click-index metric (layer jump-RMS on-off RELATIVE to the wet's own jump-RMS) on sustained E chords in R2_ModChordClickHunt (test/src/effect_tests.cpp): unsmoothed ~0.351 -> 0.048 (12 ms) -> 0.0145 (40 ms) -> 0.0073 (80 ms); the R2_ModWriteTauSonicSweep ladder (12/40/80 ms) gave +~2.2 dB body and 6.6x less sharpness from 12 to 80 ms, and the user A/B'd the shipped Windows exes: 80 ms won ('killed the clicks completely', 'no 80 ms is great'). The standing rule (user m02589, written into docs/agents/dsp-invariants.md): ALWAYS MEASURE DSP changes sonically (probe/sweep tests in the real engine) -- never ship an ear-guess without the measured ladder.",
+      "statement": "The R2 shared-Mod contract (2026-10-15, SHIPPED at the thirteenth/final cut, commit 1aa620e): `Reverb::Params::sharedMod` (0..1, clamped in setParams) gates `processSharedModSmear` -- a post-mix, wet-unity ADDED multi-voice chorus layer on the WET reverb output (`out = wet + amt*dsum`; NEVER a crossfade, which the ear rejected for volume drop + anti-phase clicks). Mechanism constants (plugin/include/Reverb.h, region ~1050-1131 + processSharedModSmear at ~1913): kModVoices = 7 (6 delay lines v=1..6 of incommensurate depth/rate + the undelayed voice), kSharedModDepthMs = 18.0 (deepest voice at sharedMod 1), kModWriteTauMs = 80.0 (the CLICK FIX: ring-write one-pole smoothing on each voice's ring write), kModChorusAmt = 3.0 (layer amount, measured), a 6 kHz 1-pole/tap-filter per voice, and a smoothstep output taper so the layer is inaudible below ~50 % Mod. The fixed-sine Mod LFO uses `waveValue(0, phase)` (wave 0 = exact sine, the Digital read-tap anchor). OFF (sharedMod == 0, the default) the WHOLE path (incl. the per-voice biquad + delay state) is never entered -> all 6 modes bit-identical to the pre-R2 engine (pinned by R2_SharedModZeroIsBitExactAllSixModes at 15-digit level). The per-mode kSmearAmt/kFbDriftAmt swirl laws are NEVER scaled by the Mod knob (always-on, unchanged, bit-identity anchor). The standing rule (user m02589): ALWAYS MEASURE DSP changes sonically (probe/sweep tests in the real engine) -- never ship an ear-guess without the measured ladder. Ticket: docs/tickets/complete/reverb-dry-mod-width-swing.md.",
       "evidence": [
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:6817ee133a6ff05596ac340c05f623ade1b6938232b073ceb3fe2e12c8ecfa86"
+          "version": "repo-file-v1:sha256:c4c0617f6d4d0c4d4d952713d217636fbb20be7bd386397fe15b0eb31c2ba257"
         },
         {
-          "resource": "repo://docs/tickets/reverb-dry-mod-width-swing.md",
-          "version": "repo-file-v1:sha256:cc62cb60b68d5d54705d3aa121a4bdf882f17dac5ae7ee83eaf7327d8518daea"
+          "resource": "repo://docs/tickets/complete/reverb-dry-mod-width-swing.md",
+          "version": "repo-file-v1:sha256:4763b150be1457825e9f212f9943426a0a7feec41351987c07449abc44fc5f75"
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
+          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
         },
         {
           "resource": "repo://test/src/effect_tests.cpp",
@@ -116,25 +124,25 @@
     },
     {
       "id": "claim_2bb3a0165b1c42d9a520ba2b024cf11f",
-      "statement": "R3 WIDTH LAW (2026-10-16, SHIPPED — supersedes any description of the reverb width as merely a per-bank tap-length drift): width is a TWO-LAYER control, coherent in all 6 reverb modes. LAYER 1 (RETAINED, bit-exact to pre-R3; present at the plain/Digital/Spring/Plate sites — Room/Chamber/Hall never used it): widthTapScaleFor(ch, numChannels) = (ch==0) ? (1.0 − 0.05*width) : (1.0 + 0.05*width) with kMaxWidthSpread = 0.05, i.e. ch-0 taps 5pct·width shorter, ch-1 5pct·width longer — the spectral-decorrelation baseline (a first R3 cut removed it and 1ch mono pins moved; it was restored). LAYER 2 (NEW, the ticket's 'match the convolver' ask): applyWidthHaas in plugin/include/Reverb.h (~:869) — a post-mix convolver-MATCHING Haas/M-S stage mirroring ConvolutionReverb's mono-IR spread constants kHaasDelayMs = 3.5 ms (kWidthHaasDelayMs) / kHaasDepth = 0.55 (kWidthHaasDepth), applied at EVERY mode's exit (7 call sites: plain ~:932, Digital ~:942, Spring ~:952, Plate ~:962, Room ~:974, Chamber ~:998, Hall ~:1087) BEFORE processSharedModSmear. Per sample: mid = 0.5(L+R) is stored in a per-instance power-of-2 ring (whRing_/whMask_/whWrite_, sized in prepare(), cleared in reset()); half = 0.5*width*kWidthHaasDepth*mid[d samples ago]*0.5; L += 2*half, R −= 2*half — i.e. side = width*0.55*mid[3.5 ms behind], split ± onto L/R. Properties: SUM-EXACT — (L+R)/2 unchanged at every sample, so every mono/level pin stayed green; GATED (widthHaasOn_ = 2ch buffer && width>0 && sampleRate_>0) — width 0 = bit-exact no-op (zero flops) and 1ch buffers (the production per-lane mode) are width-inert in layer 2, keeping only layer 1 (bit-identical to pre-R3). Net effect: Room/Chamber/Hall NOW respond to Width (previously inert); the stereo image is the convolver's Haas pair instead of a synthetic tap-length drift. P5 (PlateKnobLaw.StereoImageAtWidth1, test/src/plate_family_tests.cpp:716) re-measured under the two-layer law: tail [1.0, 2.5 s) at 2ch width 1.0 = mid −21.40 dB, side −24.91 dB = side-over-mid −3.51 dB (the pre-R3 tapScale-only measurement was −4.06 dB; the test's soft assertions sideE<midE and midE>−90 stay intact). DspTests 487/487 green; the reverb tile goldens (EffectTile kCompactKnobFace 32 px + label 12.0, the R3 UI addendum) were re-shot and verified at 0 px.",
+      "statement": "R3 WIDTH LAW (2026-10-16, SHIPPED — supersedes any description of the reverb width as merely a per-bank tap-length drift): width is a TWO-LAYER control, coherent in all 6 reverb modes. LAYER 1 (RETAINED, bit-exact to pre-R3; present at the plain/Digital/Spring/Plate sites — Room/Chamber/Hall never used it): widthTapScaleFor(ch, numChannels) = (ch==0) ? (1.0 − 0.05*width) : (1.0 + 0.05*width) with kMaxWidthSpread = 0.05, i.e. ch-0 taps 5pct·width shorter, ch-1 5pct·width longer — the spectral-decorrelation baseline (a first R3 cut removed it and 1ch mono pins moved; it was restored). LAYER 2 (NEW, the ticket's 'match the convolver' ask): applyWidthHaas in plugin/include/Reverb.h (~:869) — a post-mix convolver-MATCHING Haas/M-S stage mirroring ConvolutionReverb's mono-IR spread constants kHaasDelayMs = 3.5 ms (kWidthHaasDelayMs) / kHaasDepth = 0.55 (kWidthHaasDepth), applied at EVERY mode's exit (7 call sites: plain ~:932, Digital ~:942, Spring ~:952, Plate ~:962, Room ~:974, Chamber ~:998, Hall ~:1087) BEFORE processSharedModSmear. Per sample: mid = 0.5(L+R) is stored in a per-instance power-of-2 ring (whRing_/whMask_/whWrite_, sized in prepare(), cleared in reset()); half = 0.5*width*kWidthHaasDepth*mid[d samples ago]*0.5; L += 2*half, R −= 2*half — i.e. side = width*0.55*mid[3.5 ms behind], split ± onto L/R. Properties: SUM-EXACT — (L+R)/2 unchanged at every sample, so every mono/level pin stayed green; GATED (widthHaasOn_ = 2ch buffer && width>0 && sampleRate_>0) — width 0 = bit-exact no-op (zero flops) and 1ch buffers (the production per-lane mode) are width-inert in layer 2, keeping only layer 1 (bit-identical to pre-R3). Net effect: Room/Chamber/Hall NOW respond to Width (previously inert); the stereo image is the convolver's Haas pair instead of a synthetic tap-length drift. P5 (PlateKnobLaw.StereoImageAtWidth1, test/src/plate_family_tests.cpp:716) re-measured under the two-layer law: tail [1.0, 2.5 s) at 2ch width 1.0 = mid −21.40 dB, side −24.91 dB = side-over-mid −3.51 dB (the pre-R3 tapScale-only measurement was −4.06 dB; the test's soft assertions sideE<midE and midE>−90 stay intact). DspTests 487/487 green; the reverb tile goldens (EffectTile kCompactKnobFace 32 px + label 12.0, the R3 UI addendum) were re-shot and verified at 0 px. Ticket: docs/tickets/complete/reverb-dry-mod-width-swing.md.",
       "evidence": [
         {
-          "resource": "repo://docs/tickets/reverb-dry-mod-width-swing.md",
-          "version": "repo-file-v1:sha256:cc62cb60b68d5d54705d3aa121a4bdf882f17dac5ae7ee83eaf7327d8518daea"
+          "resource": "repo://docs/tickets/complete/reverb-dry-mod-width-swing.md",
+          "version": "repo-file-v1:sha256:4763b150be1457825e9f212f9943426a0a7feec41351987c07449abc44fc5f75"
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
+          "version": "repo-file-v1:sha256:3f3b1729017e4fc2e8a64cabc6c013522513b8598e671923649723ce98510162"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
-          "version": "repo-file-v1:sha256:434a66a7286b3bf873efbc6324012889213c7addea33ef5257bce9d3225e2c9c"
+          "version": "repo-file-v1:sha256:d0db7ac88b8f3aa03e403b4a0d967439a969f7aee4be49f292779f70f0c9fe38"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-12T12:49:50.699Z"
+    "at": "2026-10-12T21:41:51.351Z"
   }
 }

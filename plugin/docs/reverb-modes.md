@@ -14,8 +14,8 @@ shared dials underneath — the delay/compressor precedent. Shared with all:
 
 | # | Mode    | Sig A *(row 1, right of Pre)* | Sig B *(row 2, right of Width)* | One-line character |
 |---|---------|-------------------------------|--------------------------------|--------------------|
-| 0 | Plate   | **Bright** (0..1)             | **Bloom** (0..1)               | 2D dense mode wash, fast onset; discrete mode ring (Bright) + dispersive bright→bloom (Bloom); '140' type chip (EMT 140 reference-tuned) |
-| 1 | Spring  | **Springs** (stepped 1..6)    | **Sag** (0..1)                 | 1D metallic: blend of N spring lines (Springs) + transducer-attack drip + low-tone lag (Sag); RV1 type chip |
+| 0 | Plate   | **Bright** (0..1)             | **Bloom** (0..1)               | 2D dense mode wash, fast onset; discrete mode ring (Bright) + dispersive bright→bloom (Bloom); `PLT` type chip (EMT 140 family reference-tuned) |
+| 1 | Spring  | **Springs** (stepped 1..6)    | **Sag** (0..1)                 | 1D metallic: blend of N spring lines (Springs) + transducer-attack drip + low-tone lag (Sag); `SPR` type chip |
 | 2 | Room    | **Early** (0..1)              | **Air** (0..1)                 | short sharp early-reflection set + per-tap air-absorption darkening, short tail |
 | 3 | Chamber | **Volley** (0..1)             | **Bass** (0..1)                | short diffuse early cluster + **extended LF tail**, HF-limited, high density, no metallic |
 | 4 | Hall    | **Build** (0..1)              | **Space** (0..1)               | long wide early build-up (lateral energy) + longest RT + highest density |
@@ -289,9 +289,9 @@ fields, the sig-family precedent). Type 0 = the mode's MODELED character
 
 | mode    | type-0 ID | the modeled character (internal name) |
 |---------|-----------|----------------------------------------|
-| Digital | `DIG`     | the clean 8-comb field                 |
-| Spring  | `RV1`     | the single-can spring tank             |
-| Plate   | `140`     | the dense flat plate (this session's pass) |
+| Digital | `DAT`     | the clean 8-comb field (placeholder; DAT to sound like PLT later) |
+| Spring  | `SPR`     | the single-can spring tank             |
+| Plate   | `PLT`     | the dense flat plate (this session's pass) |
 | Room    | `SML`     | the small close room                   |
 | Chamber | `CHM`     | the open stone chamber                 |
 | Hall    | `HAL`     | the long wide hall                     |

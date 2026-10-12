@@ -7,8 +7,10 @@ sources:
     resource: repo://docs/agents/dsp-invariants.md
   - id: openwiki-source-087e13e369c1d3edf1b937d1
     resource: repo://docs/agents/ir-reverb-training.md
-  - id: openwiki-source-2c5595f2daaf6fcb72c0419e
-    resource: repo://docs/tickets/reverb-dry-mod-width-swing.md
+  - id: openwiki-source-a57c88194aa852db387a04a3
+    resource: repo://docs/tickets/complete/reverb-dry-mod-width-swing.md
+  - id: openwiki-source-f394ea0013cb04b60e39f7b4
+    resource: repo://docs/tickets/reverb-budget-quality-uplift.md
   - id: openwiki-source-4d6792d483f6b9821830338e
     resource: repo://plugin/include/Reverb.h
   - id: openwiki-source-4b8e7dce368774e92d99ea30
@@ -17,10 +19,10 @@ sources:
     resource: repo://test/src/effect_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
     resource: repo://test/src/plate_family_tests.cpp
-generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
+generated: { by: "pi", at: "2026-10-12T21:41:51.351Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-12T12:49:50.699Z
+    at: 2026-10-12T21:41:51.351Z
 ---
 
 
@@ -91,8 +93,19 @@ ideal). Shipped constants (all beside their law in `Reverb.h`):
 - **Bloom / color** (`kPlateBloomFrac = 0.32`, `kPlateColorAmt = 0.30`
   OFF — the soft-shoulder was the fizz/distortion, kept in-tree only as a
   clean-rooms port of the compressor's soft-knee law).
+- **Density uplift (2026-10-16, P2.1, reverb-budget-quality-uplift)**:
+  `kPlateDecayLift` raised 1.104 → **1.15** (the winning axis — the
+  per-line feedback multiplier; sweep 1.104 → full 27.2 / comb 35.8,
+  1.15 → full 32.5 / comb 34.8; t2000 lands AT the EMT 140 reference's
+  own 1.0 s level, *inside the family*, not overshoot; 1.20+ beats the
+  reference's 2 s number or saturates → DECLINED).
+  `kPlateFbCeilingUp` raised 0.940 → **0.965** (drift-safe:
+  0.965 × 1.03 = 0.994 < 1 under the shared ±3 % fbDrift; the 0.975
+  value would be UNSTABLE at 1.004 > 1 → DECLINED; the ceiling binds
+  only ≥ ~2400 ms dials). Public test hooks `plateCeilTest_` /
+  `plateLiftTest_` (0 = shipped) gate the probe sweeps.
 
-**CONSIDERED & DECLINED (2026-10-13, keep the block; do not re-try blind):**
+**CONSIDERED & DECLINED (2026-10-13 and 2026-10-16 passes; keep the block; do not re-try blind):**
 - in-loop darkening / body (comb +4.7 to +10 dB, fb-capped gain, one
   unstable);
 - 2nd-order biquad OUT-stages at low fc — measured UNSTABLE (unnormalised
@@ -110,6 +123,20 @@ ideal). Shipped constants (all beside their law in `Reverb.h`):
 - denser onset pings (L1: 42.7 → 29.5; Hadamard: 42.7 → 25.1) —
   **denser pings were measured to thin the ping further**, not densify it;
   onset ping is guarded at floor 33.0 + within 10 dB of the reference 46.6.
+
+**CONSIDERED & DECLINED (2026-10-16 P2.1 density pass, keep; do not re-try blind):**
+- `denseMix` (kPlateDenseMix) 0.70 → 0.80/0.90: +0.4 dB fullness, −2 dB
+  comb, but **broke the Plate SizeLaw** (size 1 must stay brighter than
+  size 0 — the air-law corner-shift direction inverted at 0.80) → REVERTED.
+- `washAp` (kPlateWashAp) 0.62 → 0.95: ≤ 0.2 dB on lowhi/tone — **INERT**
+  (the 1 − fb APF is level-neutral by law).
+- A **spread2 second all-pass diffusion output stage** (kSpread2Rate 0.35
+  Hz, a = 0.75): **INERT** on fullness/comb — wired then removed.
+- `fbCeilingUp` 0.940 → 0.975 (ceiling-alone, no lift change): **INERT**
+  at 2000 ms (the ceiling does not bind there).
+- Lift ≥ 1.20: full 46.6 / t2000 −52.8 dB — beats the EMT 140 reference's
+  own 2 s number → **family overshoot, DECLINED** (the m00381 family-not-IR
+  law); ≥ 1.25 saturated (peak > 1.2 → UNSTABLE).
 
 ### Spring (mode 1) — metallic body + boing (R1/R2/R3 cluster)
 
