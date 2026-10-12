@@ -1087,3 +1087,5 @@ Ninth-cut staging run: `C:\Users\jambo\Downloads\TONE3000-win-20261011-164722\TO
 Tenth-cut staging run: `C:\Users\jambo\Downloads\TONE3000-win-20261011-173143\TONE3000.exe` (md5 de662d0e8aa6012bf55c06e1fbc9c998, 29 MB, from 037c1f5).
 
 Eleventh-cut staging run: `C:\Users\jambo\Downloads\TONE3000-win-20261011-194947\TONE3000.exe` (md5 a14b36d3f1432ee5a5bfbb1b6ed90915, 29 MB, from a74a5ba).
+
+Twelfth-cut staging run: `C:\Users\jambo\Downloads\TONE3000-win-20261011-201024\TONE3000.exe` (md5 584b26db2d17bd0fb1fedb54209bb526, 29 MB, from 6d6fccc — write-tau 12 ms).
