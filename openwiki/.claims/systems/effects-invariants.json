@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:6a4a6fc1579badd5ff7eb5d447851e27d2da4df0452820404e7347a8052dd2b5",
+  "pageVersion": "sha256:861f7318feb6b107c68bed4dba5418e73b8695ff78678e808c935238fdd3f4c4",
   "claims": [
     {
       "id": "claim_bcd3a636e7fe47c7aba00662347b2681",
@@ -8,7 +8,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:f6aaa20044bc3fc771913e5f0c4ca11676ba9748b1f585b3117d8a26b583029a"
+          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
         }
       ]
     },
@@ -22,7 +22,7 @@
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:f6aaa20044bc3fc771913e5f0c4ca11676ba9748b1f585b3117d8a26b583029a"
+          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
         }
       ]
     },
@@ -32,7 +32,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:f6aaa20044bc3fc771913e5f0c4ca11676ba9748b1f585b3117d8a26b583029a"
+          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
         }
       ]
     },
@@ -42,7 +42,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:f6aaa20044bc3fc771913e5f0c4ca11676ba9748b1f585b3117d8a26b583029a"
+          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
         }
       ]
     },
@@ -56,7 +56,7 @@
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:f6aaa20044bc3fc771913e5f0c4ca11676ba9748b1f585b3117d8a26b583029a"
+          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
         }
       ]
     },
@@ -66,7 +66,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:f6aaa20044bc3fc771913e5f0c4ca11676ba9748b1f585b3117d8a26b583029a"
+          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
@@ -102,21 +102,39 @@
         },
         {
           "resource": "repo://docs/tickets/reverb-dry-mod-width-swing.md",
-          "version": "repo-file-v1:sha256:926a931116b901cdabbdd4011119454e8430aa28bde03a5aec5246e7a5b5d386"
+          "version": "repo-file-v1:sha256:cc62cb60b68d5d54705d3aa121a4bdf882f17dac5ae7ee83eaf7327d8518daea"
         },
         {
           "resource": "repo://plugin/include/Reverb.h",
-          "version": "repo-file-v1:sha256:f6aaa20044bc3fc771913e5f0c4ca11676ba9748b1f585b3117d8a26b583029a"
+          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
         },
         {
           "resource": "repo://test/src/effect_tests.cpp",
           "version": "repo-file-v1:sha256:f5b44df8a85137d2387c48b22e5df70294cffecc31a472c12757d7084361e496"
         }
       ]
+    },
+    {
+      "id": "claim_2bb3a0165b1c42d9a520ba2b024cf11f",
+      "statement": "R3 WIDTH LAW (2026-10-16, SHIPPED — supersedes any description of the reverb width as merely a per-bank tap-length drift): width is a TWO-LAYER control, coherent in all 6 reverb modes. LAYER 1 (RETAINED, bit-exact to pre-R3; present at the plain/Digital/Spring/Plate sites — Room/Chamber/Hall never used it): widthTapScaleFor(ch, numChannels) = (ch==0) ? (1.0 − 0.05*width) : (1.0 + 0.05*width) with kMaxWidthSpread = 0.05, i.e. ch-0 taps 5pct·width shorter, ch-1 5pct·width longer — the spectral-decorrelation baseline (a first R3 cut removed it and 1ch mono pins moved; it was restored). LAYER 2 (NEW, the ticket's 'match the convolver' ask): applyWidthHaas in plugin/include/Reverb.h (~:869) — a post-mix convolver-MATCHING Haas/M-S stage mirroring ConvolutionReverb's mono-IR spread constants kHaasDelayMs = 3.5 ms (kWidthHaasDelayMs) / kHaasDepth = 0.55 (kWidthHaasDepth), applied at EVERY mode's exit (7 call sites: plain ~:932, Digital ~:942, Spring ~:952, Plate ~:962, Room ~:974, Chamber ~:998, Hall ~:1087) BEFORE processSharedModSmear. Per sample: mid = 0.5(L+R) is stored in a per-instance power-of-2 ring (whRing_/whMask_/whWrite_, sized in prepare(), cleared in reset()); half = 0.5*width*kWidthHaasDepth*mid[d samples ago]*0.5; L += 2*half, R −= 2*half — i.e. side = width*0.55*mid[3.5 ms behind], split ± onto L/R. Properties: SUM-EXACT — (L+R)/2 unchanged at every sample, so every mono/level pin stayed green; GATED (widthHaasOn_ = 2ch buffer && width>0 && sampleRate_>0) — width 0 = bit-exact no-op (zero flops) and 1ch buffers (the production per-lane mode) are width-inert in layer 2, keeping only layer 1 (bit-identical to pre-R3). Net effect: Room/Chamber/Hall NOW respond to Width (previously inert); the stereo image is the convolver's Haas pair instead of a synthetic tap-length drift. P5 (PlateKnobLaw.StereoImageAtWidth1, test/src/plate_family_tests.cpp:716) re-measured under the two-layer law: tail [1.0, 2.5 s) at 2ch width 1.0 = mid −21.40 dB, side −24.91 dB = side-over-mid −3.51 dB (the pre-R3 tapScale-only measurement was −4.06 dB; the test's soft assertions sideE<midE and midE>−90 stay intact). DspTests 487/487 green; the reverb tile goldens (EffectTile kCompactKnobFace 32 px + label 12.0, the R3 UI addendum) were re-shot and verified at 0 px.",
+      "evidence": [
+        {
+          "resource": "repo://docs/tickets/reverb-dry-mod-width-swing.md",
+          "version": "repo-file-v1:sha256:cc62cb60b68d5d54705d3aa121a4bdf882f17dac5ae7ee83eaf7327d8518daea"
+        },
+        {
+          "resource": "repo://plugin/include/Reverb.h",
+          "version": "repo-file-v1:sha256:f0ae9268772b328cfe5d08ebbdcd177c5432fecc02c2b5f679cd4befcd97c968"
+        },
+        {
+          "resource": "repo://test/src/plate_family_tests.cpp",
+          "version": "repo-file-v1:sha256:434a66a7286b3bf873efbc6324012889213c7addea33ef5257bce9d3225e2c9c"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-12T03:32:00.416Z"
+    "at": "2026-10-12T12:49:50.699Z"
   }
 }

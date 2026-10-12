@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:f478d2b92f27d0a5d72d88e9a75c56a238edd8f9e212f8ca902444c270832424",
+  "pageVersion": "sha256:505d1886301d5d66c64e824161e37bae5a32b68e11f87e9a983eba64069e4b6e",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -96,7 +96,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:323ff3afdfcf8f17df631a5ee054e26edfcb2472b71bba057fc970c5d5b4e144"
+          "version": "repo-file-v1:sha256:1778c14d0cd818ab916fcb9257b4907252e1139cf577515ed4c485f471fd459f"
         }
       ]
     },
@@ -110,21 +110,31 @@
         },
         {
           "resource": "repo://plugin/ui/testbed/goldens/reverb-shift.png",
-          "version": "repo-file-v1:sha256:f846ef428da75ee194c3fde273767a91c32b96cd99e25e94247e87c922036d6a"
+          "version": "repo-file-v1:sha256:407a35142cf498fbaf768e8a04bac7ab9cef076d89be43a5bc08ea271c9fdaea"
         },
         {
           "resource": "repo://plugin/ui/testbed/goldens/reverb.png",
-          "version": "repo-file-v1:sha256:7cbd8b9e0ebcaa08cb80b8d0d173a0425333d5ff0009cb00b1eca5416d3f6d80"
+          "version": "repo-file-v1:sha256:ae520c757156ecd6765fe936705827cf62148f38855996dde9402b9418ffe11c"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:323ff3afdfcf8f17df631a5ee054e26edfcb2472b71bba057fc970c5d5b4e144"
+          "version": "repo-file-v1:sha256:1778c14d0cd818ab916fcb9257b4907252e1139cf577515ed4c485f471fd459f"
+        }
+      ]
+    },
+    {
+      "id": "claim_4fa428d83ca54c59bc26c2aa939d0f36",
+      "statement": "Knob FACE SIZE (R3 UI addendum, 2026-10-16): the compact knob face (kCompactKnobFace = 32 px, defined at plugin/ui/views/gallery/EffectTile.cpp:21) now applies to compact tiles AND the convolution AND the reverb full tile — the R3 scope addendum (user request: reverb full-tile knobs should look like the convolver tile). Implementation: 14 ternary sites in EffectTile.cpp now read `(compact_ || block_.effectKind == \"convolution\" || block_.effectKind == \"reverb\") ? kCompactKnobFace : theme::kKnobSizeSecondary` (the knob() helpers at ~:311-:343, Knob::heightFor at ~:343, and the SigA/SigB rows); the labelSize couples to the face size — inside knob() (`if (faceSize != theme::kKnobSizeSecondary) o.labelSize = 12.0f;` at ~:36), i.e. the 32-px face carries a 12.0-px label (at 14 px the 'Shape'/'Width' labels touched inside 38-px columns; at 12 px both clear). The effectKind == \"reverb\" param-stream gates at :365/:367 (Mod+Dry on the compact surface) and the 6+6 layout are unchanged by this addendum.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
+          "version": "repo-file-v1:sha256:1778c14d0cd818ab916fcb9257b4907252e1139cf577515ed4c485f471fd459f"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-12T03:32:00.416Z"
+    "at": "2026-10-12T12:49:50.699Z"
   }
 }

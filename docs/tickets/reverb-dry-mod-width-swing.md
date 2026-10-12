@@ -2,7 +2,7 @@
 # better Width, and the "swirly / swelled" EMT-140 character gap
 # (with a clean-room research track)
 
-Status: **R1 + R2 SHIPPED** (R1 2026-10-13, R2 2026-10-14, THIRTEEN R2 Mod
+Status: **R1 + R2 + R3 SHIPPED** (R1 2026-10-13, R2 2026-10-14, THIRTEEN R2 Mod
 follow-ups 2026-10-14/15 — see the follow-up logs below). Current Mod
 mechanism = the ELEVENTH-CUT structure retuned by TWELFTH/THIRTEENTH CUTS
 (wet-unity added chorus layer + write-path smoothing that obliterates
@@ -128,11 +128,59 @@ selftest green (xvfb), reverb tile 6+6. Windows staged 2026-10-15
 Commits: `57a5dba` (R2), `664965e`, `5e71f5a`, `bd3166c`, `91256dd`,
 `904695b` (1st–5th Mod cuts), plus this sixth follow-up. **R4
 (research skeleton) is COMPLETE** (`research/` gitignored, committed
-2026-10-13 alongside the ticket). **R3 (Width improvement) remains OPEN**.
+2026-10-13 alongside the ticket). **R3 (Width) SHIPPED 2026-10-16** (see the
+R3 implementation log above).
 Follow-up to the
 plate/"140" final-pass closeout
 (`docs/tickets/complete/plate-140-final-training-pass.md`). Guardrails and
 closeout protocol as at the bottom of this file stand unchanged.
+
+## R3 implementation log (2026-10-16) — Width realism + UI addendum — **SHIPPED**
+> Opened `docs/agents/dsp-invariants.md`, `docs/agents/ui-wiring.md`,
+> `docs/agents/ui-snapshots.md` before editing `plugin/include/Reverb.h`,
+> `plugin/ui/views/gallery/EffectTile.cpp`, goldens.
+
+**Two-layer law (per the ticket's "match the convolver" ask):**
+1. **tapScale (RETAINED, bit-exact to pre-R3, ALL 6 modes):** the ch-0
+   shorter / ch-1 longer 5 % tap law (`widthTapScaleFor(ch,numChannels)`:
+   `1 ∓ 0.05·width`) stays exactly where it was — plain (ch-loop), Digital
+   (per-line base), Spring, Plate. 1ch per-lane production paths and every
+   mono pin see **zero** change from the R2 ship. (First R3 cut removed it;
+   `PlateKnobLaw.ToneLaw`/`SizeLaw`/`PlateComb.OtherModesStayBitIdentical`
+   failed, confirming the production per-lane 1ch spread is load-bearing —
+   restored, 487/487 green.)
+2. **applyWidthHaas (NEW, convolver-matching, 2ch only):** post-mix on the
+   wet at every mode exit (7 call sites, before `processSharedModSmear`):
+   `m = 0.5(L+R)`, `s = 0.5(L−R)`; `outL = wetL + width·(side + 0.55·
+   mid[n − 3.5 ms])`, `outR = wetR − width·(…)`, Haas depth/delay mirrored
+   from `ConvolutionReverb.h` (`kHaasDepth 0.55`, `kHaasDelayMs 3.5`, our own
+   constants — clean-room OK: no AGPL numbers pulled). Sum-exact →
+   mid-band level pins unchanged; **bit-exact at width 0** (whole pass gated
+   on `widthHaasOn_ = width > 0 && numChannels ≥ 2` → zero flops).
+   `Room` / `Chamber` / `Hall` gain width for the first time (they never read
+   the old law) — the across-mode coherence win; Room/Chamber/Hall ch-loops
+   untouched, width is pure post-mix.
+
+**Measured (re-pin per protocol):** `PlateKnobLaw.StereoImageAtWidth1`
+(2ch, click drive, tail 1.0–2.5 s): **mid −21.40 dB, side −24.91 dB →
+side-over-mid −3.51 dB** (was −4.06 dB tapScale-only). Soft asserts
+(`sideE < midE`, `midE > −90`) green without change.
+
+**UI addendum (scope item, ticket R3 2026-10-15 m03522):** reverb full tile
+now uses the convolver's compact face — 14 ternaries in `EffectTile.cpp`
+(`:311–343` ×13, `:1196` ×1) extended to
+`compact_ || effectKind == "convolution" || effectKind == "reverb"` →
+`kCompactKnobFace` (32 px) + `labelSize 12.0`. Goldens re-shot per
+ui-snapshots.md (reverb.png 448×448 0-px mismatch; reverb-shift.png same;
+--regen is the deliberate human review step, pixel-reviewed before commit).
+
+**Gate status:** DspTests **487/487** (`script/test-dsp.sh`); `TONE3000_`
+Standalone link clean (`build-tree`, `2026-10-16`); UiTestbed goldens
+pass; Windows exe staged in this closeout:
+`C:\Users\jambo\Downloads\TONE3000-win-20261012-054520\TONE3000.exe` (md5
+032405f673d668a7f060e21f63891463, 29 MB, staged 2026-10-16 from the R3
+working tree over base f9b6a0a).
+Open: none on R3. R4 (research track) unchanged.
 
 ## R2 implementation log (2026-10-14)
 > **SUPERSEDED IN PART** (2026-10-15 user regression report): the shared Mod
@@ -768,7 +816,8 @@ all-pass/comb field cannot.
   before committing rates; the new post-mix LFO should add <0.2 µs (a few
   flops), well inside the 1.39 µs headroom.
 
-### R3 — Width realism (all reverb modes + convolver)
+### R3 — Width realism (all reverb modes + convolver) — **DONE 2026-10-16**
+  (see the R3 implementation log above)
 - Investigate then improve `width` (`Params::width` in `Reverb.h:563`,
   0 = mono, 1 = wide): the current S-M/pan law (plate Haas measured
   S−M −4.06 dB — closeout P5) is functional but the wet reads synthesized.

@@ -308,39 +308,39 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
                           : 3)))),
       compact_(size <= gallery::kStereoTileSize),
       mix_(knob("Mix", scales::percent(), 1.0f, help::Key::effectMix,
-                (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                (compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       input_(knob("In", scales::gainDb(), 0.5f, help::Key::effectInput,
-                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       output_(knob("Out", scales::gainDb(), 0.5f, help::Key::effectOutput,
-                   (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                   (compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobA_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
-                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobB_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
-                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobC_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
-                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobD_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
-                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobE_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
-                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobF_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
-                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobG_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
-                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       knobH_(knob("P", scales::percent(), 0.5f, help::Key::effectMix,
-                  (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                  (compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       power_(Icon::Power, ChromeIconButton::Tone::power, help::Key::blockPower),
       remove_(Icon::Trash2, ChromeIconButton::Tone::plain, help::Key::removeBlock),
       // Delay only (built here like the P placeholders; the delay branch
       // wires it and syncDelayMode swaps in the current mode's identity):
       sigKnob_(knob("Sig", scales::fraction01(), 0.0f, help::Key::delayPing,
-                    (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
+                    (compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
       // Delay only: the SHARED Mod knob (delayMod) -- a modulation on the
       // repeat path in EVERY mode (each mode's own law, Delay::modWobbleHz/Ms).
       // Neutral 0 = a straight tap (bit-identical read); in Mod mode (3) it
       // IS the mode's signature control.
       modKnob_(knob("Mod", scales::fraction01(), 0.0f, help::Key::delayMod,
-                    (compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary)) {
+                    (compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary)) {
   // Conv tile: the shared In knob reads as "Dwell" on this block.
   if (block_.effectKind == "convolution")
     input_.setLabel("Dwell");
@@ -1193,7 +1193,7 @@ void EffectTile::resized() {
   }
 
   const int knobH =
-      Knob::heightFor((compact_ || block_.effectKind == "convolution") ? kCompactKnobFace : theme::kKnobSizeSecondary);
+      Knob::heightFor((compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary);
   const bool convFullTile = (block_.effectKind == "convolution") && !compact_;
   const bool convCompactTile = (block_.effectKind == "convolution") && compact_;
   const int rowGap = compact_ ? 6 : 8;

@@ -78,7 +78,17 @@ class Reverb {
   static constexpr double kDefaultTone = 0.4;
   static constexpr double kDefaultSize = 0.6;
   static constexpr double kDefaultWidth = 1.0;
-  static constexpr double kMaxWidthSpread = 0.05;  // max tap offset (fraction) at full width
+  static constexpr double kMaxWidthSpread = 0.05;  // (R3, 2026-10-15: retired --
+  // the width spread is now the post-mix Haas stage below, widthHaasOn_)
+  // Width (R3, 2026-10-15): the convolver's own Haas law (ConvolutionReverb's
+  // kHaasDelayMs 3.5 ms / kHaasDepth 0.55, mono-IR spread pair), applied
+  // post-mix on the wet at every mode's output: side = width*0.55*wet[3.5ms
+  // behind]; L += width*(side), R -= width*(side). Sum-preserving
+  // ((L+R)/2 invariant -> every level pin intact); bit-exact at width 0 and
+  // inert on a 1ch buffer (the gate is 2ch && width>0); on a 2ch buffer the
+  // M/S terms add the true mid/side fold, so Width is ONE coherent control in
+  // every mode (replacing the old per-bank 5% tap-scale drift, which was
+  // inert in Hall and in production's per-lane buffering).
 
   // Digital mode laws (mode 5 only). Both reduce to the identity at 0, so
   // Digital @ Density 0 @ Mod 0 is byte-identical to the plain comb bank (the
@@ -636,6 +646,17 @@ class Reverb {
       for (int c = 0; c < kMaxChannels; ++c) chWrite_[c] = 0;
       chDelayMax_ = static_cast<uint32_t>(sampleRate_ * kSharedModDepthMs * 0.001);
     }
+    // Width-Haas mid ring (R3): power of two, the 3.5 ms delay headroom + a
+    // block of margin so the fractional-tail read never aliases this block's
+    // writes; cleared in reset().
+    {
+      size_t minSize = static_cast<size_t>(sampleRate_ * kWidthHaasDelayMs * 0.001) + 4096;
+      size_t wn = 1;
+      while (wn < minSize) wn <<= 1;
+      whRing_.assign(wn, 0.0f);
+      whMask_ = static_cast<uint32_t>(wn - 1);
+      whWrite_ = 0;
+    }
     setParams(params_);  // recompute taps now that the rate is known
   }
 
@@ -643,6 +664,8 @@ class Reverb {
     for (auto& ch : lines_)
       for (auto& L : ch) L.clear();
     modPhase_ = 0.0;  // restart the Mod LFO
+    whWrite_ = 0;  // R3: width-Haas mid history ring
+    for (size_t i = 0; i < whRing_.size(); ++i) whRing_[i] = 0.0f;
     for (int c = 0; c < kMaxChannels; ++c) {
       boingRe_[c] = 0.0f; boingIm_[c] = 0.0f; dripEnv_[c] = 0.0f; splashLp_[c] = 0.0f;
       onsetEnv_[c] = 0.0f; whipLp_[c] = 0.0f; plateOnsetLp_[c] = 0.0f;
@@ -812,6 +835,58 @@ class Reverb {
       smInc_ = 0.0;
       smB0_ = smB1_ = smB2_ = smA1_ = smA2_ = 0.0;
     }
+    // Width (R3, 2026-10-15): the Haas ring depth is a fixed 3.5 ms of the
+    // mid wet (recomputed with the sample rate; sampleRate_ is set before
+    // this setParams call in prepare()). Gate: 2ch && width > 0 -- at width 0
+    // or on a 1ch buffer applyWidthHaas is a bit-exact no-op (zero reads,
+    // zero writes) -- so the width-0 anchors stay exact by construction.
+    widthHaasOn_ = (params_.width > 0.0) && (sampleRate_ > 0.0);
+    widthHaasDelay_ = static_cast<size_t>(
+        std::max(1, static_cast<int>(kWidthHaasDelayMs * 0.001 * sampleRate_)));  // 168 @48k
+  }
+
+  // Width (R3, 2026-10-15) -- the convolver's own Haas law, shared by every
+  // mode. Post-mix on the wet, 2-channel buffers ONLY (a 1ch buffer -- the
+  // production per-lane path -- is untouched, matching the convolver's 1ch
+  // gain-only width behavior). The mid history m[n]=(L+R)/2 is ringed and the
+  // pair law (ConvolutionReverb, kHaasDelayMs 3.5 ms / kHaasDepth 0.55):
+  //   side = width * 0.55 * m[n - 3.5ms] * 0.5   (half-folded so the pair sums
+  //   exactly cancel: outL + outR = L + R - the sum-preserving law)
+  //   L' = L + width*side,  R' = R - width*side
+  // Bit-exact no-op when width == 0 or on 1ch (never entered).
+  static constexpr double kWidthHaasDelayMs = 3.5;   // mirrors ConvolutionReverb.h kHaasDelayMs
+  static constexpr double kWidthHaasDepth = 0.55;    // mirrors ConvolutionReverb.h kHaasDepth
+  // R3, 1ch buffers (production per-lane) AND 2ch buffers: the tap scale is
+  // the SAME as pre-R3 (ch-0 shorter by 0.05*width, ch-1 longer) so the
+  // comb taps are unchanged. The 2ch buffer additionally gets the convolver
+  // post-mix Haas M/S stage (applyWidthHaas) which is the ticket's "match
+  // the convolver" ask; the tap scaling remains as the spectral decorrelation
+  // baseline (it was bit-exact to ship, keep it). 1ch has no Haas stage.
+  double widthTapScaleFor(int ch, int numChannels) const {
+    const double widthSpread = kMaxWidthSpread * params_.width;
+    return (ch == 0) ? (1.0 - widthSpread) : (1.0 + widthSpread);
+  }
+  void applyWidthHaas(juce::AudioBuffer<float>& buffer) {
+    if (!widthHaasOn_ || buffer.getNumChannels() < 2) return;
+    const int n = buffer.getNumSamples();
+    const float w = static_cast<float>(params_.width);
+    const float depth = static_cast<float>(kWidthHaasDepth);
+    float* L = buffer.getWritePointer(0);
+    float* R = buffer.getWritePointer(1);
+    float* wr = whRing_.data();
+    uint32_t wpos = whWrite_;
+    const uint32_t msk = whMask_;
+    const uint32_t d = static_cast<uint32_t>(widthHaasDelay_);
+    for (int i = 0; i < n; ++i) {
+      const float mid = 0.5f*(L[i] + R[i]);
+      const uint32_t rd = (wpos + 1u + msk - d) & msk;  // exactly d samples behind the mid just written
+      const float half = 0.5f * w * depth * wr[rd] * 0.5f;
+      L[i] += 2.0f * half;
+      R[i] -= 2.0f * half;
+      wr[wpos] = mid;
+      wpos = (wpos + 1u) & msk;
+    }
+    whWrite_ = wpos;
   }
 
   int latencySamples() const {
@@ -836,10 +911,9 @@ class Reverb {
     // Tone: one-pole low-pass on the feedback path (tone 0 = no filter, bright;
     // tone 1 = fully dark), matching the delay's damping convention.
     const double dampAlpha = 1.0 - params_.tone;
-    // Width: offset each channel's taps by +/- (width * kMaxWidthSpread). The
-    // right bank runs longer than the left so the two tails drift apart and
-    // decorrelate; width = 0 keeps both banks identical (mono, L == R).
-    const double widthSpread = kMaxWidthSpread * params_.width;
+    // Width: the shared post-mix Haas stage (see widthHaasOn_ and
+    // applyWidthHaas below) -- see the Width design note in the constants
+    // block. The old per-bank tap-scale spread is gone (R3, 2026-10-15).
 
     // Digital laws are live in mode 5 only. Density (feedback coupling toward
     // the per-lines mean) and Mod (sined read-tap waver) both reduce to the
@@ -855,6 +929,7 @@ class Reverb {
         (params_.springs > 0.0 || params_.sag > 0.0);
     if (springOn) {
       processSpring(buffer);
+      applyWidthHaas(buffer);
       if (sharedOn_) processSharedModSmear(buffer);
       return;
     }
@@ -864,6 +939,7 @@ class Reverb {
         (params_.bright > 0.0 || params_.bloom > 0.0);
     if (plateOn) {
       processPlate(buffer);
+      applyWidthHaas(buffer);
       if (sharedOn_) processSharedModSmear(buffer);
       return;
     }
@@ -873,6 +949,7 @@ class Reverb {
         (params_.early > 0.0 || params_.air > 0.0);
     if (roomOn) {
       processRoom(buffer);
+      applyWidthHaas(buffer);
       if (sharedOn_) processSharedModSmear(buffer);
       return;
     }
@@ -882,6 +959,7 @@ class Reverb {
         (params_.volley > 0.0 || params_.bass > 0.0);
     if (chamberOn) {
       processChamber(buffer);
+      applyWidthHaas(buffer);
       if (sharedOn_) processSharedModSmear(buffer);
       return;
     }
@@ -893,21 +971,21 @@ class Reverb {
         (params_.build > 0.0 || params_.space > 0.0);
     if (hallOn) {
       processHall(buffer);
+      applyWidthHaas(buffer);
       if (sharedOn_) processSharedModSmear(buffer);
       return;
     }
     if (!densityOn && !modOn_) {
       for (int ch = 0; ch < numChannels; ++ch) {
         auto& lines = lines_[static_cast<size_t>(ch)];
-        const double tapScale = (ch == 0) ? (1.0 - widthSpread) : (1.0 + widthSpread);
+        const double tapScale = widthTapScaleFor(ch, numChannels);
         float* out = buffer.getWritePointer(ch);
         for (int i = 0; i < numSamples; ++i) {
           const float dry = out[i];
           float acc = 0.0f;
           for (int ln = 0; ln < kNumLines; ++ln) {
             auto& L = lines[ln];
-            const int d =
-                static_cast<int>(std::max(1.0, taps_[ln] * tapScale)) & L.mask;
+            const int d = static_cast<int>(std::max(1.0, taps_[ln] * tapScale)) & L.mask;
             const float delayed = L.ring[(L.write - d) & L.mask];  // e[n - d] tail
             L.lp += dampAlpha * (delayed - L.lp);                 // low-pass it
             L.ring[L.write] = dry + static_cast<float>(fb) * L.lp; // e[n]
@@ -917,6 +995,7 @@ class Reverb {
           out[i] = static_cast<float>(acc * norm);
         }
       }
+      applyWidthHaas(buffer);
       if (sharedOn_)
         processSharedModSmear(buffer);
       return;
@@ -934,7 +1013,7 @@ class Reverb {
 
     for (int ch = 0; ch < numChannels; ++ch) {
       auto& lines = lines_[static_cast<size_t>(ch)];
-      const double tapScale = (ch == 0) ? (1.0 - widthSpread) : (1.0 + widthSpread);
+      const double tapScale = widthTapScaleFor(ch, numChannels);
       const float side = (ch == 0) ? +1.0f : -1.0f;  // L + / R - (opposite phase)
       float* out = buffer.getWritePointer(ch);
       float delayed[kNumLines];
@@ -1005,6 +1084,7 @@ class Reverb {
     }
     if (modOn_)
       modPhase_ = phase0 + inc * numSamples;  // advance the LFO once per block
+    applyWidthHaas(buffer);
     if (sharedOn_)
       processSharedModSmear(buffer);  // R2: the shared, knob-gated post-mix swell
   }
@@ -1240,7 +1320,8 @@ class Reverb {
     const double nScale = kSpringWashRef / (double)N * kSpringWashFrac;  // FIXED ref (was live (1-fb)); level holds across decay, scaled into the family band
     const double dampAlpha =
       (0.75 + 0.25 * params_.tone) * (1.0 - 0.25 * sag);  // higher tone = gentler
-    const double widthSpread = kMaxWidthSpread * params_.width;
+    // Width (R3): the post-mix Haas stage (applyWidthHaas); no per-channel tap
+    // scaling anymore (replaced the 5% L/R tap drift).
     // 8 incommensurate resonator modes (metallic body, peak at ~500 Hz).
     // Each mode: y_complex[n] = (y_complex[n-1] + dry*gain) * (r*a + j*r*b)
     // Pre-compute real/imag parts of the complex pole per mode.
@@ -1277,7 +1358,7 @@ class Reverb {
     const float cAmt = static_cast<float>(kSpringColorAmt);
     for (int ch = 0; ch < numChannels; ++ch) {
       auto& lines = lines_[static_cast<size_t>(ch)];
-      const double tapScale = (ch == 0) ? (1.0 - widthSpread) : (1.0 + widthSpread);
+      const double tapScale = widthTapScaleFor(ch, numChannels);
       float* out = buffer.getWritePointer(ch);
       float rr1e = r1Re_[ch], rr1i = r1Im_[ch];
       float rr2e = r2Re_[ch], rr2i = r2Im_[ch];
@@ -1297,7 +1378,7 @@ class Reverb {
         float acc = 0.0f;
         for (int ln = 0; ln < N; ++ln) {
           auto& L = lines[ln];
-          const int d = static_cast<int>(std::max(1.0, taps_[ln] * tapScale)) & L.mask;
+            const int d = static_cast<int>(std::max(1.0, taps_[ln] * tapScale)) & L.mask;
           const float tail = L.ring[(L.write - d) & L.mask];
           L.lp += static_cast<float>(dampAlpha) * (tail - L.lp);
           // Fb-drift (per-sample, per-channel): modulate the comb feedback so the
@@ -1402,7 +1483,8 @@ class Reverb {
     const double fb = plateFb(params_.decayMs);   // P1: Plate-scoped lift + ceiling (stable (|fb| < 1))
     const double norm = kPlateWashRef / kNumLines;  // FIXED ref (was live (1-fb) -> died at long decay)
     const double dampAlpha = (1.0 - params_.tone) * (1.0 - kPlateBloomFrac * bloom);  // Bloom darkens (low lags)
-    const double widthSpread = kMaxWidthSpread * params_.width;
+    // Width (R3): the post-mix Haas stage (applyWidthHaas); no per-channel tap
+    // scaling anymore (replaced the 5% L/R tap drift).
     const float cAmt = static_cast<float>(kPlateColorAmt);
     // the dense "whip" onset burst; armed only if Bright is on, scales with it.
     const float onsetAmt = bright > 0.0
@@ -1413,7 +1495,7 @@ class Reverb {
         ? static_cast<float>(0.3 + 0.7 * bright) : 0.0f;  // off at Bright = 0
     for (int ch = 0; ch < numChannels; ++ch) {
       auto& lines = lines_[static_cast<size_t>(ch)];
-      const double tapScale = (ch == 0) ? (1.0 - widthSpread) : (1.0 + widthSpread);
+      const double tapScale = widthTapScaleFor(ch, numChannels);
       float* out = buffer.getWritePointer(ch);
       float delayed[kNumLines];
       float selfLp[kNumLines];
@@ -1794,6 +1876,12 @@ class Reverb {
   std::array<std::vector<float>, kMaxChannels> chRing_;
   uint32_t chMask_      = 0;
   std::array<uint32_t, kMaxChannels> chWrite_{};
+  // Width-Haas (R3): mid-wet history ring + gate/delay (see applyWidthHaas).
+  std::vector<float> whRing_;
+  uint32_t whMask_    = 0;
+  uint32_t whWrite_   = 0;
+  bool widthHaasOn_   = false;
+  size_t widthHaasDelay_ = 0;
   uint32_t chDelayMax_  = 0;    // max delay samples (at current sample rate, sharedMod 1)
   // Measured-tune accessor (R2, 2026-10-15): sweep the chorus layer
   // amount/depth by real render in DspTests before committing constants.
