@@ -3806,6 +3806,83 @@ TEST(ReverbTest, R2_ModTransientHunt) {
   SUCCEED();
 }
 
+TEST(ReverbTest, R2_ModWriteTauSonicSweep) {
+  // WRITE-TAU SONIC SWEEP (2026-10-15, "does 80 ms sound different from 40?"):
+  // same steady-state conditions as R2_ModSonicProbe (Chamber, sharedMod 1.0,
+  // 2 s white noise @48k, blocks of 128), but the ring-write one-pole is
+  // swept 12 / 40 / 80 ms via the test hook. Report per tau:
+  //   layer dB vs wet   (body)
+  //   layer tilt        (sample-index centroid vs the wet's own)  -> darkening
+  //   layer sharpness   (layer deriv-RMS / wet deriv-RMS)         -> click budget
+  // The 12 vs 80 gap in these numbers IS the answer.
+  const unsigned int fs = 48000; const int n = 2 * fs; const int blk = 128;
+  auto run = [&](double tau) {
+    Reverb r; r.prepare(fs);
+    ReverbChorusSweep::setWriteTau(r, tau);
+    Reverb::Params p;
+    p.decayMs = 1800.0; p.tone = 0.3; p.size = 0.5; p.width = 1.0; p.preMs = 0.0;
+    p.mode = 3; p.volley = 0.4; p.bass = 0.6; p.sharedMod = 1.0;
+    r.setParams(p);
+    std::mt19937 rng(4242); std::uniform_real_distribution<float> d(-0.3f, 0.3f);
+    juce::AudioBuffer<float> b(2, blk);
+    std::vector<float> outL(n), outR(n);
+    for (int off = 0; off + blk <= n; off += blk) {
+      for (int i = 0; i < blk; ++i) { b.setSample(0, i, d(rng)); b.setSample(1, i, d(rng)); }
+      r.process(b);
+      for (int i = 0; i < blk; ++i) { outL[off+i] = b.getSample(0,i); outR[off+i] = b.getSample(1,i); }
+    }
+    return std::pair<std::vector<float>,std::vector<float>>{outL, outR};
+  };
+  // mod-off baseline (tau irrelevant: the stage is gated off)
+  const auto offPair = [&]() {
+    Reverb r; r.prepare(fs);
+    Reverb::Params p;
+    p.decayMs = 1800.0; p.tone = 0.3; p.size = 0.5; p.width = 1.0; p.preMs = 0.0;
+    p.mode = 3; p.volley = 0.4; p.bass = 0.6; p.sharedMod = 0.0;
+    r.setParams(p);
+    std::mt19937 rng(4242); std::uniform_real_distribution<float> d(-0.3f, 0.3f);
+    juce::AudioBuffer<float> b(2, blk);
+    std::vector<float> outL(n), outR(n);
+    for (int off = 0; off + blk <= n; off += blk) {
+      for (int i = 0; i < blk; ++i) { b.setSample(0, i, d(rng)); b.setSample(1, i, d(rng)); }
+      r.process(b);
+      for (int i = 0; i < blk; ++i) { outL[off+i] = b.getSample(0,i); outR[off+i] = b.getSample(1,i); }
+    }
+    return std::pair<std::vector<float>,std::vector<float>>{outL, outR};
+  }();
+  const auto rms = [](const std::vector<float>& x, unsigned m1, unsigned m2){
+    double e=0; for(unsigned i=m1;i<m2;++i) e+=double(x[i]*x[i]); return std::sqrt(e/(m2-m1)); };
+  const auto centroid = [](const std::vector<float>& x, unsigned m1, unsigned m2){
+    double num=0, den=0; for(unsigned i=m1;i<m2;++i){num+=double(x[i])*x[i]*double(i); den+=double(x[i])*x[i];}
+    return den>1e-12 ? num/den : 0.0; };
+  const auto deriv = [](const std::vector<float>& x, unsigned m1, unsigned m2){
+    double e=0; for(unsigned i=m1+1;i<m2;++i){const double dd=double(x[i])-x[i-1]; e+=dd*dd;}
+    return std::sqrt(e/(m2-m1-1)); };
+  const char nl[] = "\n";
+  const unsigned m1 = (unsigned)fs, m2 = (unsigned)n;   // skip first second (settle)
+  const auto wetL = offPair.first, wetR = offPair.second;
+  const double wetRms = rms(wetL, m1, m2);
+  const double wetDeriv = deriv(wetL, m1, m2);
+  const double wetCent = (centroid(wetL, m1, m2) + centroid(wetR, m1, m2)) * 0.5;
+  std::cout << "[WRITE-TAU SONIC SWEEP  sharedMod 1.0, 2 s, 48 kHz]" << nl
+    << "  wet RMS " << wetRms << " | wet centroid " << wetCent
+    << " | wet deriv-RMS (reference)" << nl
+    << "  tau ms | layer dBS vs wet | layer centroid (delta from wet) | layer deriv-RMS / wet deriv-RMS" << nl;
+  for (double tau : {12.0, 20.0, 40.0, 80.0}) {
+    const auto pr = run(tau);
+    std::vector<float> lL(n), lR(n);
+    for (int i = 0; i < n; ++i) { lL[i] = pr.first[i] - wetL[i]; lR[i] = pr.second[i] - wetR[i]; }
+    const double layRms = (rms(lL, m1, m2) + rms(lR, m1, m2)) * 0.5;
+    const double layCent = (centroid(lL, m1, m2) + centroid(lR, m1, m2)) * 0.5;
+    const double layDeriv = (deriv(lL, m1, m2) + deriv(lR, m1, m2)) * 0.5;
+    std::cout << "  " << tau << " ms | "
+              << 20.0*std::log10(std::max(layRms,1e-12)/std::max(wetRms,1e-12)) << " dB | "
+              << layCent << "  (" << (layCent - wetCent) << ") | "
+              << layDeriv / std::max(wetDeriv, 1e-12) << nl;
+  }
+  SUCCEED();
+}
+
 TEST(ReverbTest, R2_ModChordClickHunt) {
   // ELEVENTH CUT (2026-10-15) -- the USER'S OWN methodology: "hit the reverb
   // front end with guitar signals at VARYING VOLUMES; the louder sustained
@@ -3870,6 +3947,8 @@ TEST(ReverbTest, R2_ModChordClickHunt) {
     line("write-tau 8.0 ms", 8.0);
     line("write-tau 12.0 ms", 12.0);
     line("write-tau 20.0 ms", 20.0);
+    line("write-tau 40.0 ms", 40.0);
+    line("write-tau 80.0 ms", 80.0);
     line("write-tau SHIP default (kModWriteTauMs)", 0.0);
   }
   // ELEVENTH-CUT GUARD (the whole point: the ring-write smoothing means the

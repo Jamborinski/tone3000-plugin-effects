@@ -284,7 +284,7 @@
   spikes with the body). ELEVENTH FIX (structural REMOVAL, not reduction):
   write the SMOOTHED wet into the delay ring -- per-channel one-pole
   smWriteCoef_ = exp(-1/(fs * kModWriteTauMs)), state smWritePrev_[c],
-  tau 12.0 ms ship (kModWriteTauMs; hook 0 = off -> bit-exact anchor; 4.0 ms = click 0.132; 12.0 ms = click 0.048 @ body x0.998 -- twelfth-cut measured sweep, flat to 20 ms). R2_ModChordClickHunt
+  tau 80.0 ms ship (kModWriteTauMs; hook 0 = off -> bit-exact anchor; 4 ms = 0.132; 12 = 0.048; 40 = 0.0145; 80 = 0.0073 click index @ body x0.99999; sonic sweep: 80 vs 12 ms costs ~2.2 dB tap body (-26.2 vs -24.0 dB vs wet) + 6.6x less layer sharpness -- user A/B picked 80: "killed the clicks completely"). R2_ModChordClickHunt
   (THE USER'S OWN METHODOLOGY: sustained 5-partial guitar chord, 30 ms
   attack, amplitudes 0.25/0.5/0.75/1.0, max Mod, layer = on-minus-off in
   the steady window): tenth-cut reference index 0.218 @ body x0.956 vs

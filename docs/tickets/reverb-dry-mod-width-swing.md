@@ -2,13 +2,15 @@
 # better Width, and the "swirly / swelled" EMT-140 character gap
 # (with a clean-room research track)
 
-Status: **R1 + R2 SHIPPED** (R1 2026-10-13, R2 2026-10-14, TWELVE R2 Mod
+Status: **R1 + R2 SHIPPED** (R1 2026-10-13, R2 2026-10-14, THIRTEEN R2 Mod
 follow-ups 2026-10-14/15 — see the follow-up logs below). Current Mod
-mechanism = the ELEVENTH-CUT structure retuned by the TWELFTH CUT
+mechanism = the ELEVENTH-CUT structure retuned by TWELFTH/THIRTEENTH CUTS
 (wet-unity added chorus layer + write-path smoothing that obliterates
-click transients at the source; tau 12.0 ms ship -- measured headroom
-sweep 4 ms = 0.132/0.982, 12 ms = 0.048/0.998, 20 ms = 0.029/0.999, body
-near unity at ship; six averaged delay taps, natural full-sweep taper). **R1 (Dry knob, all
+click transients at the source; **tau 80.0 ms ship** -- ladder measured
+12 = 0.048/0.998, 40 = 0.0145/0.9999, 80 = 0.0073/0.99999; sonic sweep:
+80 vs 12 ms = ~2.2 dB less tap body + 6.6x less sharpness, user A/B:
+"killed the clicks completely", kept 80; six averaged delay taps, natural
+full-sweep taper). **R1 (Dry knob, all
 reverb modes) DONE 2026-10-13.**
 **R2 shared Mod DONE (eighth-cut final mechanism): WET-UNITY + ADDED CHORUS
 LAYER, amplitude MEASURED** (`sharedMod`/`reverbSharedMod`, 0..1, 0 =
@@ -70,7 +72,16 @@ nearly unlimited headroom — 4 ms = 0.132 @ x0.982, 8 ms = 0.071 @ x0.995,
 tau rises: the smoothing was the old body cost, not a new one). SHIPPED
 kModWriteTauMs = 12.0: the residual click is halved again and body is
 effectively unity (0.998). Guard in R2_ModChordClickHunt holds with >2x
-slack (0.048 < 0.5 x 0.351). DspTests 486/486; selftest 122/122 green. DspTests 486/486; bit-exact anchor `R2_SharedModZeroIsBitExactAllSixModes`
+slack (0.048 < 0.5 x 0.351). DspTests 486/486; selftest 122/122 green.
+
+**THIRTEENTH CUT (2026-10-15, user A/B decision -- "killed the clicks
+completely, does write-tau really do that much to the sound?"): the sonic
+sweep answers the cost question (R2_ModWriteTauSonicSweep: 12 ms = -24.0 dB
+tap layer vs wet @ sharpness 0.0010; 40 ms = -25.5 @ 0.00030; 80 ms =
+-26.2 @ 0.00015 -- ~2.2 dB body + 6.6x sharpness for 80 vs 12). User
+confirmed 80 ms sounds great: SHIPPED kModWriteTauMs = 80.0. Click index
+at ship 0.0073 @ body x0.99999 (all amplitudes); guard 0.5x baseline holds
+with 5x slack. 487/487 green. DspTests 486/486; bit-exact anchor `R2_SharedModZeroIsBitExactAllSixModes`
 holds (gate unchanged: `sharedMod==0` skips the stage).
 Pins at 3.3x (below the 4.0x structural ceiling, above measured ~1.05x).
 486/486 green, selftest 122/122.

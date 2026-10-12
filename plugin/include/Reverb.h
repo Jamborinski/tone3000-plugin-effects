@@ -1064,7 +1064,7 @@ class Reverb {
   // vs the 10th-cut reference 0.217, at EVERY input amp (0.25/0.5/0.75/1.0);
   // tau 2.0 = 0.218 (nearly no change) -- the delayed tap structurally cannot
   // re-emit the wet's transients once the ring contents are smoothed.
-  static constexpr double kModWriteTauMs = 12.0;
+  static constexpr double kModWriteTauMs = 80.0;   // THIRTEENTH CUT (2026-10-15): tau ladder measured to the floor (12/40/80 ms); user A/B picked 80
   // Chorus LAYER gain: the delayed voices ADD ON TOP of the full (unity)
   // undelayed wet -- this is the "lush modulation ADDED to the reverb"
   // (2026-10-15) and is what kills BOTH the level drop and the clicking.
