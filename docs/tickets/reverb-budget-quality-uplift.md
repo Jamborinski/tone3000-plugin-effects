@@ -377,8 +377,8 @@ in pass 1.
   Type names renamed per m00398 (`plugin/ui/views/gallery/EffectTile.cpp`
   :142/:151): Plate "140"→**PLT**, Spring "RV1"→**SPR**, Digital "DIG"→**DAT**
   (placeholder — DAT will sound like a plate-family type later; SML/CHM/HAL
-  unchanged). Note for later: `plugin/docs/reverb-modes.md` still documents
-  the "RV1"/"140" chip names — needs its type-name row updated at closeout.
+  unchanged) — `plugin/docs/reverb-modes.md` type-name row updated to
+  match at closeout (PLT/SPR/DAT).
 - **P2.2 — Spring: DECLINED (already in the family boundary).**
   `kSpringWashLpA` swept 0.28 → 0.42/0.20/0.15/0.12 (a single-pole @3.5 kHz
   can't kill the 8 kHz comb residue — metallic comb + 8 resonators dominate;
