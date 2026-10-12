@@ -39,8 +39,8 @@ statement is a claim to be verified, not a fact to be believed.
 
 ## Protocol (mandatory, not a suggestion)
 1. **Match by PATH, not by vibes, before you edit anything:**
-   - touch `plugin/include/{Delay,Chorus,Tremolo,Compressor}.h|src/*` or `test/src/*` → **`docs/agents/dsp-invariants.md`**
-   - reverb-mode tuning against an **IR reference** (retune a mode in `plugin/include/Reverb.h`, add a reference-IR test / comb·decay metric / plate-vs-conv A/B) → **`docs/agents/ir-reverb-training.md`**
+   - touch `plugin/include/{Delay,Chorus,Tremolo,Compressor}.h|src/*` or `test/src/*` → **`docs/agents/dsp-invariants.md`** — and **`docs/agents/audio-testing.md`** (the sonic measurement protocol: click-index/jump metrics, comb & dropout laws, per-effect probe matrix, the hunt→measure→guard loop)
+   - reverb-mode tuning against an **IR reference** (retune a mode in `plugin/include/Reverb.h`, add a reference-IR test / comb·decay metric / plate-vs-conv A/B) → **`docs/agents/ir-reverb-training.md`** — and `docs/agents/audio-testing.md` (block-size sweep is the fastest click diagnostic)
    - touch `plugin/ui/**`, chain state, KnobScale, tiles, a param's plumbing → **`docs/agents/ui-wiring.md`**
    - touch `plugin/ui/testbed/**`, TileShot/Compare, UI goldens, or re-shooting a tile → **`docs/agents/ui-snapshots.md`**
    - touch `CMakeLists*`, `build/`|`build-win/`, `scripts/win-*`, or a Windows exe → **`docs/agents/windows-build.md`** (and `linux-build-deep.md` if it's the Linux build/fresh-configure/helper)
@@ -135,7 +135,8 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   and report numbers for: added-layer level vs the wet (dB), layer spectral
   tilt (Hz centroid of `on - off`), L-vs-R independence/correlation, and a
   sharpness/click metric (derivative RMS, transient hunt). Pin the useful
-  ones as tests.
+  ones as tests. Full protocol (stimuli, deciding metrics per artifact class,
+  probe matrix, diagnostic tree): `docs/agents/audio-testing.md`.
 - **`edit` tool drift trap (this repo, WSL/9p):** it intermittently reports
   spurious "content drift" even when the oldText is verbatim. On failure:
   re-check with `grep -n`/`sed -n`, then apply via `python3` `str.replace`
