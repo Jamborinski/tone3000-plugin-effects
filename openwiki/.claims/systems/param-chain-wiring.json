@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:0db75f17976d00edef4939ad4436dfb3442900ac64c609309c122b53a82ab828",
+  "pageVersion": "sha256:ad51312bbf325d28a2a4d1e5f3d40ac6e56dec6bc0284517cc56412c34004fae",
   "claims": [
     {
       "id": "claim_5182e0a71fbd47bea2e298fb16e1de68",
@@ -8,15 +8,15 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/ui-wiring.md",
-          "version": "repo-file-v1:sha256:987b689830d5715918342921f1eb525fc9afff80b289de1b2135bb60d1b372fb"
+          "version": "repo-file-v1:sha256:3957ba19c608190c1db689a428a03202260fbd8c66241992b5a77b63aadce428"
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:2558fbd10b7acf9b91a67966513536dd9e46e8453c2dd0a70e8552326c7d4e36"
+          "version": "repo-file-v1:sha256:4590377e2ecfb42d5e01478dc407acfdfcce91345785fd34bf1845dcd6c2cbc5"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:015eccba5482f329474de68b01344d59910915aa4accd301e6a9aa50fe94bf79"
+          "version": "repo-file-v1:sha256:1d3320ac4c6605198e3918901c115f7b4a81e43de3688e7167ed3c20d018dc9e"
         }
       ]
     },
@@ -53,10 +53,32 @@
           "version": "repo-file-v1:sha256:a5805ef9cb674d789aa8aee8d75a83cae8a25b267ed5fcbd5b8147aabdd1472d"
         }
       ]
+    },
+    {
+      "id": "claim_c814b3d9bd3a4e5e96158208998ad651",
+      "statement": "T-DAT-001 added a THIRD family member to the four-state-place rule: engine param reverbLoCut (0..1 clamped, default 0 = bit-pass). Its four places: (1) ChainBlock.h:406 field `double reverbLoCut = 0.0;` + the reverbParams() aggregate ending `reverbSharedMod, reverbWave, reverbLoCut` (:430; matches Reverb::Params struct order) + ProcessorChain.cpp BlockRow init (:1203), row mirror (:1320), and params->setProperty(\"reverbLoCut\", …) in serializeChain (:1497); (2) ChainState.h/.cpp parseItem `item.reverbLoCut = num(v[\"params\"], \"reverbLoCut\", 0.0)`; (3) ProcessorChain.cpp isReverbParam list (:1936) + updateBlockParam branch (:2221-2222, jlimit 0..1 + block->reverb.setParams(block->reverbParams())); (4) ProcessorState.cpp blockState.setProperty (:282) + jlimit restore (:472).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/ChainBlock.h",
+          "version": "repo-file-v1:sha256:63032fe01274786abfda0c4245c7322139b08e78a5d9cf10783b9bf55ab5289b"
+        },
+        {
+          "resource": "repo://plugin/src/ProcessorChain.cpp",
+          "version": "repo-file-v1:sha256:4590377e2ecfb42d5e01478dc407acfdfcce91345785fd34bf1845dcd6c2cbc5"
+        },
+        {
+          "resource": "repo://plugin/src/ProcessorState.cpp",
+          "version": "repo-file-v1:sha256:815d98ea551b9a28bc61fa201ac26c1aa93a042a314d3468b44c884464eca807"
+        },
+        {
+          "resource": "repo://plugin/ui/model/ChainState.cpp",
+          "version": "repo-file-v1:sha256:1d3320ac4c6605198e3918901c115f7b4a81e43de3688e7167ed3c20d018dc9e"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-12T23:07:19.188Z"
+    "at": "2026-10-13T21:50:34.909Z"
   }
 }

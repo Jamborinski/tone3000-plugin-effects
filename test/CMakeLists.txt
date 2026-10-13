@@ -22,6 +22,7 @@ target_sources(DspTests PRIVATE
     src/clipboard_tests.cpp
     src/convolution_reverb_tests.cpp
     src/dsp_tests.cpp
+    src/dat_probe_tests.cpp
     src/dual_mono_tests.cpp
     src/duplicate_tests.cpp
     src/effect_tests.cpp

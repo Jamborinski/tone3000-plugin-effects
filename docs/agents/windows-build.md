@@ -43,6 +43,10 @@ cmake --build build-win --target TONE3000_Standalone    # also TONE3000_VST3
   codebase's style). Windows-only build error
   `no matching function for 'tanhf'` = this.
 
+## Log triage + closeout rule
+- **Build logs: eigen `-Wzero-as-null-pointer-constant` warnings are NON-FATAL noise** — the real failure is the FIRST `error:` line; grep for it, don't chase the latest warning cluster.
+- **CLOSEOUT RULE (user-mandated):** every ticket closeout ENDS by staging a fresh standalone Windows exe via `scripts/win-standalone.sh` after DspTests + selftest + goldens are green and the commit is in, recording the staging dir + md5 in the ticket log. Don't close a shipped ticket without it.
+
 ## Staging to Windows Downloads
 `bash /home/jambo/dev/tone3000-plugin-main/scripts/win-standalone.sh` →
 `C:\Users\jambo\Downloads\TONE3000-win-YYYYMMDD-HHMMSS\TONE3000.exe`.

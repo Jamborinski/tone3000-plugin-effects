@@ -190,7 +190,7 @@ std::vector<float> plateRun(const Reverb::Params& p,
   r.prepare(kFs);
   r.reset();
   r.setParams(p);
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   std::vector<float> out(in.size(), 0.0f);
   for (size_t off = 0; off + kBlock <= in.size(); off += kBlock) {
     buf.clear();
@@ -227,7 +227,7 @@ struct ConvRef {
     std::cout << "  [cstr] loaded, prepare..." << std::endl; std::cout.flush();
     fx.prepare(rate);
     std::cout << "  [cstr] prepared, warmup..." << std::endl; std::cout.flush();
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     for (int b = 0; b < 600; ++b) {   // OLA schedule steady state
       buf.clear();
       fx.process(buf);
@@ -237,7 +237,7 @@ struct ConvRef {
   }
   std::vector<float> run(const std::vector<float>& in) {
     if (!ok) return {};
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     std::vector<float> out(in.size(), 0.0f);
     for (size_t off = 0; off + kBlock <= in.size(); off += kBlock) {
       buf.clear();
@@ -440,7 +440,7 @@ TEST(PlateComb, OtherModesStayBitIdentical) {
     r.prepare(kFs);
     r.reset();
     r.setParams(p);
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     double sum = 0, sumAbs = 0, energy = 0;
     const int tailOff = (int)in.size() - (int)kFs / 2;
     for (size_t off = 0; off + kBlock <= in.size(); off += kBlock) {
@@ -556,7 +556,7 @@ void benchPlate(int rate, int block) {
   Reverb r;
   r.prepare(rate);
   r.setParams(plateDefaults());
-  juce::AudioBuffer<float> buf(1, block);
+  juce::AudioBuffer<float> buf(1, block); buf.clear();
   for (int b = 0; b < 64; ++b) {           // schedule + smoother warm-up
     for (int i = 0; i < block; ++i) buf.setSample(0, i, 0.3f);
     r.process(buf);
@@ -586,7 +586,7 @@ void benchConv(int rate, int block) {
     okOut = ref.ok;
     if (!okOut) return;
     auto& fx = ref.fx;
-    juce::AudioBuffer<float> buf(1, block);
+    juce::AudioBuffer<float> buf(1, block); buf.clear();
     for (int b = 0; b < 64; ++b) {
       buf.clear();
       fx.process(buf);

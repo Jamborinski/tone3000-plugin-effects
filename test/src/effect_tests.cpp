@@ -105,7 +105,7 @@ TEST(DelayTest, DampingAttenuatesTheRepeat) {
   ASSERT_GT(tap, 0);
   ASSERT_LT(2 * tap + 16, 48000);
   auto secondRepeat = [tap](Delay& d) {
-    juce::AudioBuffer<float> buf(1, 2 * tap + 16);
+    juce::AudioBuffer<float> buf(1, 2 * tap + 16); buf.clear();
     buf.clear();
     buf.setSample(0, 0, 1.0f);
     d.process(buf);
@@ -171,7 +171,7 @@ TEST(DelayTest, MidStreamTimeChangeSweepsTheTapInsteadOfJumping) {
   // block's first sample (output[0] == g - tap, so tap == g - output[0]).
   int g = 0;
   auto feedBlockAndReadFirstTap = [&]() {
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     for (int i = 0; i < kBlock; ++i)
       buf.setSample(0, i, static_cast<float>(g + i));
     d.process(buf);
@@ -347,7 +347,7 @@ TEST(DelayTest, ScaffoldEngineMatchesIntegerTapReference) {
     for (double spread : {0.0, 1.0}) {
       for (double fb : {0.0, 0.35, 0.9}) {
         for (double damp : {0.0, 0.5}) {
-          juce::AudioBuffer<float> buf(1, static_cast<int>(in.size()));
+          juce::AudioBuffer<float> buf(1, static_cast<int>(in.size())); buf.clear();
           buf.clear();
           for (size_t i = 0; i < in.size(); ++i)
             buf.setSample(0, static_cast<int>(i), in[i]);
@@ -379,7 +379,7 @@ TEST(DelayTest, ScaffoldNeutralModesBitIdenticalToDigital) {
   // law pins below keep it honest instead of forcing it to vanish.
   const auto in = delayScaffoldChirp(60000);  // 1.25 s > the 250 ms tap, so the
   auto run = [&](int mode) {
-    juce::AudioBuffer<float> buf(1, static_cast<int>(in.size()));
+    juce::AudioBuffer<float> buf(1, static_cast<int>(in.size())); buf.clear();
     buf.clear();
     for (size_t i = 0; i < in.size(); ++i)
       buf.setSample(0, static_cast<int>(i), in[i]);
@@ -462,7 +462,7 @@ TEST(DelayTest, ScaffoldSteppedSignatureMaps) {
 TEST(DelayTest, ScaffoldDcBlockerStopsLoopDcBuildup) {
   const int count = 16000;
   auto lastOut = [&](bool blockDc) {
-    juce::AudioBuffer<float> buf(1, count);
+    juce::AudioBuffer<float> buf(1, count); buf.clear();
     buf.clear();
     for (int i = 0; i < count; ++i)
       buf.setSample(0, i, 0.5f);
@@ -594,7 +594,7 @@ TEST(DelayTest, DigitalPingIsInertOnMono) {
     p.sigPing = ping;
     d.setParams(p);
     const int n = 24000;
-    juce::AudioBuffer<float> buf(1, n);
+    juce::AudioBuffer<float> buf(1, n); buf.clear();
     buf.clear();
     for (int i = 0; i < n; ++i)
       buf.setSample(0, i,
@@ -669,7 +669,7 @@ TEST(DelayTest, TapeEvenCombPassAndNull) {
     d.setParams(p);
     const int n = static_cast<int>(3.0 * kFs);
     const int ramp = n / 20;
-    juce::AudioBuffer<float> buf(1, n);
+    juce::AudioBuffer<float> buf(1, n); buf.clear();
     buf.clear();
     for (int i = 0; i < n; ++i) {
       double g = 1.0;
@@ -722,7 +722,7 @@ TEST(DelayTest, TapeWowDriftsTheCluster) {
     p.mode = 1;
     p.sigHeads = sigHeads;
     d.setParams(p);
-    juce::AudioBuffer<float> buf(1, 16000);
+    juce::AudioBuffer<float> buf(1, 16000); buf.clear();
     buf.clear();
     for (int i = 0; i < 128; ++i) buf.setSample(0, i, 0.5f);
     d.process(buf);
@@ -767,7 +767,7 @@ TEST(DelayTest, TapeLoopStaysBounded) {
   p.sigHeads = 1.0;
   d.setParams(p);
   const int n = static_cast<int>(6.0 * kFs);
-  juce::AudioBuffer<float> buf(1, n);
+  juce::AudioBuffer<float> buf(1, n); buf.clear();
   for (int i = 0; i < n; ++i) buf.setSample(0, i, 0.5f);
   d.process(buf);
   float peak = 0.0f;
@@ -794,7 +794,7 @@ TEST(DelayTest, TapeDcBlockedConverges) {
     d.setParams(p);
     const int T = d.latencySamples();
     const int total = 32 * T;
-    juce::AudioBuffer<float> buf(1, total);
+    juce::AudioBuffer<float> buf(1, total); buf.clear();
     for (int i = 0; i < total; ++i) buf.setSample(0, i, 0.5f);
     d.process(buf);
     float m = 0.0f;
@@ -825,7 +825,7 @@ TEST(DelayTest, TapeClusterStartsEarlier) {
     p.sigHeads = sigHeads;
     d.setParams(p);
     const int n = 24000;
-    juce::AudioBuffer<float> buf(1, n);
+    juce::AudioBuffer<float> buf(1, n); buf.clear();
     buf.clear();
     for (int i = 0; i < 64; ++i) buf.setSample(0, i, 0.5f);
     d.process(buf);
@@ -864,7 +864,7 @@ TEST(DelayTest, TapeClusterStartsEarlier) {
 // in T and in chip for such a tone.
 static float bbdEchoAmp(double timeMs, double freqHz, double fb, double chip) {
   const int N = 30 * 48000;  // 30 s of steady tone at 48 kHz
-  juce::AudioBuffer<float> buf(1, N);
+  juce::AudioBuffer<float> buf(1, N); buf.clear();
   buf.clear();
   for (int i = 0; i < N; ++i)
     buf.setSample(0, i, 0.5f * static_cast<float>(
@@ -938,7 +938,7 @@ TEST(DelayTest, BBDChipVintageAddsDriveLoss) {
   // Chip 0 is the linear floor with essentially no added harmonics.
   auto steady = [&](double chip, double amp) {
     const int N = 30 * 48000;
-    juce::AudioBuffer<float> buf(1, N);
+    juce::AudioBuffer<float> buf(1, N); buf.clear();
     buf.clear();
     for (int i = 0; i < N; ++i)
       buf.setSample(0, i, static_cast<float>(
@@ -980,7 +980,7 @@ TEST(DelayTest, BBDLawHoldsAcrossFullRangeAndStaysStable) {
   for (double tMs : {5.0, 400.0, 1000.0, 10000.0}) {
     const int N = 16 * 48000;  // 16 s >= the internal 10 s max time
     const auto in = makeNoise(N, 987, 0.5f);
-    juce::AudioBuffer<float> buf(1, N);
+    juce::AudioBuffer<float> buf(1, N); buf.clear();
     buf.clear();
     for (int i = 0; i < N; ++i)
       buf.setSample(0, i, in[i]);
@@ -1120,7 +1120,7 @@ TEST(DelayTest, SharedModKnobIsLiveInEveryMode) {
     p.sigMod = sigMod;
     d.setParams(p);
     const int N = 2 * static_cast<int>(kFs);
-    juce::AudioBuffer<float> buf(1, N);
+    juce::AudioBuffer<float> buf(1, N); buf.clear();
     buf.clear();
     for (int i = 0; i < N / 2; ++i)
       buf.setSample(0, i, 0.5f * static_cast<float>(
@@ -1231,7 +1231,7 @@ TEST(DelayTest, DopplerModeSidebandsRunDeeperThanTheClassicLaw) {
     p.sigMod = 1.0;
     p.sigRate = p.sigMagRate = p.sigMmRate = rateHz;  // all fields: mode dispatch
     d.setParams(p);
-    juce::AudioBuffer<float> buf(1, N);
+    juce::AudioBuffer<float> buf(1, N); buf.clear();
     buf.clear();
     for (int i = 0; i < N; ++i)
       buf.setSample(0, i, 0.5f * static_cast<float>(
@@ -1563,7 +1563,7 @@ static std::vector<float> delayWet(int mode, double sigMod, double rate, double 
   p.sigMmRate = rate;
   d.setParams(p);
   if (N == 0) N = 2 * static_cast<int>(kFs);
-  juce::AudioBuffer<float> buf(1, N);
+  juce::AudioBuffer<float> buf(1, N); buf.clear();
   buf.clear();
   for (int i = 0; i < N; ++i)
     buf.setSample(0, i, 0.5f
@@ -1713,7 +1713,7 @@ TEST(DelayTest, MemGuyWaverFollowsItsOwnRateKnob) {
     p.feedback = 0.0;
     d.setParams(p);
     const int N = 2 * static_cast<int>(kFs);
-    juce::AudioBuffer<float> buf(1, N);
+    juce::AudioBuffer<float> buf(1, N); buf.clear();
     buf.clear();
     for (int i = 0; i < N / 2; ++i)
       buf.setSample(0, i, 0.5f * static_cast<float>(
@@ -1864,7 +1864,7 @@ TEST(ChorusTest, SpreadControlsStereoWidth) {
   std::vector<float> in(frames);
   for (int i = 0; i < frames; ++i)
     in[i] = 0.5f * std::sin(2.0 * M_PI * 500.0 * i / kFs);
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   std::vector<float> out(frames);
   for (int blk = 0; blk < frames / kBlock; ++blk) {
     for (int i = 0; i < kBlock; ++i)
@@ -1998,7 +1998,7 @@ TEST(ChorusTest, ToneTiltsTheTopEnd) {
     for (int i = 0; i < frames; ++i)
       in[i] = 0.6f * std::sin(2.0 * M_PI * 6000.0 * i / kFs)
              + 0.6f * std::sin(2.0 * M_PI * 400.0 * i / kFs);
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     for (size_t off = 0; off < in.size(); off += static_cast<size_t>(kBlock)) {
       for (int i = 0; i < kBlock; ++i)
         buf.setSample(0, i, in[off + static_cast<size_t>(i)]);
@@ -2046,7 +2046,7 @@ TEST(ChorusTest, SawAndSquareEdgesAreClickFree) {
     std::vector<float> in(frames), out(frames, 0.0f);
     const int f0 = 500;
     for (int i = 0; i < frames; ++i) in[i] = 0.8f * std::sin(2.0 * M_PI * f0 * i / kFs);
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     for (size_t off = 0; off < in.size(); off += static_cast<size_t>(kBlock)) {
       for (int i = 0; i < kBlock; ++i)
         buf.setSample(0, i, in[off + static_cast<size_t>(i)]);
@@ -2107,7 +2107,7 @@ TEST(TremoloTest, ZeroDepthIsAUnityPassThrough) {
     tm.prepare(kFs);
     tm.setParams({3.0, 0.0, w});
     const auto in = makeSine(kBlock, 440.0, 0.5f);
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     for (int i = 0; i < kBlock; ++i) buf.setSample(0, i, in[i]);
     tm.process(buf);
     for (int i = 0; i < kBlock; ++i)
@@ -2140,7 +2140,7 @@ TEST(TremoloTest, FullDepthDipsToSilenceWithoutBoosting) {
     float mn = 1e9f, mx = -1e9f, sum = 0.0f;
     while (done < total) {
       const int take = std::min(kBlock, total - done);
-      juce::AudioBuffer<float> buf(1, take);
+      juce::AudioBuffer<float> buf(1, take); buf.clear();
       for (int i = 0; i < take; ++i) buf.setSample(0, i, 1.0f);
       tm.process(buf);
       for (int i = 0; i < take; ++i) {
@@ -2178,7 +2178,7 @@ TEST(TremoloTest, SawDownStartsDeepAndRecovers) {
   prm.wave = 3;         // saw (Down)
   t.setParams(prm);
   const int b = 256;           // small blocks -> x nearly constant inside
-  juce::AudioBuffer<float> buf(1, b);
+  juce::AudioBuffer<float> buf(1, b); buf.clear();
   const int nblk = 48000 / b;  // one full period
   std::vector<float> amp(nblk);
   for (int blk = 0; blk < nblk; ++blk) {
@@ -2220,7 +2220,7 @@ TEST(TremoloTest, GainTransitionsAreClickFreeForSawAndSquare) {
     prm.depth = depth;
     prm.wave = w;
     t.setParams(prm);
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     float prevGain = -1.0f;
     double maxDelta = 0.0;
     for (int n = 0; n < 16; ++n) {
@@ -2320,7 +2320,7 @@ double probeTremoloToneGain(double tone) {
   double outSumSq = 0.0, phase = 0.0;
   const double w = 2.0 * 3.14159265358979323846 * freq / kFs;
   for (int blk = 0; blk < 30; ++blk) {
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     for (int i = 0; i < kBlock; ++i) {
       buf.setSample(0, i, static_cast<float>(std::sin(phase)));
       phase += w;
@@ -2416,7 +2416,7 @@ TEST(CompressorTest, QuietSignalPassesWithoutGainReduction) {
   const double w = 2.0 * 3.14159265358979323846 * freq / kFs;
   double outSumSq = 0.0, n = 0.0, phase = 0.0;
   for (int blk = 0; blk < 40; ++blk) {
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     for (int i = 0; i < kBlock; ++i) {
       buf.setSample(0, i, static_cast<float>(amp * std::sin(phase)));
       phase += w;
@@ -2449,7 +2449,7 @@ TEST(CompressorTest, HotSignalIsCompressed) {
   const double w = 2.0 * 3.14159265358979323846 * freq / kFs;
   double outSumSq = 0.0, n = 0.0, phase = 0.0;
   for (int blk = 0; blk < 120; ++blk) {
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     for (int i = 0; i < kBlock; ++i) {
       buf.setSample(0, i, static_cast<float>(amp * std::sin(phase)));
       phase += w;
@@ -2501,7 +2501,7 @@ TEST(CompressorTest, VcaSoftKneeEngagesGraduallyThenHoldsSlope) {
     return std::pow(10.0, -g / 20.0);
   };
   auto settledPassRatio = [&](double amp) {
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     double inSumSq = 0.0, outSumSq = 0.0;
     const int kBlocks = 240;
     const double w = 2.0 * 3.14159265358979323846 * 440.0 / kFs;
@@ -2550,7 +2550,7 @@ TEST(CompressorTest, VcaTracksEnergyNotSpikes) {
     const long total = 80 * cycle;
     for (long done = 0; done < total; ) {
       const int take = static_cast<int>(std::min<long>(kBlock, total - done));
-      juce::AudioBuffer<float> buf(1, take);
+      juce::AudioBuffer<float> buf(1, take); buf.clear();
       for (int i = 0; i < take; ++i) {
         const bool on = continuous || (((done + i) % cycle) < onLen);
         const float s = on ? static_cast<float>(amp * std::sin(phase)) : 0.0f;
@@ -2598,7 +2598,7 @@ TEST(CompressorTest, Opto2ATracksEnergyNotSpikes) {
     const long total = 80 * cycle;
     for (long done = 0; done < total; ) {
       const int take = static_cast<int>(std::min<long>(kBlock, total - done));
-      juce::AudioBuffer<float> buf(1, take);
+      juce::AudioBuffer<float> buf(1, take); buf.clear();
       for (int i = 0; i < take; ++i) {
         const bool on = continuous || (((done + i) % cycle) < onLen);
         const float s = on ? static_cast<float>(amp * std::sin(phase)) : 0.0f;
@@ -2644,7 +2644,7 @@ TEST(CompressorTest, VcaThresholdSitsAtSineEngagement) {
     const double w = 2.0 * 3.14159265358979323846 * freq / kFs;
     double outSumSq = 0.0, inSumSq = 0.0, n = 0.0, phase = 0.0;
     for (int blk = 0; blk < 240; ++blk) {
-      juce::AudioBuffer<float> buf(1, kBlock);
+      juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
       for (int i = 0; i < kBlock; ++i) {
         const float s = static_cast<float>(amp * std::sin(phase));
         buf.setSample(0, i, s);
@@ -2683,7 +2683,7 @@ TEST(CompressorTest, LowerThresholdCompressesMore) {
     const double w = 2.0 * 3.14159265358979323846 * freq / kFs;
     double outSumSq = 0.0, n = 0.0, phase = 0.0;
     for (int blk = 0; blk < 120; ++blk) {
-      juce::AudioBuffer<float> buf(1, kBlock);
+      juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
       for (int i = 0; i < kBlock; ++i) {
         buf.setSample(0, i, static_cast<float>(amp * std::sin(phase)));
         phase += w;
@@ -2720,7 +2720,7 @@ TEST(CompressorTest, ToneAddsOrCutsTreble) {
     p.thresholdDb = -18.0;  // keep the 0.1 tone below threshold -> shelf only
     c.setParams(p);
     const int n = 8000;
-    juce::AudioBuffer<float> buf(1, n);
+    juce::AudioBuffer<float> buf(1, n); buf.clear();
     const double w = 2.0 * 3.14159265358979323846 * hz / fs;
     const double amp = 0.1;           // quiet: below the -18 dBFS threshold, shelf only
     double phase = 0.0, inS = 0.0;
@@ -2793,7 +2793,7 @@ TEST(CompressorTest, BoldModesCompressAHotSignal) {
     const double w = 2.0 * 3.14159265358979323846 * freq / kFs;
     double outSumSq = 0.0, n = 0.0, phase = 0.0;
     for (int blk = 0; blk < 120; ++blk) {
-      juce::AudioBuffer<float> buf(1, kBlock);
+      juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
       for (int i = 0; i < kBlock; ++i) {
         buf.setSample(0, i, static_cast<float>(amp * std::sin(phase)));
         phase += w;
@@ -2836,7 +2836,7 @@ TEST(CompressorTest, PunchParallelBlendEngagesInEveryMode) {
       const double w = 2.0 * 3.14159265358979323846 * freq / kFs;
       double outSumSq = 0.0, n = 0.0, phase = 0.0;
       for (int blk = 0; blk < 120; ++blk) {
-        juce::AudioBuffer<float> buf(1, kBlock);
+        juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
         for (int i = 0; i < kBlock; ++i) {
           buf.setSample(0, i, static_cast<float>(amp * std::sin(phase)));
           phase += w;
@@ -2877,7 +2877,7 @@ TEST(CompressorTest, FetSlowDialClampsTransientsOnlyPartially) {
   c.setParams(p);  // PUNCH off
   const double w = 2.0 * 3.141592653589793 * 200.0 / kFs;
   const int pulseEnd = 32, N = 15360;  // pulse (~0.7 ms), then ~320 ms of body
-  juce::AudioBuffer<float> buf(1, N);
+  juce::AudioBuffer<float> buf(1, N); buf.clear();
   double phase = 0.0, inPulse = 0.0, inBody = 0.0;
   for (int i = 0; i < N; ++i) {
     const float x = static_cast<float>((i < pulseEnd ? 1.5 : 0.7) * std::sin(phase));
@@ -2929,7 +2929,7 @@ TEST(CompressorTest, FetSaturatesOddNotEven) {
     Compressor::Params p; p.mode = 3; p.thresholdDb = threshDb;
     c.setParams(p);
     const int n = 9600;  // 200 ms @ 48k (5 Hz bins): 200 Hz on bin 40, D2 on 80, D3 on 120
-    juce::AudioBuffer<float> buf(1, n);
+    juce::AudioBuffer<float> buf(1, n); buf.clear();
     const double w = 2.0 * 3.141592653589793 * 200.0 / kFs; double phase = 0.0;
     for (int i = 0; i < n; ++i) { buf.setSample(0, i, static_cast<float>(amp * std::sin(phase))); phase += w; }
     c.process(buf);
@@ -2971,7 +2971,7 @@ TEST(CompressorTest, FetPunchOpensTheSlowPair) {
     c.setParams(p);
     const double w = 2.0 * 3.141592653589793 * 200.0 / kFs;
     const int pulseEnd = 32, N = 15360;
-    juce::AudioBuffer<float> buf(1, N);
+    juce::AudioBuffer<float> buf(1, N); buf.clear();
     double phase = 0.0, inPulse = 0.0, inBody = 0.0;
     for (int i = 0; i < N; ++i) {
       const float x = static_cast<float>((i < pulseEnd ? 1.5 : 1.0) * std::sin(phase));
@@ -3020,7 +3020,7 @@ TEST(CompressorTest, Opto2AColorationMatchesMeasurements) {
     Compressor::Params p; p.mode = 2; p.mbc = punch; p.thresholdDb = threshDb;
     c.setParams(p);
     const int N = 15360;
-    juce::AudioBuffer<float> buf(1, N);
+    juce::AudioBuffer<float> buf(1, N); buf.clear();
     const double w = 2.0 * 3.141592653589793 * 200.0 / kFs; double ph = 0.0;
     for (int i = 0; i < N; ++i) { buf.setSample(0, i, static_cast<float>(1.2f * std::sin(ph))); ph += w; }
     c.process(buf);
@@ -3035,7 +3035,7 @@ TEST(CompressorTest, Opto2AColorationMatchesMeasurements) {
     Compressor::Params p; p.mode = 2; p.thresholdDb = 6.0;   // no GR at all
     c.setParams(p);
     const int N = 12000;
-    juce::AudioBuffer<float> buf(1, N);
+    juce::AudioBuffer<float> buf(1, N); buf.clear();
     const double w = 2.0 * 3.141592653589793 * 200.0 / kFs; double ph = 0.0;
     for (int i = 0; i < N; ++i) { buf.setSample(0, i, static_cast<float>(0.1f * std::sin(ph))); ph += w; }
     c.process(buf);
@@ -3175,7 +3175,7 @@ TEST(ReverbTest, AllModesBoundedAcrossDecaySweep) {
       const int n = 60 * kBlock;                 // ~1.25 s (long enough for the tail)
       std::vector<float> in(n, 0.0f);
       for (int i = 0; i < 240; ++i) in[i] = 0.6f;  // a ~5 ms drive burst
-      juce::AudioBuffer<float> buf(1, kBlock);
+      juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
       double pk = 0.0; bool fin = true;
       for (int off = 0; off + kBlock <= n; off += kBlock) {
         for (int i = 0; i < kBlock; ++i) buf.setSample(0, i, in[off + i]);
@@ -3311,6 +3311,9 @@ TEST(ReverbTest, FullToneKillsTheSustainedTail) {
 // Width: 0 gives both comb banks identical taps (L == R, mono) while 1 offsets
 // the right bank's taps so the two tails decorrelate (wide) -- the same
 // per-channel decorrelation the chorus uses for its spread.
+// (Re-targeted 2026-10-16 to the LEGACY comb voice at the Digital PLT entry:
+//  the DAT plate is stereo-image by construction (per-side tap split), so the
+//  mono-equality law is the comb arm's, not mode 0's.)
 TEST(ReverbTest, WidthControlsStereoWidth) {
   auto maxLMinusR = [](Reverb& r, const std::vector<float>& in) {
     juce::AudioBuffer<float> buf(2, kBlock);
@@ -3329,10 +3332,17 @@ TEST(ReverbTest, WidthControlsStereoWidth) {
     return m;
   };
   Reverb mono, wide;
+  auto arm = [](Reverb::Params& pp, double w) {
+    pp.decayMs = 1200.0; pp.preMs = 0.0; pp.tone = 0.4; pp.size = 0.6; pp.width = w;
+    pp.mode = 5; pp.type[5] = 2; pp.bright = 0.5; pp.bloom = 0.5;
+  };
+  Reverb::Params pm, pw;
+  arm(pm, 0.0);   // width = 0 -> mono
+  arm(pw, 1.0);   // width = 1 -> wide
   mono.prepare(kFs);
-  mono.setParams({1200.0, 0.0, 0.4, 0.6, 0.0});  // width = 0 -> mono
+  mono.setParams(pm);
   wide.prepare(kFs);
-  wide.setParams({1200.0, 0.0, 0.4, 0.6, 1.0});  // width = 1 -> wide
+  wide.setParams(pw);
   const int frames = 2 * kBlock;
   const auto in = makeSine(frames, 440.0, 0.8f);
   const double mMono = maxLMinusR(mono, in);
@@ -3526,7 +3536,7 @@ static std::vector<float> springOut(const std::vector<float>& input,
   p.decayMs = decayMs; p.tone = 0.40; p.size = 0.60; p.width = 0.0; p.preMs = 0.0;
   p.mode = 1; p.springs = springs; p.sag = sag;   // arms the Spring law path
   r.setParams(p);
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   std::vector<float> L(input.size());
   for (int off = 0; off + kBlock <= (int)input.size(); off += kBlock) {
     for (int i = 0; i < kBlock; ++i) buf.setSample(0, i, input[off + i]);
@@ -4602,7 +4612,28 @@ static std::vector<float> plateOut(const std::vector<float>& input,
   p.decayMs = decayMs; p.tone = 0.35; p.size = 0.80; p.width = 0.0; p.preMs = 0.0;
   p.mode = 0; p.bright = bright; p.bloom = bloom;   // arms the Plate law path
   r.setParams(p);
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
+  std::vector<float> L(input.size());
+  for (int off = 0; off + kBlock <= (int)input.size(); off += kBlock) {
+    for (int i = 0; i < kBlock; ++i) buf.setSample(0, i, input[off + i]);
+    r.process(buf);
+    for (int i = 0; i < kBlock; ++i) L[off + i] = buf.getSample(0, i);
+  }
+  return L;
+}
+
+// The Bloom / Bright color laws belong to the LEGACY comb-plate voice, which
+// now lives at the Digital PLT entry (mode 5, type[5] == 2) -- re-targeted
+// there 2026-10-16 (mode 0 runs the DAT tank with its own sonic guards).
+static std::vector<float> plateLegacyOut(const std::vector<float>& input,
+                                         double bright, double bloom, double decayMs = 2400.0) {
+  Reverb r; r.prepare(kFs);
+  Reverb::Params p;
+  p.decayMs = decayMs; p.tone = 0.35; p.size = 0.80; p.width = 0.0; p.preMs = 0.0;
+  p.mode = 5; p.type[5] = 2;               // Digital PLT = the legacy comb voice
+  p.bright = bright; p.bloom = bloom;
+  r.setParams(p);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   std::vector<float> L(input.size());
   for (int off = 0; off + kBlock <= (int)input.size(); off += kBlock) {
     for (int i = 0; i < kBlock; ++i) buf.setSample(0, i, input[off + i]);
@@ -4622,10 +4653,10 @@ TEST(PlateTest, BloomMakesTheLowEndOutlast) {
     double s = 0.0; for (int i = a; i < (int)v.size(); ++i) s += (double)v[i] * v[i];
     return s / ((int)v.size() - a);
   };
-  const auto lo0 = plateOut(makeSine(n, 200.0, 0.7f), 0.0, 0.10);   // Bloom mild
-  const auto hi0 = plateOut(makeSine(n, 4000.0, 0.7f), 0.0, 0.10);
-  const auto lo1 = plateOut(makeSine(n, 200.0, 0.7f), 0.0, 1.0);    // Bloom strong
-  const auto hi1 = plateOut(makeSine(n, 4000.0, 0.7f), 0.0, 1.0);
+  const auto lo0 = plateLegacyOut(makeSine(n, 200.0, 0.7f), 0.0, 0.10);   // Bloom mild
+  const auto hi0 = plateLegacyOut(makeSine(n, 4000.0, 0.7f), 0.0, 0.10);
+  const auto lo1 = plateLegacyOut(makeSine(n, 200.0, 0.7f), 0.0, 1.0);    // Bloom strong
+  const auto hi1 = plateLegacyOut(makeSine(n, 4000.0, 0.7f), 0.0, 1.0);
   const double r0 = avgPow(lo0, from) / std::max(1e-12, avgPow(hi0, from));
   const double r1 = avgPow(lo1, from) / std::max(1e-12, avgPow(hi1, from));
   EXPECT_GT(r1, r0) << "Bloom must let the low survive the high more than it does at low Bloom";
@@ -4636,8 +4667,8 @@ TEST(PlateTest, BloomMakesTheLowEndOutlast) {
 TEST(PlateTest, BrightDensifiesTheOnset) {
   const int n = 8 * kBlock;
   std::vector<float> click(n, 0.0f); for (int i = 0; i < 40; ++i) click[i] = 1.0f;
-  const auto b03 = plateOut(click, 0.3, 0.0);   // armed by Bright
-  const auto b10 = plateOut(click, 1.0, 0.0);   // denser onset (Bright 1)
+  const auto b03 = plateLegacyOut(click, 0.3, 0.0);   // armed by Bright
+  const auto b10 = plateLegacyOut(click, 1.0, 0.0);   // denser onset (Bright 1)
   for (auto s : b10) EXPECT_LE(std::abs((double)s), 5.0) << "plate out of bound";
   auto windowPow = [](const std::vector<float>& v, int a, int b) {
     double e = 0.0; for (int i = a; i < b && i < (int)v.size(); ++i) e += (double)v[i] * v[i];
@@ -4682,7 +4713,7 @@ static std::vector<float> roomOut(const std::vector<float>& input,
   p.decayMs = decayMs; p.tone = 0.3; p.size = 0.3; p.width = 0.0; p.preMs = 0.0;
   p.mode = 2; p.early = early; p.air = air;   // arms the Room law path
   r.setParams(p);
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   std::vector<float> L(input.size());
   for (int off = 0; off + kBlock <= (int)input.size(); off += kBlock) {
     for (int i = 0; i < kBlock; ++i) buf.setSample(0, i, input[off + i]);
@@ -4756,7 +4787,7 @@ static void fetRun(const Compressor::Params& p, const std::vector<float>& env) {
   Compressor c; c.prepare(kFs); c.setParams(p);
   const double w = 2.0 * 3.141592653589793 * 400.0 / 48000.0;
   double ph = 0.0;
-  juce::AudioBuffer<float> buf(1, (int)env.size());
+  juce::AudioBuffer<float> buf(1, (int)env.size()); buf.clear();
   for (size_t i = 0; i < env.size(); ++i) { buf.setSample(0, (int)i, env[i] * static_cast<float>(std::sin(ph))); ph += w; }
   c.process(buf);
   fetOutBuf.assign(buf.getReadPointer(0), buf.getReadPointer(0) + env.size());
@@ -4873,7 +4904,7 @@ TEST(CompressorTest, TubeStaPunchOpensTheBody) {
     p.attackMs = 2.0; p.releaseMs = 200.0; p.mbc = punch;
     c.setParams(p);
     const int N = 20000;
-    juce::AudioBuffer<float> buf(1, N);
+    juce::AudioBuffer<float> buf(1, N); buf.clear();
     const double w = 2.0 * 3.141592653589793 * 200.0 / kFs; double ph = 0.0;
     for (int i = 0; i < N; ++i) { buf.setSample(0, i, static_cast<float>(0.5f * std::sin(ph))); ph += w; }
     c.process(buf);
@@ -4907,7 +4938,7 @@ TEST(CompressorTest, TubeStaColorIsMildAndEvenLeaning) {
     p.attackMs = 2.0; p.releaseMs = 200.0; p.mbc = false;
     c.setParams(p);
     const int N = 15360;
-    juce::AudioBuffer<float> buf(1, N);
+    juce::AudioBuffer<float> buf(1, N); buf.clear();
     const double w = 2.0 * 3.141592653589793 * 200.0 / kFs; double ph = 0.0;
     for (int i = 0; i < N; ++i) { buf.setSample(0, i, static_cast<float>(ampIn * std::sin(ph))); ph += w; }
     c.process(buf);
@@ -4921,7 +4952,7 @@ TEST(CompressorTest, TubeStaColorIsMildAndEvenLeaning) {
     p.attackMs = 2.0; p.releaseMs = 200.0; p.mbc = false;
     c.setParams(p);
     const int N = 12000;
-    juce::AudioBuffer<float> buf(1, N);
+    juce::AudioBuffer<float> buf(1, N); buf.clear();
     const double w = 2.0 * 3.141592653589793 * 200.0 / kFs; double ph = 0.0;
     for (int i = 0; i < N; ++i) { buf.setSample(0, i, static_cast<float>(0.1f * std::sin(ph))); ph += w; }
     c.process(buf);
@@ -5099,7 +5130,7 @@ TEST(CompressorTest, ClipDepthIsAffineInTheKnobInEveryBoldMode) {
   const float freq = 375.0f, amp = 1.5f;
   const int len = 9600, span = 1280;   // 200 ms drive; last 26.7 ms = steady
   auto steady = [&](int mode, double clip) {
-    juce::AudioBuffer<float> buf(1, len);
+    juce::AudioBuffer<float> buf(1, len); buf.clear();
     const double w = 2.0 * 3.14159265358979323846 * freq / kFs;
     double ph = 0.0;
     for (int i = 0; i < len; ++i) {
@@ -5160,7 +5191,7 @@ TEST(CompressorTest, KneeNoonIsTheClassicSixDbAndWiderMeansSofter) {
     p.kneeDb = knee;
     c.setParams(p);
     const double w = 2.0 * 3.14159265358979323846 * 440.0 / kFs;
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     double o = 0.0, n = 0.0, ph = 0.0;
     for (int blk = 0; blk < 120; ++blk) {
       for (int i = 0; i < kBlock; ++i) {
@@ -5340,7 +5371,7 @@ TEST(CompressorTest, FluxIsZeroLatencyAndTransientUnity) {
     Compressor c; c.prepare(kFs);
     Compressor::Params p; p.mode = m;
     c.setParams(p);
-    juce::AudioBuffer<float> buf(1, 64);
+    juce::AudioBuffer<float> buf(1, 64); buf.clear();
     buf.setSample(0, 0, 1.0f);
     c.process(buf);
     EXPECT_NE(buf.getSample(0, 0), 0.0f)
@@ -5353,7 +5384,7 @@ TEST(CompressorTest, FluxIsZeroLatencyAndTransientUnity) {
     Compressor c; c.prepare(kFs);
     Compressor::Params p; p.mode = 3;
     c.setParams(p);
-    juce::AudioBuffer<float> buf(1, 64);
+    juce::AudioBuffer<float> buf(1, 64); buf.clear();
     buf.setSample(0, 0, 1.0f);
     c.process(buf);
     EXPECT_NEAR(buf.getSample(0, 0), 1.0f, 1e-5f) << "FET first sample must be ~1.0 (got " << buf.getSample(0, 0) << ")";
@@ -5363,7 +5394,7 @@ TEST(CompressorTest, FluxIsZeroLatencyAndTransientUnity) {
     Compressor c; c.prepare(kFs);
     Compressor::Params p; p.mode = 0;
     c.setParams(p);
-    juce::AudioBuffer<float> buf(1, 64);
+    juce::AudioBuffer<float> buf(1, 64); buf.clear();
     buf.setSample(0, 0, 1.0f);
     c.process(buf);
     EXPECT_NEAR(buf.getSample(0, 0), 1.0f, 1e-3f) << "VCA first sample ~1.0 (got " << buf.getSample(0, 0) << ")";
@@ -5383,7 +5414,7 @@ static std::vector<float> chamberOut(const std::vector<float>& input,
   p.decayMs = decayMs; p.tone = 0.4; p.size = 0.5; p.width = 0.0; p.preMs = 0.0;
   p.mode = 3; p.volley = volley; p.bass = bass;   // arms the Chamber law path
   r.setParams(p);
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   std::vector<float> L(input.size());
   for (int off = 0; off + kBlock <= (int)input.size(); off += kBlock) {
     for (int i = 0; i < kBlock; ++i) buf.setSample(0, i, input[off + i]);
@@ -5459,7 +5490,7 @@ static std::vector<float> hallOut(const std::vector<float>& input,
   p.decayMs = decayMs; p.tone = 0.4; p.size = 0.8; p.width = 0.0; p.preMs = 0.0;
   p.mode = 4; p.build = build; p.space = space;   // arms the Hall law path
   r.setParams(p);
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   std::vector<float> L(input.size());
   for (int off = 0; off + kBlock <= (int)input.size(); off += kBlock) {
     for (int i = 0; i < kBlock; ++i) buf.setSample(0, i, input[off + i]);
@@ -5513,7 +5544,7 @@ TEST(HallTest, IsLiveAndBounded) {
 //   crest  = steady peak / steady RMS
 //   onset  = peak of the first 4 ms of a 40-sample full-scale click (strike)
 static void tdrive(Reverb& r, const std::vector<float>& in, std::vector<float>& out) {
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   out.assign(in.size(), 0.0f);
   for (size_t off = 0; off + kBlock <= in.size(); off += kBlock) {
     for (int i = 0; i < kBlock; ++i) buf.setSample(0, i, in[off + i]);

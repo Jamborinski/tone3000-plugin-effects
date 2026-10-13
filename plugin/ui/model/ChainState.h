@@ -183,6 +183,7 @@ struct ChainItem {
   double reverbBass = 0.6;
   double reverbBuild = 0.6;
   double reverbSpace = 0.7;
+  double reverbLoCut = 0.0;
   // Per-mode TYPE (sub-model within a mode; the choice is remembered per
   // mode -- the 12-sig precedent). 0 = the mode's modeled/first type.
   // (Reverb::Params::type[]; plugin/docs/reverb-modes.md.)

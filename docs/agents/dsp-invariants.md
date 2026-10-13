@@ -157,14 +157,29 @@
   and RAM freely up to that cap — do not half-optimize for CPU at the cost of
   timbre. This is an open invitation, not a task to start now; the ticket
   for it does not exist yet.
-## Reverb (plate / "140" model -- full text in `docs/agents/ir-reverb-training.md`)
-- Plate/"140" (mode 0, type 0 = the EMT 140 model) is tuned against the EMT 140
-  2.0 s IR reference (house convolver, peak-normalised): 50 % NEUTRAL start
-  dials (tone/size/width 0.50, decay 2000 ms = the reference's own length);
-  air law = 2x 1st-order OUT-stage LPF stages, 4900 Hz at short decay -> 3600 Hz
-  at long (LONGER = DARKER, the direction the reference family itself measures:
-  0.5 s len -62.5 vs 2.0 s len -73.0 -- the ticket's "shorter = darker"
-  phrasing is INVERTED against that measurement).
+## Reverb (PLT face, per-mode laws -- full text in `docs/agents/ir-reverb-training.md`)
+- **Plate (mode 0) is now the DAT (Dattorro) engine** (T-DAT-001, 2026-10-17):
+  an MIT port of `RSAlgorithmicVerb-main` `DattorroVerb.cpp` (attribution +
+  the AGENTS.md clean-room/MIT rule at the port site in
+  `plugin/include/Reverb.h`). DEFAULT + ONLY engine for Plate; the old
+  comb-plate law survives bit-identical at the Digital PLT subtype (mode 5,
+  type[5]==2) with the legacy pin tests on its arm. The Decay knob drives the
+  six decay-site loop gain with a **uniform 0.82 cap** (stability boundary
+  measured 0.88 — see the allpass-loop-stability section below); Size = rs
+  loop-scale (0.25+1.5*size); LoCut = the only new param (45 Hz one-pole
+  HPF, 0 = bit-pass, four state places — see `ui-wiring.md`). Guards:
+  `test/src/dat_probe_tests.cpp` suite **DatGuards** (6/6 green; band meter
+  is a per-bin DFT, NOT a unit-circle resonator — that overflows on plate
+  low-band content and produced the LoCut/Air/Width 'failures' mid-hunt).
+- **LEGACY comb-plate** (the mode-0 engine before T-DAT-001, 2026-10-13; now
+the Digital PLT arm only) is tuned against the EMT 140 2.0 s IR reference
+(house convolver, peak-normalised): 50 % NEUTRAL start dials
+tone/size/width 0.50, decay 2000 ms = the reference's own length); air law
+= 2x 1st-order OUT-stage LPF stages, 4900 Hz at short decay -> 3600 Hz at
+long (LONGER = DARKER, the direction the reference family itself measures:
+0.5 s len -62.5 vs 2.0 s len -73.0 -- the ticket's "shorter = darker"
+phrasing is INVERTED against that measurement); pins level law 93.95
+rawAbs @2000 ms / comb cap 21.98 @2500 ms on the `plateLegacyP()` arm.
 - **CONSIDERED & DECLINED (2026-10-13):** in-loop darkening / body (comb +4.7 to
   +10 dB, fb-capped gain, one unstable); 2nd-order biquad out-stages at low fc
   (unstable pole 1.13 / DC-dead "lowpass" gain 0.035 / wrong-shape 240 Hz
@@ -305,3 +320,42 @@
   UNAFFECTED — we raised what a MODE may cost, not what the convolver may
   cost. Zero-latency law unchanged (no OLA-style latency, no oversampling).
   Guards: `test/src/reverb_ceiling_p0_tests.cpp` (ReverbCeiling.ModeCpuGuard).
+
+## Feedback / allpass loop stability (2026-10-17, the DAT plate rebuild, T-DAT-001)
+- **The per-traversal decay constant is part of the STABILITY budget, not
+  just the reverb length.** The DAT (Dattorro) port's fig-8 loop was stable
+  at the golden's own fixed `decayTime = 0.35` but marginal the moment the
+  Decay knob could push the per-site gain past ~0.84-0.88 (measured by the
+  per-second energy-GROWTH slope on the 6-16 s tail of a long render at
+  sizes 0.0 / 0.5 / 1.0 — a `|s|>50`/nonfinite test is render-length
+dependent and LIES for marginal poles). Shipped law: a **uniform 0.82
+cap** on the Decay-knob-mapped loop gain (`datDec_`, applied at all six
+decay sites), below the measured 0.88 boundary with margin — the knob is
+live, the loop is stable, both across every size/decay dial.
+- **The "runaway at some sizes" bug class was a PROBE HARNESS bug, not the
+  engine.** An unzeroed `juce::AudioBuffer<float>` fed ~15 s of heap
+garbage into the feedback loop and amplified it to 1e37, flipping
+apparent stability by render length. Standing rule (also in
+`docs/agents/audio-testing.md`): every probe buffer is `clear()`ed right
+after allocation; "stable" claims require the energy-growth-slope
+harness, not a short-render peak cap.
+- **A g = 1.0 Schroeder-I allpass parks a pole at z = −1 (a leaky
+  integrator) that long drive bursts pump to runaway** — small delays + full
+  gain = the divergence path. Cap allpass gains below 1 (shipped 0.98 on the
+  DAT input APs, gIn1/gIn2 = {0.98, 0.98, 0.83, 0.83} with the "why" at the
+  port site in `plugin/include/Reverb.h`); never ship a 1.0 feedforward tap.
+- **Always sweep the knob ladder INCLUDING the edges (0 and max).** Mid-range
+  green is not proof of stability: every DAT probe at size 0.5 passed while
+  size 0.0 (and the legacy size-0 pins) diverged. `DspTests
+  AllModesBounded`-class tests exist exactly for this — extend the sweep set
+  to the parameter's bounds whenever a loop gain or delay base changes.
+- **Bisection pattern for runaway attribution (one build + one run):** add
+  one `inline static thread_local int` bit flag (header-only, keep it in a
+  probe-guard region so it never ships) + a per-stage `if (!(flag & bit))`
+  skip, then a probe test that runs the full flag matrix (dbg 0..7) at the
+  failing config and reports `peak/idx` per bit-combination. On the DAT
+  rebuild this localized the divergence to the fig-8 crossfeeds (disabling their carries
+  collapsed size-0 runaway peak 13.5 → 0.75; the other stage bits changed almost
+  nothing) — 2× faster than
+  commenting stages in and out of a 400-line function.
+

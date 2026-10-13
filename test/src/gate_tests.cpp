@@ -36,7 +36,7 @@ std::vector<float> runGate(const std::vector<float>& in, const NoiseGate::Params
   NoiseGate gate;
   gate.prepare(kFs);
   gate.setParams(p);
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   std::vector<float> out;
   out.reserve(in.size());
   for (size_t off = 0; off < in.size(); off += kBlock) {
@@ -165,7 +165,7 @@ TEST(NoiseGateTest, ParamsApplyMidStream) {
   p.releaseMs = 500.0f;
   p.holdMs = 0.0f;
   gate.setParams(p);
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   std::vector<float> out;
   for (size_t off = 0; off < in.size(); off += kBlock) {
     if (static_cast<int>(off) == burst) {

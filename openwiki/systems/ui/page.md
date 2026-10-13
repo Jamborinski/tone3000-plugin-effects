@@ -3,8 +3,6 @@ type: "Reference"
 title: "Native UI: architecture and screens"
 openwiki_generated: true
 sources:
-  - id: openwiki-source-f42fc55d83e6151f6984ab0d
-    resource: repo://docs/agents/ui-snapshots.md
   - id: openwiki-source-bd1c7579d37b2f053f6955d3
     resource: repo://plugin/docs/native-ui.md
   - id: openwiki-source-d03af21fb5ca3fcbf4437434
@@ -34,7 +32,7 @@ sources:
 generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-12T23:07:19.188Z
+    at: 2026-10-13T21:50:34.909Z
 ---
 
 

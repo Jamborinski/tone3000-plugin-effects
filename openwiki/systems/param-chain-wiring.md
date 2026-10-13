@@ -5,10 +5,14 @@ openwiki_generated: true
 sources:
   - id: openwiki-source-da6fd5ac2a3719541ddf1725
     resource: repo://docs/agents/ui-wiring.md
+  - id: openwiki-source-e2fb14576702431774114c7c
+    resource: repo://plugin/include/ChainBlock.h
   - id: openwiki-source-7162675b87d5c606d8e7cac9
     resource: repo://plugin/include/MidiMapper.h
   - id: openwiki-source-fd29254520bef2ca5ddb33d0
     resource: repo://plugin/src/ProcessorChain.cpp
+  - id: openwiki-source-906b35776f47040ec6806bce
+    resource: repo://plugin/src/ProcessorState.cpp
   - id: openwiki-source-2cc0983ddb88288e69accf75
     resource: repo://plugin/ui/core/KnobScale.h
   - id: openwiki-source-20c83d572d97ba03f654862b
@@ -20,7 +24,7 @@ sources:
 generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-12T23:07:19.188Z
+    at: 2026-10-13T21:50:34.909Z
 ---
 
 

@@ -403,6 +403,7 @@ struct ChainBlock {
   double reverbBass = 0.6;
   double reverbBuild = 0.6;
   double reverbSpace = 0.7;
+  double reverbLoCut = 0.0;  // T-DAT-001: PLT LoCut (0 = bit-exact pass)
   // Per-mode TYPE (sub-model within a mode; see Reverb.h + reverb-modes.md).
   // One field per mode = the choice is remembered per mode (the 12-sig
   // precedent). 0 = the mode's modeled/first type (the only one today).
@@ -426,7 +427,7 @@ struct ChainBlock {
             reverbBright, reverbBloom, reverbEarly, reverbAir, reverbVolley,
             reverbBass, reverbBuild, reverbSpace,
             reverbType0, reverbType1, reverbType2, reverbType3, reverbType4, reverbType5,
-            reverbSharedMod, reverbWave};
+            reverbSharedMod, reverbWave, reverbLoCut};
   }
   // Convolution (EffectKind::Convolution): IR-driven convolution reverb (see
   // ConvolutionReverb.h). Five user controls, all normalised except the two

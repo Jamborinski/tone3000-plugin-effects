@@ -61,7 +61,7 @@ std::vector<float> runPitchShift(const std::vector<float>& in, const PitchShift:
   for (size_t off = 0; off < in.size(); off += kBlock) {
     if (p2 != nullptr && static_cast<int>(off) == switchAt) t.setParams(*p2);
     const int n = static_cast<int>(std::min<size_t>(kBlock, in.size() - off));
-    juce::AudioBuffer<float> buf(1, n);
+    juce::AudioBuffer<float> buf(1, n); buf.clear();
     buf.copyFrom(0, 0, in.data() + off, n);
     t.process(buf);
     out.insert(out.end(), buf.getReadPointer(0), buf.getReadPointer(0) + n);
@@ -352,7 +352,7 @@ TEST(PitchShiftTest, SmoothSweepNeverBreaksTheTone) {
   constexpr int kBlocks = 4 * 48000 / kBlock;
   const auto in = makeSine(kBlocks * kBlock, 220.0, 0.5f);
   std::vector<float> out;
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   for (int b = 0; b < kBlocks; ++b) {
     // A triangle: 0 -> +24 -> -24 -> 0.
     const double phase = static_cast<double>(b) / kBlocks;
@@ -419,7 +419,7 @@ TEST(PitchShiftTest, PowerBlendsInsteadOfStepping) {
   p.semitones = -5;
   constexpr int kLength = 288 * kBlock;  // ~3 s
   const auto in = makeSine(kLength, 220.0, 0.5f);
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   std::vector<float> out;
   int stoppedAt = -1;
   for (int off = 0; off < kLength; off += kBlock) {

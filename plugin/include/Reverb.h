@@ -29,6 +29,7 @@
 // setParams() on the message thread under chainMutex; process() on the audio
 // thread with zero allocation.
 #include <cmath>
+#include <cstdlib>
 #include <cstdint>
 #include <vector>
 
@@ -649,7 +650,12 @@ class Reverb {
     // (the existing `mod` field still sets its DEPTH). The shared, all-modes
     // Mod knob (`sharedMod`) always uses a fixed sine LFO (`waveValue(0, ...)`
     // in `processSharedModSmear`) — it does not read this field.
-    int wave = 0;
+    int wave   = 0;
+    // T-DAT-001: low-end rolloff (PLT LoCut). 0 = full rumble (bit-exact
+    // pass-through); higher = deeper sub cut. Appended AFTER `wave` so the
+    // positional aggregates below keep compiling; state missing the key
+    // reads 0.0 = pass-through.
+    double loCut = 0.0;
   };
 
   void prepare(double sampleRate) {
@@ -708,6 +714,26 @@ class Reverb {
       whMask_ = static_cast<uint32_t>(wn - 1);
       whWrite_ = 0;
     }
+    // T-DAT-001: PLT tank rings -- sized for the golden's max delays at the
+    // widest roomSize (rs = 0.25+1.5, size 1): dly max 5505*1.75 + head,
+    // apm max 1343*1.75 + LFO 24, ap5 3931*1.75, apIn 561*1.75; pre per the
+    // pre-ceiling (60 ms). Powers of two, cleared by the fill below.
+    {
+      // FIXED SIZES (the delay bases are SAMPLE counts at 44.1 k class, not ms):
+      // dly max 6590*1.75 = 11532 -> 16384; ap5 3931*1.75 = 6879 -> 8192;
+      // apm 1343*1.75+24 = 2352 -> 4096; apIn 561*1.75 = 982 -> 1024;
+      // pre = 60 ms ceiling per the pre law (ms-based is right THERE).
+      const size_t kDly  = 16384;
+      const size_t kApm  = 4096;
+      const size_t kAp5  = 8192;
+      const size_t kApIn = 1024;
+      const size_t kPre  = static_cast<size_t>(kMaxPreMs * 1e-3 * sampleRate_) + 64;
+      for (auto& ch : dat_) {
+        for (int i = 0; i < 4; ++i) { ch.apIn[i].init(kApIn); ch.dly[i].init(kDly); }
+        for (int i = 0; i < 2;  ++i) { ch.apm[i].init(kApm); }
+        ch.ap5.init(kAp5); ch.ap6.init(kAp5); ch.pre.init(kPre);
+      }
+    }
     setParams(params_);  // recompute taps now that the rate is known
   }
 
@@ -752,6 +778,14 @@ class Reverb {
         smBqX1_[c][v] = 0.0; smBqX2_[c][v] = 0.0; smBqY1_[c][v] = 0.0; smBqY2_[c][v] = 0.0;
       }
     }
+    for (auto& ch : dat_) {                      // T-DAT-001: PLT tank
+      for (int i = 0; i < 4; ++i) { ch.apIn[i].clear(); ch.dly[i].clear(); }
+      for (int i = 0; i < 2; ++i) ch.apm[i].clear();
+      ch.ap5.clear(); ch.ap6.clear(); ch.pre.clear();
+      ch.inLp = ch.dmpA = ch.dmpB = ch.sumB = 0.0f;
+      ch.airLp = ch.loX = ch.loY = 0.0f;
+    }
+    datLfoPhase_ = 0.0f;
   }
 
   void setParams(const Params& p) {
@@ -786,6 +820,89 @@ class Reverb {
     params_.space = juce::jlimit(0.0, 1.0, p.space);
     params_.sharedMod = juce::jlimit(0.0, 1.0, p.sharedMod);
     params_.wave = static_cast<int>(juce::jlimit(0, kNumWaves - 1, p.wave));
+    params_.loCut = juce::jlimit(0.0, 1.0, p.loCut);
+    const double t60s = std::max(0.05, params_.decayMs * 0.001);
+
+    // ------------------------------------------------------------ PLT tank
+    // Golden constants (MIT, RSAlgorithmicVerb-main, port 2026-10-16):
+    //   input AP  210 158 561 410      gains 1.0 1.0 0.83 0.83
+    //   loop AP   apm1 1343 (0.93)  ap5 3931 (0.93)  apm2 995 (0.67)  ap6 2664 (0.67)
+    //   fig-8 dly 6241 6590 4641 5505         (x roomSize = 0.25 + 1.5*size)
+    //   taps      d1 +394 +4401/-3124  ap5 -2831/-496  d2 +2954/-179
+    //             d3 -2945/+522 +5368  ap6 -277/-1817  d4 -1578/+3956  (x0.6)
+    //   LFO       sine + quadrature, +-24 (x modDepth) samples
+    // Ours: T60->fb, Pre, Early (2/5/9 ms taps), Tone in-loop damping
+    // (800 Hz..12.8 kHz), LoCut one-pole HPF, Air shelf (~4.5 kHz, 0.9*air),
+    // Space-scaled diffusion gains, one-knob Mod (depth 24*mod, rate
+    // 3-15 Hz per the EMT beat law, 0 = off), per-side LFO phase c*(P/4).
+    {
+      const double rs    = 0.25 + 1.5 * params_.size;
+      const double sr    = sampleRate_;
+      const float space = (float)(0.1 + 0.9 * params_.space);
+      const int dIn_[4]  = { 210, 158, 561, 410 };
+      const int loop_[4] = { 1343, 995, 3931, 2664 };
+      const int dly_[4]  = { 6241, 6590, 4641, 5505 };
+      const int tap_[14] = { 394, 4401, 3124, 2831, 496, 2954, 179,
+                             2945, 522, 5368, 277, 1817, 1578, 3956 };
+      const int earlyMs_[3] = { 2, 5, 9 };
+      // INPUT allpasses: FIXED sub-unity (stability law, 2026-10-16). The
+      // golden's g = 1.0 (apIn0/apIn1) parks a z=-1 leaky-integrator pole that
+      // a long drive burst pumps to runaway at small sizes; cap at 0.98. They
+      // do NOT set the T60 -- they sit outside the feedback cycle.
+      const float gIn01 = 0.98f, gInLp = 0.90f, gInHp = 0.83f;
+      for (int i = 0; i < 4; ++i) datApInLen_[i] = (int)(dIn_[i] * rs) + 1;
+      datDiffIn_[0] = gIn01 * space;
+      datDiffIn_[1] = gIn01 * space;
+      datDiffIn_[2] = gInHp * space;
+      datDiffIn_[3] = gInLp * space;   // input chain: golden gains (feed-forward, not in loop)
+      datApLen_[0]  = (int)(loop_[0] * rs) + 1;
+      datDiffDec_[0] = 0.92f * space;   // apm1 (loop) — 0.60 control scale (2026-10-17)
+      datApLen_[1]  = (int)(loop_[1] * rs) + 1;
+      datDiffDec_[1] = 0.67f * space;   // apm2 (loop)
+      datDecLen_[0] = (int)(loop_[2] * rs) + 1;
+      datDiffDec_[2] = 0.92f * space;   // ap5 (loop)
+      datDecLen_[1] = (int)(loop_[3] * rs) + 1;
+      datDiffDec_[3] = 0.67f * space;   // ap6 (loop)
+      for (int i = 0; i < 4; ++i) datDlyLen_[i] = (int)(dly_[i] * rs) + 1;
+      // One full A-B-A fig-8 traversal (golden delay bases sum:
+      // 1343+995+3931+2664+6241+6590+4641+5505 = 28955) at the current size.
+      // ASSIGNED BEFORE datDec_ (ordering bug 2026-10-16).
+      datLoopTot_ = (int)(28955.0 * rs) + 4;
+      // DAT fig-8 T60 law (OURS, final 2026-10-17, echo-blind T60 measurements).
+      // datDec_ is the fig-8 decay multiplier applied at every loop read site
+      // (A-entry sumB carry, d0/d1/d2 damping pops, B-entry carry, d3 read).
+      // It MUST be < 1; the fig-8 loop's intrinsic gain (passive golden
+      // passbands on apm1/apm2/ap5/ap6 plus node-tap leaks) pushes the loop
+      // toward its instability boundary, and dDec is the knob that keeps it a
+      // distance away. The closer it comes to the boundary, the longer the
+      // tail (loop's slowest pole is near-unity), so LONGER T60 = LARGER dDec.
+      //
+      // Measured boundary (per-second energy-GROWTH slope, 6..16 s tail, the
+      // FULL guard stack — bright/bloom ON, pre default — with CLEANED input
+      // buffers; earlier "runaway at size>=0.25" results were heap garbage
+      // streaming in from an unzeroed AudioBuffer, NOT the loop):
+      //   size 0.0: decaying through d=0.92 (boundary off-grid, >=0.92)
+      //   size 0.5: decaying at d<=0.84, GROWING +0.6/s at d=0.88
+      //   size 1.0: decaying at d<=0.84, GROWING +0.3/s at d=0.88
+      // => safe universal ceiling d=0.82 (boundary 0.84 minus margin). The
+      // Decay knob maps LOG-uniformly from the floor (0.15) at decayMs=50 to
+      // 0.82 at decayMs=2500; longer tail = loop's near-unity pole, still
+      // monotone in decayMs at every size.
+      const double hi = 0.82;
+      {
+        const double decayMs = std::max(50.0, std::min(2500.0, params_.decayMs));
+        const double tnorm   = std::max(0.0, std::min(1.0,
+            std::log10(decayMs / 50.0) / std::log10(2500.0 / 50.0)));
+        datDec_ = (float)(0.15 + (hi - 0.15) * tnorm);
+      }
+      for (int i = 0; i < 14; ++i) datTap_[i] = (int)(tap_[i] * rs) + 1;
+      for (int i = 0; i < 3; ++i) datPreTap_[i] = (int)(earlyMs_[i] * 1e-3 * sr) + 1;
+      datPre_   = (float)(params_.preMs * 1e-3 * sr);
+      datDmpA_  = (float)(1.0 - std::exp(-6.283185307179586 * (800.0 * std::pow(16.0, (double)params_.tone)) / sr));
+      datAirA_  = (float)(1.0 - std::exp(-6.283185307179586 * 4500.0 / sr));
+      datInA_   = (float)(1.0 - std::exp(-6.283185307179586 * 13500.0 / sr));
+      datLoA_   = (float)(1.0 - std::exp(-6.283185307179586 * 45.0 / sr));
+    }
     if (sampleRate_ > 0.0) {
       // Size scales every line (0 = half base), 1 = large (1.5x base); Pre
       // offsets every tap.
@@ -1006,9 +1123,37 @@ class Reverb {
       if (sharedOn_) processSharedModSmear(buffer);
       return;
     }
-    // Plate (mode 0) is law-live when armed (Bright>0 or Bloom>0); at both 0 it
-    // runs the shared plain path (the anchor + the law-inert premise hold).
-    const bool plateOn = (lawCh == 0) &&
+    // T-DAT-001: mode 0 (PLT) always runs the DAT tank (default + only
+    // engine; no Bright/Bloom arm). The legacy comb-plate voice moves to the
+    // Digital PLT entry (mode 5, type[5] == 2, the Digital subtype order
+    // DIG SPR PLT SML CHM HAL) and keeps the Bright/Bloom arm there.
+    if (params_.mode == 0) {
+      processDat(buffer);
+      // DAT-specific width (R3, M/S side-gain law, 2026-10-17): the golden
+      // already produces a per-side stereo image (two tanks with different
+      // node-tap splits). The width knob modulates how much of that image is
+      // passed: 0 = mono (L=R=mid), 1 = full image. The legacy applyWidthHaas
+      // (shared post-mix Haas) is a DIFFERENT mechanic (adds a 3.5 ms echo);
+      // we don't apply both here -- width in the DAT arm is the M/S side-gain.
+      // (Legacy plate arm at mode 5/type 2 STILL uses applyWidthHaas; it is
+      // bit-exact there by design and not reachable from the PLT face.)
+      if (buffer.getNumChannels() >= 2) {
+        float* L = buffer.getWritePointer(0);
+        float* R = buffer.getWritePointer(1);
+        const int ns = buffer.getNumSamples();
+        const float w = params_.width;  // w=0 -> mono (L=R=mid), w=1 -> full per-side image
+        for (int i = 0; i < ns; ++i) {
+          const float mid  = 0.5f * (L[i] + R[i]);
+          const float side = 0.5f * (L[i] - R[i]) * w;
+          L[i] = mid + side;
+          R[i] = mid - side;
+        }
+      }
+      if (sharedOn_) processSharedModSmear(buffer);
+      return;
+    }
+    const bool plateOn = (lawCh == 0) && (params_.mode == 5) &&
+        (params_.type[5] == 2) &&
         (params_.bright > 0.0 || params_.bloom > 0.0);
     if (plateOn) {
       processPlate(buffer);
@@ -2018,6 +2163,242 @@ class Reverb {
   bool widthHaasOn_   = false;
   size_t widthHaasDelay_ = 0;
   uint32_t chDelayMax_  = 0;    // max delay samples (at current sample rate, sharedMod 1)
+
+  // ---------------------------------------------------------------- PLT ("T-DAT-001")
+  // The "DAT" plate engine -- two independent mono tanks (one per channel,
+  // user-locked design), each the golden DattorroPlate fig-8 chain: 4 input
+  // allpasses -> A half (LFO-mod ap, d0, ap5, d1) -> B half (LFO-mod ap, d2,
+  // ap6, d3), fig-8 cross-feed, per-side Schroeder-I taps. PORT OF GOLDEN:
+  // RSAlgorithmicVerb-main (MIT), Source/DattorroVerb.cpp DattorroPlate,
+  // Dattorro 1997 (port site 2026-10-16, AGENTS.md MIT rule -- constants are
+  // the golden's; arrangement/order here are ours). OURS: T60->fb Decay,
+  // Pre ring, Early ladder, Tone damping corner, LoCut HPF, Air shelf,
+  // Space-scaled diffusion, one-knob Mod (depth+rate, 0 = off, phase c*P/4).
+  struct DatLine {
+    std::vector<float> ring_;
+    uint32_t w    = 0;
+    uint32_t mask = 1;
+    void init(size_t minSize) {
+      size_t n = 2;
+      while (n < minSize) n <<= 1;
+      ring_.assign(n, 0.0f);
+      mask = static_cast<uint32_t>(n - 1);
+      w    = 0;
+    }
+    void clear() { std::fill(ring_.begin(), ring_.end(), 0.0f); }
+    void push(float v) { ring_[w & mask] = v; ++w; }
+    float readAt(uint32_t off) const { return ring_[(w + mask - off) & mask]; }
+  };
+  struct DatChan {
+    DatLine apIn[4], apm[2], ap5, ap6, dly[4], pre;
+    float inLp = 0.0f, dmpA = 0.0f, dmpB = 0.0f, sumB = 0.0f;
+    float airLp = 0.0f, loX = 0.0f, loY = 0.0f;
+  };
+  std::array<DatChan, kMaxChannels> dat_  = {};
+  float   datLfoPhase_ = 0.0f;
+  // coefficients (setParams-frozen):
+  int   datApInLen_[4]  = {};
+  int   datApLen_[2]    = {};    // apm1, apm2
+  int   datDecLen_[2]   = {};    // ap5, ap6
+  int   datDlyLen_[4]   = {};
+  int   datTap_[14]     = {};
+  int   datPreTap_[3]   = {};
+  float datDiffIn_[4]   = {};
+  float datDiffDec_[4]  = {};
+  float datPre_         = 0.0f;
+  float datDmpA_ = 0.0f, datAirA_ = 0.0f, datInA_ = 0.0f, datLoA_ = 0.0f;
+  int   datLoopTot_ = 1;    // one full A-B-A fig-8 traversal (samples, at current size)
+  float datDec_ = 1.0f;     // fig-8 loop decay multiplier (Decay knob, 0.82 cap; all 6 decay sites)
+
+  // T-DAT-001: one Schroeder-I allpass pass over L with per-tap gain g.
+  // Golden form: a = pop; fb = a*g; ff = -x - a*g; push(x+fb); y = a + ff.
+  inline float datApf(DatLine& L, int off, float g, float x) {
+    const float a = L.readAt(static_cast<uint32_t>(off));
+    const float f = -a * g - x;
+    L.push(x + a * g);
+    return a + f;
+  }
+
+  // T-DAT-001: the "DAT" plate voice -- mode 0 (PLT) default + only engine.
+  //
+  // PORT OF THE GOLDEN DattorroPlate (MIT, RSAlgorithmicVerb-main,
+  // Source/DattorroVerb.cpp, Dattorro 1997; port site 2026-10-16 per the
+  // AGENTS.md MIT rule). Structure + constants are the golden's:
+  //   4 input allpasses (210/158/561/410, gains 1.0/1.0/.83/.83),
+  //   A half = LFO-mod ap (1343, .93) -> d0 (6241, damped, x decay) ->
+  //            ap5 (3931, .93) -> d1 (6590, x decay),
+  //   B half = LFO-mod ap (995, .67) -> d2 (4641, damped, x decay) ->
+  //            ap6 (2664, .67) -> d3 (5505, undamped, undecayed),
+  //   fig-8 cross-feed (B's d3 out -> A entry; A's d1 out -> B entry),
+  //   16 Schroeder taps (golden node table x 0.6), 13.5 kHz input LPF,
+  //   LFO sine + quadrature, +-24 sample depth.
+  // OURS (not in the golden): T60->fb Decay, Pre ring, Early tap ladder
+  // (2/5/9 ms off the pre ring), Tone in-loop damping corner (800 Hz..12.8
+  // kHz), LoCut one-pole HPF, Air shelf (~4.5 kHz, 0.9*air), Space-scaled
+  // diffusion, one-knob Mod (depth 24*mod samples AND rate 3-15 Hz; 0 =
+  // off -> the mod-0 pins are deterministic), per-side LFO phase c*(P/4),
+  // and the per-side stereo split (side 0 = golden's L taps, side 1 = R).
+  //
+  // ZERO-LATENCY (hard rule): every ring read is (w - d) with d >= 1 (no
+  // read position is the current write slot), the LFO phase advances ONE
+  // step behind the sample it modulated, every one-pole feeds the NEXT
+  // sample. No look-ahead, no oversampling; latencySamples() reports the
+  // Pre-only delay as before.
+  void processDat(juce::AudioBuffer<float>& buffer) {
+    const int numChannels = juce::jmin(buffer.getNumChannels(), kMaxChannels);
+    const int numSamples  = buffer.getNumSamples();
+    if (numChannels == 0 || numSamples == 0) return;
+    // ddEff: the Decay-knob loop multiplier (datDec_, uniform 0.82 cap — the
+    // stability law, see the setParams block). Measured boundary: decaying at
+    // 0.84, growing at 0.88 (energy-growth slope, sizes 0.0/0.5/1.0).
+    const float ddEff = datDec_;
+    (void)datLoopTot_;  // law measured by render, not derived
+
+    const float dmpA  = datDmpA_, airA = datAirA_, inA = datInA_, loA = datLoA_;
+    const float loCut = (float)params_.loCut;
+    // Air shelf gain: the input LPF (13.5 kHz, golden) already damps the
+    // 6-12 kHz presence band, so the shelf needs a real lift to be audible:
+    // shelfGain = 1 + 6.0*(1-air) ~= +6 dB over the body (one-pole blend).
+    const float airAm = (float)(6.0 * params_.air);
+    const float earlyG0 = (float)(0.5 * params_.early),
+                earlyG1 = (float)(0.35 * params_.early),
+                earlyG2 = (float)(0.25 * params_.early);
+    const float preLen = datPre_;
+    const bool modOn   = (params_.mod > 0.0f);
+    const float modDepth = modOn ? (float)(24.0 * params_.mod) : 0.0f;
+    const float lfoRate  = modOn ? (float)(15.0 - 13.5 * params_.mod) : 0.0f;
+    const float lfoInc   = modOn
+        ? (float)(2.0 * M_PI * (double)lfoRate / sampleRate_) : 0.0f;
+    for (int c = 0; c < numChannels; ++c) {
+      DatChan& ch = dat_[c];
+      // Per-side LFO phase (side 1 = golden's quadrature), advancing per sample
+      float ph = datLfoPhase_ + (c == 1 ? (float)M_PI_F * 0.25f : 0.0f);
+      const float* in  = buffer.getReadPointer(c);
+      float* out = buffer.getWritePointer(c);
+      const uint32_t d0sz = ch.dly[0].mask + 1;
+      const uint32_t d1sz = ch.dly[1].mask + 1;
+      const uint32_t d2sz = ch.dly[2].mask + 1;
+      const uint32_t d3sz = ch.dly[3].mask + 1;
+      for (int i = 0; i < numSamples; ++i) {
+        const float x0 = in[i];
+        // -- Pre ring (ours): always write; read at datPre_ if >= 1 sample --
+        float x = x0;
+        if (preLen >= 1.0f) x = ch.pre.readAt(std::min<uint32_t>((uint32_t)(preLen - 1.0f), ch.pre.mask));
+        ch.pre.push(x0);
+        // -- input LPF, 13.5 kHz (golden) --
+        ch.inLp = x + inA * (ch.inLp - x);
+        x = ch.inLp;
+        const float xin = x0;            // B-half entry: golden's RAW mono (pre-LPF)
+        // -- 4 input-diffusion allpasses (golden delays/gains, Space-scaled) --
+        x = datApf(ch.apIn[0], datApInLen_[0], datDiffIn_[0], x);
+        x = datApf(ch.apIn[1], datApInLen_[1], datDiffIn_[1], x);
+        x = datApf(ch.apIn[2], datApInLen_[2], datDiffIn_[2], x);
+        x = datApf(ch.apIn[3], datApInLen_[3], datDiffIn_[3], x);
+        // -- A half: fig-8 entry (the other carry: our d3 undamped out * fb) --
+        x += ch.sumB * ddEff;
+        // -- LFO-modulated ap (golden: 1343, depth +-24*modDepth, sine) --
+        {
+          const int base = datApLen_[0];
+          const int off  = (int)(base + (float)modDepth * (float)std::sin(ph));
+          x = datApf(ch.apm[0], std::max(1, off), datDiffDec_[0], x);
+        }
+        // -- d0 (golden 6241): write, then read * damping (Tone) * fb --
+        {
+          const float raw = ch.dly[0].readAt((uint32_t)datDlyLen_[0]);
+          ch.dly[0].push(x);
+          ch.dmpA = raw + dmpA * (ch.dmpA - raw);
+          x = ch.dmpA * ddEff;
+        }
+        float acc = 0.0f;
+        if (c == 0) {
+          acc += ch.dly[0].readAt(std::min<uint32_t>((uint32_t)datTap_[0], d0sz - 1)) * 0.6f;
+          acc += ch.dly[0].readAt(std::min<uint32_t>((uint32_t)datTap_[1], d0sz - 1)) * 0.6f;
+        } else {
+          acc -= ch.dly[0].readAt(std::min<uint32_t>((uint32_t)datTap_[2], d0sz - 1)) * 0.6f;
+        }
+        // -- ap5 (golden 3931) + node B taps (L: -2831, R: -496) --
+        x = datApf(ch.ap5, datDecLen_[0], datDiffDec_[2], x);
+        const uint32_t a5sz = ch.ap5.mask + 1;
+        if (c == 0)      acc -= ch.ap5.readAt(std::min<uint32_t>((uint32_t)datTap_[3], a5sz - 1)) * 0.6f;
+        else             acc -= ch.ap5.readAt(std::min<uint32_t>((uint32_t)datTap_[4], a5sz - 1)) * 0.6f;
+        // -- d1 (golden 6590) x fb + node C taps (L: +2954, R: -179) --
+        {
+          const float raw = ch.dly[1].readAt((uint32_t)datDlyLen_[1]);
+          ch.dly[1].push(x);
+          x = raw * ddEff;
+          ch.dly[1].push(x);
+        }
+        if (c == 0)      acc += ch.dly[1].readAt(std::min<uint32_t>((uint32_t)datTap_[5], d1sz - 1)) * 0.6f;
+        else             acc -= ch.dly[1].readAt(std::min<uint32_t>((uint32_t)datTap_[6], d1sz - 1)) * 0.6f;
+        // -- B half: fig-8 entry (A's d1 out * fb) --
+        x = x * ddEff;
+        // -- LFO-modulated ap (golden: 995, depth +-24, quadrature => sin(phase + P/4)) --
+        {
+          const int base = datApLen_[1];
+          const int off  = (int)(base + (float)modDepth * (float)std::sin(ph + 1.5707963268f));
+          x = datApf(ch.apm[1], std::max(1, off), datDiffDec_[1], x);
+        }
+        // -- d2 (golden 4641) damped x fb + node D taps (L: -2945; R: +522 +5368) --
+        {
+          const float raw = ch.dly[2].readAt((uint32_t)datDlyLen_[2]);
+          ch.dly[2].push(x);
+          ch.dmpB = raw + dmpA * (ch.dmpB - raw);
+          x = ch.dmpB * ddEff;
+        }
+        if (c == 0)      acc -= ch.dly[2].readAt(std::min<uint32_t>((uint32_t)datTap_[7], d2sz - 1)) * 0.6f;
+        else             {
+          acc += ch.dly[2].readAt(std::min<uint32_t>((uint32_t)datTap_[8], d2sz - 1)) * 0.6f;
+          acc += ch.dly[2].readAt(std::min<uint32_t>((uint32_t)datTap_[9], d2sz - 1)) * 0.6f;
+        }
+        // -- ap6 (golden 2664) + node E taps (L: -277, R: -1817) --
+        x = datApf(ch.ap6, datDecLen_[1], datDiffDec_[3], x);
+        const uint32_t a6sz = ch.ap6.mask + 1;
+        if (c == 0)      acc -= ch.ap6.readAt(std::min<uint32_t>((uint32_t)datTap_[10], a6sz - 1)) * 0.6f;
+        else             acc -= ch.ap6.readAt(std::min<uint32_t>((uint32_t)datTap_[11], a6sz - 1)) * 0.6f;
+        // -- d3 (golden 5505): undamped; the FIG-8 T60 carry (datDec on the read,
+        // and again on sumB below) --
+        {
+          const float raw = ch.dly[3].readAt((uint32_t)datDlyLen_[3]) * ddEff;
+          ch.dly[3].push(x);
+          x = raw;
+        }
+        if (c == 0)      acc -= ch.dly[3].readAt(std::min<uint32_t>((uint32_t)datTap_[12], d3sz - 1)) * 0.6f;
+        else             acc += ch.dly[3].readAt(std::min<uint32_t>((uint32_t)datTap_[13], d3sz - 1)) * 0.6f;
+        ch.sumB = x;          // carry; the d3-read site above carries the T60 gain (ddEff)
+        // -- Early taps (ours): 2/5/9 ms off the pre ring, Early-scaled --
+        const uint32_t preSz = ch.pre.mask;
+        acc += ch.pre.readAt(std::min<uint32_t>((uint32_t)datPreTap_[0] - 1, preSz)) * earlyG0;
+        acc += ch.pre.readAt(std::min<uint32_t>((uint32_t)datPreTap_[1] - 1, preSz)) * earlyG1;
+        acc += ch.pre.readAt(std::min<uint32_t>((uint32_t)datPreTap_[2] - 1, preSz)) * earlyG2;
+        // -- Air shelf (ours): HF presence ~4.5 kHz, boost (1-air) --
+        // shelf(f>fc) = 1 + airMax*(1-air) ; shelf(f<fc) = 1  (bit-match at 0)
+        if (airAm > 0.0f) {
+          const float low = acc + airA * (ch.airLp - acc);
+          ch.airLp = low;
+          acc = low + (1.0f + airAm) * (acc - low);
+        } else {
+          ch.airLp = acc;
+        }
+        // -- LoCut one-pole HPF (ours): 0 = bit-exact pass-through --
+        if (loCut > 0.0f) {
+          const float loXp = ch.loX, loYp = ch.loY;
+          const float hp   = acc - loXp + loA * (loYp + loXp);
+          ch.loX = acc; ch.loY = hp;
+          acc = acc * (1.0f - loCut) + hp * loCut;
+        } else {
+          ch.loX = acc; ch.loY = acc;
+        }
+        out[i] = acc;
+        ph += lfoInc;   // per-sample LFO advance (side 1's +P/4 offset rides along)
+      }
+    }
+    if (modOn) {
+      datLfoPhase_ += lfoInc * (float)numSamples;   // one step behind -> causal
+    }
+  }
+
+  // ---------------------------------------------------------------- PLT ("T-DAT-001")
+
   // Measured-tune accessor (R2, 2026-10-15): sweep the chorus layer
   // amount/depth by real render in DspTests before committing constants.
   double smTestLpfHz_ = 0.0;  // >0: override kModVoiceLpfHz (measured-tune hook)

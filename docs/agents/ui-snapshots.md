@@ -44,6 +44,12 @@ explicit UTF-8 pointer: `juce::String (juce::CharPointer_UTF8 ("text \u2014"))`.
 (Shipped in the conv `IR FILE MISSING — ` fix — see
 `docs/tickets/e2-ir-persistence-and-time.md` follow-ups.)
 
+## GUI / display runs (this repo)
+- **Never run GUI selftests on the live X display** — `juce::Process::makeForegroundProcess()` + `grabFocus()` steals the operator's keyboard/mouse. UI tests run under a private display: `xvfb-run -a -s "-screen 0 1280x800x24" <bin> --selftest` (`script/test-ui.sh` wraps this).
+- **`xvfb-run` + a relative binary path: not found** (its dash wrapper cd's elsewhere) — invoke by ABSOLUTE path.
+- **`build/` vs `build-ui/` are separate CMake trees:** `TONE3000_Standalone` builds in `build/`; `TileShot` + `UiTestbed` live in `build-ui/`. A stale `TileShot` silently dumps the OLD layout — rebuild after C++ edits before `--tile`.
+- **Tool flag ownership:** `TileShot` owns `--list/--dump/--tile/--golden/--regen`; `UiTestbed` owns `--selftest`. Passing a flag to the wrong tool just HANGS — kill and retry with the right binary.
+
 ## House rules
 - Goldens live in `plugin/ui/testbed/goldens/<tile>.png` (LF, committed).
 - Regenerating the FIRST baseline: shoot all 16, eyeball each, then `--regen`

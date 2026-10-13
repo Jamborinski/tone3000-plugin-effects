@@ -279,6 +279,7 @@ juce::ValueTree TONE3000Processor::serializeBlockSettings(const ChainBlock& bloc
       blockState.setProperty("reverbBass", block.reverbBass, nullptr);
       blockState.setProperty("reverbBuild", block.reverbBuild, nullptr);
       blockState.setProperty("reverbSpace", block.reverbSpace, nullptr);
+      blockState.setProperty("reverbLoCut", block.reverbLoCut, nullptr);
       blockState.setProperty("convGain", block.convGain, nullptr);
       blockState.setProperty("convDry", block.convDry, nullptr);
       blockState.setProperty("convWidth", block.convWidth, nullptr);
@@ -468,6 +469,7 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
       block.reverbBass = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbBass", 0.6)));
       block.reverbBuild = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbBuild", 0.6)));
       block.reverbSpace = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbSpace", 0.7)));
+      block.reverbLoCut = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("reverbLoCut", 0.0)));
       {
         // Dry/wet split migration: presets saved before the "Dry" knob became
         // a DRY-path gain stored their "Dry" value in convGain (the WET level).

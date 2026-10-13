@@ -109,14 +109,14 @@ help::Key delaySigHelp(int m) {
 // Springs is the single stepped (1..6) sig. (plugin/docs/reverb-modes.md.)
 static const char* reverbSigParam(int mode, int localSlot) {
   static const char* p[Reverb::kNumModes][2] = {
-      {"reverbBright", "reverbBloom"}, {"reverbSprings", "reverbSag"},
+      {"reverbAir", "reverbEarly"},  {"reverbSprings", "reverbSag"},  // 2026-10-17 PLT: sig A (row 1) = Air, sig B (row 2) = Early (Bright/Bloom off the face)
       {"reverbEarly", "reverbAir"},   {"reverbVolley", "reverbBass"},
       {"reverbBuild", "reverbSpace"}, {"reverbDensity", "reverbWave"}};
   return p[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
 }
 static const char* reverbSigLabel(int mode, int localSlot) {
   static const char* n[Reverb::kNumModes][2] = {
-      {"Bright", "Bloom"}, {"Springs", "Sag"}, {"Early", "Air"},
+      {"Air", "Early"},     {"Springs", "Sag"}, {"Early", "Air"},
       {"Volley", "Bass"}, {"Build", "Space"}, {"Density", "Shape"}};
   return n[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
 }
@@ -130,7 +130,7 @@ static const KnobScale* reverbSigScaleForMode(int mode, int localSlot) {
 }
 static help::Key reverbSigHelp(int mode, int localSlot) {
   static const help::Key k[Reverb::kNumModes][2] = {
-      {help::Key::reverbBright, help::Key::reverbBloom},
+      {help::Key::reverbAir, help::Key::reverbEarly},
       {help::Key::reverbSprings, help::Key::reverbSag},
       {help::Key::reverbEarly, help::Key::reverbAir},
       {help::Key::reverbVolley, help::Key::reverbBass},
@@ -189,7 +189,7 @@ static double reverbSigRaw(const ChainItem& b, int mode, int localSlot) {
   const int m = juce::jlimit(0, Reverb::kNumModes - 1, mode);
   const int s = localSlot ? 1 : 0;
   switch (m) {
-    case 0: return s ? b.reverbBloom : b.reverbBright; break;
+    case 0: return s ? b.reverbEarly : b.reverbAir;     break;  // 2026-10-17 PLT face: slot0 (sigKnob_, row 1) = Air, slot1 (modKnob_, row 2) = Early
     case 1: return s ? b.reverbSag : b.reverbSprings;  break;
     case 2: return s ? b.reverbAir : b.reverbEarly;    break;
     case 3: return s ? b.reverbBass : b.reverbVolley;  break;
@@ -256,12 +256,13 @@ std::vector<EffectParams> paramsFor(const ChainItem& b, bool compact) {
         {&scales::reverbTone(), "reverbTone", "Tone", b.reverbTone, help::Key::reverbTone},
         {&scales::reverbSize(), "reverbSize", "Size", b.reverbSize, help::Key::reverbSize},
         {&scales::reverbWidth(), "reverbWidth", "Width", b.reverbWidth, help::Key::reverbWidth},
-        // R2: the SHARED Mod knob (all six modes, 0 = today's static tail,
-        // 1 = full optional waver on top). R2 fix: 6-col even layout — it
-        // rides knobH_ (row 1) and Dry follows it (param index 6, knobF_,
-        // row 2); numParams_ gates both out compact.
+        // R2: shared Mod knob (6-col even layout) rides knobH_ (row 1, right end).
         {&scales::reverbSharedMod(), "reverbSharedMod", "Mod", b.reverbSharedMod, help::Key::reverbSharedMod},
-        {&scales::reverbDry(), "reverbDry", "Dry", b.reverbDry, help::Key::reverbDry},
+        // 2026-10-17 PLT face: LoCut (index 6 → knobF_) and Space (index 7 → knobG_),
+        // both via the reverb-specific knobAt remap. Dry removed; Air/Early are
+        // the sig slots (sigKnob_/modKnob_) bound via reverbSigParam.
+        {&scales::fraction01(), "reverbLoCut", "LoCut", b.reverbLoCut, help::Key::reverbLoCut},
+        {&scales::fraction01(), "reverbSpace", "Space", b.reverbSpace, help::Key::reverbSpace},
     };
   if (k == "convolution") {
     // Full 6x2 surface (FogConvolver-2 parity): 12 knobs = the fixed
@@ -311,7 +312,7 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
                  : (block.effectKind == "convolution"
                     ? ((size <= gallery::kStereoTileSize) ? 5 : 9)
                     : (block.effectKind == "reverb"
-                       ? ((size <= gallery::kStereoTileSize) ? 5 : 7)  // R2: + shared Mod knob (knobH_), full tile only
+                       ? ((size <= gallery::kStereoTileSize) ? 5 : 8) // 2026-10-17 PLT face: 8 base params (A,B,F,C,D,H,G,E incl. LoCut+Space) + 2 sig slots (Air/Early, bound via reverbSigParam)
                        : (block.effectKind == "delay" ||
                           block.effectKind == "chorus" ||
                           block.effectKind == "tremolo" ? 5
@@ -373,9 +374,11 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
     // layout), index 6 = Dry -> knobF_ (row 2) -- NOT sigKnob_/modKnob_,
     // which carry the per-mode Sig A/B (wired in resized(), not the param list).
     if (block_.effectKind == "reverb" && !compact_ && i == 5)
-      return &knobH_;
+      return &knobH_;  // Mod (row 1, right end)
     if (block_.effectKind == "reverb" && !compact_ && i == 6)
-      return &knobF_;
+      return &knobF_;  // LoCut (row 2, replaces In slot) — 2026-10-17 PLT face
+    if (block_.effectKind == "reverb" && !compact_ && i == 7)
+      return &knobG_;  // Space (row 2) — 2026-10-17 PLT face
     return i < 5 ? knobs[i] : (i == 5 ? &sigKnob_ : (i == 6 ? &modKnob_
                     : (i == 7 ? &knobF_ : (i == 8 ? &knobG_ : &knobH_))));
   };
@@ -410,6 +413,7 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
 
   addAndMakeVisible(mix_);
   addAndMakeVisible(input_);
+  input_.setVisible(!(block_.effectKind == "reverb" && !compact_));  // 2026-10-17 PLT face: Mix takes the In slot; Dwell off the face
   addAndMakeVisible(output_);
   for (int i = 0; i < numParams_ && i < (int)ps.size(); ++i)
     addAndMakeVisible(*knobAt(i));  // comp row 2: SC + PUNCH ride sigKnob_/modKnob_
@@ -763,12 +767,13 @@ void EffectTile::syncKnobs() {
   // not in knobD_/E -- keep the two passes agreeing).
   const std::vector<EffectParams> ps = paramsFor(block_, compact_);
   for (int i = 0; i < numParams_ && i < (int)ps.size(); ++i) {
-    // Reverb full tile: index 5 = shared Mod -> knobH_ (row 1),
-    // index 6 = Dry -> knobF_ (row 2) — 6-column even layout (R2 fix).
+    // 2026-10-17 PLT face (full tile): i=5 Mod -> knobH_, i=6 LoCut -> knobF_
+    // (sig slots Air/Space are bound separately via reverbSigParam).
     Knob* k = slots[i];
     if (block_.effectKind == "reverb" && !compact_) {
-      if (i == 5) k = &knobH_;
-      else if (i == 6) k = &knobF_;
+      if (i == 5) k = &knobH_;      // Mod
+      else if (i == 6) k = &knobF_; // LoCut
+      else if (i == 7) k = &knobG_; // Space — 2026-10-17 PLT face
     }
     k->setValue((float)knobFromStored(*ps[i].scale, ps[i].raw));
   }
@@ -1277,27 +1282,32 @@ void EffectTile::resized() {
   const bool convFull = conv && !compact_;
   const bool convCompact = conv && compact_;
   const int cols = convFull ? 6
-                            : ((delayFull || compFull) ? 5 : (reverbFull ? 6 : (five ? 4 : 3)));
+                            : ((delayFull || compFull) ? 5 : (reverbFull ? 6 : (five ? 4 : 3)));  // 2026-10-17 PLT face: 6-col even grid, rows use 6 (Mix on row 2, row 1 = 6 effect slots)
   const int colW = (W - 8) / cols;
 
-  // Row 1: Mix, p0, p1, p2 [p3 on the full delay tile]. Reverb: full =
-  // Mix/Decay/Pre/Tone/SigA/Mod (R2 follow-up: 6 even columns, matching
-  // conv; Mod at the row's right end); compact = Mix/Decay/SigA/Tone
-  // (Pre + SigB + Mod hide).
+  // Row 1: Mix, p0, p1, p2 [p3 on the full delay tile]. Reverb full =
+  // Decay/Pre/LoCut/Tone/Air/Mod (PLT face 2026-10-17, Mix on row 2);
+  // compact = Mix/Decay/SigA/Tone (Pre + SigB + Mod hide).
   int x = 4;
-  mix_.setBounds(x, row1Y, colW, knobH); x += colW;
-  knobA_.setBounds(x, row1Y, colW, knobH); x += colW;  // Decay
   if (reverbFull) {
+    // 2026-10-17 PLT face row 1 (6 effect slots, Mix lives on row 2):
+    //   Decay(A) | Pre(B) | LoCut(F) | Tone(C) | Air(sigKnob_) | Mod(H)
+    knobA_.setBounds(x, row1Y, colW, knobH); x += colW;  // Decay
     knobB_.setBounds(x, row1Y, colW, knobH); x += colW;   // Pre
-    knobC_.setBounds(x, row1Y, colW, knobH); x += colW;   // Tone (6-col even layout)
-    sigKnob_.setBounds(x, row1Y, colW, knobH); x += colW; // Sig A
-    knobH_.setBounds(x, row1Y, colW, knobH);               // Mod (R2, reverb full)
-  } else if (reverbCompact) {
-    sigKnob_.setBounds(x, row1Y, colW, knobH); x += colW; // Sig A (right of Decay)
+    knobF_.setBounds(x, row1Y, colW, knobH); x += colW;   // LoCut
     knobC_.setBounds(x, row1Y, colW, knobH); x += colW;   // Tone
+    sigKnob_.setBounds(x, row1Y, colW, knobH); x += colW; // Air (PLT sig A)
+    knobH_.setBounds(x, row1Y, colW, knobH);               // Mod
   } else {
-    knobB_.setBounds(x, row1Y, colW, knobH); x += colW;
-    knobC_.setBounds(x, row1Y, colW, knobH); x += colW;
+    mix_.setBounds(x, row1Y, colW, knobH); x += colW;
+    knobA_.setBounds(x, row1Y, colW, knobH); x += colW;  // Decay
+    if (reverbCompact) {
+      sigKnob_.setBounds(x, row1Y, colW, knobH); x += colW; // Sig A (right of Decay)
+      knobC_.setBounds(x, row1Y, colW, knobH); x += colW;   // Tone
+    } else {
+      knobB_.setBounds(x, row1Y, colW, knobH); x += colW;
+      knobC_.setBounds(x, row1Y, colW, knobH); x += colW;
+    }
   }
   if (delayFull) {
     knobD_.setBounds(x, row1Y, colW, knobH);  // Fb joins row 1
@@ -1314,17 +1324,25 @@ void EffectTile::resized() {
   // empty in Mod mode), Out (full delay)] / [Fb, (Mod in Mod mode else
   // unique), Out (compact delay)] / [p3, p4, Out] / [p2, Out].
   x = 4;
-  input_.setBounds(x, row2Y, colW, knobH); x += colW;
+  if (reverbFull) {
+    // 2026-10-17 PLT face row 2: Mix replaces the In slot (Row2 = Mix|Early|Size|Space|Width|Out).
+    mix_.setBounds(x, row2Y, colW, knobH);
+  } else {
+    input_.setBounds(x, row2Y, colW, knobH);
+  }
+  x += colW;
   if (delayFull) {
     knobE_.setBounds(x, row2Y, colW, knobH); x += colW;    // Width
     modKnob_.setBounds(x, row2Y, colW, knobH); x += colW;  // the shared Mod
     sigKnob_.setBounds(x, row2Y, colW, knobH);  // the mode's unique (Rate in Mod mode)
     x += colW;
   } else if (reverbFull) {
-    knobF_.setBounds(x, row2Y, colW, knobH); x += colW;   // Dry (right of Dwell)
-    knobE_.setBounds(x, row2Y, colW, knobH); x += colW;   // Width (R2 tenth: swapped with Sig B -- user preference)
-    modKnob_.setBounds(x, row2Y, colW, knobH); x += colW; // Sig B
-    knobD_.setBounds(x, row2Y, colW, knobH); x += colW;   // Size (6 slots: Dwell/Dry/Width/SigB/Size/Out, matching conv's 6+6)
+    // 2026-10-17 PLT face row 2 (4 effect slots):
+    //   Early(modKnob_) | Size(D) | Space(G) | Width(E)
+    modKnob_.setBounds(x, row2Y, colW, knobH); x += colW; // Early (PLT sig B)
+    knobD_.setBounds(x, row2Y, colW, knobH); x += colW;   // Size
+    knobG_.setBounds(x, row2Y, colW, knobH); x += colW;   // Space
+    knobE_.setBounds(x, row2Y, colW, knobH); x += colW;   // Width
   } else if (reverbCompact) {
     knobD_.setBounds(x, row2Y, colW, knobH); x += colW;   // Size
     knobE_.setBounds(x, row2Y, colW, knobH); x += colW;   // Width

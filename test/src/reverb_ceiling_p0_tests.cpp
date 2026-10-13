@@ -44,7 +44,7 @@ struct ConvStats {
 // Measure per-block cost of a ConvolutionReverb (house path) at kBlock.
 // The convolver is warmed 600 blocks before timing begins (OLA steady-state).
 ConvStats measureConvolverCost(ConvolutionReverb& fx, int nBlocks = 256) {
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   for (int b = 0; b < 600; ++b) {   // OLA schedule steady-state (same as plate_texture_tests)
     buf.clear();
     fx.process(buf);
@@ -74,7 +74,7 @@ ConvStats measureConvolverCost(ConvolutionReverb& fx, int nBlocks = 256) {
 // Measure per-block cost of a Reverb mode at kBlock (matching existing
 // PlateTexture.CpuWithinBaselineClass protocol exactly).
 ConvStats measureReverbCost(Reverb& r, int nBlocks = 256) {
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   for (int i = 0; i < kBlock; ++i) buf.setSample(0, i, 0.3f);
   // Warm 64 blocks (same warm count as PlateTexture.CpuWithinBaselineClass)
   for (int b = 0; b < 64; ++b) r.process(buf);

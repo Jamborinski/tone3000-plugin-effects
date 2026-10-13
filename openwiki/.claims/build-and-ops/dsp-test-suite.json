@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:41e1965d9d7afa4749be0a5ee2f79bd50d5091dc72cf4badc94706c6020bf9b6",
+  "pageVersion": "sha256:5b1b18de2b215feee4bae8395e81eed00f39fbbe3470ed1bcc1d2fed33365f36",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -18,7 +18,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
+          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
         }
       ]
     },
@@ -28,7 +28,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
+          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
         }
       ]
     },
@@ -38,7 +38,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
+          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
         }
       ]
     },
@@ -48,7 +48,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
+          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
         }
       ]
     },
@@ -58,15 +58,15 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
+          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
-          "version": "repo-file-v1:sha256:d0db7ac88b8f3aa03e403b4a0d967439a969f7aee4be49f292779f70f0c9fe38"
+          "version": "repo-file-v1:sha256:68c6d057dbb6e9035276fb6e95fc6517a09023fe5171e4a6b2ee0c2149e27188"
         },
         {
           "resource": "repo://test/src/plate_texture_tests.cpp",
-          "version": "repo-file-v1:sha256:bf38bd0ebdeac716ad43789e3c446e629e5e8658b970f5e5a2aeac4432f594a1"
+          "version": "repo-file-v1:sha256:79fe5bf27f5ff0d2238b3ec5aa978176ea6afe17ff6545a21be867db1ec6043f"
         }
       ]
     },
@@ -76,7 +76,7 @@
       "evidence": [
         {
           "resource": "repo://test/src/processor_tests.cpp",
-          "version": "repo-file-v1:sha256:9f37bb818a587222edae85fe6d12ecb4b88578df3b167a5babbdced02573ebb4"
+          "version": "repo-file-v1:sha256:4e36623e51eec8c441fb32af84122bb6d111f48f043ab430ef11ff93a52a4478"
         }
       ]
     },
@@ -86,11 +86,11 @@
       "evidence": [
         {
           "resource": "repo://test/src/effect_tests.cpp",
-          "version": "repo-file-v1:sha256:f4ad1335b3f3d17256929cd55d7714086c0230e7f5806e90212c1d84ad504cdd"
+          "version": "repo-file-v1:sha256:0a1020b4adf40a60a59e66d9363cc7fb0ddd8e9095dad9e9d9c7b86a28b24aea"
         },
         {
           "resource": "repo://test/src/reverb_ceiling_p0_tests.cpp",
-          "version": "repo-file-v1:sha256:4145987b9ce48cc42b3cfb9b2ea2d14101d25e024622084fb0fe95ae84c6c881"
+          "version": "repo-file-v1:sha256:93e3f56217e621c343b4c839836fb8dabe664e0aa06f347834d9f9f9581901a5"
         },
         {
           "resource": "repo://test/src/reverb_probe_tmp.cpp",
@@ -104,17 +104,31 @@
       "evidence": [
         {
           "resource": "repo://docs/tickets/complete/reverb-budget-quality-uplift.md",
-          "version": "repo-file-v1:sha256:35bdfc2d6400cbd71fd4f68d3b795dc0a4e3e9fa6491ee66f1b5fd2d25d74dd8"
+          "version": "repo-file-v1:sha256:6c5453974a34dec5e3eb1583883812f6d1605458cf0aaf94242764f07f1b169b"
         },
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
+          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
+        }
+      ]
+    },
+    {
+      "id": "claim_4b0c60de51534ae498ed88ae3281cb26",
+      "statement": "The T-DAT-001 plate-DAT rebuild added the standing DatGuards suite in test/src/dat_probe_tests.cpp, registered in test/CMakeLists.txt: StableAcrossSizeDecayGrid, LongerDecayKeepsTheLongTail, LoCutDropsTheLowBand (DFT per-bin band meter), AirLiftsTheTopBand, WidthWidensThePlateImage (width-gated M/S side-gain), and ModZeroIsBitPass - guards for the new processDat engine in Reverb.h. The interim diagnostic suites (dat_exp, goldengrid, loopsolo, goldengrid, loopgain, loopsolo, arb, rerun, boundary2, margin, finallaw, sitekill) were removed at closeout; the full DspTests suite is at 509 tests as of closeout.",
+      "evidence": [
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
+        },
+        {
+          "resource": "repo://test/src/dat_probe_tests.cpp",
+          "version": "repo-file-v1:sha256:42a4598974aca657b5a8f99b35800e9aa2c22684b5cbca6c8b63e7ed1e813b06"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-12T23:07:19.188Z"
+    "at": "2026-10-13T21:50:34.909Z"
   }
 }

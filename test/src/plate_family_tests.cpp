@@ -254,13 +254,37 @@ Reverb::Params plateAt(double decayMs) {
   return p;
 }
 
+// T-DAT-001: the LEGACY comb-plate voice now lives at the Digital PLT
+// entry (mode 5, type[5] == 2, the Digital subtype order DIG SPR PLT). The
+// level/onset/comb pins above re-target THAT arm (bit-identical snapshot);
+// mode 0 itself now runs the DAT (Dattorro) tank and has its own sonic
+// guards.
+Reverb::Params plateLegacyP() {
+  Reverb::Params p = plateP();
+  p.mode = 5;
+  p.type[5] = 2;
+  return p;
+}
+
+Reverb::Params plateLegacyAt(double decayMs) {
+  Reverb::Params p = plateLegacyP();
+  p.decayMs = decayMs;
+  return p;
+}
+
+Reverb::Params plateLegacyWith(double tone, double size, double bright, double bloom) {
+  Reverb::Params p = plateLegacyP();
+  p.tone = tone; p.size = size; p.bright = bright; p.bloom = bloom;
+  return p;
+}
+
 std::vector<float> plateRunMono(const Reverb::Params& p,
                                 const std::vector<float>& in) {
   Reverb r;
   r.prepare(kFs);
   r.reset();
   r.setParams(p);
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   std::vector<float> out(in.size(), 0.0f);
   for (size_t off = 0; off + kBlock <= in.size(); off += kBlock) {
     buf.clear();
@@ -287,13 +311,13 @@ struct ConvRef {
     if (!reader->read(&src, 0, src.getNumSamples(), 0, true, true)) return;
     if (!fx.loadBuffer(src, reader->sampleRate)) return;
     fx.prepare(rate);
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     for (int b = 0; b < 600; ++b) { buf.clear(); fx.process(buf); }  // OLA warm
     ok = true;
   }
   std::vector<float> run(const std::vector<float>& in) {
     if (!ok) return {};
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     std::vector<float> out(in.size(), 0.0f);
     for (size_t off = 0; off + kBlock <= in.size(); off += kBlock) {
       buf.clear();
@@ -398,7 +422,7 @@ TEST(PlateFamily, LevelLawAtEveryLength) {
   const int n = static_cast<int>(2.5 * kFs);
   const auto clk = click(n);
   for (double ms : {500.0, 1000.0, 1500.0, 2000.0, 2500.0}) {
-    const double lvl = sumAbs(plateRunMono(plateAt(ms), clk));
+    const double lvl = sumAbs(plateRunMono(plateLegacyAt(ms), clk));
     const double base = (ms == 2000.0) ? 93.95 : 0.0;  // 2.0 s is the pinned baseline (RE-PINNED 2026-10-16 P2.1 density uplift: lift 1.104->1.15 raised the raw sum-abs 78.23 -> 93.95; the fuller wash is the ticket goal)
     if (base > 0.0) {
       std::cout << "  [P1 level] " << ms << "ms lvl=" << lvl
@@ -422,7 +446,7 @@ TEST(PlateFamily, PlateLawsHoldAtEveryInRangeLength) {
   const int n = static_cast<int>(2.5 * kFs);
   const auto clk = click(n);
   auto pingAt = [n, &clk](double ms) {
-    return peakRatio(peakNorm(plateRunMono(plateAt(ms), clk)), 0.02, 0.15);
+    return peakRatio(peakNorm(plateRunMono(plateLegacyAt(ms), clk)), 0.02, 0.15);
   };
   for (double ms : {500.0, 1000.0, 1500.0, 2000.0, 2500.0}) {
     const double p = pingAt(ms);
@@ -430,12 +454,12 @@ TEST(PlateFamily, PlateLawsHoldAtEveryInRangeLength) {
     EXPECT_GE(p, 33.0) << "onset floor at " << ms << "ms";
   }
   {
-    const double comb = combDepth(peakNorm(plateRunMono(plateAt(2500.0), clk)), 1.15, 1.80);
+    const double comb = combDepth(peakNorm(plateRunMono(plateLegacyAt(2500.0), clk)), 1.15, 1.80);
     std::cout << "  [P1 comb] 2500ms click comb=" << comb << " (density-uplift baseline 21.98, cap-law: no growth past it)" << std::endl;
     EXPECT_LE(comb, 21.98 * std::pow(10.0, 1.0 / 20.0)) << "comb at the 2.5 s in-range cap (RE-PINNED 2026-10-16: the density uplift (lift 1.15) trades +2.6 dB late-window comb for the family fullness -- inside the Bricasti plate family, user leeway; still below the DECLINED loop-LPF level 21.4+)";
   }
   {
-    const auto ps = plateRunMono(plateAt(500.0), sweep());
+    const auto ps = plateRunMono(plateLegacyAt(500.0), sweep());
     const double body = tailBand(peakNorm(ps), 120, 300);
     std::cout << "  [P1 body] 500ms body=" << body << " (swept, plate side)" << std::endl;
     EXPECT_GT(body, -60.0) << "the body must not be dead at the 0.5 s end";
@@ -545,13 +569,13 @@ TEST(PlateKnobLaw, ToneLaw) {
   const auto sw = sweep();
   const auto clk = click(n);
   auto top = [&sw](double tone) {
-    return tailBand(peakNorm(plateRunMono(plateWith(tone, 0.5, 0.5, 0.5), sw)), 6000, 12000);
+    return tailBand(peakNorm(plateRunMono(plateLegacyWith(tone, 0.5, 0.5, 0.5), sw)), 6000, 12000);
   };
   auto body = [&sw](double tone) {
-    return tailBand(peakNorm(plateRunMono(plateWith(tone, 0.5, 0.5, 0.5), sw)), 120, 300);
+    return tailBand(peakNorm(plateRunMono(plateLegacyWith(tone, 0.5, 0.5, 0.5), sw)), 120, 300);
   };
   auto comb = [&clk](double tone) {
-    return combDepth(peakNorm(plateRunMono(plateWith(tone, 0.5, 0.5, 0.5), clk)), 1.15, 1.80);
+    return combDepth(peakNorm(plateRunMono(plateLegacyWith(tone, 0.5, 0.5, 0.5), clk)), 1.15, 1.80);
   };
   const double t0 = top(0.0), t1 = top(1.0);
   const double b0 = body(0.0), b1 = body(1.0);
@@ -585,7 +609,7 @@ TEST(PlateKnobLaw, SizeLaw) {
   const int n = static_cast<int>(2.5 * kFs);
   const auto clk = click(n);
   auto hflfRel = [n, &clk](double size) {
-    Reverb::Params p = plateAt(2000.0);
+    Reverb::Params p = plateLegacyAt(2000.0);
     p.size = size;
     // The live early-tail window (0.4-0.6 s) -- the same convention as
     // DecayLawAcrossTheFamily; live for a 2.0 s decay (peak-normalised in).
@@ -593,7 +617,7 @@ TEST(PlateKnobLaw, SizeLaw) {
     return hfLFSplit(out);
   };
   auto combAt = [n, &clk](double size) {
-    Reverb::Params p = plateAt(2000.0);
+    Reverb::Params p = plateLegacyAt(2000.0);
     p.size = size;
     return combDepth(peakNorm(plateRunMono(p, clk)), 1.15, 1.80);
   };
@@ -623,10 +647,10 @@ TEST(PlateKnobLaw, BrightLaw) {
   const int n = static_cast<int>(2.5 * kFs);
   const auto clk = click(n);
   auto ping = [&clk](double b) {
-    return peakRatio(peakNorm(plateRunMono(plateWith(0.5, 0.5, b, 0.5), clk)), 0.02, 0.15);
+    return peakRatio(peakNorm(plateRunMono(plateLegacyWith(0.5, 0.5, b, 0.5), clk)), 0.02, 0.15);
   };
   auto comb = [&clk](double b) {
-    return combDepth(peakNorm(plateRunMono(plateWith(0.5, 0.5, b, 0.5), clk)), 1.15, 1.80);
+    return combDepth(peakNorm(plateRunMono(plateLegacyWith(0.5, 0.5, b, 0.5), clk)), 1.15, 1.80);
   };
   const double p0 = ping(0.0), p5 = ping(0.5), p1 = ping(1.0);
   const double c5 = comb(0.5), c1 = comb(1.0);
@@ -721,7 +745,7 @@ TEST(PlateKnobLaw, StereoImageAtWidth1) {
   //   stereo image sits (the table above).
   const int n = static_cast<int>(2.5 * kFs);
   const auto clk = click(n);
-  Reverb::Params p = plateAt(2000.0);
+  Reverb::Params p = plateLegacyAt(2000.0);
   p.width = 1.0;
   auto [L, R] = plateRunStereo(p, clk);
   ASSERT_FALSE(L.empty());
@@ -775,14 +799,14 @@ TEST(PlateCap, StableAtCapDialGrid) {
   const int n = static_cast<int>(2.5 * kFs);
   const auto clk = click(n);
   const auto sw = sweep();
-  const double cap = Reverb::maxDecayForMode(0);
+  const double cap = 2500.0;   // the legacy arm (mode 5, type[5]==2) clamps to mode 0's plate cap
   ASSERT_DOUBLE_EQ(cap, 2500.0) << "the plate sheen cap is 2500 ms (user state)";
   int cells = 0;
   for (double tone : {0.0, 1.0}) {
     for (double size : {0.0, 1.0}) {
       for (double sig : {0.0, 1.0}) {
         for (const auto& drive : {clk, sw}) {
-          Reverb::Params p = plateAt(cap);
+          Reverb::Params p = plateLegacyAt(cap);
           p.tone = tone; p.size = size; p.bright = sig; p.bloom = sig;
           const auto out = plateRunMono(p, drive);
           bool finite = true, bounded = true;
@@ -817,7 +841,7 @@ TEST(PlateCap, CpuAtDecayPoints) {
     p.bright = Reverb::defaultSigForMode(0, 0);
     p.bloom = Reverb::defaultSigForMode(0, 1);
     r.setParams(p);
-    juce::AudioBuffer<float> buf(1, block);
+    juce::AudioBuffer<float> buf(1, block); buf.clear();
     for (int b = 0; b < 64; ++b) {
       for (int i = 0; i < block; ++i) buf.setSample(0, i, 0.3f);
       r.process(buf);

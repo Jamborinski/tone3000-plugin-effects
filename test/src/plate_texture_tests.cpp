@@ -206,13 +206,29 @@ Reverb::Params plateDefWithDecay(double decayMs) {
   return p;
 }
 
+// T-DAT-001: the LEGACY comb-plate voice now lives at the Digital PLT entry
+// (mode 5, type[5] == 2); the model-state pins re-target THAT arm (the
+// bit-identical snapshot), while mode 0 itself runs the DAT tank.
+Reverb::Params plateLegacyDefaults() {
+  Reverb::Params p = plateDefaults();
+  p.mode = 5;
+  p.type[5] = 2;
+  return p;
+}
+
+Reverb::Params plateLegacyDecay(double decayMs) {
+  Reverb::Params p = plateLegacyDefaults();
+  p.decayMs = decayMs;
+  return p;
+}
+
 std::vector<float> plateRun(const Reverb::Params& p,
                             const std::vector<float>& in) {
   Reverb r;
   r.prepare(kFs);
   r.reset();
   r.setParams(p);
-  juce::AudioBuffer<float> buf(1, kBlock);
+  juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
   std::vector<float> out(in.size(), 0.0f);
   for (size_t off = 0; off + kBlock <= in.size(); off += kBlock) {
     buf.clear();
@@ -241,7 +257,7 @@ struct ConvRef {
     if (!reader->read(&src, 0, src.getNumSamples(), 0, true, true)) return;
     if (!fx.loadBuffer(src, reader->sampleRate)) return;
     fx.prepare(rate);
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     for (int b = 0; b < 600; ++b) {   // OLA schedule steady state
       buf.clear();
       fx.process(buf);
@@ -250,7 +266,7 @@ struct ConvRef {
   }
   std::vector<float> run(const std::vector<float>& in) {
     if (!ok) return {};
-    juce::AudioBuffer<float> buf(1, kBlock);
+    juce::AudioBuffer<float> buf(1, kBlock); buf.clear();
     std::vector<float> out(in.size(), 0.0f);
     for (size_t off = 0; off + kBlock <= in.size(); off += kBlock) {
       buf.clear();
@@ -339,7 +355,7 @@ TEST(PlateTexture, OnsetDensityMeetsReference) {
   const int n = static_cast<int>(2.5 * kFs);
   const auto clk = click(n);
   const double emt = peakRatio(peakNorm(ConvRef().run(clk)), 0.02, 0.15);
-  const double plate = peakRatio(peakNorm(plateRun(plateDefaults(), clk)), 0.02, 0.15);
+  const double plate = peakRatio(peakNorm(plateRun(plateLegacyDefaults(), clk)), 0.02, 0.15);
   std::cout << "  [onset] plate=" << plate << " dB emt=" << emt
             << " dB (guard: floor 33.0 dB + within 12 dB of the reference;"
                " structural residual, see the comment above)" << std::endl;
@@ -452,7 +468,7 @@ TEST(PlateTexture, LevelLawWithinOneDbOfBaseline) {
   // the Bricasti plate family); the body is intact (BodySurvives guard) and
   // the comb law holds within the re-pinned cap (PlateLawsHold).
   const int n = static_cast<int>(2.5 * kFs);
-  const double lvl = sumAbs(plateRun(plateDefaults(), click(n)));
+  const double lvl = sumAbs(plateRun(plateLegacyDefaults(), click(n)));
   std::cout << "  [level] rawAbs=" << lvl << " (density-uplift baseline 93.95, +/-1 dB)"
             << std::endl;
   const double base = 93.95;   // RE-PINNED 2026-10-16 (P2.1 plate density uplift, lift 1.104->1.15: raw sum-abs 78.23 -> 93.95, +2.9 dB -- the fuller wash IS the ticket goal; user leeway per ticket Log)
@@ -488,7 +504,7 @@ TEST(PlateTexture, CpuWithinBaselineClass) {
   r.prepare(48000.0);
   r.reset();
   r.setParams(plateDefaults());
-  juce::AudioBuffer<float> buf(1, 128);
+  juce::AudioBuffer<float> buf(1, 128); buf.clear();
   for (int i = 0; i < 128; ++i) buf.setSample(0, i, 0.3f);
   for (int b = 0; b < 64; ++b) r.process(buf);   // warm
   auto t0 = std::chrono::steady_clock::now();
@@ -514,7 +530,7 @@ TEST(PlateTexture, R2_CpuWithSharedModOn) {
   Reverb::Params p = plateDefaults();
   p.sharedMod = 1.0;  // ON, full depth — the worst case
   r.setParams(p);
-  juce::AudioBuffer<float> buf(1, 128);
+  juce::AudioBuffer<float> buf(1, 128); buf.clear();
   for (int i = 0; i < 128; ++i) buf.setSample(0, i, 0.3f);
   for (int b = 0; b < 64; ++b) r.process(buf);   // warm
   auto t0 = std::chrono::steady_clock::now();

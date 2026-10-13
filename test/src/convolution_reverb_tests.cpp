@@ -344,7 +344,7 @@ TEST(ConvolutionReverb, MonoLaneBufferHasWet) {
   ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
   fx.prepare(48000.0);
 
-  juce::AudioBuffer<float> buf(1, 16);
+  juce::AudioBuffer<float> buf(1, 16); buf.clear();
   Fill(buf, 0.5f);
   fx.process(buf);
   EXPECT_NEAR(buf.getSample(0, 0), 0.125f * 0.5f, 1e-6);

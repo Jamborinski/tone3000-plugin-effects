@@ -119,12 +119,20 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   copies); `libs/googletest` is in-tree.
 - Don't commit scratch/review notes (benchmark reports, QA checklists, draft
   tickets) unless explicitly asked.
-- **Clean-room / zero-latency decision (2026-10-06, keep):**
-  felitronics-core (AGPL-3.0) is a spec/measurement REFERENCE only — NEVER copy
-  code, constants, curves, or tuned numbers into the MIT codebase (law sources:
-  published physics + our own constants tuned to our own pins); ZERO latency
-  (causal flux integrator OK; the NAB pair are exact inverses; NO oversampling);
-  WingComp "LA-2A" (Desktop) is unusable — never pull from it.
+- **Clean-room / zero-latency decision (2026-10-06, keep; MIT porting rule 2026-10-16):**
+  **Porting by license:** MIT-licensed or public-domain reference code IS
+  safe to port — structure AND constants, with an attribution + license
+  comment at the port site (the clean-room ban does NOT apply to MIT).
+  Order/arrangement of the ported code is ours to set — restructure freely
+  to match this repo's style (no verbatim transcription); only the
+  numerical DESIGN (constants, topology, laws) is what carries over.
+  felitronics-core, GPL references (e.g. GPL reverb nodes), and any
+  copyleft/strictly-licensed code stay a spec/measurement REFERENCE only —
+  NEVER copy code, constants, curves, or tuned numbers into the MIT codebase
+  (law sources: published physics + our own constants tuned to our own pins);
+  **ZERO latency** (causal flux integrator OK; the NAB pair are exact inverses;
+  NO oversampling) applies to ALL ports regardless of license; WingComp "LA-2A"
+  (Desktop) is unusable — never pull from it.
 - **Model/subtype (type) tuning is permissive (CAN, not MUST) — 2026-10-13:** a mode + model (e.g. reverb Plate/"140" = mode 2, type 0 today — `Params::type[mode]` axis, `numTypes()`/`defaultDialsForType()`, the "140" chip) may carry its own neutral defaults (50 % dials; decay 2.0 s = reference length) + reference-IR law (LONGER = DARKER, the direction the EMT 140 family itself measures) — it must keep the generic/shared mechanism and the other modes separate (other modes stay bit-identical). The rule is GENERAL (any effect mode/subtype); full text + the plate/"140" instance + the biquad landmine: `docs/agents/ir-reverb-training.md`; one-liners: `dsp-invariants.md` § Reverb + `ui-wiring.md`.
 - **Always MEASURE DSP changes sonically, not just algebraically — STANDING
   RULE for every effect (DSP engine, modulation, any audio-stage work)**

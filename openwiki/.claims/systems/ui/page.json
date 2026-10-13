@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:c6dd4220af80d48f0c8a74b3097607f2808765b27de96bb6477d566dc8e29da8",
+  "pageVersion": "sha256:c46c626ca64bcbefa82500447f161886a62b4547ff6e50c7da661bc6aa4e8f48",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -54,7 +54,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:87cb3c8367d8cc142825418c338b6f6a531fe2aed138845eb80b5d93e21fe292"
+          "version": "repo-file-v1:sha256:00fce6ca0f6ce302bce2000a19ce73a50b7d3cb02efed4ab809c03e39b6f4b48"
         }
       ]
     },
@@ -82,7 +82,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
+          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
         }
       ]
     },
@@ -96,29 +96,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:87cb3c8367d8cc142825418c338b6f6a531fe2aed138845eb80b5d93e21fe292"
-        }
-      ]
-    },
-    {
-      "id": "claim_0028108cd7c547c1afe67367a1609c39",
-      "statement": "FINAL reverb full-tile layout (after R2 + the 2026-10-15 R2 follow-ups through commit 1aa620e): the tile runs a 6+6 COLUMN grid (6 even columns per row, matching conv's pitch — the 2026-10-15 user fix; the first cut had cramped 7 columns, and a second fix restored a missing `x += colW;` after knobE_ that had made Dry/Out overlap). Row 1: Mix / Decay / Pre / Tone / SigA (sigKnob_) / Mod (knobH_, row right end). Row 2: Dwell / Dry (knobF_) / Width (knobE_) / SigB (modKnob_) / Size (knobD_) / Out — the SigB<->Width row-2 swap is the tenth-cut user preference (EffectTile.cpp resized(), reverbFull branches ~:1315-1340). The generic param stream has 7 entries (Decay, Pre, Tone, Size, Width, reverbSharedMod, reverbDry) so sharedMod=Dry index 6 gates out compact; on the compact surface (4 cols) Mod + Dry are bound in the param stream but have NO visible slot (the 'silent extra param' pattern), SigB + Pre + Size hide, compact row 1 = Mix/Decay/SigA/Tone. The two SIGATURE knobs are mode-specific (reverbSigParam/Label/ScaleForMode, EffectTile.cpp:110-180): Digital's SigB now binds the 5-detent reverbWave Shape scale (R2 Sig-B became Shape), re-voiced by syncReverbSig() on every mode change. TileShot goldens plugin/ui/testbed/goldens/reverb.png + reverb-shift.png were re-shot and re-approved after the final layout (see docs/agents/ui-snapshots.md: TileShot owns --dump/--tile, runs from the build-ui tree, goldens paths RELATIVE to plugin/ui/testbed, bare names).",
-      "evidence": [
-        {
-          "resource": "repo://docs/agents/ui-snapshots.md",
-          "version": "repo-file-v1:sha256:51d5b904060259673e1cf585f878f4b09a38481b3f192b2a9de035544569a909"
-        },
-        {
-          "resource": "repo://plugin/ui/testbed/goldens/reverb-shift.png",
-          "version": "repo-file-v1:sha256:407a35142cf498fbaf768e8a04bac7ab9cef076d89be43a5bc08ea271c9fdaea"
-        },
-        {
-          "resource": "repo://plugin/ui/testbed/goldens/reverb.png",
-          "version": "repo-file-v1:sha256:ae520c757156ecd6765fe936705827cf62148f38855996dde9402b9418ffe11c"
-        },
-        {
-          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:87cb3c8367d8cc142825418c338b6f6a531fe2aed138845eb80b5d93e21fe292"
+          "version": "repo-file-v1:sha256:00fce6ca0f6ce302bce2000a19ce73a50b7d3cb02efed4ab809c03e39b6f4b48"
         }
       ]
     },
@@ -128,13 +106,31 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:87cb3c8367d8cc142825418c338b6f6a531fe2aed138845eb80b5d93e21fe292"
+          "version": "repo-file-v1:sha256:00fce6ca0f6ce302bce2000a19ce73a50b7d3cb02efed4ab809c03e39b6f4b48"
+        }
+      ]
+    },
+    {
+      "id": "claim_ac86244a8c3e474798097d2bddd66f3b",
+      "statement": "FINAL reverb full-tile layout after the T-DAT-001 PLT face rebuild (2026-10-17, supersedes the pre-DAT R2/R3 layout): a 6x2 grid (6 even columns per row, kCompactKnobFace 32 px applied to compact + convolution + reverb-full, 12.0 px labels). The param stream (paramsFor, EffectTile.cpp:201-265) for reverb now carries 8 base entries: Decay, Pre, Tone, Size, Width, Mod (reverbSharedMod), LoCut (reverbLoCut, fraction 0..1, 0 = off), Space (reverbSpace) — Dwell/In removed from the face (Dwell hidden via `input_.setVisible(!(reverb && !compact))` at ~:416; Dry dropped as redundant with Mix+Out). Visible grid: Row 1 = Decay(A) | Pre(B) | LoCut(F, knobF_ remap) | Tone(C) | Air (sigKnob_ slot0, binds reverbAir) | Mod (knobH_); Row 2 = Mix | Early (modKnob_ slot1, binds reverbEarly) | Size(D) | Space (knobG_ remap) | Width(E) | Out. The syncKnobs remaps (i==5->knobH_, i==6->knobF_, i==7->knobG_) sit at ~:376-380; numParams_ for reverb full = 8 (EffectTile.cpp:311-315). The two SIG slots are re-voiced per mode by reverbSigParam/Label/ScaleForMode; for the PLT face they are Air (row 1) and Early (row 2) — the legacy Bright/Bloom arms stay engine-live on the Digital PLT subtype but are OFF the visible face. TileShot goldens plugin/ui/testbed/goldens/reverb.png + reverb-shift.png were re-shot after user review and the goldens re-approved at 0 px diff (docs/agents/ui-snapshots.md flow: human approve -> --regen). Current DspTests suite count at the T-DAT-001 closeout: 509 tests (previously 503).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/testbed/goldens/reverb-shift.png",
+          "version": "repo-file-v1:sha256:9c67b4c2daaba2ddbc68e2ccd75d56e754b1a2a81c82f9b42436de043a5046aa"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/goldens/reverb.png",
+          "version": "repo-file-v1:sha256:f14c7612a303d555966d8eae13956ea87e5b0ce78e510472164e551f7ea7abf4"
+        },
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
+          "version": "repo-file-v1:sha256:00fce6ca0f6ce302bce2000a19ce73a50b7d3cb02efed4ab809c03e39b6f4b48"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-12T23:07:19.188Z"
+    "at": "2026-10-13T21:50:34.909Z"
   }
 }

@@ -21,6 +21,15 @@ probe is stereo-specific. Deterministic seeds only (no `rand()`); gtest
 | ID | Signal | Built for | In-repo example |
 |---|---|---|---|
 | `STIM_PLUCK` | 82.41 Hz (E2) fundamental + harmonics up to ~5 kHz decaying at −6 dB/oct, exponential string decay, 1-2 sample pick spike at t=0 | compressor/gate envelope tracking; onset behaviour of every stage | `test/src/effect_tests.cpp` sweep helpers; `gate_tests.cpp` |
+### The final arbiter
+Mechanism probes + this file's metrics narrow the cut; **the ship decision is the user ear + A/B** (TONE3000 precedent: 12th vs 13th Mod cut → 80 ms shipped because the user said "killed the clicks completely" against an 8×-worse measured 12 ms candidate). Each A/B = two staged Windows standalone exes.
+
+### DspTests bookkeeping (the fast loop)
+- **Counts are a lower-bound snapshot, never an assertion target** — the suite grows with features (469→470→476→477→487→503→509 through 2026-10-17, T-DAT-001); on a red run check the build RC and that the test names ran, and the "Running N tests" line is non-zero (comma-filtered lists can silently run 0 tests and exit 0). Canonical loop: `./script/test-dsp.sh [filter]`.
+
+### Probe buffer rule (T-DAT-001 lesson, keep)
+- **Every `juce::AudioBuffer` a probe allocates MUST be `clear()`ed right after allocation.** An unzeroed buffer fed ~15 s of heap garbage into the DAT feedback loop and amplified it to 1e37 — the entire "marginal instability at some sizes / render-length-dependent runaway" hunt was this harness bug, not the engine. "Stable" claims for feedback systems need the **energy-growth slope on a long render's tail** (per-second slope over the 6–16 s window), not a `|s|>50` / nonfinite cap on a short render (a marginal pole just below 1 survives short renders and fails long ones — or vice versa).
+
 | `STIM_CHORD` (sustained) | Open E: 82.41 · 123.47 · 164.81 · 196.0 · 246.94 Hz sines, 30 ms attack, **held** for seconds | **THE click trigger** (loud sustained chords are what produce audible clicks — user methodology, m03127) | `ReverbTest.R2_ModChordClickHunt` |
 | `STIM_DIRAC` | x[0]=1, else 0 | IR capture of the block; decay/T60; phase map of delay/chorus | `plate_comb_tests.cpp`, `delay` IR tests |
 | `STIM_AMPLITUDE_STEP` | 0-1 s: −60 dBFS 1 kHz → 1-2 s: 0 dBFS → 2-3 s: −60 dBFS | attack/release tracking, denormal/dropout detection | `gate_tests.cpp`, compressor law tests |

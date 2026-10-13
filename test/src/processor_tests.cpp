@@ -676,7 +676,7 @@ juce::File makeMonoIrWav() {
   juce::AudioFormatWriterOptions opts;
   opts = opts.withSampleRate(48000.0).withNumChannels(1).withBitsPerSample(24);
   if (auto writer = fmt.createWriterFor(base, opts); writer != nullptr) {
-    juce::AudioBuffer<float> buf(1, 4096);
+    juce::AudioBuffer<float> buf(1, 4096); buf.clear();
     for (int i = 0; i < 4096; ++i) {
       const float env = std::exp(-0.003f * i);
       buf.setSample(0, i, 0.4f * std::sin(0.02f * i) * env);

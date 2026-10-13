@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:ebabd41473eac4ced9d7b8556c6170c264e509959583a9a9d04aa85c66d78687",
+  "pageVersion": "sha256:42c5ec6d3ebbf075786670abb5725e6f487d97920d27bf987d168a98070c043c",
   "claims": [
     {
       "id": "claim_746e41b7d7214abc8858befedfaa8e01",
@@ -8,11 +8,11 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:7a0b7050dfe5d9b4cfe51a7c4522b5fedae95a9b0998084e19df480cb256b25d"
+          "version": "repo-file-v1:sha256:9092bd3462903848b3883e440af4664eba61b130e3573b1542e01ef4a9e59796"
         },
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:84f6b987b6f0f551e18b4da8a2eb7945bd6687e329e23b8aaceb4607478900dd"
+          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
         }
       ]
     },
@@ -26,7 +26,7 @@
         },
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:7a0b7050dfe5d9b4cfe51a7c4522b5fedae95a9b0998084e19df480cb256b25d"
+          "version": "repo-file-v1:sha256:9092bd3462903848b3883e440af4664eba61b130e3573b1542e01ef4a9e59796"
         }
       ]
     },
@@ -36,7 +36,7 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:7a0b7050dfe5d9b4cfe51a7c4522b5fedae95a9b0998084e19df480cb256b25d"
+          "version": "repo-file-v1:sha256:9092bd3462903848b3883e440af4664eba61b130e3573b1542e01ef4a9e59796"
         },
         {
           "resource": "repo://scripts/win-standalone.sh",
@@ -50,13 +50,13 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:7a0b7050dfe5d9b4cfe51a7c4522b5fedae95a9b0998084e19df480cb256b25d"
+          "version": "repo-file-v1:sha256:9092bd3462903848b3883e440af4664eba61b130e3573b1542e01ef4a9e59796"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-12T21:41:51.351Z"
+    "at": "2026-10-13T21:50:34.909Z"
   }
 }

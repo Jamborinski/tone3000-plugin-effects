@@ -1,12 +1,46 @@
 # Ticket — Plate (PLT): replace the default engine with the Dattorro-tank ("DAT") build
 
-Status: **GREENLIT (user, 2026-10-16)** — approved for execution in a
-fresh session. Plate engine rebuild is its OWN ticket, separate from
-spring and from the reverb-dry-mod-width-swing work. Research complete:
-`research/plate-dat.md` (DAT = Dattorro-tank plate, idea-level read;
-rebuild authorization: "if you have to move away from the 8 comb + 4
-all-pass approach for the plate I do not care at all, rebuild it if you
-must").
+Status: **DONE (2026-10-13, T-DAT-001)** — shipped and closed out (log at bottom).
+
+## Ship log (T-DAT-001)
+- **Engine** — `plugin/include/Reverb.h`: the DAT (Dattorro) plate tank is
+  the **default + only** engine for Plate (mode 0): clean-room **MIT port**
+  of `RSAlgorithmicVerb-main` `Source/DattorroVerb.cpp` (MIT — attribution +
+  AGENTS.md MIT-port rule at the port site ~:2225), restructured to repo
+  style (per-side mono tanks, `DatLine`/`DatChan` rings, `processDat`),
+  zero-latency verified (every read is a past write). Dispatch: mode 0 →
+  `processDat` + width-gated M/S side stage; the **legacy comb PLT voice
+  survives bit-identical** at the Digital PLT subtype (mode 5, type[5]==2,
+  Bright/Bloom armed) — pins 93.95 rawAbs @2000 ms / 21.98 comb @2500 ms
+  re-targeted there via `plateLegacyP()`/`plateLegacyAt()`.
+- **Decay knob law** — `datDec_ = 0.15 + (0.82 − 0.15) ·
+  log10(clamp(decayMs,50,2500)/50)/log10(2500/50)`, the knob driving all six
+  loop decay sites with a **uniform 0.82 cap** (stability boundary measured
+  at 0.88 by 6–16 s energy-growth slope at sizes 0.0/0.5/1.0 — render-length
+  dependent; short-render peak caps lie for marginal poles). Allpass gains
+  capped <1 (z=−1 pole rule). The chase's "size-0 runaway" root cause was an
+  **unzeroed AudioBuffer in the probe harnesses**, not the engine — probe
+  buffers are always `clear()`ed now (standing rule in
+  `docs/agents/audio-testing.md`). Scaffolding (`s_datDecDrive`, 11 probe
+  test files, `s_killMask`) all removed; the 6/6 **DatGuards** suite in
+  `test/src/dat_probe_tests.cpp` is the real guard.
+- **Face** — the 6x2 PLT face (Row 1 Decay|Pre|LoCut|Tone|Air|Mod; Row 2
+  Mix|Early|Size|Space|Width|Out): 8-param stream, LoCut the only new param
+  (45 Hz one-pole HPF, 0 = bit-pass; four state places in
+  ChainBlock / ProcessorChain ×5 / ProcessorState / ChainState), Dwell hidden
+  on the full face, Dry dropped (redundant with Mix+Out), Air/Early as the
+  sig slots, `numParams_` full = 8. Goldens re-shot + re-approved (human
+  review first).
+- **Closeout gates (all green, 2026-10-13):** DspTests **509/509**
+  (`./script/test-dsp.sh`); GUI `TONE3000_Standalone` links clean; UiTestbed
+  `--selftest` 0 failed (xvfb); TileShot goldens 0 px mismatch; OpenWiki
+  update run completed (8 pages reconciled + prose hand-edits in
+  `openwiki/systems/effects-invariants.md` and `docs/agents/{dsp-invariants,
+  ui-wiring}.md`). CPU ceiling (23 µs) **waived** for this engine (user).
+- **Windows stage** — `scripts/win-standalone.sh`: staged
+  `/mnt/c/Users/jambo/Downloads/TONE3000-win-20261013-145050/TONE3000.exe`
+  (30,100,687 bytes; contains the `reverbLoCut` plumbing string — verified
+  with `strings`); **md5 `6bd2266cbb3ac9c22c73c72b314b4921`**.
 
 ## Scope
 - New PLT engine (Dattorro-tank class, 8-delay FDN), idea-level from

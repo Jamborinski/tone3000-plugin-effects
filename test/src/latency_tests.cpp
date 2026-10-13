@@ -112,7 +112,7 @@ TEST(EffectLatency, TremoloIsCausalZeroLatency) {
     // the CURRENT sample, so the audio is never delayed. A unit input makes
     // the output literally the gain, in [1-depth, 1].
     const int N = 512;
-    juce::AudioBuffer<float> buf(1, N);
+    juce::AudioBuffer<float> buf(1, N); buf.clear();
     for (int i = 0; i < N; ++i) buf.setSample(0, i, 1.0f);
     tm.process(buf);
 
@@ -138,7 +138,7 @@ TEST(EffectLatency, DelayFirstEchoAtExactlyTheDialedTap) {
   ASSERT_GT(tap, 0);
 
   const int N = 2 * tap + 8;
-  juce::AudioBuffer<float> buf(1, N);
+  juce::AudioBuffer<float> buf(1, N); buf.clear();
   buf.clear();
   buf.setSample(0, 0, 1.0f);
   d.process(buf);
@@ -166,7 +166,7 @@ TEST(EffectLatency, ChorusFirstEchoWithinTheDialedWindow) {
   ASSERT_GE(base, 1);
 
   const int N = top + 4096;
-  juce::AudioBuffer<float> buf(1, N);
+  juce::AudioBuffer<float> buf(1, N); buf.clear();
   buf.clear();
   buf.setSample(0, 0, 1.0f);
   ch.process(buf);

@@ -9,12 +9,12 @@ sources:
     resource: repo://docs/agents/ir-reverb-training.md
   - id: openwiki-source-a57c88194aa852db387a04a3
     resource: repo://docs/tickets/complete/reverb-dry-mod-width-swing.md
-  - id: openwiki-source-f394ea0013cb04b60e39f7b4
-    resource: repo://docs/tickets/complete/reverb-budget-quality-uplift.md
   - id: openwiki-source-4d6792d483f6b9821830338e
     resource: repo://plugin/include/Reverb.h
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
+  - id: openwiki-source-22db8812ec3771683e6a7ddc
+    resource: repo://test/src/dat_probe_tests.cpp
   - id: openwiki-source-9122ffeb8c7fc8e2457955ce
     resource: repo://test/src/effect_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
@@ -22,7 +22,7 @@ sources:
 generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-12T23:07:19.188Z
+    at: 2026-10-17T00:00:00.000Z
 ---
 
 
@@ -58,21 +58,77 @@ Neutral start dials (the 50 % row; `defaultDialsForMode`, V2 order):
 
 | Mode | decay | pre | tone | size | width |
 |---|---|---|---|---|---|
-| 0 **Plate** | **2000 ms** (= the EMT 140 2.0 s reference length, the tuning target, 2026-10-13) | 0.5 | **0.50 / 0.50 / 0.50 all NEUTRAL** |  |
+| 0 **Plate** | **2000 ms** DAT dial (neutral 0.5 dials, 2026-10-17 T-DAT-001) | 0.5 | 0.5 / 0.5 / 0.5 / **LoCut 0.0 (off)** |  |
 | 1 Spring  | 2000 ms | 0.0 | 0.60 | 0.60 | 0.90 |
 | 2 Room    | 500 ms  | 0.0 | 0.40 | 0.30 | 0.70 |
 | 3 Chamber | 1800 ms | 1.0 | 0.50 | 0.45 | 0.85 |
 | 4 Hall    | 3000 ms | 2.0 | 0.60 | 0.90 | 0.95 |
 | 5 Digital | 1200 ms | 0.0 | 0.40 | 0.60 | 1.00 |
 
-### Plate / "140" model (mode 2, type 0 — the EMT 140 subtype)
+### Plate — the DAT engine (mode 0, T-DAT-001, 2026-10-17; DEFAULT + ONLY engine)
 
-Tuned against the EMT 140 2.0 s IR convolved through the **house
-`BudgetConvolver`**, **peak-normalised both sides**, with the reference's
-own numbers measured first (its +4.85 dB drift and 4.3 dB of steady comb
-are the guardrail, and it violates the "no growing comb" and "flattest
-comb wins" laws — the guards pin the *measured* direction, not an assumed
-ideal). Shipped constants (all beside their law in `Reverb.h`):
+A **MIT port** of `RSAlgorithmicVerb-main`
+(`Source/DattorroVerb.cpp`, Dattorro 1997 — MIT attribution at the port
+site, `Reverb.h` ~:2225; the AGENTS.md MIT-port rule permits structure AND
+constants, restructured to repo style, zero-latency preserved). Ported
+tank: two independent mono all-pass/delay banks (one per channel) with
+the golden fig-8 A/B crossfeed; 4 input all-pass stages (gains
+0.98 / 0.98 / 0.83 / 0.83 — capped under 1 so the z = −1 pole stays
+stable); AP delay bases in **samples** (base × rs, `rs = 0.25 +
+1.5×size`, so **Size** = loop length / diffusion spread); the golden
+node-tap split (L vs R banks use different tap sets — the two tanks
+carry the stereo image); **Early** pre-ring taps 2 / 5 / 9 ms ×
+`early`; **Tone** one-pole damplings `800·16^tone` Hz on the d0 / d2
+pops; **Air** a 4.5 kHz shelf `(1 + 6·air)` on the accumulator low-pass;
+**LoCut** a 45 Hz one-pole HPF (`0` = bit-pass, the only new param);
+in-LPF 13.5 kHz; diffusion scale `0.1 + 0.9×space`.
+
+**Decay knob law** — `datDec_ = 0.15 + (0.82 − 0.15) ·
+log10(clamp(decayMs, 50, 2500)/50) / log10(2500/50)`, a **uniform 0.82
+cap** in `setParams` (Reverb.h ~:889–897), applied as the fixed-gain
+fig-8 loop multiplier at all 6 decay sites (the golden's hardcoded
+`decayTime = 0.35` replaced by the live knob — the golden's fixed 0.35
+is exactly what keeps that loop structurally marginal at long tails, so
+the 0.82 cap is the stability guarantee). The boundary was measured by
+the per-second energy-GROWTH slope on the 6–16 s tail of a 15–20 s
+render (a `|s| > 50` / non-finite test on short renders is
+render-length dependent and misleading): sizes 0.0 / 0.5 / 1.0 stay
+decaying through `ddEff` 0.84 and are GROWING at 0.88 → **0.82 =
+boundary minus margin**. The "runaway at size ≥ 0.25" the stability
+hunt chased was an **unzeroed `juce::AudioBuffer` in the probe
+harnesses** (heap garbage streaming into the feedback loop and
+amplifying to 1e37) — not the engine; probe buffers are always
+`clear()`ed now (standing probe rule, `docs/agents/audio-testing.md`).
+
+Width in the DAT arm is a **width-gated M/S side-gain**
+(`side = 0.5(L−R)·width`, 0 = true mono, 1 = full per-side image)
+instead of the shared `applyWidthHaas` Haas-echo post stage the legacy
+modes use; the R2 shared-Mod post stage is unchanged. **CPU ceiling
+(23 us/block@128) WAIVED** for this engine by the user (m00552 — the
+port is the design; the ceiling applies to the other modes). Guards:
+suite **DatGuards**, `test/src/dat_probe_tests.cpp`
+(StableAcrossSizeDecayGrid, DecayKnobTracksMonotone, TailIsAudible,
+LoCutDropsLowBand — band meter via a per-bin DFT, because the old
+unit-circle resonator meter OVERFLOWS on plate low-band content →
+inf → nan,
+AirLiftsTopBand, WidthWidens, ModZeroBitPass).
+
+### Legacy comb-plate — the former mode-0 law (now at the Digital PLT
+subtype, mode 5 / type[5]==2)
+
+The pre-T-DAT-001 Plate engine (built and tuned 2026-10-13) survives
+**bit-identical** at the Digital-mode PLT subtype entry (the PLT type
+with Bright / Bloom armed — `processPlate`, Reverb.h ~:1157 gate;
+`lawCh=='0' && sigOn`). Pin tests re-targeted there via the
+`plateLegacyP()` / `plateLegacyAt()` helpers (level law 93.95 rawAbs @
+2000 ms, comb cap 21.98 @ 2500 ms) — `test/src/plate_family_tests.cpp`
++ `plate_texture_tests.cpp`. Tuned against the EMT 140 2.0 s IR
+convolved through the **house `BudgetConvolver`**, **peak-normalised
+both sides**, with the reference's own numbers measured first (its
++4.85 dB drift and 4.3 dB of steady comb are the guardrail, and it
+violates the "no growing comb" and "flattest comb wins" laws — the
+guards pin the *measured* direction, not an assumed ideal). Shipped
+constants (all beside their law in `Reverb.h`):
 
 - **Air law** (`kPlateAirHz{Bright,Dark} = 4900 / 3600`,
   `kPlateAirStages = 2`): two 1st-order OUT-stage LPF stages, −6 dB/oct
