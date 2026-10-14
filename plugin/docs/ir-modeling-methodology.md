@@ -27,7 +27,7 @@ single load-bearing rule:
 | R1 | **IR family**: 2–4+ IR WAVs (48 kHz, 2 ch, 24-bit/float) spanning the extremes of the effect (e.g. GBS dark/plate-like ↔ Demeter middle ↔ Deluxe bright/pingy) | Pick ONE as the "target middle" with the user; use the extremes only as range boundaries |
 | R2 | **Same test signal both sides**: a 30 ms white-noise burst (peak-normalised, ×0.5) is the standard probe; the convolved IR and the algorithm MUST be excited with the identical signal | Analyzing raw IR files directly is banned — convolve, then compare (see M3) |
 | R3 | Algorithmic engine with per-mode paths + an audio-thread test harness (gtest on a mono buffer) | |
-| R4 | A cross-platform build that reaches the user (Windows standalone: `scripts/win-standalone.sh`, timestamped dir, no descriptive suffixes) | The ears need a runnable artifact every round |
+| R4 | A cross-platform build that reaches the user (Windows standalone: `script/win-standalone.sh`, timestamped dir, no descriptive suffixes) | The ears need a runnable artifact every round |
 | R5 | A fixed set of invariants (Section 6) that every edit must keep | Bit-identity anchor is the tripwire |
 | R6 | User availability for A/B between builds | "The user's ears define correct" is a constraint, not an aspiration |
 
@@ -265,7 +265,7 @@ see G9 for the plate instance of exactly this.
 | Percept | Constant | Value | Why |
 |---|---|---|---|
 | tail survival lift | `kPlateDecayLift` / `kPlateFbCeiling` | ×1.104, cap 0.940 | T30 0.89 s → 0.99 s (ref 1.38 s); at the 2500 ms dial the plate now EXCEEDS the ref in low-band persistence (125 Hz T40 3.71 s vs 2.68 s) — length complaint retired by data |
-| onset density | `kPlateOnsetDelayMs[5]` / `kPlateOnsetTapGain[5]` | {12.7, 19.3, 27.8, 43.1, 58.4} ms; {0.32, 0.27, 0.23, 0.19, 0.16} × onGain (bright-gated: 0.3 + 0.7·bright) -- **SUPERSEDED by the 2026-10-13 final pass** (3 onset taps {14.2, 26.9, 51.3 ms} sum 0.88 + whip 0.015; the "sparse over a quieter incoherent floor" law; see `docs/tickets/plate-140-final-training-pass-closeout.md` + the CONSIDERED & DECLINED block in `plugin/include/Reverb.h`) | pings 8 → 11 (ref 12); attack 8k −3.1 vs ref −5.4; reuses `inHist_` (Room/Chamber/Hall pattern), 2.5 kHz 1-pole LP for fizz safety — NOT a comb-tap add |
+| onset density | `kPlateOnsetDelayMs[5]` / `kPlateOnsetTapGain[5]` | {12.7, 19.3, 27.8, 43.1, 58.4} ms; {0.32, 0.27, 0.23, 0.19, 0.16} × onGain (bright-gated: 0.3 + 0.7·bright) -- **SUPERSEDED by the 2026-10-13 final pass** (3 onset taps {14.2, 26.9, 51.3 ms} sum 0.88 + whip 0.015; the "sparse over a quieter incoherent floor" law; see `docs/tickets/plate-140-final-training-pass-closeout.md` + the CONSIDERED & DECLINED block in `plugin/include/effects/reverb/Reverb.h`) | pings 8 → 11 (ref 12); attack 8k −3.1 vs ref −5.4; reuses `inHist_` (Room/Chamber/Hall pattern), 2.5 kHz 1-pole LP for fizz safety — NOT a comb-tap add |
 | body survival | `kPlateBodyHz/Db/Q` | 550 Hz, +1.3 dB per RT, Q 0.60 | 500–1k body +1.0…+2.7 dB mid/deep, 500 Hz T40 1.12 → 1.25 s (ref 2.00 s); A capped to 0.990/fb (M7); DERIVED peaking, B(w0)=1 exactly (M8) — not the remembered formula |
 | wash diffusion | `kPlateWashAp` | 0.62 (unchanged) | pre-P-ons fizz fix, preserved |
 | presence | `kPlatePresence` | 1.189 (unchanged) | G1/G2: user's A/B value |

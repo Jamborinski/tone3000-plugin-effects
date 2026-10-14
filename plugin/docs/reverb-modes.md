@@ -79,7 +79,7 @@ is bit-identical (the sizeDelta term is exactly 0.0 there).
 
 See `docs/agents/ir-reverb-training.md` (the model/subtype tuning rule +
 the final numbers + the family/cross-model tables) and the CONSIDERED
-& DECLINED block in `plugin/include/Reverb.h`.
+& DECLINED block in `plugin/include/effects/reverb/Reverb.h`.
 All starting decays fit the engine's 50..5000 ms range (Hall = 3000, the
 longest default; 5000 is the ceiling). The [50, 3000] region is bit-identical
 (`decayFb`) so the Digital anchor stays byte-identical. Alt-click on any knob returns it to that mode's starting

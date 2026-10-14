@@ -206,7 +206,7 @@ tilt, even/odd partial balance, click/derivative transient)
 
 ## Closeout (per AGENTS.md)
 - **DspTests** green (all P0..P6 above), **`TONE3000_Standalone`**
-  link green, **`scripts/win-standalone.sh`** green → record
+  link green, **`script/win-standalone.sh`** green → record
   `TONE3000-win-YYYYMMDD-HHMMSS` + md5 in the ticket log
   (Stage A, user-mandated).
 - **OpenWiki UPDATE:** `openwiki_begin(root, mode="update")` →

@@ -24,7 +24,7 @@ User A/B on the shipped exe drove a second face wave (this commit):
 - **Gates:** DspTests **511/511** (up from 509: +2 Mod guards; LoCut taper guard re-pinned), build-ui relinked; **Windows stage** `TONE3000-win-20261013-173958` (md5 `b349a8059c372e15ac87ca060cb391c3`, `strings | grep -c reverbMod` = 11).
 
  (T-DAT-001)
-- **Engine** — `plugin/include/Reverb.h`: the DAT (Dattorro) plate tank is
+- **Engine** — `plugin/include/effects/reverb/Reverb.h`: the DAT (Dattorro) plate tank is
   the **default + only** engine for Plate (mode 0): a **modified port of the
   Dattorro plate algorithm** (2026-10-16) in repo style (per-side mono tanks,
   `DatLine`/`DatChan` rings, `processDat`), zero-latency verified (every read
@@ -57,7 +57,7 @@ User A/B on the shipped exe drove a second face wave (this commit):
   update run completed (8 pages reconciled + prose hand-edits in
   `openwiki/systems/effects-invariants.md` and `docs/agents/{dsp-invariants,
   ui-wiring}.md`). CPU ceiling (23 µs) **waived** for this engine (user).
-- **Windows stage** — `scripts/win-standalone.sh`: staged
+- **Windows stage** — `script/win-standalone.sh`: staged
   `/mnt/c/Users/jambo/Downloads/TONE3000-win-20261013-145050/TONE3000.exe`
   (30,100,687 bytes; contains the `reverbLoCut` plumbing string — verified
   with `strings`); **md5 `6bd2266cbb3ac9c22c73c72b314b4921`**.
@@ -123,7 +123,7 @@ User A/B on the shipped exe drove a second face wave (this commit):
 
 ## Closeout protocol (standard)
 DspTests full-green, TONE3000_Standalone build, UiTestbed --selftest,
-OpenWiki update, Windows standalone exe stage (`scripts/win-standalone.sh`).
+OpenWiki update, Windows standalone exe stage (`script/win-standalone.sh`).
 
 ## Measured reference — Bricasti M7 plate IR set (user, measured 2026-10-14)
 `research/probe_bricasti_plates.py` → `research/briplate-data.txt` (19 files,

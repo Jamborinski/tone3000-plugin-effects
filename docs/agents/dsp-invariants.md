@@ -160,7 +160,7 @@
 ## Reverb (PLT face, per-mode laws -- full text in `docs/agents/ir-reverb-training.md`)
 - **Plate (mode 0) is now the DAT (Dattorro) engine** (T-DAT-001, 2026-10-17):
   a modified port of the Dattorro plate algorithm (see
-  `plugin/include/Reverb.h`, `processDat`). DEFAULT + ONLY engine for Plate; the old
+  `plugin/include/effects/reverb/Reverb.h` (`Reverb_DAT.h` for impl), `processDat`). DEFAULT + ONLY engine for Plate; the old
   comb-plate law survives bit-identical at the Digital PLT subtype (mode 5,
   type[5]==2) with the legacy pin tests on its arm. The Decay knob drives the
   six decay-site loop gain with a **uniform 0.82 cap** (stability boundary
@@ -365,7 +365,7 @@ harness, not a short-render peak cap.
   integrator) that long drive bursts pump to runaway** — small delays + full
   gain = the divergence path. Cap allpass gains below 1 (shipped 0.98 on the
   DAT input APs, gIn1/gIn2 = {0.98, 0.98, 0.83, 0.83} with the "why" at the
-  port site in `plugin/include/Reverb.h`); never ship a 1.0 feedforward tap.
+  port site in `plugin/include/effects/reverb/Reverb.h`); never ship a 1.0 feedforward tap.
 - **Always sweep the knob ladder INCLUDING the edges (0 and max).** Mid-range
   green is not proof of stability: every DAT probe at size 0.5 passed while
   size 0.0 (and the legacy size-0 pins) diverged. `DspTests

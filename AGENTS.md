@@ -39,11 +39,11 @@ statement is a claim to be verified, not a fact to be believed.
 
 ## Protocol (mandatory, not a suggestion)
 1. **Match by PATH, not by vibes, before you edit anything:**
-   - touch `plugin/include/{Delay,Chorus,Tremolo,Compressor}.h|src/*` or `test/src/*` → **`docs/agents/dsp-invariants.md`** — and **`docs/agents/audio-testing.md`** (the sonic measurement protocol: click-index/jump metrics, comb & dropout laws, per-effect probe matrix, the hunt→measure→guard loop)
-   - reverb-mode tuning against an **IR reference** (retune a mode in `plugin/include/Reverb.h`, add a reference-IR test / comb·decay metric / plate-vs-conv A/B) → **`docs/agents/ir-reverb-training.md`** — and `docs/agents/audio-testing.md` (block-size sweep is the fastest click diagnostic)
+   - touch `plugin/include/effects/{delay,chorus,tremolo,compressor}/**|plugin/src/effects/*` or `test/src/*` → **`docs/agents/dsp-invariants.md`** — and **`docs/agents/audio-testing.md`** (the sonic measurement protocol: click-index/jump metrics, comb & dropout laws, per-effect probe matrix, the hunt→measure→guard loop)
+   - reverb-mode tuning against an **IR reference** (retune a mode in `plugin/include/effects/reverb/Reverb.h`, add a reference-IR test / comb·decay metric / plate-vs-conv A/B) → **`docs/agents/ir-reverb-training.md`** — and `docs/agents/audio-testing.md` (block-size sweep is the fastest click diagnostic)
    - touch `plugin/ui/**`, chain state, KnobScale, tiles, a param's plumbing → **`docs/agents/ui-wiring.md`**
    - touch `plugin/ui/testbed/**`, TileShot/Compare, UI goldens, or re-shooting a tile → **`docs/agents/ui-snapshots.md`**
-   - touch `CMakeLists*`, `build/`|`build-win/`, `scripts/win-*`, or a Windows exe → **`docs/agents/windows-build.md`** (and `linux-build-deep.md` if it's the Linux build/fresh-configure/helper)
+   - touch `CMakeLists*`, `build/`|`build-win/`, `script/win-*`, or a Windows exe → **`docs/agents/windows-build.md`** (and `linux-build-deep.md` if it's the Linux build/fresh-configure/helper)
    - `git merge`/`fetch upstream`, tags/branches/push → **`docs/agents/merge-upstream.md`**
    - borderline (a param change that affects both DSP and wiring, a build that touches UI, …) → **read every matching file; default to `dsp-invariants.md` + `ui-wiring.md`.**
 2. **Open the file BEFORE writing** to the area it covers. Cross-references are

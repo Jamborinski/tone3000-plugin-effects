@@ -4,7 +4,7 @@
 > same recipe is the intended path for Spring / Digital / Chamber / Hall) by
 > comparing it against a **convolved IR reference**; adding a reference-IR
 > test, a comb/decay metric, or a plate-vs-conv A/B bench. Also when a
-> "closer to the reference" change is proposed for `plugin/include/Reverb.h`.
+> "closer to the reference" change is proposed for `plugin/include/effects/reverb/Reverb.h` (or its per-mode impl headers).
 > **The one line that matters:** the reference is convolved **through the
 > house `BudgetConvolver`** (not an external FFT conv), **both sides are
 > peak-normalised before any shape metric**, and the **reference's OWN numbers
@@ -140,7 +140,7 @@ Rules that keep the A/B honest:
   and a "better" number is a level artifact, not a shape win.
 - One lever at a time against **both** the baked baseline AND the convolved
   reference. A number only counts if body (Step 5) and level are preserved.
-- `git stash push -- plugin/include/Reverb.h` → rebuild → measure → `git stash
+- `git stash push -- plugin/include/effects/reverb/` → rebuild → measure → `git stash
   pop` is the fast baseline/retune swing; scope the stash to the ONE engine
   file so the test harness stays in place.
 - Record the DECLINED levers with their numbers in the same place as the law
@@ -252,7 +252,7 @@ compared against, so "CPU headroom is fine" is almost never the limiter.
 - **Plate/"140" model STATE (FINAL PASS 2026-10-13, vs EMT 140 2.0 s through the
   house BudgetConvolver, peak-normalised; the full family 0.5-4.5 s + EMT 240
   Gold + RX4000 cross-model tables live in the close-out ticket + the
-  CONSIDERED & DECLINED block in plugin/include/Reverb.h):**
+  CONSIDERED & DECLINED block in plugin/include/effects/reverb/Reverb.h):**
   onset ping 45.66 vs reference 46.60 at the 2.0 s dial (the pre-pass
   STRUCTURAL ~9 dB residual is now CLOSED to within 0.9 dB; at the 2.5 s
   cap the plate reads 46.85; the 42.7 dB decline bar of the L1 attempt is
@@ -304,5 +304,5 @@ compared against, so "CPU headroom is fine" is almost never the limiter.
 - `docs/agents/linux-build-deep.md` — the canonical build env + mtime/traps.
 - `docs/tickets/complete/plate-combing.md` + its close-out — the first instance of this
   training (reference path, metric table, A/B, CPU) as a worked example.
-- `plugin/include/BudgetConvolver.h` / `plugin/src/ConvolutionReverb.cpp` —
+- `plugin/include/effects/conv/BudgetConvolver.h` / `plugin/src/effects/conv/ConvolutionReverb.cpp` —
   the house convolution tail + the mono null-safety fix.

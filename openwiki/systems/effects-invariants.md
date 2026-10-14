@@ -49,7 +49,7 @@ modes in V2 order: **Plate 0 /
 Spring 1 / Room 2 / Chamber 3 / Hall 4 / Digital 5**; `kNumModes = 6`),
 and `effects/conv/ConvolutionReverb.h` (loaded-IR playback, the house
 engine). Since the per-mode split (commit `abebb1e`,
-docs/tickets/repo-organization-reorg.md) the reverb `processX` bodies no
+docs/tickets/complete/repo-organization-reorg.md) the reverb `processX` bodies no
 longer live in `Reverb.h` itself: `Reverb.h` keeps the class, the `Params`
 dials, the constants, and the dispatch, and includes seven per-mode impl
 headers after the class close — `Reverb_Spring.h`, `Reverb_Plate.h`,
