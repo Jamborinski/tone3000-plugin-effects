@@ -48,10 +48,30 @@ cmake --build build-win --target TONE3000_Standalone    # also TONE3000_VST3
 - **CLOSEOUT RULE (user-mandated):** every ticket closeout ENDS by staging a fresh standalone Windows exe via `script/win-standalone.sh` after DspTests + selftest + goldens are green and the commit is in, recording the staging dir + md5 in the ticket log. Don't close a shipped ticket without it.
 
 ## Staging to Windows Downloads
-`bash /home/jambo/dev/tone3000-plugin-main/script/win-standalone.sh` →
+`bash script/win-standalone.sh` (from the repo root; the script loads `.env`,
+gitignored — keys/paths in `.env.example`) →
 `C:\Users\jambo\Downloads\TONE3000-win-YYYYMMDD-HHMMSS\TONE3000.exe`.
 Older descriptive folders in Downloads are historical A/B references — do not
 touch them. Naming is **run-timestamp only** (user preference).
+
+## Authenticode signing (optional, `T3K_SIGN=1` in `.env`)
+Certs/keys live OUTSIDE the repo (`$T3K_SIGNING_DIR`, default `$HOME/signing`;
+`*.p12`/`*.cer` are gitignored) and are **never committed**. Infra:
+`script/signing/{sign-exe,build-minica,make-demo-cert,add-cert}.sh` —
+env-driven, machine-path-free (setup README ships in `$T3K_SIGNING_DIR`).
+- `T3K_SIGN_CERT` = p12 basename in the certs dir; `T3K_SIGN_PASS` = p12
+  password (blank for passwordless minica p12s); `T3K_SIGN_TS` = RFC3161 URL
+  (default `http://timestamp.sectigo.com`); `T3K_SIGN_VERIFY` = post-sign
+  chain check (default 1). The script signs the STAGED copy after `cp`
+  (never the build-tree exe).
+- osslsigncode 2.13 API gotchas (verified live): password flag is `-pass`
+  (`-p` = proxy); use `-in`/`-out`; `-out` refuses existing files (sign to
+  temp, `mv` into place); self-signed roots need `verify -CAfile certs/<name>.pem`.
+- Local trust chain = `build-minica.sh` (25 y root + 10 y codeSigning leaf,
+  no-password p12 + `.pem`/`root.pem`); `make-demo-cert.sh` = plain
+  self-signed pipeline test only. Windows-side trust (publisher name, no
+  Smart Screen warning) requires a commercial CA intermediate folded in with
+  `add-cert.sh` → `<cert>-full.p12`.
 
 ## In-place reconfigure (fast path, after `.env` / source changes)
 A plain build does NOT pick up a changed `.env` (publishable key) or new

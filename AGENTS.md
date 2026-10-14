@@ -77,7 +77,7 @@ export LD_LIBRARY_PATH=/home/jambo/buildkit/stage/usr/lib/x86_64-linux-gnu${LD_L
 # or direct:
 LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
 ```
-- **Fresh shells start empty** — every `bg_run`/background task and even some
+- **Fresh shells start empty** — every `MonitorCreate`/delegate background job and even some
   foreground tool calls start with a **minimal env**: `cmake: command not
   found`, missing stage libs. Export the two canonical lines (`PATH` +
   `LD_LIBRARY_PATH`) at the top of EVERY build/test command.
