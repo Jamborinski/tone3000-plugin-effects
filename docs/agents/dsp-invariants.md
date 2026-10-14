@@ -160,7 +160,7 @@
 ## Reverb (PLT face, per-mode laws -- full text in `docs/agents/ir-reverb-training.md`)
 - **Plate (mode 0) is now the DAT (Dattorro) engine** (T-DAT-001, 2026-10-17):
   a modified port of the Dattorro plate algorithm (see
-  `plugin/include/effects/reverb/Reverb.h` (`Reverb_DAT.h` for impl), `processDat`). DEFAULT + ONLY engine for Plate; the old
+  `plugin/include/effects/reverb/Reverb.h` (impl headers in `effects/reverb/<mode>/`, e.g. `plate/Reverb_DAT.h`), `processDat`). DEFAULT + ONLY engine for Plate; the old
   comb-plate law survives bit-identical at the Digital PLT subtype (mode 5,
   type[5]==2) with the legacy pin tests on its arm. The Decay knob drives the
   six decay-site loop gain with a **uniform 0.82 cap** (stability boundary

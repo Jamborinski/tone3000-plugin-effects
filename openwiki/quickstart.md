@@ -19,7 +19,7 @@ sources:
   - id: openwiki-source-e2fb14576702431774114c7c
     resource: repo://plugin/include/ChainBlock.h
   - id: openwiki-source-652b993abfe8770db021e86f
-    resource: repo://plugin/include/effects/reverb/Reverb_DAT.h
+    resource: repo://plugin/include/effects/reverb/plate/Reverb_DAT.h
   - id: openwiki-source-d4b9a9adb1644505c083378b
     resource: repo://plugin/include/effects/reverb/Reverb.h
   - id: openwiki-source-732fd101392931455320572e

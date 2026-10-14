@@ -1582,15 +1582,15 @@ class Reverb {
     return (1.0f - diffCoef) * x + diffCoef * yAp; // blend dry input + APF by amount
   }
 
-  void processSpring(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/Reverb_Spring.h
+  void processSpring(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/spring/Reverb_Spring.h
 
-  void processPlate(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/Reverb_Plate.h
+  void processPlate(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/digital/Reverb_Plate.h
 
-  void processRoom(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/Reverb_Room.h
+  void processRoom(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/room/Reverb_Room.h
 
-  void processChamber(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/Reverb_Chamber.h
+  void processChamber(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/chamber/Reverb_Chamber.h
 
-  void processHall(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/Reverb_Hall.h
+  void processHall(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/hall/Reverb_Hall.h
 
  private:
   struct Line {
@@ -1741,7 +1741,7 @@ class Reverb {
     return a + f;
   }
 
-  void processDat(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/Reverb_DAT.h
+  void processDat(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/plate/Reverb_DAT.h
 
   // ---------------------------------------------------------------- PLT ("T-DAT-001")
 
@@ -1825,13 +1825,13 @@ class Reverb {
   float hallTapsLp_[kMaxChannels][kNumHallTaps] = {};
   double hallTapsSamples_[kNumHallTaps] = {};
 
-  void processSharedModSmear(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/Reverb_SharedMod.h
+  void processSharedModSmear(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/shared/Reverb_SharedMod.h
 };
 
-#include "Reverb_Spring.h"
-#include "Reverb_Plate.h"
-#include "Reverb_Room.h"
-#include "Reverb_Chamber.h"
-#include "Reverb_Hall.h"
-#include "Reverb_DAT.h"
-#include "Reverb_SharedMod.h"
+#include "spring/Reverb_Spring.h"
+#include "digital/Reverb_Plate.h"
+#include "room/Reverb_Room.h"
+#include "chamber/Reverb_Chamber.h"
+#include "hall/Reverb_Hall.h"
+#include "plate/Reverb_DAT.h"
+#include "shared/Reverb_SharedMod.h"

@@ -10,13 +10,13 @@ sources:
   - id: openwiki-source-a57c88194aa852db387a04a3
     resource: repo://docs/tickets/complete/reverb-dry-mod-width-swing.md
   - id: openwiki-source-652b993abfe8770db021e86f
-    resource: repo://plugin/include/effects/reverb/Reverb_DAT.h
+    resource: repo://plugin/include/effects/reverb/plate/Reverb_DAT.h
   - id: openwiki-source-2facbc441e66db87c3b8df63
-    resource: repo://plugin/include/effects/reverb/Reverb_Plate.h
+    resource: repo://plugin/include/effects/reverb/digital/Reverb_Plate.h
   - id: openwiki-source-19216030c70d0a3aeeebbfe7
-    resource: repo://plugin/include/effects/reverb/Reverb_SharedMod.h
+    resource: repo://plugin/include/effects/reverb/shared/Reverb_SharedMod.h
   - id: openwiki-source-6306f3aec9a0733a17a7eab7
-    resource: repo://plugin/include/effects/reverb/Reverb_Spring.h
+    resource: repo://plugin/include/effects/reverb/spring/Reverb_Spring.h
   - id: openwiki-source-d4b9a9adb1644505c083378b
     resource: repo://plugin/include/effects/reverb/Reverb.h
   - id: openwiki-source-7fb62e48416333f990bd3d93
@@ -52,9 +52,9 @@ engine). Since the per-mode split (commit `abebb1e`,
 docs/tickets/complete/repo-organization-reorg.md) the reverb `processX` bodies no
 longer live in `Reverb.h` itself: `Reverb.h` keeps the class, the `Params`
 dials, the constants, and the dispatch, and includes seven per-mode impl
-headers after the class close — `Reverb_Spring.h`, `Reverb_Plate.h`,
-`Reverb_Room.h`, `Reverb_Chamber.h`, `Reverb_Hall.h`, `Reverb_DAT.h`,
-`Reverb_SharedMod.h` — each carrying its `inline` out-of-class member
+headers after the class close — `spring/Reverb_Spring.h`, `digital/Reverb_Plate.h`,
+`room/Reverb_Room.h`, `chamber/Reverb_Chamber.h`, `hall/Reverb_Hall.h`, `plate/Reverb_DAT.h`,
+`shared/Reverb_SharedMod.h` — each carrying its `inline` out-of-class member
 definitions verbatim. Each
 mode is a **distinct DSP engine, not a preset**, and its behavior is pinned
 by tests — the laws below are user A/B-calibrated **contracts**
@@ -91,7 +91,7 @@ Neutral start dials (the 50 % row; `defaultDialsForMode`, V2 order):
 ### Plate — the DAT engine (mode 0, T-DAT-001, 2026-10-17; DEFAULT + ONLY engine)
 
 A **modified port of the Dattorro plate algorithm** (Dattorro 1997),
-restructured to repo style (`Reverb.h` class + `Reverb_DAT.h` body, `processDat`; zero-latency
+restructured to repo style (`Reverb.h` class + `plate/Reverb_DAT.h` body, `processDat`; zero-latency
 preserved). Tank: two independent mono all-pass/delay banks (one per
 channel) with the fig-8 A/B crossfeed; 4 input all-pass stages (gains
 0.98 / 0.98 / 0.83 / 0.83 — capped under 1 so the z = −1 pole stays
@@ -155,7 +155,7 @@ subtype, mode 5 / type[5]==2)
 
 The pre-T-DAT-001 Plate engine (built and tuned 2026-10-13) survives
 **bit-identical** at the Digital-mode PLT subtype entry (the PLT type
-with Bright / Bloom armed — `processPlate` (body in `Reverb_Plate.h`) gate;
+with Bright / Bloom armed — `processPlate` (body in `digital/Reverb_Plate.h`) gate;
 `lawCh=='0' && sigOn`). Pin tests re-targeted there via the
 `plateLegacyP()` / `plateLegacyAt()` helpers (level law 93.95 rawAbs @
 2000 ms, comb cap 21.98 @ 2500 ms) — `test/src/plate_family_tests.cpp`
