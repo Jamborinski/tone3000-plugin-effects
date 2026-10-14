@@ -3286,7 +3286,13 @@ TEST(ReverbTest, HigherDecayGivesALongerMeasuredDecayTime) {
 // Tone low-passes the feedback path (dampAlpha = 1 - tone), so full tone
 // (dampAlpha = 0) collapses the sustained feedback tail: the sustained energy
 // far past the input burst must shrink as the tone knob goes up.
-TEST(ReverbTest, FullToneKillsTheSustainedTail) {
+// (T-DAT-001, 2026-10-17: re-pinned after the user-directed TONE DIRECTION
+//  fix -- "tone seems to be wired backwards, it gets brighter as you
+//  decrease it". The DAT law now fades the damping to ZERO at tone = 1,
+//  so FULL TONE KEEPS the sustained tail (bright, undamped) and ZERO TONE
+//  applies the strongest lowpass and KILLS it fastest. The legacy comb
+//  voice keeps its original law at the Digital PLT entry.)
+TEST(ReverbTest, FullToneKeepsTheSustainedTail) {
   auto sustained = [](double tone) {
     Reverb r;
     r.prepare(kFs);
@@ -3304,8 +3310,10 @@ TEST(ReverbTest, FullToneKillsTheSustainedTail) {
     for (int i = 4096; i < N; ++i) energy += buf.getSample(0, i) * buf.getSample(0, i);
     return energy;
   };
-  EXPECT_GT(sustained(0.0), sustained(1.0))
-      << "full tone (damped feedback) must leave a shorter sustained tail";
+  EXPECT_GT(sustained(1.0), sustained(0.0))
+      << "full tone (undamped/bright) must let the sustained tail live longer";
+  EXPECT_GT(sustained(1.0), 1e-6)
+      << "tone=1 must leave a measurable sustained tail";
 }
 
 // Width: 0 gives both comb banks identical taps (L == R, mono) while 1 offsets

@@ -785,7 +785,6 @@ class Reverb {
       ch.inLp = ch.dmpA = ch.dmpB = ch.sumB = 0.0f;
       ch.airLp = ch.loX = ch.loY = 0.0f;
     }
-    datLfoPhase_ = 0.0f;
   }
 
   void setParams(const Params& p) {
@@ -830,11 +829,10 @@ class Reverb {
     //   fig-8 dly 6241 6590 4641 5505         (x roomSize = 0.25 + 1.5*size)
     //   taps      d1 +394 +4401/-3124  ap5 -2831/-496  d2 +2954/-179
     //             d3 -2945/+522 +5368  ap6 -277/-1817  d4 -1578/+3956  (x0.6)
-    //   LFO       sine + quadrature, +-24 (x modDepth) samples
     // Ours: T60->fb, Pre, Early (2/5/9 ms taps), Tone in-loop damping
     // (800 Hz..12.8 kHz), LoCut one-pole HPF, Air shelf (~4.5 kHz, 0.9*air),
-    // Space-scaled diffusion gains, one-knob Mod (depth 24*mod, rate
-    // 3-15 Hz per the EMT beat law, 0 = off), per-side LFO phase c*(P/4).
+    // Space-scaled diffusion gains. The Mod knob is a post-wet chorus layer
+    // (processSharedModSmear) driven by reverbSharedMod -- NOT an in-loop LFO.
     {
       const double rs    = 0.25 + 1.5 * params_.size;
       const double sr    = sampleRate_;
@@ -902,7 +900,20 @@ class Reverb {
       for (int i = 0; i < 14; ++i) datTap_[i] = (int)(tap_[i] * rs) + 1;
       for (int i = 0; i < 3; ++i) datPreTap_[i] = (int)(earlyMs_[i] * 1e-3 * sr) + 1;
       datPre_   = (float)(params_.preMs * 1e-3 * sr);
-      datDmpA_  = (float)(1.0 - std::exp(-6.283185307179586 * (800.0 * std::pow(16.0, (double)params_.tone)) / sr));
+      // T-DAT-001 (2026-10-17, user: "tone seems to be wired backwards, it
+      // gets brighter as you decrease it") -- DIRECTION FIX: the original law
+      // scaled the ONE-POLE DAMPING with tone (high tone -> high fc -> MORE
+      // lowpass -> darker), opposite to the knob intuition of every face we
+      // have (Tone up = brighter). Inverted: the damping amount fades to ZERO
+      // at tone = 1 (bright, undamped) and is strongest at tone = 0 (dark),
+      // sweeping the cutoff from 12.8 kHz down to 800 Hz as tone is lowered.
+      // c(tone) = (1-tone) * (1 - exp(-w * 800 * 16^(1-tone)))  (tone 0:
+      // full 12.8 kHz lowpass, tone 1: exactly no damping -> bit-equal to no
+      // damping path).
+      {
+        const double tinv = 1.0 - (double)params_.tone;
+        datDmpA_ = (float)(tinv * (1.0 - std::exp(-6.283185307179586 * (800.0 * std::pow(16.0, tinv)) / sr)));
+      }
       datAirA_  = (float)(1.0 - std::exp(-6.283185307179586 * 4500.0 / sr));
       datInA_   = (float)(1.0 - std::exp(-6.283185307179586 * 13500.0 / sr));
       datLoA_   = (float)(1.0 - std::exp(-6.283185307179586 * 45.0 / sr));
@@ -2199,7 +2210,6 @@ class Reverb {
     float airLp = 0.0f, loX = 0.0f, loY = 0.0f;
   };
   std::array<DatChan, kMaxChannels> dat_  = {};
-  float   datLfoPhase_ = 0.0f;
   // coefficients (setParams-frozen):
   int   datApInLen_[4]  = {};
   int   datApLen_[2]    = {};    // apm1, apm2
@@ -2268,20 +2278,8 @@ class Reverb {
                 earlyG1 = (float)(0.35 * params_.early),
                 earlyG2 = (float)(0.25 * params_.early);
     const float preLen = datPre_;
-    const bool modOn   = (params_.mod > 0.0f);
-    // Mod depth: 24 samples was too subtle to hear on a ~6000-sample loop
-    // (user: "the mod control is pretty subtle") — 120 samples at full = a
-    // visible delay-length waver on the 1343/995 loop APs; rate law unchanged.
-    // mod == 0 still leaves depth 0 -> bit-identical to un-modulated (guarded
-    // by DatGuards.ModZeroIsBitPass).
-    const float modDepth = modOn ? (float)(60.0 * params_.mod) : 0.0f;  // T-DAT-001 (2026-10-17): user heard 120 = too aggressive; 60 = clearly audible, tamer
-    const float lfoRate  = modOn ? (float)(15.0 - 13.5 * params_.mod) : 0.0f;
-    const float lfoInc   = modOn
-        ? (float)(2.0 * M_PI * (double)lfoRate / sampleRate_) : 0.0f;
     for (int c = 0; c < numChannels; ++c) {
       DatChan& ch = dat_[c];
-      // Per-side LFO phase (side 1 = golden's quadrature), advancing per sample
-      float ph = datLfoPhase_ + (c == 1 ? (float)M_PI_F * 0.25f : 0.0f);
       const float* in  = buffer.getReadPointer(c);
       float* out = buffer.getWritePointer(c);
       const uint32_t d0sz = ch.dly[0].mask + 1;
@@ -2305,12 +2303,11 @@ class Reverb {
         x = datApf(ch.apIn[3], datApInLen_[3], datDiffIn_[3], x);
         // -- A half: fig-8 entry (the other carry: our d3 undamped out * fb) --
         x += ch.sumB * ddEff;
-        // -- LFO-modulated ap (golden: 1343, depth +-24*modDepth, sine) --
-        {
-          const int base = datApLen_[0];
-          const int off  = (int)(base + (float)modDepth * (float)std::sin(ph));
-          x = datApf(ch.apm[0], std::max(1, off), datDiffDec_[0], x);
-        }
+        // -- fixed-off loop ap (golden: 1343, gain 0.93) --
+        // (wave 3 (2026-10-17): the LFO read-tap waver + tau write-smooth were
+        //  removed; Mod is now a post-wet chorus layer -- processSharedModSmear,
+        //  applied at the mode-0 dispatch arm after the M/S width stage.)
+        x = datApf(ch.apm[0], datApLen_[0], datDiffDec_[0], x);
         // -- d0 (golden 6241): write, then read * damping (Tone) * fb --
         {
           const float raw = ch.dly[0].readAt((uint32_t)datDlyLen_[0]);
@@ -2341,12 +2338,8 @@ class Reverb {
         else             acc -= ch.dly[1].readAt(std::min<uint32_t>((uint32_t)datTap_[6], d1sz - 1)) * 0.6f;
         // -- B half: fig-8 entry (A's d1 out * fb) --
         x = x * ddEff;
-        // -- LFO-modulated ap (golden: 995, depth +-24, quadrature => sin(phase + P/4)) --
-        {
-          const int base = datApLen_[1];
-          const int off  = (int)(base + (float)modDepth * (float)std::sin(ph + 1.5707963268f));
-          x = datApf(ch.apm[1], std::max(1, off), datDiffDec_[1], x);
-        }
+        // -- fixed-off loop ap (golden: 995, gain 0.67) --
+        x = datApf(ch.apm[1], datApLen_[1], datDiffDec_[1], x);
         // -- d2 (golden 4641) damped x fb + node D taps (L: -2945; R: +522 +5368) --
         {
           const float raw = ch.dly[2].readAt((uint32_t)datDlyLen_[2]);
@@ -2398,11 +2391,7 @@ class Reverb {
           ch.loX = acc; ch.loY = acc;
         }
         out[i] = acc;
-        ph += lfoInc;   // per-sample LFO advance (side 1's +P/4 offset rides along)
       }
-    }
-    if (modOn) {
-      datLfoPhase_ += lfoInc * (float)numSamples;   // one step behind -> causal
     }
   }
 

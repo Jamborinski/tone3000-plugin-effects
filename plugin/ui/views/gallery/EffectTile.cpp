@@ -256,13 +256,14 @@ std::vector<EffectParams> paramsFor(const ChainItem& b, bool compact) {
         {&scales::reverbTone(), "reverbTone", "Tone", b.reverbTone, help::Key::reverbTone},
         {&scales::reverbSize(), "reverbSize", "Size", b.reverbSize, help::Key::reverbSize},
         {&scales::reverbWidth(), "reverbWidth", "Width", b.reverbWidth, help::Key::reverbWidth},
-        // T-DAT-001 face v2 (2026-10-17): the DAT Mod LFO reads params_.mod
-        // (the reverbMod property) -- NOT reverbSharedMod (that is the R2
-        // shared-mod swell law for Digital/wafer plates; binding it here left
-        // the DAT engine's 120-sample LFO at depth 0, i.e. inaudible).
-        // Same 0..1 knob scale (reverbSharedMod), same help key (it describes
-        // the Mod knob either way).
-        {&scales::reverbSharedMod(), "reverbMod", "Mod", b.reverbMod, help::Key::reverbSharedMod},
+        // T-DAT-001 wave 3 (2026-10-17): the DAT Mod IS the shared post-wet
+        // chorus layer (processSharedModSmear) -- params_.sharedMod, the
+        // user-approved old-engine law (out = wet + amt*chorus, 6 incoherent
+        // voices, tau-smoothed writes). The earlier in-loop LFO read
+        // params_.mod and killed the wet (a tau there lowpassed the loop
+        // itself); that path was removed. Same 0..1 scale + help key as
+        // before (describes the Mod knob either way).
+        {&scales::reverbSharedMod(), "reverbSharedMod", "Mod", b.reverbSharedMod, help::Key::reverbSharedMod},
         // 2026-10-17 PLT face v2: 7 base params (Decay, Pre, Tone, Size, Width,
         // Mod, LoCut) + 2 sig slots (Air/Early, bound via reverbSigParam).
         // Space dropped this round (engine-pinned at its 0.7 default) — LoCut

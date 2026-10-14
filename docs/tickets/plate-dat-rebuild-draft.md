@@ -3,6 +3,15 @@
 Status: **DONE (2026-10-13, T-DAT-001)** — shipped and closed out (log at bottom).
 
 ## Ship log
+### Mod + Tone wave 3 (2026-10-17, post-v5 user A/B)
+
+User A/B on exe v5 drove a third wave (this commit):
+
+- **Mod architecture rewrite (m03446 'all wet disappears', m03447 'only get dry'; pivot per m03469 'the other reverb engine may have a modulation engine you can copy', m03476 'yeah do it'):** the in-loop LFO (the depth-90 read-offset sweep on the two loop allpasses + the τ write-smoothing attempt) is **removed from the DAT tank** — the τ belonged on an ADDITIVE wet path, never in the feedback feed (in-loop it acted as a ~2 Hz lowpass on the tail itself = 'all wet disappears'). Mode 0 now ends with the **user-approved post-wet chorus layer** `processSharedModSmear` (`out = wet + amt·chorus`; 6 incommensurate darkened voices), gated by `sharedOn_` from `params_.sharedMod` — the wet structurally cannot be killed, and the τ there does its hiss job where it was designed. Reverted apm0/apm1 to fixed golden offsets (`datApf(ch.apm[n], datApLen_[n], …)`).
+- **Face Mod rebind (again, correctly this time):** `EffectTile.cpp` PLT list entry → `{&scales::reverbSharedMod(), "reverbSharedMod", "Mod", b.reverbSharedMod, help::Key::reverbSharedMod}`; `DatGuards.ModZeroIsBitPass` + `ModOneAudiblyChangesTheRender` re-pinned to `p.sharedMod` (=0 stays bit-identical by the `sharedOn_` gate).
+- **Tone direction fix (m03344 'tone seems to be wired backwards'):** Reverb.h PLT coefs now `tinv = 1 − tone; datDmpA_ = tinv·(1 − exp(−2π·800·16^tinv/sr))` — full Tone = ZERO damping (bright), the cutoff sweeps 800 Hz→12.8 kHz as it's lowered; `ReverbTest.FullToneKeepsTheSustainedTail` (renamed from `…KillsTheSustainedTail`) re-pinned to the new direction, sustained(1.0) > sustained(0.0) > 1e-6.
+- **Gates:** DspTests 511/511; TONE3000_Standalone links (RC=0); script/test-ui.sh 0 failed; Windows stage `TONE3000-win-20261013-184341` (md5 `bb9389970fb36994b2219355c7da0eee`, `reverbSharedMod` string present). User verdict m03527: 'great, commit and push'.
+
 ### Face v2 wave (2026-10-17, post-closeout user A/B)
 User A/B on the shipped exe drove a second face wave (this commit):
 

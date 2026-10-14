@@ -300,14 +300,16 @@ TEST(DatGuards, WidthWidensThePlateImage) {
 }
 
 // ---------------------------------------------------------------------------
-// G6 — Mod at 0: the LFO path must be an exact no-op (depth 0, taps at base):
-// a zero-mod render must be sample-identical to the fresh engine's own —
-// catches any phase/state bleed into the no-mod path.
+// G6 — Mod at 0: the shared post-wet chorus layer must be a full no-op
+// (sharedOn_ false, path never entered): a zero-mod render must be
+// deterministic — catches any phase/state bleed into the no-mod path.
+// (wave 3 (2026-10-17): the Mod knob is params_.sharedMod now; the old
+//  in-loop LFO on params_.mod was removed for killing the wet.)
 // ---------------------------------------------------------------------------
 TEST(DatGuards, ModZeroIsBitPass) {
   const auto clk = click(1024);
   Reverb::Params p = datP();
-  p.mod = 0.0;
+  p.sharedMod = 0.0;
   const auto a = render(p, clk);
   const auto b = render(p, clk);
   ASSERT_EQ(a.out.size(), b.out.size());
@@ -318,20 +320,19 @@ TEST(DatGuards, ModZeroIsBitPass) {
 }
 
 // ---------------------------------------------------------------------------
-// G7 — Mod at full must actually CHANGE the render: the face knob (reverbMod
-// -> params_.mod) drives the 120-sample LFO depth on the apm1/apm2 delay
-// bases. With mod=0 the LFO is dead (bit-pass, G6); turning it to 1 must
-// produce a measurably different tail (differing-sample count well above
-// the single-ulp rounding-noise floor). Catches the "Mod knob is silent"
-// miswire (the face was binding reverbSharedMod, which the DAT engine does
-// not read -- user reported "I can't tell a difference with it on vs off").
+// G7 — Mod at full must actually CHANGE the render: the face knob
+// (reverbSharedMod -> params_.sharedMod) arms the post-wet chorus layer.
+// With sharedMod=0 the path is never entered (bit-pass, G6); at 1 the
+// chorused addend must show up (differing samples well above the rounding
+// floor). (wave 3: re-wired from the removed in-loop LFO to the shared
+// post-wet chorus.)
 // ---------------------------------------------------------------------------
 TEST(DatGuards, ModOneAudiblyChangesTheRender) {
   const auto clk = click(100 * static_cast<int>(kFs));  // 100 ms drive
   Reverb::Params p0 = datP();
-  p0.mod = 0.0;
+  p0.sharedMod = 0.0;
   Reverb::Params p1 = datP();
-  p1.mod = 1.0;
+  p1.sharedMod = 1.0;
   const auto a = render(p0, clk);
   const auto b = render(p1, clk);
   ASSERT_EQ(a.out.size(), b.out.size());
