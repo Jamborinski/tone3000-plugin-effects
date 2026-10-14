@@ -83,6 +83,10 @@ constexpr size_t kSkip = 0;  // no cross-run smoother drift here; see comment ab
 constexpr double kUnityNorm = 0.5;    // 0 dB relative (gainDb formula's center)
 constexpr double kReducedNorm = 0.0;  // -24 dB relative: (0.0 - 0.5) * 48
 constexpr double kMix = 0.5;
+// 2026-10-17 PLT face v2 (T-DAT-001): the mix crossfade applies the wet
+// fraction as m^2 (Processor.cpp), so the reference wet share at kMix is
+// kMix^2, not kMix. Endpoints (0, 1) are unaffected.
+const double kWet = kMix * kMix;
 // Ratio between the two outputGain settings' linear gain. Derived from the
 // documented normalized->dB mapping alone (0.5 span == 48 dB), not from the
 // short-IR cab pad offset, so it holds regardless of that constant.
@@ -140,9 +144,9 @@ TEST(OutGainTest, OutGainMatchesPostMixFormulaNotWetOnlyFormula) {
       const float d = dry[i], w = wet[i];
       out[i] = postMixGain
                    // fixed: gain applies to the combined signal
-                   ? static_cast<float>((d * (1.0 - kMix) + w * kMix) * kGainRatio)
+                   ? static_cast<float>((d * (1.0 - kWet) + w * kWet) * kGainRatio)
                    // broken: gain applies to the wet term alone, before mixing
-                   : static_cast<float>(d * (1.0 - kMix) + (w * kGainRatio) * kMix);
+                   : static_cast<float>(d * (1.0 - kWet) + (w * kGainRatio) * kWet);
     }
     return out;
   };

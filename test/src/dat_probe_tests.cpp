@@ -201,6 +201,54 @@ TEST(DatGuards, LoCutDropsTheLowBand) {
   EXPECT_LE(l1, l0 - 3.0) << "LoCut 1.0 must drop the 40-120 Hz band at least 3 dB vs 0.0";
 }
 
+// G3b — the LoCut KNOB's taper (T-DAT-001 face v2, user 2026-10-17 "subtle
+// for ~66-75% of the sweep, ramping near the top"): the knob maps stored =
+// n^3 (KnobScale.h loCutTaper()). So the measured low-band drop must stay
+// GENTLE over the first half of knob travel (at 50% knob the stored fraction
+// is only 12.5% - it must not yet show a significant drop versus 0) and
+// STEEPEN in the top third: 75% knob (stored 42%) still clearly below full,
+// 90% knob (stored 73%) near it. Pins the *shape*, not a fixed dB value: the
+// engine-side drop-per-stored-unit is already covered by G3.
+TEST(DatGuards, LoCutKnobTapersGentlyThenRamps) {
+  const auto clk = click(2 * 1000 * static_cast<int>(kFs));
+  // Metric: absolute 40-120 Hz band level vs the loCut=0 base.
+  // This is what the user perceives when the reverb body darkens/quietens.
+  auto lowLevel = [&](double storedLoCut) {
+    Reverb::Params p = datP();
+    p.loCut = storedLoCut;
+    const auto r = render(p, clk);
+    std::vector<float> mono(r.out.begin(), r.out.end());
+    return bandLogE(mono, kFs, 40, 120, 0.05, 0.35);
+  };
+  const double base    = lowLevel(0.0);
+  // Taper v3 law (user m03131): stored(n) = 0.85 * n^0.7, capped at 0.85.
+  //   knob 0.50 -> stored 0.52  (audible, ~-6 dB)
+  //   knob 0.75 -> stored 0.68  (user-approved "pretty good" zone, ~-10 dB)
+  //   knob 1.00 -> stored 0.85  CAPPED on the shoulder (~-16 dB, no -40 dB cliff)
+  const double d50   = lowLevel(0.85 * std::pow(0.50, 0.7)) - base;
+  const double d75   = lowLevel(0.85 * std::pow(0.75, 0.7)) - base;
+  const double dFull = lowLevel(0.85)                           - base;
+  const double dCliff = lowLevel(1.0)                            - base;
+  std::cout << "  [LoCut-taper-v3] knob 50%=" << d50
+              << " 75%=" << d75
+              << " 100%=" << dFull
+              << " (cliff full blend=" << dCliff << " dB)" << std::endl;
+  // User: "up to 80% its pretty good ... a little less subtle ... not kill
+  // the sound because the reverb starts to get cut heavily after that".
+  // - 50% knob must already be clearly cutting (v2's n^3 was ~-2.5 dB here).
+  // - 75% knob must be in the audible-but-gentle "pretty good" zone.
+  // - 100% knob must show a real, substantial cut (>= -12 dB) but CAPPED
+  //   well above the ~-40 dB full-blend cliff (the "disappears" case).
+  EXPECT_LE(d50, -3.0)  << "50% knob must clearly cut (be less subtle than v2)";
+  EXPECT_GE(d50, -10.0) << "50% knob must not be a slat; still audible body";
+  EXPECT_LE(d75, -6.0)  << "75% knob in the 'pretty good' zone: more cut than 50%";
+  EXPECT_GE(d75, -14.0) << "75% knob still gentle (not a kill)";
+  EXPECT_LE(dFull, -12.0) << "full knob must show a meaningful cut";
+  EXPECT_GE(dFull, -25.0) << "full knob must NOT kill the sound (capped well above the -40 dB cliff)";
+  EXPECT_GE(dFull, dCliff) << "cap 0.85 (gentler) must stay ABOVE the -40 dB cliff (= full blend 1.0)";
+  EXPECT_LE(dCliff, -30.0) << "reference: the full-blend cliff is the ~-40 dB point";
+}
+
 // ---------------------------------------------------------------------------
 // G4 — Air (4.5 kHz shelf, 0 = bit-pass): turning it UP must lift the
 // 6-12 kHz top band against the body band.
@@ -268,3 +316,37 @@ TEST(DatGuards, ModZeroIsBitPass) {
     if (a.out[i] != b.out[i]) ++diff;
   EXPECT_EQ(diff, 0u) << "mod=0 must be deterministic (fresh-state runs identical, 0 differing samples)";
 }
+
+// ---------------------------------------------------------------------------
+// G7 — Mod at full must actually CHANGE the render: the face knob (reverbMod
+// -> params_.mod) drives the 120-sample LFO depth on the apm1/apm2 delay
+// bases. With mod=0 the LFO is dead (bit-pass, G6); turning it to 1 must
+// produce a measurably different tail (differing-sample count well above
+// the single-ulp rounding-noise floor). Catches the "Mod knob is silent"
+// miswire (the face was binding reverbSharedMod, which the DAT engine does
+// not read -- user reported "I can't tell a difference with it on vs off").
+// ---------------------------------------------------------------------------
+TEST(DatGuards, ModOneAudiblyChangesTheRender) {
+  const auto clk = click(100 * static_cast<int>(kFs));  // 100 ms drive
+  Reverb::Params p0 = datP();
+  p0.mod = 0.0;
+  Reverb::Params p1 = datP();
+  p1.mod = 1.0;
+  const auto a = render(p0, clk);
+  const auto b = render(p1, clk);
+  ASSERT_EQ(a.out.size(), b.out.size());
+  size_t diff = 0;
+  double peakDiff = 0.0;
+  for (size_t i = 0; i < a.out.size(); ++i) {
+    const double d = std::abs(double(a.out[i]) - double(b.out[i]));
+    if (d > 1e-6) ++diff;
+    if (d > peakDiff) peakDiff = d;
+  }
+  const double frac = double(diff) / double(a.out.size());
+  std::cout << "  [Mod] differing samples=" << diff << "/" << a.out.size()
+            << " (frac " << (frac * 100.0) << "%) peakDiff=" << peakDiff << std::endl;
+  EXPECT_GT(frac, 0.05) << "mod=1 vs mod=0 must differ on >=5% of samples (the LFO is moving the delay taps)";
+  EXPECT_GT(peakDiff, 1e-3) << "mod=1 must produce an audible-scale difference somewhere in the render";
+}
+
+

@@ -2,7 +2,19 @@
 
 Status: **DONE (2026-10-13, T-DAT-001)** — shipped and closed out (log at bottom).
 
-## Ship log (T-DAT-001)
+## Ship log
+### Face v2 wave (2026-10-17, post-closeout user A/B)
+User A/B on the shipped exe drove a second face wave (this commit):
+
+- **Layout (m02884):** Row 1 `Mix | Decay | LoCut | Tone | Air | Mod`, Row 2 `Dwell | Pre | Early | Size | Width | Out` — Mix moved to row-1 col 1, Dwell (input gain) re-shown in row 2, Space removed.
+- **Space pinned (m02854/m02881-2):** "space at default sounds good ... not useful higher/lower" → `space = 0.73f` fixed in Reverb.h setParams (the 0.7 default's diffusion scale); param still round-trips in state, just off the face.
+- **Mix taper (m02854):** "too skewed to wet at low mix" → squared at the audio read path (Processor.cpp mix line): wet share = m^2 (knob 25% → 6% wet, 50% → 25%, 75% → 56%); 0/1 endpoints bit-exact; all write paths stay raw. OutGainTest re-pinned (kWet = kMix^2).
+- **Mod rebind + depth (m02887-90, m03131, m03269):** face Mod now binds `reverbMod` (was `reverbSharedMod`, which the DAT engine never reads — the knob was silently dead); LFO depth 120 samples (too strong, m03269) → **60 samples shipped here** (user asked for a bit more strength before next pass); `DatGuards.ModOneAudiblyChangesTheRender` + `ModZeroIsBitPass` guard it.
+- **LoCut taper v3 (m02953, m03131):** `scales::loCutTaper()` = `0.85 * n^0.7` capped 0.85 — measured (absolute low-band level): 50% → -6.4 dB, 75% → -10.2 dB, 100% → -16.2 dB, vs the old n^3 full-travel -39.6 dB cliff ("sound disappears"); guard `DatGuards.LoCutKnobTapersGentlyThenRamps` re-pinned on that map.
+- **Naming (m02904):** mode-0 plate chip `PLT` → `DAT` (EffectTile mode-name + type-name tables; the DIG-arm legacy "PLT" subtype is a different voice and keeps its name).
+- **Gates:** DspTests **511/511** (up from 509: +2 Mod guards; LoCut taper guard re-pinned), build-ui relinked; **Windows stage** `TONE3000-win-20261013-173958` (md5 `b349a8059c372e15ac87ca060cb391c3`, `strings | grep -c reverbMod` = 11).
+
+ (T-DAT-001)
 - **Engine** — `plugin/include/Reverb.h`: the DAT (Dattorro) plate tank is
   the **default + only** engine for Plate (mode 0): clean-room **MIT port**
   of `RSAlgorithmicVerb-main` `Source/DattorroVerb.cpp` (MIT — attribution +

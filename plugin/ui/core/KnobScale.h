@@ -779,6 +779,53 @@ inline const KnobScale& convPitch() {
   }();
   return s;
 }
+// T-DAT-001 (reverb LoCut, mode 0 / DAT plate): the 45 Hz HPF blend fraction.
+// The engine blends the HPF in proportion to this stored value, where 0 =
+// completely off (bit-pass, matches the engine's loCut==0 branch) and 1 = the
+// full cut. toStored shapes how the KNOB feels: stored = n^3, so the first
+// half of knob travel only reaches 12.5% of the max cut (subtle), and the
+// top of the sweep does the heavy lifting (stored(0.75) = 42%,
+// stored(0.9) = 73%, stored(1) = 100%) — "gentle over most of the sweep,
+// ramps up near the top" (user 2026-10-17, spc-1791932246923-61119).
+// Display/readout stays in plain percent of the STORED (post-curve) value, so
+// what the number says is exactly what the engine does.
+inline const KnobScale& loCutTaper() {
+  static const KnobScale s = [] {
+    // T-DAT-001 LoCut taper v3 (user m03131): "up to 80% its pretty good so
+    // be a little less subtle for its sweep to 80% but also have it just not
+    // kill the sound, because the reverb starts to get cut heavily after than".
+    //
+    // MEASURED 2026-10-17 (absolute 40-120 Hz band level vs loCut=0 base):
+    //   stored 0.5  -> -6.0 dB
+    //   stored 0.70 -> -12.0 dB  (the "pretty good" point at ~70% of the engine)
+    //   stored 0.85 -> -16.5 dB  (measured: 0.855 -> -16.5 dB)
+    //   stored 0.90 -> -19.5 dB
+    //   stored 1.0  -> -39.6 dB  (the "sound completely disappears" cliff)
+    //
+    // v2 (n^3) mapped knob 100% -> stored 1.0 -> -40 dB: the "disappears" problem.
+    // v3 law: stored(n) = 0.85 * n^0.7  (sub-linear, gentle at the bottom,
+    // steeper mid-range, capped at 0.85 = the "-16 dB heavy-but-present" level):
+    //   knob 0.50 -> stored 0.52  -> ~-6 dB   (more present than v2's -2.5 dB)
+    //   knob 0.75 -> stored 0.68  -> ~-10 dB  (user-approved "pretty good" zone)
+    //   knob 1.00 -> stored 0.85  -> ~-16 dB  CAPPED (no -40 dB cliff)
+    KnobScale c;
+    c.toStored = [](double n) -> double {
+      n = std::clamp(n, 0.0, 1.0);
+      return 0.85 * std::pow(n, 0.7);
+    };
+    c.fromStored = [](double d) -> double {
+      d = std::clamp(d, 0.0, 0.85);
+      if (d < 1e-9) return 0.0;
+      return std::pow(d / 0.85, 1.0 / 0.7);
+    };
+    c.toDisplay = [](double n) { return n; };
+    c.fromDisplay = [](double d) { return d; };
+    c.format   = [](double n) { return juce::String(juce::roundToInt(n * 100.0)) + "%"; };
+    c.editText = [](double n) { return juce::String(juce::roundToInt(n * 100.0)); };
+    return c;
+  }();
+  return s;
+}
 // Stored 0..1 fraction (width/spread, or an effect signature amount), shown
 // 0..100%. toDisplay MUST stay the identity: the tile writes toDisplay(v)
 // straight into the block param, and these params are stored 0..1 and clamped

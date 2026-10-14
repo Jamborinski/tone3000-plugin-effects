@@ -838,7 +838,11 @@ class Reverb {
     {
       const double rs    = 0.25 + 1.5 * params_.size;
       const double sr    = sampleRate_;
-      const float space = (float)(0.1 + 0.9 * params_.space);
+      // Space is OFF THE FACE (user 2026-10-17: "not really useful ... fix it
+      // to its default") — pinned at the shipped default 0.7's diffusion scale
+      // (0.1 + 0.9*0.7 = 0.73) for every mode-0 dial. params_.space stays in
+      // the param/state path (presets round-trip) but no longer moves the mix.
+      const float space = 0.73f;
       const int dIn_[4]  = { 210, 158, 561, 410 };
       const int loop_[4] = { 1343, 995, 3931, 2664 };
       const int dly_[4]  = { 6241, 6590, 4641, 5505 };
@@ -2265,7 +2269,12 @@ class Reverb {
                 earlyG2 = (float)(0.25 * params_.early);
     const float preLen = datPre_;
     const bool modOn   = (params_.mod > 0.0f);
-    const float modDepth = modOn ? (float)(24.0 * params_.mod) : 0.0f;
+    // Mod depth: 24 samples was too subtle to hear on a ~6000-sample loop
+    // (user: "the mod control is pretty subtle") — 120 samples at full = a
+    // visible delay-length waver on the 1343/995 loop APs; rate law unchanged.
+    // mod == 0 still leaves depth 0 -> bit-identical to un-modulated (guarded
+    // by DatGuards.ModZeroIsBitPass).
+    const float modDepth = modOn ? (float)(60.0 * params_.mod) : 0.0f;  // T-DAT-001 (2026-10-17): user heard 120 = too aggressive; 60 = clearly audible, tamer
     const float lfoRate  = modOn ? (float)(15.0 - 13.5 * params_.mod) : 0.0f;
     const float lfoInc   = modOn
         ? (float)(2.0 * M_PI * (double)lfoRate / sampleRate_) : 0.0f;

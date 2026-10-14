@@ -1520,7 +1520,13 @@ void TONE3000Processor::processChainOnBuffer(std::vector<std::unique_ptr<ChainBl
       const float wetGain = block->swapWetMuteGain.getNextValue() * cabPadGain;
       const float outGain = block->outputGainSmoother.getNextValue();
       const float fade = block->wetFadeGain.getNextValue();
-      const float m = block->mixSmoother.getNextValue() * fade;
+      // 2026-10-17 PLT face v2 (T-DAT-001, user: "wet dominates even at low
+      // mix"): shape the wet FACTION as m^2 at this single audio-read site —
+      // all write/persist paths still store the raw 0..1 knob value and the
+      // 0/1 endpoints are bit-identical (m^2 = m at 0 and 1); only the
+      // mid-travel feels change: mix 25% -> 6% wet (nearly dry), mix 50% ->
+      // 25%, mix 75% -> 56%. Dry-down stays proportional to (1 - m^2).
+      const float m = (float)std::pow(block->mixSmoother.getNextValue() * fade, 2.0);
       const float postGain = 1.0f + (outGain - 1.0f) * fade;
       float wetL = buffer.getWritePointer(0)[i] * wetGain;
       float dryL = dryScratch.getReadPointer(0)[i];
