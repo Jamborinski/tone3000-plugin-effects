@@ -68,10 +68,10 @@ target_sources(DspTests PRIVATE
     ../plugin/src/AutoOffset.cpp
     ../plugin/src/BlockEq.cpp
     ../plugin/src/BlockSpectrum.cpp
-    ../plugin/src/ConvolutionReverb.cpp
-    ../plugin/src/BudgetConvolver.cpp
-    ../plugin/src/Chorus.cpp
-    ../plugin/src/Delay.cpp
+    ../plugin/src/effects/conv/ConvolutionReverb.cpp
+    ../plugin/src/effects/conv/BudgetConvolver.cpp
+    ../plugin/src/effects/chorus/Chorus.cpp
+    ../plugin/src/effects/delay/Delay.cpp
     ../plugin/src/LegacyParamIds.cpp
     ../plugin/src/MidiMapper.cpp
     ../plugin/src/NamEngine.cpp
@@ -99,6 +99,14 @@ target_sources(DspTests PRIVATE
 
 target_include_directories(DspTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/include
+    # Effects live in per-effect subdirs (effects/{delay,chorus,...}); the
+    # bare-include style ("Reverb.h") resolves through these paths.
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/include/effects/delay
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/include/effects/chorus
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/include/effects/tremolo
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/include/effects/compressor
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/include/effects/reverb
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/include/effects/conv
     # KnobScale.h (the UI scale contract tests) needs the ui/core headers.
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/ui/core
     # ChainDomain.h pulls in the AudioDSPTools resampling boundary.

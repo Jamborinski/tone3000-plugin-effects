@@ -325,10 +325,10 @@ target_sources(${PROJECT_NAME}
         src/BlockSpectrum.cpp
         include/ChainBlock.h
         include/ChainHistory.h
-        include/ConvolutionReverb.h
-        src/ConvolutionReverb.cpp
-        include/BudgetConvolver.h
-        src/BudgetConvolver.cpp
+        include/effects/conv/ConvolutionReverb.h
+        src/effects/conv/ConvolutionReverb.cpp
+        include/effects/conv/BudgetConvolver.h
+        src/effects/conv/BudgetConvolver.cpp
         include/ImageDeck.h
         include/Spread.h
         src/Spread.cpp
@@ -358,10 +358,10 @@ target_sources(${PROJECT_NAME}
         src/TunerDetector.cpp
         include/PitchShift.h
         src/PitchShift.cpp
-        include/Delay.h
-        src/Delay.cpp
-        include/Chorus.h
-        src/Chorus.cpp
+        include/effects/delay/Delay.h
+        src/effects/delay/Delay.cpp
+        include/effects/chorus/Chorus.h
+        src/effects/chorus/Chorus.cpp
 )
 
 # Include GUI for Desktop builds
@@ -446,6 +446,16 @@ endif()
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        # Effects live in per-effect subdirs (effects/{delay,chorus,...}); the
+        # bare-include style ("Reverb.h") resolves through these paths, so no
+        # #include lines in upstream-owned files (e.g. ChainBlock.h) need to
+        # change.
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/effects/delay
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/effects/chorus
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/effects/tremolo
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/effects/compressor
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/effects/reverb
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/effects/conv
         ${CMAKE_CURRENT_SOURCE_DIR}/NeuralAmpModelerCore
         ${CMAKE_CURRENT_SOURCE_DIR}/NeuralAmpModelerCore/Dependencies/eigen
         ${CMAKE_CURRENT_SOURCE_DIR}/NeuralAmpModelerCore/Dependencies/nlohmann
