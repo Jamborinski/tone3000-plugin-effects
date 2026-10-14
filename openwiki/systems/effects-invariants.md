@@ -11,8 +11,10 @@ sources:
     resource: repo://docs/tickets/complete/reverb-dry-mod-width-swing.md
   - id: openwiki-source-b0e24661fab1f1c9f8906b3b
     resource: repo://plugin/include/effects/reverb/digital/Reverb_Plate.h
-  - id: openwiki-source-f79e6124e5e7690b7229ec93
-    resource: repo://plugin/include/effects/reverb/plate/Reverb_DAT.h
+  - id: openwiki-source-5fba7bd6fbd3028bb9aa2a86
+    resource: repo://plugin/include/effects/reverb/plate/plate_engine.h
+  - id: openwiki-source-59247f1e8aecef9a69f7ccae
+    resource: repo://plugin/include/effects/reverb/plate/types/Reverb_DAT.h
   - id: openwiki-source-d4b9a9adb1644505c083378b
     resource: repo://plugin/include/effects/reverb/Reverb.h
   - id: openwiki-source-64f81fc5081b9545023ce6a0
@@ -29,10 +31,10 @@ sources:
     resource: repo://test/src/effect_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
     resource: repo://test/src/plate_family_tests.cpp
-generated: { by: "pi", at: "2026-10-14T16:54:40.219Z" }
+generated: { by: "pi", at: "2026-10-14T21:12:00.922Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-14T18:37:00.801Z
+    at: 2026-10-14T21:12:00.922Z
 ---
 
 
@@ -48,14 +50,19 @@ directory; the upstream-owned files stayed flat in `plugin/include/`):
 modes in V2 order: **Plate 0 /
 Spring 1 / Room 2 / Chamber 3 / Hall 4 / Digital 5**; `kNumModes = 6`),
 and `effects/conv/ConvolutionReverb.h` (loaded-IR playback, the house
-engine). Since the per-mode split (commit `abebb1e`,
-docs/tickets/complete/repo-organization-reorg.md) the reverb `processX` bodies no
+engine). Since the per-mode split (commit `abebb1e`), extended by the
+engine/wrapper split (commit `9bf4469`), the reverb `processX` bodies no
 longer live in `Reverb.h` itself: `Reverb.h` keeps the class, the `Params`
-dials, the constants, and the dispatch, and includes seven per-mode impl
-headers after the class close — `spring/Reverb_Spring.h`, `digital/Reverb_Plate.h`,
-`room/Reverb_Room.h`, `chamber/Reverb_Chamber.h`, `hall/Reverb_Hall.h`, `plate/Reverb_DAT.h`,
-`shared/Reverb_SharedMod.h` — each carrying its `inline` out-of-class member
-definitions verbatim. Each
+dials, the constants, and the dispatch, and includes the per-mode-family
+engine headers after the class close — `digital/comb_engine.h`
+(the Digital comb base + `widthTapScaleFor`), `digital/Reverb_Plate.h`
+(legacy comb-plate arm), `plate/plate_engine.h` (DAT Dattorro tank +
+`datApf`), `spring/Reverb_Spring.h`, `room/Reverb_Room.h`,
+`chamber/Reverb_Chamber.h`, `hall/Reverb_Hall.h`,
+`shared/Reverb_SharedMod.h` — each carrying its `inline` out-of-class
+member definitions verbatim; thin type wrappers
+(`digital/types/Reverb_DIG.h`, `plate/types/Reverb_DAT.h`) pull their
+engines in. Each
 mode is a **distinct DSP engine, not a preset**, and its behavior is pinned
 by tests — the laws below are user A/B-calibrated **contracts**
 (`docs/agents/dsp-invariants.md` is the authoritative rule sub-file; the
@@ -91,7 +98,7 @@ Neutral start dials (the 50 % row; `defaultDialsForMode`, V2 order):
 ### Plate — the DAT engine (mode 0, T-DAT-001, 2026-10-17; DEFAULT + ONLY engine)
 
 A **modified port of the Dattorro plate algorithm** (Dattorro 1997),
-restructured to repo style (`Reverb.h` class + `plate/Reverb_DAT.h` body, `processDat`; zero-latency
+restructured to repo style (`Reverb.h` class + `plate/plate_engine.h` body, `processDat`, with the thin `plate/types/Reverb_DAT.h` wrapper; zero-latency
 preserved). Tank: two independent mono all-pass/delay banks (one per
 channel) with the fig-8 A/B crossfeed; 4 input all-pass stages (gains
 0.98 / 0.98 / 0.83 / 0.83 — capped under 1 so the z = −1 pole stays

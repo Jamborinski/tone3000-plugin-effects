@@ -1,8 +1,8 @@
 {
-  "updatedAt": "2026-10-14T19:47:35.106Z",
+  "updatedAt": "2026-10-14T21:20:55.022Z",
   "command": "update",
-  "gitHead": "1d069c9c4416785ff917275c483e7487faf14078",
+  "gitHead": "9bf4469115fdb068b2e068e931803132c60100f2",
   "model": "host-agent/pi",
-  "status": "interrupted",
+  "status": "complete",
   "language": "en"
 }

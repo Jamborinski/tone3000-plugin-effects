@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:38c22354757daead1a51b1f37f688ce03d3472934d79af370a54439a67e63ece",
+  "pageVersion": "sha256:f09d40df9631881e83b1e52ca0a032a4add1616378156e6d27ea80ca76fc8b27",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -56,7 +56,7 @@
     },
     {
       "id": "claim_5f41f8df721a45b688fca54aae962375",
-      "statement": "The chain is a left/right lane of blocks (ChainBlock: Nam, IR, Insert, Effect, each with a ChainSide), processed at a fixed 48 kHz base rate (plugin/include/ChainDomain.h, kChainBaseSampleRate = 48000.0) with the host rate re-sampled at the chain's boundary (Lanczos-12). Zero-latency (PDC) is a hard invariant; the NAM engine and the reverb/convolver run inside the chain (convDry and, since the 2026-10-13 R1 pass, reverbDry are chain-layer dry-gain fields on the Convolution and Reverb effect blocks respectively). After the repo-organization reorg the effect engines live per-effect under plugin/include/effects/: Delay/Chorus/Tremolo/Compressor headers at the effects/ level, the reverb engine at effects/reverb/Reverb.h with its per-mode impl headers in effects/reverb/{plate,spring,room,chamber,hall,digital,shared}/, and the convolver at effects/conv/ConvolutionReverb.h.",
+      "statement": "The chain is a left/right lane of blocks (ChainBlock: Nam, IR, Insert, Effect, each with a ChainSide), processed at a fixed 48 kHz base rate (plugin/include/ChainDomain.h, kChainBaseSampleRate = 48000.0) with the host rate re-sampled at the chain's boundary (Lanczos-12). Zero-latency (PDC) is a hard invariant; the NAM engine and the reverb/convolver run inside the chain (convDry and, since the 2026-10-13 R1 pass, reverbDry are chain-layer dry-gain fields on the Convolution and Reverb effect blocks respectively). After the repo-organization reorg the effect engines live per-effect under plugin/include/effects/: Delay/Chorus/Tremolo/Compressor headers at the effects/ level, the reverb engine at effects/reverb/Reverb.h with one engine header per mode family - digital/comb_engine.h (the Digital comb base + widthTapScaleFor), digital/Reverb_Plate.h (legacy comb-plate arm), plate/plate_engine.h (the DAT Dattorro tank + datApf), spring/Reverb_Spring.h, room/Reverb_Room.h, chamber/Reverb_Chamber.h, hall/Reverb_Hall.h, shared/Reverb_SharedMod.h - plus thin type wrappers at digital/types/Reverb_DIG.h and plate/types/Reverb_DAT.h that pull in their engines (engine/wrapper split); and the convolver at effects/conv/ConvolutionReverb.h.",
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
@@ -72,7 +72,7 @@
         },
         {
           "resource": "repo://plugin/include/effects/reverb/Reverb.h",
-          "version": "repo-file-v1:sha256:89d09d9e966809a3edd021069ae096fb05facfb719d3032fea313371186219ab"
+          "version": "repo-file-v1:sha256:874d200a4c5281dbf7bd434098d31a1e5d9b47f1666a5f50acc965ac03e8d829"
         }
       ]
     },
@@ -90,7 +90,7 @@
         },
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:a27594fc24436f387f276541a6e47fd2e1d720521086e1b623576eb98b7a5f7d"
+          "version": "repo-file-v1:sha256:98597409fc24a416a9fc2053986ee435456b609a48430b38f072774cd54a85d9"
         }
       ]
     },
@@ -144,7 +144,7 @@
     },
     {
       "id": "claim_c5e04c6057004c60a1387a3e6ac28e9a",
-      "statement": "AGENTS.md hard rules also carry the 2026-10-16 MIT-port license rule (added during reverb tuning, generalized in the T-DAT-001 pass): MIT-licensed or public-domain reference code IS portable - structure AND constants, with an attribution + license comment at the port site; order/arrangement is restructured to repo style (no verbatim transcription). GPL/copyleft references (e.g. GPL reverb nodes) stay spec/measurement REFERENCE only - NEVER copy code, constants, curves, or tuned numbers into the MIT codebase. Zero-latency applies to ALL ports regardless of license. The T-DAT-001 PLT engine (plugin/include/effects/reverb/Reverb.h + effects/reverb/plate/Reverb_DAT.h after the per-mode split; suite DatGuards in test/src/dat_probe_tests.cpp) follows the Dattorro plate algorithm (Dattorro 1997), modified and restructured to repo style.",
+      "statement": "AGENTS.md hard rules also carry the 2026-10-16 MIT-port license rule (added during reverb tuning, generalized in the T-DAT-001 pass): MIT-licensed or public-domain reference code IS portable - structure AND constants, with an attribution + license comment at the port site; order/arrangement is restructured to repo style (no verbatim transcription). GPL/copyleft references (e.g. GPL reverb nodes) stay spec/measurement REFERENCE only - NEVER copy code, constants, curves, or tuned numbers into the MIT codebase. Zero-latency applies to ALL ports regardless of license. The T-DAT-001 PLT engine (the DAT Dattorro tank: plugin/include/effects/reverb/Reverb.h declares the class; the processDat body + datApf live in effects/reverb/plate/plate_engine.h, pulled in by the thin wrapper effects/reverb/plate/types/Reverb_DAT.h — engine/wrapper split after the per-mode split; suite DatGuards in test/src/dat_probe_tests.cpp) follows the Dattorro plate algorithm (Dattorro 1997), modified and restructured to repo style.",
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
@@ -152,21 +152,25 @@
         },
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:a27594fc24436f387f276541a6e47fd2e1d720521086e1b623576eb98b7a5f7d"
+          "version": "repo-file-v1:sha256:98597409fc24a416a9fc2053986ee435456b609a48430b38f072774cd54a85d9"
         },
         {
           "resource": "repo://plugin/include/effects/reverb/Reverb.h",
-          "version": "repo-file-v1:sha256:89d09d9e966809a3edd021069ae096fb05facfb719d3032fea313371186219ab"
+          "version": "repo-file-v1:sha256:874d200a4c5281dbf7bd434098d31a1e5d9b47f1666a5f50acc965ac03e8d829"
         },
         {
-          "resource": "repo://plugin/include/effects/reverb/plate/Reverb_DAT.h",
-          "version": "repo-file-v1:sha256:736f6ca6202321bc41d288febd5130d7172dd1dabb1ee76cabe7748ec7fd26e4"
+          "resource": "repo://plugin/include/effects/reverb/plate/plate_engine.h",
+          "version": "repo-file-v1:sha256:b71bc466e8d788ce1ff8d206e4279e9043fdfec5d8da79b197df0a733ad57069"
+        },
+        {
+          "resource": "repo://plugin/include/effects/reverb/plate/types/Reverb_DAT.h",
+          "version": "repo-file-v1:sha256:e1241ca2696587d4815cb219dfc8bd9f8e56b2d1765cc0e2c15b20b6b67794cd"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-14T18:37:00.801Z"
+    "at": "2026-10-14T21:12:00.922Z"
   }
 }

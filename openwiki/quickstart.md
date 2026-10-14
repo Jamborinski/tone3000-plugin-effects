@@ -20,8 +20,10 @@ sources:
     resource: repo://plugin/include/ChainBlock.h
   - id: openwiki-source-98413be46f92c72f6215e812
     resource: repo://plugin/include/effects/conv/ConvolutionReverb.h
-  - id: openwiki-source-f79e6124e5e7690b7229ec93
-    resource: repo://plugin/include/effects/reverb/plate/Reverb_DAT.h
+  - id: openwiki-source-5fba7bd6fbd3028bb9aa2a86
+    resource: repo://plugin/include/effects/reverb/plate/plate_engine.h
+  - id: openwiki-source-59247f1e8aecef9a69f7ccae
+    resource: repo://plugin/include/effects/reverb/plate/types/Reverb_DAT.h
   - id: openwiki-source-d4b9a9adb1644505c083378b
     resource: repo://plugin/include/effects/reverb/Reverb.h
   - id: openwiki-source-732fd101392931455320572e
@@ -48,10 +50,10 @@ sources:
     resource: repo://test/src/effect_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
     resource: repo://test/src/plate_family_tests.cpp
-generated: { by: "pi", at: "2026-10-14T18:37:00.801Z" }
+generated: { by: "pi", at: "2026-10-14T21:12:00.922Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-14T18:37:00.801Z
+    at: 2026-10-14T21:12:00.922Z
 ---
 
 # TONE3000
@@ -216,8 +218,13 @@ is available on this machine for smoke-testing the staged exe.
 - **IR + BudgetConvolver** — `plugin/src/effects/conv/BudgetConvolver.cpp` for the
   long-IR OLA-tail schedule; `test/files/cab-ir-test.wav` for the fixture.
 - **Built-in effects** — per-effect under `plugin/include/effects/` (e.g.
-  `effects/reverb/Reverb.h` with per-mode impl headers in
-  `effects/reverb/{plate,spring,room,chamber,hall,digital,shared}/`,
+  `effects/reverb/Reverb.h` with one engine header per mode family —
+  `digital/comb_engine.h` (the Digital comb base), `digital/Reverb_Plate.h`
+  (legacy comb-plate arm), `plate/plate_engine.h` (DAT Dattorro tank),
+  `spring/Reverb_Spring.h`, `room/Reverb_Room.h`, `chamber/Reverb_Chamber.h`,
+  `hall/Reverb_Hall.h`, `shared/Reverb_SharedMod.h` — plus thin type wrappers
+  at `digital/types/Reverb_DIG.h` and `plate/types/Reverb_DAT.h` (engine/wrapper
+  split),
   `effects/conv/ConvolutionReverb.h`) together with
   `docs/agents/dsp-invariants.md` for the CONSIDERED &
   DECLINED contracts.
