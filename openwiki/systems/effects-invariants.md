@@ -9,8 +9,16 @@ sources:
     resource: repo://docs/agents/ir-reverb-training.md
   - id: openwiki-source-a57c88194aa852db387a04a3
     resource: repo://docs/tickets/complete/reverb-dry-mod-width-swing.md
-  - id: openwiki-source-4d6792d483f6b9821830338e
-    resource: repo://plugin/include/Reverb.h
+  - id: openwiki-source-652b993abfe8770db021e86f
+    resource: repo://plugin/include/effects/reverb/Reverb_DAT.h
+  - id: openwiki-source-2facbc441e66db87c3b8df63
+    resource: repo://plugin/include/effects/reverb/Reverb_Plate.h
+  - id: openwiki-source-19216030c70d0a3aeeebbfe7
+    resource: repo://plugin/include/effects/reverb/Reverb_SharedMod.h
+  - id: openwiki-source-6306f3aec9a0733a17a7eab7
+    resource: repo://plugin/include/effects/reverb/Reverb_Spring.h
+  - id: openwiki-source-d4b9a9adb1644505c083378b
+    resource: repo://plugin/include/effects/reverb/Reverb.h
   - id: openwiki-source-7fb62e48416333f990bd3d93
     resource: repo://plugin/ui/views/gallery/EffectTile.cpp
   - id: openwiki-source-4b8e7dce368774e92d99ea30
@@ -21,20 +29,33 @@ sources:
     resource: repo://test/src/effect_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
     resource: repo://test/src/plate_family_tests.cpp
-generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
+generated: { by: "pi", at: "2026-10-14T16:54:40.219Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-14T01:57:16.991Z
+    at: 2026-10-14T16:54:40.219Z
 ---
 
 
 # Built-in effects: modes, dials, invariants
 
-The self-contained effect engines live in `plugin/include/`:
-`Compressor.h/.cpp` (6 modes), `Delay.h/.cpp` (6 modes, design at
-`plugin/docs/delay-modes.md`), `Chorus.h`, `Tremolo.h`, `Reverb.h` (6 modes in V2 order: **Plate 0 /
+The self-contained effect engines live in `plugin/include/effects/` (the
+repo-organization reorg moved each fork-only effect into a per-effect
+directory; the upstream-owned files stayed flat in `plugin/include/`):
+`effects/compressor/Compressor.h` (6 modes, header-only),
+`effects/delay/Delay.h/.cpp` (6 modes, design at
+`plugin/docs/delay-modes.md`), `effects/chorus/Chorus.h/.cpp`,
+`effects/tremolo/Tremolo.h` (header-only), `effects/reverb/Reverb.h` (6
+modes in V2 order: **Plate 0 /
 Spring 1 / Room 2 / Chamber 3 / Hall 4 / Digital 5**; `kNumModes = 6`),
-and `ConvolutionReverb.h` (loaded-IR playback, the house engine). Each
+and `effects/conv/ConvolutionReverb.h` (loaded-IR playback, the house
+engine). Since the per-mode split (commit `abebb1e`,
+docs/tickets/repo-organization-reorg.md) the reverb `processX` bodies no
+longer live in `Reverb.h` itself: `Reverb.h` keeps the class, the `Params`
+dials, the constants, and the dispatch, and includes seven per-mode impl
+headers after the class close — `Reverb_Spring.h`, `Reverb_Plate.h`,
+`Reverb_Room.h`, `Reverb_Chamber.h`, `Reverb_Hall.h`, `Reverb_DAT.h`,
+`Reverb_SharedMod.h` — each carrying its `inline` out-of-class member
+definitions verbatim. Each
 mode is a **distinct DSP engine, not a preset**, and its behavior is pinned
 by tests — the laws below are user A/B-calibrated **contracts**
 (`docs/agents/dsp-invariants.md` is the authoritative rule sub-file; the
@@ -70,7 +91,7 @@ Neutral start dials (the 50 % row; `defaultDialsForMode`, V2 order):
 ### Plate — the DAT engine (mode 0, T-DAT-001, 2026-10-17; DEFAULT + ONLY engine)
 
 A **modified port of the Dattorro plate algorithm** (Dattorro 1997),
-restructured to repo style (`Reverb.h`, `processDat`; zero-latency
+restructured to repo style (`Reverb.h` class + `Reverb_DAT.h` body, `processDat`; zero-latency
 preserved). Tank: two independent mono all-pass/delay banks (one per
 channel) with the fig-8 A/B crossfeed; 4 input all-pass stages (gains
 0.98 / 0.98 / 0.83 / 0.83 — capped under 1 so the z = −1 pole stays
@@ -90,7 +111,7 @@ in-LPF 13.5 kHz; diffusion scale `0.1 + 0.9×space`.
 
 **Decay knob law** — `datDec_ = 0.15 + (0.82 − 0.15) ·
 log10(clamp(decayMs, 50, 2500)/50) / log10(2500/50)`, a **uniform 0.82
-cap** in `setParams` (Reverb.h ~:889–897), applied as the fixed-gain
+cap** in `setParams` (Reverb.h), applied as the fixed-gain
 fig-8 loop multiplier at all 6 decay sites (the reference design's
 hardcoded `decayTime = 0.35` replaced by the live knob — that fixed
 gain is what keeps that loop structurally marginal at long tails, so
@@ -134,7 +155,7 @@ subtype, mode 5 / type[5]==2)
 
 The pre-T-DAT-001 Plate engine (built and tuned 2026-10-13) survives
 **bit-identical** at the Digital-mode PLT subtype entry (the PLT type
-with Bright / Bloom armed — `processPlate`, Reverb.h ~:1157 gate;
+with Bright / Bloom armed — `processPlate` (body in `Reverb_Plate.h`) gate;
 `lawCh=='0' && sigOn`). Pin tests re-targeted there via the
 `plateLegacyP()` / `plateLegacyAt()` helpers (level law 93.95 rawAbs @
 2000 ms, comb cap 21.98 @ 2500 ms) — `test/src/plate_family_tests.cpp`

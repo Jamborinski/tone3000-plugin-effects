@@ -7,14 +7,14 @@ sources:
     resource: repo://CMakeLists.txt
   - id: openwiki-source-54aa3f4134fa6c214762f246
     resource: repo://docs/agents/windows-build.md
-  - id: openwiki-source-4f7fb275f8268e0506e67d23
-    resource: repo://scripts/win-standalone.sh
+  - id: openwiki-source-2e86156505dd09c0183e033d
+    resource: repo://script/win-standalone.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
-generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
+generated: { by: "pi", at: "2026-10-14T16:54:40.219Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-13T21:50:34.909Z
+    at: 2026-10-14T16:54:40.219Z
 ---
 
 
@@ -69,7 +69,7 @@ fix the build. Static proof it is compiled in:
 ## Staging to Windows Downloads
 
 ```bash
-bash /home/jambo/dev/tone3000-plugin-main/scripts/win-standalone.sh
+bash /home/jambo/dev/tone3000-plugin-main/script/win-standalone.sh
 ```
 
 Stages `TONE3000.exe` to

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:42c5ec6d3ebbf075786670abb5725e6f487d97920d27bf987d168a98070c043c",
+  "pageVersion": "sha256:95c89a34fbd7ecb287cc060abd2920dd454b836f7bde98b8e07bea46c06b79c9",
   "claims": [
     {
       "id": "claim_746e41b7d7214abc8858befedfaa8e01",
@@ -8,11 +8,11 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:9092bd3462903848b3883e440af4664eba61b130e3573b1542e01ef4a9e59796"
+          "version": "repo-file-v1:sha256:a80c63d947c3a243146b6c87bade0c03d813e64f1abff360fc3969ff7c06aaf8"
         },
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
+          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
         }
       ]
     },
@@ -26,21 +26,7 @@
         },
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:9092bd3462903848b3883e440af4664eba61b130e3573b1542e01ef4a9e59796"
-        }
-      ]
-    },
-    {
-      "id": "claim_044b750130dc4dc69504d626995529f5",
-      "statement": "scripts/win-standalone.sh stages the built TONE3000.exe to C:\\Users\\jambo\\Downloads\\TONE3000-win-YYYYMMDD-HHMMSS (run-timestamp only, never descriptive suffixes; older descriptive folders are historical A/B references to leave alone), with -2/-3 dedup, md5sums, and the git branch + HEAD commit printed for provenance. A plain build does not pick up a changed .env (publishable key) or new sources — it needs a reconfigure (GLOB re-runs) ~2 min.",
-      "evidence": [
-        {
-          "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:9092bd3462903848b3883e440af4664eba61b130e3573b1542e01ef4a9e59796"
-        },
-        {
-          "resource": "repo://scripts/win-standalone.sh",
-          "version": "repo-file-v1:sha256:ccf1df4a87821fd1195521040779e0b7fae1bdf17614d32b4d4fd10daed86052"
+          "version": "repo-file-v1:sha256:a80c63d947c3a243146b6c87bade0c03d813e64f1abff360fc3969ff7c06aaf8"
         }
       ]
     },
@@ -50,13 +36,27 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:9092bd3462903848b3883e440af4664eba61b130e3573b1542e01ef4a9e59796"
+          "version": "repo-file-v1:sha256:a80c63d947c3a243146b6c87bade0c03d813e64f1abff360fc3969ff7c06aaf8"
+        }
+      ]
+    },
+    {
+      "id": "claim_2962114fc0824d078b451369be13ad74",
+      "statement": "script/win-standalone.sh (the former scripts/win-standalone.sh, folded into script/ by the repo-organization reorg) stages the built TONE3000.exe to C:\\Users\\jambo\\Downloads\\TONE3000-win-YYYYMMDD-HHMMSS (run-timestamp only, never descriptive suffixes; older descriptive folders are historical A/B references to leave alone), with -2/-3 dedup, md5sums, and the git branch + HEAD commit printed for provenance. A plain build does not pick up a changed .env (publishable key) or new sources — it needs a reconfigure (GLOB re-runs) ~2 min.",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/windows-build.md",
+          "version": "repo-file-v1:sha256:a80c63d947c3a243146b6c87bade0c03d813e64f1abff360fc3969ff7c06aaf8"
+        },
+        {
+          "resource": "repo://script/win-standalone.sh",
+          "version": "repo-file-v1:sha256:d87556e2c7b3b9adb7355b1ce62d0278d2e0c6deb8d1a46a80d93e4e73eecc94"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-13T21:50:34.909Z"
+    "at": "2026-10-14T16:54:40.219Z"
   }
 }

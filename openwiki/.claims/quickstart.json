@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:db8489f87f4a120a8cb66c1cff8021a5b83438208ca67c7b77521e9adc709a8c",
+  "pageVersion": "sha256:ba65127834b6f33a89e51edef613f6aa8e833ee33dba7aee410f10382e431b30",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -41,20 +41,6 @@
       ]
     },
     {
-      "id": "claim_6d6e0f4b779a405eb1dc523cb757c5e5",
-      "statement": "Windows deliverables are cross-built with MinGW in WSL and staged into C:\\\\Users\\\\jambo\\\\Downloads\\\\TONE3000-win-YYYYMMDD-HHMMSS (run-timestamp folder only, no descriptive suffix, -2/-3 dedup) by scripts/win-standalone.sh; ASIO is a hard dependency; the result is a self-contained PE32+ with no mingw shared-library dependencies (no libstdc++/libgcc/libwinpthread in the DLL import table), verified per docs/agents/windows-build.md.",
-      "evidence": [
-        {
-          "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:9092bd3462903848b3883e440af4664eba61b130e3573b1542e01ef4a9e59796"
-        },
-        {
-          "resource": "repo://scripts/win-standalone.sh",
-          "version": "repo-file-v1:sha256:ccf1df4a87821fd1195521040779e0b7fae1bdf17614d32b4d4fd10daed86052"
-        }
-      ]
-    },
-    {
       "id": "claim_f7a52aded7e04ee393277843e3791bcd",
       "statement": "UI iteration uses the standalone testbed app (plugin/ui/testbed, target UiTestbed) rendering PluginRoot on a fixture-driven MockBackend + MockSession; modes include --scenario (live window), --selftest (unit tests + focus policy in a real window), --capture (2x PNG per scenario), --compare (before/after diff), --bench (CPU/memory phases). It is the acceptance path for UI changes: a green DspTests run does not prove the UI links; verify UI changes in the testbed or a GUI plugin build. -DT3K_BUILD_UI_TESTBED=ON wires --selftest into ctest.",
       "evidence": [
@@ -88,29 +74,15 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:f927cdb6fd5c7cd252584738d5b0590e8b6b043e1f1dab6e3559a4d2f7732012"
+          "version": "repo-file-v1:sha256:31b056efc89b581206f8dcdf48fe23ec426366d4bd8ed2dd4a5d2762035090a3"
         },
         {
           "resource": "repo://docs/agents/audio-testing.md",
-          "version": "repo-file-v1:sha256:62896767f33dd4c91719bbf6f7af83e8cca9fb39a92dfc373f007ccbad0e9f06"
+          "version": "repo-file-v1:sha256:5cee80bdee4ebb06ea950a294e4271dde2760b8db8a1f65aace78e1ca38f61dd"
         },
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:efd4cfab6e22490b05657ab38e2c7dee999df629c21b5a12475925e938a411f2"
-        }
-      ]
-    },
-    {
-      "id": "claim_1e6060c85f654709868ba9a165298c0e",
-      "statement": "AGENTS.md hard rules also carry the 2026-10-16 MIT-port license rule (added during reverb tuning, generalized in the T-DAT-001 pass): MIT-licensed or public-domain reference code IS portable - structure AND constants, with an attribution + license comment at the port site; order/arrangement is restructured to repo style (no verbatim transcription). GPL/copyleft references (e.g. GPL reverb nodes) stay spec/measurement REFERENCE only - NEVER copy code, constants, curves, or tuned numbers into the MIT codebase. Zero-latency applies to ALL ports regardless of license. The T-DAT-001 PLT engine (plugin/include/Reverb.h, suite DatGuards in test/src/dat_probe_tests.cpp) follows the Dattorro plate algorithm (Dattorro 1997), modified and restructured to repo style.",
-      "evidence": [
-        {
-          "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:f927cdb6fd5c7cd252584738d5b0590e8b6b043e1f1dab6e3559a4d2f7732012"
-        },
-        {
-          "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:efd4cfab6e22490b05657ab38e2c7dee999df629c21b5a12475925e938a411f2"
+          "version": "repo-file-v1:sha256:2780510cc4cb183208aaa155b7776ef37be2478ff81215fbc3022fab0db4e33d"
         }
       ]
     },
@@ -124,11 +96,11 @@
         },
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
+          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
         },
         {
           "resource": "repo://test/src/dat_probe_tests.cpp",
-          "version": "repo-file-v1:sha256:2bad6a2a711aa31b4dc4cd4ff8d8bc422dc132a45b2272c4fa4d31c3cfcc7d63"
+          "version": "repo-file-v1:sha256:d25de9e0ad214a7757b0064448c64558324eabeb1deae1b2a6e09c0695222ef4"
         },
         {
           "resource": "repo://test/src/effect_tests.cpp",
@@ -139,10 +111,46 @@
           "version": "repo-file-v1:sha256:68c6d057dbb6e9035276fb6e95fc6517a09023fe5171e4a6b2ee0c2149e27188"
         }
       ]
+    },
+    {
+      "id": "claim_e3513c1f05e44468a9f3c03288dc8d12",
+      "statement": "Windows deliverables are cross-built with MinGW in WSL and staged into C:\\Users\\jambo\\Downloads\\TONE3000-win-YYYYMMDD-HHMMSS (run-timestamp folder only, no descriptive suffix, -2/-3 dedup) by script/win-standalone.sh (the former scripts/win-standalone.sh, folded into script/ by the repo-organization reorg); ASIO is a hard dependency; the result is a self-contained PE32+ with no mingw shared-library dependencies (no libstdc++/libgcc/libwinpthread in the DLL import table), verified per docs/agents/windows-build.md.",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/windows-build.md",
+          "version": "repo-file-v1:sha256:a80c63d947c3a243146b6c87bade0c03d813e64f1abff360fc3969ff7c06aaf8"
+        },
+        {
+          "resource": "repo://script/win-standalone.sh",
+          "version": "repo-file-v1:sha256:d87556e2c7b3b9adb7355b1ce62d0278d2e0c6deb8d1a46a80d93e4e73eecc94"
+        }
+      ]
+    },
+    {
+      "id": "claim_c5e04c6057004c60a1387a3e6ac28e9a",
+      "statement": "AGENTS.md hard rules also carry the 2026-10-16 MIT-port license rule (added during reverb tuning, generalized in the T-DAT-001 pass): MIT-licensed or public-domain reference code IS portable - structure AND constants, with an attribution + license comment at the port site; order/arrangement is restructured to repo style (no verbatim transcription). GPL/copyleft references (e.g. GPL reverb nodes) stay spec/measurement REFERENCE only - NEVER copy code, constants, curves, or tuned numbers into the MIT codebase. Zero-latency applies to ALL ports regardless of license. The T-DAT-001 PLT engine (plugin/include/effects/reverb/Reverb.h + Reverb_DAT.h after the per-mode split; suite DatGuards in test/src/dat_probe_tests.cpp) follows the Dattorro plate algorithm (Dattorro 1997), modified and restructured to repo style.",
+      "evidence": [
+        {
+          "resource": "repo://AGENTS.md",
+          "version": "repo-file-v1:sha256:31b056efc89b581206f8dcdf48fe23ec426366d4bd8ed2dd4a5d2762035090a3"
+        },
+        {
+          "resource": "repo://docs/agents/dsp-invariants.md",
+          "version": "repo-file-v1:sha256:2780510cc4cb183208aaa155b7776ef37be2478ff81215fbc3022fab0db4e33d"
+        },
+        {
+          "resource": "repo://plugin/include/effects/reverb/Reverb.h",
+          "version": "repo-file-v1:sha256:9735e62c08472ba87a2675ed56f79b84b162c0c6af074d32d580fad27a368ec6"
+        },
+        {
+          "resource": "repo://plugin/include/effects/reverb/Reverb_DAT.h",
+          "version": "repo-file-v1:sha256:736f6ca6202321bc41d288febd5130d7172dd1dabb1ee76cabe7748ec7fd26e4"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-14T01:57:16.991Z"
+    "at": "2026-10-14T16:54:40.219Z"
   }
 }

@@ -18,6 +18,10 @@ sources:
     resource: repo://docs/agents/windows-build.md
   - id: openwiki-source-e2fb14576702431774114c7c
     resource: repo://plugin/include/ChainBlock.h
+  - id: openwiki-source-652b993abfe8770db021e86f
+    resource: repo://plugin/include/effects/reverb/Reverb_DAT.h
+  - id: openwiki-source-d4b9a9adb1644505c083378b
+    resource: repo://plugin/include/effects/reverb/Reverb.h
   - id: openwiki-source-732fd101392931455320572e
     resource: repo://plugin/include/Processor.h
   - id: openwiki-source-e592877ce1adba0c2539910f
@@ -30,8 +34,8 @@ sources:
     resource: repo://README.md
   - id: openwiki-source-fbe20d668cd183c9fb53adb2
     resource: repo://script/test-dsp.sh
-  - id: openwiki-source-4f7fb275f8268e0506e67d23
-    resource: repo://scripts/win-standalone.sh
+  - id: openwiki-source-2e86156505dd09c0183e033d
+    resource: repo://script/win-standalone.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
   - id: openwiki-source-22db8812ec3771683e6a7ddc
@@ -40,10 +44,10 @@ sources:
     resource: repo://test/src/effect_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
     resource: repo://test/src/plate_family_tests.cpp
-generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
+generated: { by: "pi", at: "2026-10-14T16:54:40.219Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-14T01:57:16.991Z
+    at: 2026-10-14T16:54:40.219Z
 ---
 
 # TONE3000
@@ -192,7 +196,7 @@ See the working guide in `plugin/ui/README.md` and the design record in
 
 ## Windows (MinGW cross-compile)
 
-Standalone `.exe` staging is in `scripts/win-standalone.sh`, and the
+Standalone `.exe` staging is in `script/win-standalone.sh`, and the
 authoritative reference is `docs/agents/windows-build.md`. Staging produces
 `TONE3000-win-YYYYMMDD-HHMMSS` (run-timestamp name only, no descriptive
 suffix — user preference). ASIO is a hard requirement for the plugin; Wine

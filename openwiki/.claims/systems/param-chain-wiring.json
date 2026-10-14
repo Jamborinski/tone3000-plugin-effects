@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:6afedd3ed807bff7fd9c6376fe9b807c4b157cfbab06903dcf1a76010a31f5ca",
+  "pageVersion": "sha256:c294f077a20c433d18a0e6bcef5995568a569afc3367176649a4fd54f25f9257",
   "claims": [
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
@@ -54,7 +54,7 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/ui-wiring.md",
-          "version": "repo-file-v1:sha256:b24ea89b246f8f9413bba69a21975bc567048f06675d70e3fd6e737a6021d833"
+          "version": "repo-file-v1:sha256:50797644b910fb3d7092230ed69fd4771bc7b2946f89d465e48c5c477f410e07"
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
@@ -72,7 +72,7 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/ui-wiring.md",
-          "version": "repo-file-v1:sha256:b24ea89b246f8f9413bba69a21975bc567048f06675d70e3fd6e737a6021d833"
+          "version": "repo-file-v1:sha256:50797644b910fb3d7092230ed69fd4771bc7b2946f89d465e48c5c477f410e07"
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
@@ -83,6 +83,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-14T01:57:16.991Z"
+    "at": "2026-10-14T16:54:40.219Z"
   }
 }

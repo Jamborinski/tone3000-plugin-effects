@@ -101,7 +101,7 @@ SQUARED at the read path — `Processor.cpp` mixes as `m*m`, so a 50 % knob =
 25 % wet (guard `test/src/outgain_tests.cpp`: `kWet = kMix * kMix`); **Dwell
 (In) is re-shown in row 2 col 1** (`input_.setLabel("Dwell")`, always visible
 now — the wave-1 face had hidden it); **Space is OFF the face** — engine
-pinned `const float space = 0.73f` in `plugin/include/Reverb.h` setParams
+pinned `const float space = 0.73f` in `plugin/include/effects/reverb/Reverb.h` setParams
 (reverbLoCut clamp sits just above it), ChainBlock default 0.7; the param
 still round-trips in state, it just has no visible knob. The param stream
 (paramsFor, EffectTile.cpp reverb arm) carries **7 base entries** in this

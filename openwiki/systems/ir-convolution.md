@@ -3,20 +3,20 @@ type: "Reference"
 title: "IR convolution and `BudgetConvolver`"
 openwiki_generated: true
 sources:
-  - id: openwiki-source-929ce4feadb6f107f2d06847
-    resource: repo://plugin/include/BudgetConvolver.h
   - id: openwiki-source-e2fb14576702431774114c7c
     resource: repo://plugin/include/ChainBlock.h
   - id: openwiki-source-1b69ab64c1d4a1a653d87502
     resource: repo://plugin/include/ChainDomain.h
-  - id: openwiki-source-8a1b39c9bc35f3f3dd75a8c4
-    resource: repo://plugin/include/ConvolutionReverb.h
+  - id: openwiki-source-49cc2f4683cd66fe93498aed
+    resource: repo://plugin/include/effects/conv/BudgetConvolver.h
+  - id: openwiki-source-98413be46f92c72f6215e812
+    resource: repo://plugin/include/effects/conv/ConvolutionReverb.h
   - id: openwiki-source-8a517d0ba4e262c409b9866c
     resource: repo://plugin/src/ProcessorModelLoader.cpp
-generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
+generated: { by: "pi", at: "2026-10-14T16:54:40.219Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-13T21:50:34.909Z
+    at: 2026-10-14T16:54:40.219Z
 ---
 
 
@@ -27,7 +27,7 @@ several seconds (reverb plates) with **zero added latency** and a **bounded
 per-call CPU cost** — no multi-millisecond RT spikes, no growing delay as the
 IR gets longer.
 
-## `BudgetConvolver` (`plugin/include/BudgetConvolver.h`)
+## `BudgetConvolver` (`plugin/include/effects/conv/BudgetConvolver.h`)
 
 The house long-kernel OLA tail. It does the **same per-pair math as JUCE's
 non-uniform engine** (real-only FFT 16384; the identical packed-domain

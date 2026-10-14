@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:5f83870edb77bcad7bfa4892d21a2da648fd3f44c320966e555cfa5aa154ffab",
+  "pageVersion": "sha256:db27e6c3ec9db4eea02a6a3f2fcaf6930a7fd4a43650d0bf0d87c20743f933b3",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -13,22 +13,12 @@
       ]
     },
     {
-      "id": "claim_bc13721ee2324075bae8c9a45ef0eba2",
-      "statement": "DspTests is a JUCE console app (juce_add_console_app) whose target_sources list compiles the real plugin sources (../plugin/src/AutoOffset.cpp, BlockEq.cpp, ConvolutionReverb.cpp, BudgetConvolver.cpp, Chorus.cpp, Delay.cpp, MidiMapper.cpp, NamEngine.cpp, PresetFile.cpp, PresetManager.cpp, Processor.cpp, ProcessorChain.cpp, ProcessorModelLoader.cpp, StandaloneStateAutosave.cpp, etc.) — compiled straight from the plugin tree so the tests exercise the real processor, not a copy.",
-      "evidence": [
-        {
-          "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
-        }
-      ]
-    },
-    {
       "id": "claim_3890caf1a2e74a6d9fc7b3dffe71d557",
       "statement": "GUI sources are excluded from DspTests: the only UI file pulled in is plugin/ui/core/Labels.cpp (the KnobScale readout formatter the scale-contract tests link), with plugin/ui/core on the include path — so a green DspTests run does not prove the UI links.",
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
+          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
         }
       ]
     },
@@ -38,7 +28,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
+          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
         }
       ]
     },
@@ -48,7 +38,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
+          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
         }
       ]
     },
@@ -58,7 +48,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
+          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
@@ -90,7 +80,7 @@
         },
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
+          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
         }
       ]
     },
@@ -100,7 +90,7 @@
       "evidence": [
         {
           "resource": "repo://docs/tickets/plate-dat-rebuild-draft.md",
-          "version": "repo-file-v1:sha256:9c34b3a3963cc395df8220b0646fa0cba1ee716777b9e2b9c2d00d1ce2e44bcb"
+          "version": "repo-file-v1:sha256:070df7d137403b3a191e944e6b9ca3635604cfcf75302969c8595720f44a3fdc"
         },
         {
           "resource": "repo://test/src/effect_tests.cpp",
@@ -122,21 +112,31 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:0aa15ddea2b93b6b2fa58c387417b79ad2bf6bd4ed4c945c8fd1c5acb8b4759c"
+          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
         },
         {
           "resource": "repo://test/src/dat_probe_tests.cpp",
-          "version": "repo-file-v1:sha256:2bad6a2a711aa31b4dc4cd4ff8d8bc422dc132a45b2272c4fa4d31c3cfcc7d63"
+          "version": "repo-file-v1:sha256:d25de9e0ad214a7757b0064448c64558324eabeb1deae1b2a6e09c0695222ef4"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
           "version": "repo-file-v1:sha256:68c6d057dbb6e9035276fb6e95fc6517a09023fe5171e4a6b2ee0c2149e27188"
         }
       ]
+    },
+    {
+      "id": "claim_76ef652039d54119b5a86740771c8e5b",
+      "statement": "DspTests is a JUCE console app (juce_add_console_app) whose target_sources list compiles the real plugin sources straight from the plugin tree so the tests exercise the real processor, not a copy. After the repo-organization reorg the fork-only effect engines are listed from their new subdirectories: ../plugin/src/effects/conv/ConvolutionReverb.cpp, ../plugin/src/effects/conv/BudgetConvolver.cpp, ../plugin/src/effects/chorus/Chorus.cpp, ../plugin/src/effects/delay/Delay.cpp, plus the upstream-owned flat plugin/src files (AutoOffset.cpp, BlockEq.cpp, BlockSpectrum.cpp, LegacyParamIds.cpp, MidiMapper.cpp, NamEngine.cpp, PresetFile.cpp, PresetManager.cpp, Processor.cpp, ProcessorChain.cpp, ProcessorHistory.cpp, ProcessorModelLoader.cpp, ProcessorPresets.cpp, ProcessorState.cpp, Spread.cpp, StandaloneStateAutosave.cpp, PitchShift.cpp, StereoOffset.cpp, TunerDetector.cpp).",
+      "evidence": [
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-14T01:57:16.991Z"
+    "at": "2026-10-14T16:54:40.219Z"
   }
 }

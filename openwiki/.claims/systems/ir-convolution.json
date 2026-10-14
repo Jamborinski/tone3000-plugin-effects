@@ -1,31 +1,7 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:f69b8ee371a6172416b0bbed6b18b1705dfd5b86bc791ecf52a9940b8081a117",
+  "pageVersion": "sha256:2679048bb8c1b6c8552c54798e215cfa1f278ac75138c0a5405b70d3306dc6ec",
   "claims": [
-    {
-      "id": "claim_5950146e18974b41ad95b20a6e9d7d5d",
-      "statement": "BudgetConvolver (plugin/include/BudgetConvolver.h) is a bounded per-call OLA long-tail convolver: it does the same per-pair math as JUCE's non-uniform engine (real-only FFT 16384, verbatim JUCE packed-domain product: prepareForConvolution / convolutionProcessingAndAccumulate / updateSymmetricFrequencyDomainData) — the difference is schedule. JUCE (processSamplesWithAddedLatency) pays FWD FFT + all N outstanding (frame×seg) products + IFFT in ONE boundary call once per 8192 input samples — worse the longer the IR; BudgetConvolver pays one 16384-point real transform + one new (frame×seg0) product in one call, defers the IFFT to the NEXT call, and bounds steady-state calls to K old products (K = ceil(M / callsMax), M = tailSamples/8192 + 1). Heaviest call ≈ one 16384-pt real transform (~0.35 ms 2-ch), well under 1.0 ms.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/include/BudgetConvolver.h",
-          "version": "repo-file-v1:sha256:78415f5b4fc4f1608239bb7bcecf2edf5ef6b9943891f49188bf6a96c2b4c9e9"
-        }
-      ]
-    },
-    {
-      "id": "claim_82f6446db99a4747ac911e3db87a6472",
-      "statement": "kIrConvolverMaxBlockSize = 256 (ChainBlock.h) caps the per-call BudgetConvolver feed; irConvolverBlockSizeFor and processConvolverInChunks (ChainBlock.h) split any host-sized block into ≤256-sample slices so per-call OLA product cost cannot inflate with the host's block size — the host block may be larger than the cap but the product budget per call stays bounded regardless. BudgetConvolver.h carries the matching kMaxCall = 256 / kFrame = 8192 pair as its own copy of the house CPU law (ConvolutionReverb.h references this cap in its header comment: 'Block-size cap (kIrConvolverMaxBlockSize) + chunked RT feed').",
-      "evidence": [
-        {
-          "resource": "repo://plugin/include/BudgetConvolver.h",
-          "version": "repo-file-v1:sha256:78415f5b4fc4f1608239bb7bcecf2edf5ef6b9943891f49188bf6a96c2b4c9e9"
-        },
-        {
-          "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:63032fe01274786abfda0c4245c7322139b08e78a5d9cf10783b9bf55ab5289b"
-        }
-      ]
-    },
     {
       "id": "claim_63767cf697ac4d45bfd45cb93f9a268b",
       "statement": "JUCE Normalise is energy-based (0.125 / sqrt(hottest-channel-energy)) — used for reverb IRs so an IR's absolute level means nothing. Short IRs (≤ 1 s, cab class) instead get a −18 dB output pad (computeIrNormalizationGain) with 100% default mix; long IRs (> 1 s, reverb class) use Normalise with 50% default mix. kMaxIrSeconds = 10.0 is a hard cap on loaded IR length; kShortIrMaxBaseSamples = 48000 (1 s at the 48 kHz base rate); kLongIrDefaultMix = 0.5.",
@@ -51,15 +27,39 @@
       ]
     },
     {
-      "id": "claim_4bc8664e9b804b95b7115ea3bd50db4b",
-      "statement": "ConvolutionReverb (IR-driven plate reverb) shares this engine: a ~150 ms install-fade warmup (JUCE's dry crossfade elapses off the live path via primeSilence at install, not at first wet), and the JUCE non-uniform OLA replaced by the BudgetConvolver tail. Reverb-specific: user time-stretch (JUCE re-samples the edited IR to engine rate), 4.0 quad→stereo downmix folded BEFORE JUCE sees it (L=(c0+c2)/√2, R=(c1+c3)/√2 — JUCE reads only ch 0/1 and would drop the rear pair), and JUCE Normalise on the load path.",
+      "id": "claim_e80b3d0ed6bf4c1cbdc4f3d6ab508326",
+      "statement": "BudgetConvolver (plugin/include/effects/conv/BudgetConvolver.h; formerly flat plugin/include/BudgetConvolver.h before the per-effect subdirectory move) is a bounded per-call OLA long-tail convolver: it does the same per-pair math as JUCE's non-uniform engine (real-only FFT 16384, verbatim JUCE packed-domain product: prepareForConvolution / convolutionProcessingAndAccumulate / updateSymmetricFrequencyDomainData) — the difference is schedule. JUCE (processSamplesWithAddedLatency) pays FWD FFT + all N outstanding (frame×seg) products + IFFT in ONE boundary call once per 8192 input samples — worse the longer the IR; BudgetConvolver pays one 16384-point real transform + one new (frame×seg0) product in one call, defers the IFFT to the NEXT call, and bounds steady-state calls to K old products (K = ceil(M / callsMax), M = tailSamples/8192 + 1). Heaviest call ≈ one 16384-pt real transform (~0.35 ms 2-ch), well under 1.0 ms.",
       "evidence": [
         {
-          "resource": "repo://plugin/include/BudgetConvolver.h",
+          "resource": "repo://plugin/include/effects/conv/BudgetConvolver.h",
+          "version": "repo-file-v1:sha256:78415f5b4fc4f1608239bb7bcecf2edf5ef6b9943891f49188bf6a96c2b4c9e9"
+        }
+      ]
+    },
+    {
+      "id": "claim_e3590b38325b4b66b2af4b362b3dfd65",
+      "statement": "kIrConvolverMaxBlockSize = 256 (ChainBlock.h) caps the per-call BudgetConvolver feed; irConvolverBlockSizeFor and processConvolverInChunks (ChainBlock.h) split any host-sized block into ≤256-sample slices so per-call OLA product cost cannot inflate with the host's block size — the host block may be larger than the cap but the product budget per call stays bounded regardless. BudgetConvolver.h (now in plugin/include/effects/conv/) carries the matching kMaxCall = 256 / kFrame = 8192 pair as its own copy of the house CPU law (ConvolutionReverb.h references this cap in its header comment: 'Block-size cap (kIrConvolverMaxBlockSize) + chunked RT feed').",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/ChainBlock.h",
+          "version": "repo-file-v1:sha256:63032fe01274786abfda0c4245c7322139b08e78a5d9cf10783b9bf55ab5289b"
+        },
+        {
+          "resource": "repo://plugin/include/effects/conv/BudgetConvolver.h",
+          "version": "repo-file-v1:sha256:78415f5b4fc4f1608239bb7bcecf2edf5ef6b9943891f49188bf6a96c2b4c9e9"
+        }
+      ]
+    },
+    {
+      "id": "claim_24754ba80a974ab29304c7c7267ca0f3",
+      "statement": "ConvolutionReverb (IR-driven plate reverb; now plugin/include/effects/conv/ConvolutionReverb.h) shares this engine: a ~150 ms install-fade warmup (JUCE's dry crossfade elapses off the live path via primeSilence at install, not at first wet), and the JUCE non-uniform OLA replaced by the BudgetConvolver tail. Reverb-specific: user time-stretch (JUCE re-samples the edited IR to engine rate), 4.0 quad→stereo downmix folded BEFORE JUCE sees it (L=(c0+c2)/√2, R=(c1+c3)/√2 — JUCE reads only ch 0/1 and would drop the rear pair), and JUCE Normalise on the load path.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/effects/conv/BudgetConvolver.h",
           "version": "repo-file-v1:sha256:78415f5b4fc4f1608239bb7bcecf2edf5ef6b9943891f49188bf6a96c2b4c9e9"
         },
         {
-          "resource": "repo://plugin/include/ConvolutionReverb.h",
+          "resource": "repo://plugin/include/effects/conv/ConvolutionReverb.h",
           "version": "repo-file-v1:sha256:6c10f5af885783ebdec6a7487ea57762af1a942515d07e168578432e76899e20"
         }
       ]
@@ -67,6 +67,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-13T21:50:34.909Z"
+    "at": "2026-10-14T16:54:40.219Z"
   }
 }
