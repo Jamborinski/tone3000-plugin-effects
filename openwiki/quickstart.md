@@ -18,7 +18,9 @@ sources:
     resource: repo://docs/agents/windows-build.md
   - id: openwiki-source-e2fb14576702431774114c7c
     resource: repo://plugin/include/ChainBlock.h
-  - id: openwiki-source-652b993abfe8770db021e86f
+  - id: openwiki-source-98413be46f92c72f6215e812
+    resource: repo://plugin/include/effects/conv/ConvolutionReverb.h
+  - id: openwiki-source-f79e6124e5e7690b7229ec93
     resource: repo://plugin/include/effects/reverb/plate/Reverb_DAT.h
   - id: openwiki-source-d4b9a9adb1644505c083378b
     resource: repo://plugin/include/effects/reverb/Reverb.h
@@ -32,6 +34,8 @@ sources:
     resource: repo://plugin/ui/testbed/CMakeLists.txt
   - id: openwiki-source-23775c3de52f3ab95a13cb8b
     resource: repo://README.md
+  - id: openwiki-source-88584cf10e435bc9ae271488
+    resource: repo://script/signing/sign-exe.sh
   - id: openwiki-source-fbe20d668cd183c9fb53adb2
     resource: repo://script/test-dsp.sh
   - id: openwiki-source-2e86156505dd09c0183e033d
@@ -44,10 +48,10 @@ sources:
     resource: repo://test/src/effect_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
     resource: repo://test/src/plate_family_tests.cpp
-generated: { by: "pi", at: "2026-10-14T16:54:40.219Z" }
+generated: { by: "pi", at: "2026-10-14T18:37:00.801Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-14T16:54:40.219Z
+    at: 2026-10-14T18:37:00.801Z
 ---
 
 # TONE3000
@@ -209,10 +213,13 @@ is available on this machine for smoke-testing the staged exe.
   fades, and the IR base-rate island.
 - **NAM / model loading** — `plugin/include/NamEngine.h`,
   `plugin/src/ProcessorModelLoader.cpp`.
-- **IR + BudgetConvolver** — `plugin/src/BudgetConvolver.cpp` for the
+- **IR + BudgetConvolver** — `plugin/src/effects/conv/BudgetConvolver.cpp` for the
   long-IR OLA-tail schedule; `test/files/cab-ir-test.wav` for the fixture.
-- **Built-in effects** — `plugin/include/{Delay,Chorus,Tremolo,Compressor,Reverb,ConvolutionReverb}.h`
-  together with `docs/agents/dsp-invariants.md` for the CONSIDERED &
+- **Built-in effects** — per-effect under `plugin/include/effects/` (e.g.
+  `effects/reverb/Reverb.h` with per-mode impl headers in
+  `effects/reverb/{plate,spring,room,chamber,hall,digital,shared}/`,
+  `effects/conv/ConvolutionReverb.h`) together with
+  `docs/agents/dsp-invariants.md` for the CONSIDERED &
   DECLINED contracts.
 - **Knob-to-DSP wiring** — `plugin/ui/core/KnobScale.h`,
   `plugin/ui/services/ParamBinding.h`, and `docs/agents/ui-wiring.md` for

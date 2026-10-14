@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:aa7e5ebe712f17b412de58cd2687566eed3548ee33a9e171b0c0add97481bc4d",
+  "pageVersion": "sha256:eaa743a0e5aeadd45eb9a22eb7a4711ac3d75d420aa7f2df6ac656afbbfc1b8d",
   "claims": [
     {
       "id": "claim_9c6f8afc68d34500bf778a2da1af5f07",
@@ -8,11 +8,11 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:2780510cc4cb183208aaa155b7776ef37be2478ff81215fbc3022fab0db4e33d"
+          "version": "repo-file-v1:sha256:a27594fc24436f387f276541a6e47fd2e1d720521086e1b623576eb98b7a5f7d"
         },
         {
           "resource": "repo://docs/agents/ir-reverb-training.md",
-          "version": "repo-file-v1:sha256:49b7fc822ba8712696775bc387950b35875a3c5b6681a622c1d6258c8f633d3a"
+          "version": "repo-file-v1:sha256:e4193302a4efbc1c7d47bdd2f519f9fe4f92ebcf83f85efc90f1d568cdf2249f"
         },
         {
           "resource": "repo://test/CMakeLists.txt",
@@ -22,14 +22,14 @@
     },
     {
       "id": "claim_b51dc23841844c60b7140a325e1a48d3",
-      "statement": "Spring (mode 1) metallic body + boing: the incommensurate resonator cluster (kSpringR1..R3 gains, IR-driven ears-pass — the 1.3–2.8 kHz pings lifted ~+4 dB RELATIVE to the 220–900 Hz body modes, ping + sparkle) replaces the old single-2-kHz boing ring, which is DISABLED (kSpringBoingGain = 0.000, 'replaced by the R1/R2/R3 cluster'; earlier value 0.028). Body gain kSpringBodyGain = 0.018 (modest — 'body is under the metal, not over it'). The processSpring body now lives out-of-class in effects/reverb/Reverb_Spring.h (per-mode split of the former flat plugin/include/Reverb.h).",
+      "statement": "Spring (mode 1) metallic body + boing: the incommensurate resonator cluster (kSpringR1..R3 gains, IR-driven ears-pass — the 1.3–2.8 kHz pings lifted ~+4 dB RELATIVE to the 220–900 Hz body modes, ping + sparkle) replaces the old single-2-kHz boing ring, which is DISABLED (kSpringBoingGain = 0.000, 'replaced by the R1/R2/R3 cluster'; earlier value 0.028). Body gain kSpringBodyGain = 0.018 (modest — 'body is under the metal, not over it'). The processSpring body now lives out-of-class in effects/reverb/spring/Reverb_Spring.h (per-mode split of the former flat plugin/include/Reverb.h).",
       "evidence": [
         {
           "resource": "repo://plugin/include/effects/reverb/Reverb.h",
-          "version": "repo-file-v1:sha256:9735e62c08472ba87a2675ed56f79b84b162c0c6af074d32d580fad27a368ec6"
+          "version": "repo-file-v1:sha256:89d09d9e966809a3edd021069ae096fb05facfb719d3032fea313371186219ab"
         },
         {
-          "resource": "repo://plugin/include/effects/reverb/Reverb_Spring.h",
+          "resource": "repo://plugin/include/effects/reverb/spring/Reverb_Spring.h",
           "version": "repo-file-v1:sha256:d9eda21ecaee9f6080d7bd01dc38d330749a4ebdd3c7240ea8b7b519f0f3112f"
         }
       ]
@@ -40,21 +40,21 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/ir-reverb-training.md",
-          "version": "repo-file-v1:sha256:49b7fc822ba8712696775bc387950b35875a3c5b6681a622c1d6258c8f633d3a"
+          "version": "repo-file-v1:sha256:e4193302a4efbc1c7d47bdd2f519f9fe4f92ebcf83f85efc90f1d568cdf2249f"
         },
         {
           "resource": "repo://plugin/include/effects/reverb/Reverb.h",
-          "version": "repo-file-v1:sha256:9735e62c08472ba87a2675ed56f79b84b162c0c6af074d32d580fad27a368ec6"
+          "version": "repo-file-v1:sha256:89d09d9e966809a3edd021069ae096fb05facfb719d3032fea313371186219ab"
         },
         {
-          "resource": "repo://plugin/include/effects/reverb/Reverb_Plate.h",
+          "resource": "repo://plugin/include/effects/reverb/digital/Reverb_Plate.h",
           "version": "repo-file-v1:sha256:ecc44658f4873138df3d47d0825b5795923c98838d2cebc592a65ad9c581f6d0"
         }
       ]
     },
     {
       "id": "claim_0d20c973d2da4c78bf40e8d69cf1e0f5",
-      "statement": "R3 WIDTH LAW (2026-10-16, SHIPPED — supersedes any description of the reverb width as merely a per-bank tap-length drift): width is a TWO-LAYER control, coherent in all 6 reverb modes. LAYER 1 (RETAINED, bit-exact to pre-R3; present at the plain/Digital/Spring/Plate sites — Room/Chamber/Hall never used it): widthTapScaleFor(ch, numChannels) = (ch==0) ? (1.0 − 0.05*width) : (1.0 + 0.05*width) with kMaxWidthSpread = 0.05, i.e. ch-0 taps 5pct·width shorter, ch-1 5pct·width longer — the spectral-decorrelation baseline (a first R3 cut removed it and 1ch mono pins moved; it was restored). LAYER 2 (NEW, the ticket's 'match the convolver' ask): applyWidthHaas in the reverb engine header — a post-mix convolver-MATCHING Haas/M-S stage mirroring ConvolutionReverb's mono-IR spread constants kHaasDelayMs = 3.5 ms (kWidthHaasDelayMs) / kHaasDepth = 0.55 (kWidthHaasDepth), applied at EVERY mode's exit (7 call sites) BEFORE processSharedModSmear. Per sample: mid = 0.5(L+R) is stored in a per-instance power-of-2 ring (whRing_/whMask_/whWrite_, sized in prepare(), cleared in reset()); half = 0.5*width*kHaasDepth*mid[d samples ago]*0.5; L += 2*half, R −= 2*half — i.e. side = width*0.55*mid[3.5 ms behind], split ± onto L/R. Properties: SUM-EXACT — (L+R)/2 unchanged at every sample, so every mono/level pin stayed green; GATED (widthHaasOn_ = 2ch buffer && width>0 && sampleRate_>0) — width 0 = bit-exact no-op (zero flops) and 1ch buffers (the production per-lane mode) are width-inert in layer 2, keeping only layer 1 (bit-identical to pre-R3). Net effect: Room/Chamber/Hall NOW respond to Width (previously inert); the stereo image is the convolver's Haas pair instead of a synthetic tap-length drift. P5 (PlateKnobLaw.StereoImageAtWidth1) re-measured under the two-layer law: tail [1.0, 2.5 s) at 2ch width 1.0 = mid −21.40 dB, side −24.91 dB = side-over-mid −3.51 dB (the pre-R3 tapScale-only measurement was −4.06 dB; the test's soft assertions sideE<midE and midE>−90 stay intact). DspTests green; the reverb tile goldens (EffectTile kCompactKnobFace 32 px + label 12.0, the R3 UI addendum) were re-shot and verified at 0 px. Ticket: docs/tickets/complete/reverb-dry-mod-width-swing.md. (Line-number cites of the old flat plugin/include/Reverb.h dropped in the repo-organization reorg: the per-mode process bodies moved to effects/reverb/Reverb_<Mode>.h, the width Haas constants/ring + dispatch remain in effects/reverb/Reverb.h.)",
+      "statement": "R3 WIDTH LAW (2026-10-16, SHIPPED — supersedes any description of the reverb width as merely a per-bank tap-length drift): width is a TWO-LAYER control, coherent in all 6 reverb modes. LAYER 1 (RETAINED, bit-exact to pre-R3; present at the plain/Digital/Spring/Plate sites — Room/Chamber/Hall never used it): widthTapScaleFor(ch, numChannels) = (ch==0) ? (1.0 − 0.05*width) : (1.0 + 0.05*width) with kMaxWidthSpread = 0.05, i.e. ch-0 taps 5pct·width shorter, ch-1 5pct·width longer — the spectral-decorrelation baseline (a first R3 cut removed it and 1ch mono pins moved; it was restored). LAYER 2 (NEW, the ticket's 'match the convolver' ask): applyWidthHaas in the reverb engine header — a post-mix convolver-MATCHING Haas/M-S stage mirroring ConvolutionReverb's mono-IR spread constants kHaasDelayMs = 3.5 ms (kWidthHaasDelayMs) / kHaasDepth = 0.55 (kWidthHaasDepth), applied at EVERY mode's exit (7 call sites) BEFORE processSharedModSmear. Per sample: mid = 0.5(L+R) is stored in a per-instance power-of-2 ring (whRing_/whMask_/whWrite_, sized in prepare(), cleared in reset()); half = 0.5*width*kHaasDepth*mid[d samples ago]*0.5; L += 2*half, R −= 2*half — i.e. side = width*0.55*mid[3.5 ms behind], split ± onto L/R. Properties: SUM-EXACT — (L+R)/2 unchanged at every sample, so every mono/level pin stayed green; GATED (widthHaasOn_ = 2ch buffer && width>0 && sampleRate_>0) — width 0 = bit-exact no-op (zero flops) and 1ch buffers (the production per-lane mode) are width-inert in layer 2, keeping only layer 1 (bit-identical to pre-R3). Net effect: Room/Chamber/Hall NOW respond to Width (previously inert); the stereo image is the convolver's Haas pair instead of a synthetic tap-length drift. P5 (PlateKnobLaw.StereoImageAtWidth1) re-measured under the two-layer law: tail [1.0, 2.5 s) at 2ch width 1.0 = mid −21.40 dB, side −24.91 dB = side-over-mid −3.51 dB (the pre-R3 tapScale-only measurement was −4.06 dB; the test's soft assertions sideE<midE and midE>−90 stay intact). DspTests green; the reverb tile goldens (EffectTile kCompactKnobFace 32 px + label 12.0, the R3 UI addendum) were re-shot and verified at 0 px. Ticket: docs/tickets/complete/reverb-dry-mod-width-swing.md. (Per-mode split note: the per-mode process bodies live in effects/reverb/<mode>/Reverb_<Mode>.h; the width Haas constants/ring + dispatch remain in effects/reverb/Reverb.h.)",
       "evidence": [
         {
           "resource": "repo://docs/tickets/complete/reverb-dry-mod-width-swing.md",
@@ -62,10 +62,10 @@
         },
         {
           "resource": "repo://plugin/include/effects/reverb/Reverb.h",
-          "version": "repo-file-v1:sha256:9735e62c08472ba87a2675ed56f79b84b162c0c6af074d32d580fad27a368ec6"
+          "version": "repo-file-v1:sha256:89d09d9e966809a3edd021069ae096fb05facfb719d3032fea313371186219ab"
         },
         {
-          "resource": "repo://plugin/include/effects/reverb/Reverb_Plate.h",
+          "resource": "repo://plugin/include/effects/reverb/digital/Reverb_Plate.h",
           "version": "repo-file-v1:sha256:ecc44658f4873138df3d47d0825b5795923c98838d2cebc592a65ad9c581f6d0"
         },
         {
@@ -76,18 +76,18 @@
     },
     {
       "id": "claim_c3da4b6a50f84b0d85fd3dc4fe03ff42",
-      "statement": "LEGACY COMB PLATE (the 2026-10-13 '140' tuned law) survives ONLY on the Digital PLT entry (mode 5, type[5]==2, bright/bloom armed - plateOn gate in effects/reverb/Reverb.h), bit-identical to the pre-T-DAT-001 engine: kPlateAirHzBright 4900 / kPlateAirHzDark 3600, kPlateAirStages 2, kPlateBodyHz 550, onset taps {14.2, 26.9, 51.3} ms, kPlateWashAp 0.62 / kPlateWashRef 0.244, kPlateBloomFrac 0.32, kPlateColorAmt 0.3, kPlateDecayLift 1.15, kPlateFbCeilingUp 0.965 (test hooks plateCeilTest_/plateLiftTest_), Size-law corner shift kPlateSizeCornerFrac 0.30 (size 1 = brighter, MEASURED direction). The processPlate body now lives out-of-class in effects/reverb/Reverb_Plate.h (per-mode split). Baseline pins retained on that arm: level-law 93.95@2000 ms, comb cap 21.98@2500 ms (re-pinned tests now drive the mode5/type2 arm via plateLegacyP()/plateLegacyAt() helpers). All other modes bit-identical to pre-T-DAT. The CONSIDERED-&-DECLINED block (2026-10-13, docs/agents/ir-reverb-training.md + dsp-invariants.md) remains a contract for that arm.",
+      "statement": "LEGACY COMB PLATE (the 2026-10-13 '140' tuned law) survives ONLY on the Digital PLT entry (mode 5, type[5]==2, bright/bloom armed - plateOn gate in effects/reverb/Reverb.h), bit-identical to the pre-T-DAT-001 engine: kPlateAirHzBright 4900 / kPlateAirHzDark 3600, kPlateAirStages 2, kPlateBodyHz 550, onset taps {14.2, 26.9, 51.3} ms, kPlateWashAp 0.62 / kPlateWashRef 0.244, kPlateBloomFrac 0.32, kPlateColorAmt 0.3, kPlateDecayLift 1.15, kPlateFbCeilingUp 0.965 (test hooks plateCeilTest_/plateLiftTest_), Size-law corner shift kPlateSizeCornerFrac 0.30 (size 1 = brighter, MEASURED direction). The processPlate body now lives out-of-class in effects/reverb/digital/Reverb_Plate.h (per-mode split). Baseline pins retained on that arm: level-law 93.95@2000 ms, comb cap 21.98@2500 ms (re-pinned tests now drive the mode5/type2 arm via plateLegacyP()/plateLegacyAt() helpers). All other modes bit-identical to pre-T-DAT. The CONSIDERED-&-DECLINED block (2026-10-13, docs/agents/ir-reverb-training.md + dsp-invariants.md) remains a contract for that arm.",
       "evidence": [
         {
           "resource": "repo://docs/agents/ir-reverb-training.md",
-          "version": "repo-file-v1:sha256:49b7fc822ba8712696775bc387950b35875a3c5b6681a622c1d6258c8f633d3a"
+          "version": "repo-file-v1:sha256:e4193302a4efbc1c7d47bdd2f519f9fe4f92ebcf83f85efc90f1d568cdf2249f"
         },
         {
           "resource": "repo://plugin/include/effects/reverb/Reverb.h",
-          "version": "repo-file-v1:sha256:9735e62c08472ba87a2675ed56f79b84b162c0c6af074d32d580fad27a368ec6"
+          "version": "repo-file-v1:sha256:89d09d9e966809a3edd021069ae096fb05facfb719d3032fea313371186219ab"
         },
         {
-          "resource": "repo://plugin/include/effects/reverb/Reverb_Plate.h",
+          "resource": "repo://plugin/include/effects/reverb/digital/Reverb_Plate.h",
           "version": "repo-file-v1:sha256:ecc44658f4873138df3d47d0825b5795923c98838d2cebc592a65ad9c581f6d0"
         },
         {
@@ -102,7 +102,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/effects/reverb/Reverb.h",
-          "version": "repo-file-v1:sha256:9735e62c08472ba87a2675ed56f79b84b162c0c6af074d32d580fad27a368ec6"
+          "version": "repo-file-v1:sha256:89d09d9e966809a3edd021069ae096fb05facfb719d3032fea313371186219ab"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
@@ -112,18 +112,18 @@
     },
     {
       "id": "claim_2b20d9b0adc14af9a8da6a5857769c33",
-      "statement": "T-DAT-001 (2026-10-17, wave 3, commit 1d069c9; the default plate engine = a MODIFIED port of the Dattorro plate algorithm (Dattorro 1997), restructured to repo style with repo constants, zero-latency preserved. The processDat body now lives out-of-class in effects/reverb/Reverb_DAT.h (per-mode split of the former flat plugin/include/Reverb.h). Dispatch: mode 0 ALWAYS runs processDat(), then the width stage, then `if (sharedOn_) processSharedModSmear(buffer)` — the shared R2 post-wet Mod layer. processDat = two mono tanks (one per channel) with the fig-8 A/B crossfeed, 4 input allpasses (gains 0.98/0.98/0.83/0.83, capped under 1 for the z=-1 pole), APF delay bases in SAMPLES x(0.25+1.5*size), node-tap splits per side (c==0 vs c==1 tap sets x0.6), pre-ring Early taps 2/5/9 ms x early, in-LPF 13.5 kHz, Air shelf 4.5 kHz (6.0*air on acc-low), LoCut one-pole HPF 45 Hz (stored 0 = bit-pass). TONE (wave 3, user m03344 wired-backwards fix): inverted — `tinv = 1.0 - tone; datDmpA_ = tinv * (1 - exp(-2pi*(800*16^tinv)/sr))`; tone 1 = damping coef exactly 0 = bright, tone 0 = darkest; guard ReverbTest.FullToneKeepsTheSustainedTail (sustained(1.0) > sustained(0.0)) in test/src/effect_tests.cpp. DECAY KNOB drives the fig-8 loop multiplier datDec_ at all 6 decay sites: datDec_ = 0.15 + (0.82-0.15)*log10(clamp(decayMs,50,2500)/50)/log10(2500/50), UNIFORM 0.82 ceiling — measured energy-growth-slope boundary decaying<=0.84 / growing>=0.88 across sizes; 0.82 = boundary minus margin; the 'runaway' seen mid-hunt was unzeroed AudioBuffer probe garbage, not the engine. Width on the DAT arm: width-gated M/S side post stage (w=0 mono pin, w=1 full per-side image). Standing guards: suite DatGuards in test/src/dat_probe_tests.cpp (StableAcrossSizeDecayGrid, LongerDecayKeepsTheLongTail, LoCutDropsTheLowBand, AirLiftsTheTopBand, WidthWidensThePlateImage, ModZeroIsBitPass, ModOneAudiblyChangesTheRender — the two Mod guards pinned to the sharedMod gate field after wave 3). CPU ceiling (23 us/block@128, pinned 2026-10-16) WAIVED for mode 0 at user direction (m00552); other modes keep their ceiling pins. Legacy color/dwell/bright laws (BloomMakesTheLowEndOutlast, BrightDensifiesTheOnset, PlateKnobLaw arm) are anchored on the mode 5 / type[5]==2 arm, not mode 0.",
+      "statement": "T-DAT-001 (2026-10-17, wave 3, commit 1d069c9; the default plate engine = a MODIFIED port of the Dattorro plate algorithm (Dattorro 1997), restructured to repo style with repo constants, zero-latency preserved. The processDat body now lives out-of-class in effects/reverb/plate/Reverb_DAT.h (per-mode split of the former flat plugin/include/Reverb.h). Dispatch: mode 0 ALWAYS runs processDat(), then the width stage, then `if (sharedOn_) processSharedModSmear(buffer)` — the shared R2 post-wet Mod layer. processDat = two mono tanks (one per channel) with the fig-8 A/B crossfeed, 4 input allpasses (gains 0.98/0.98/0.83/0.83, capped under 1 for the z=-1 pole), APF delay bases in SAMPLES x(0.25+1.5*size), node-tap splits per side (c==0 vs c==1 tap sets x0.6), pre-ring Early taps 2/5/9 ms x early, in-LPF 13.5 kHz, Air shelf 4.5 kHz (6.0*air on acc-low), LoCut one-pole HPF 45 Hz (stored 0 = bit-pass). TONE (wave 3, user m03344 wired-backwards fix): inverted — `tinv = 1.0 - tone; datDmpA_ = tinv * (1 - exp(-2pi*(800*16^tinv)/sr))`; tone 1 = damping coef exactly 0 = bright, tone 0 = darkest; guard ReverbTest.FullToneKeepsTheSustainedTail (sustained(1.0) > sustained(0.0)) in test/src/effect_tests.cpp. DECAY KNOB drives the fig-8 loop multiplier datDec_ at all 6 decay sites: datDec_ = 0.15 + (0.82-0.15)*log10(clamp(decayMs,50,2500)/50)/log10(2500/50), UNIFORM 0.82 ceiling — measured energy-growth-slope boundary decaying<=0.84 / growing>=0.88 across sizes; 0.82 = boundary minus margin; the 'runaway' seen mid-hunt was unzeroed AudioBuffer probe garbage, not the engine. Width on the DAT arm: width-gated M/S side post stage (w=0 mono pin, w=1 full per-side image). Standing guards: suite DatGuards in test/src/dat_probe_tests.cpp (StableAcrossSizeDecayGrid, LongerDecayKeepsTheLongTail, LoCutDropsTheLowBand, AirLiftsTheTopBand, WidthWidensThePlateImage, ModZeroIsBitPass, ModOneAudiblyChangesTheRender — the two Mod guards pinned to the sharedMod gate field after wave 3). CPU ceiling (23 us/block@128, pinned 2026-10-16) WAIVED for mode 0 at user direction (m00552); other modes keep their ceiling pins. Legacy color/dwell/bright laws (BloomMakesTheLowEndOutlast, BrightDensifiesTheOnset, PlateKnobLaw arm) are anchored on the mode 5 / type[5]==2 arm, not mode 0.",
       "evidence": [
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:2780510cc4cb183208aaa155b7776ef37be2478ff81215fbc3022fab0db4e33d"
+          "version": "repo-file-v1:sha256:a27594fc24436f387f276541a6e47fd2e1d720521086e1b623576eb98b7a5f7d"
         },
         {
           "resource": "repo://plugin/include/effects/reverb/Reverb.h",
-          "version": "repo-file-v1:sha256:9735e62c08472ba87a2675ed56f79b84b162c0c6af074d32d580fad27a368ec6"
+          "version": "repo-file-v1:sha256:89d09d9e966809a3edd021069ae096fb05facfb719d3032fea313371186219ab"
         },
         {
-          "resource": "repo://plugin/include/effects/reverb/Reverb_DAT.h",
+          "resource": "repo://plugin/include/effects/reverb/plate/Reverb_DAT.h",
           "version": "repo-file-v1:sha256:736f6ca6202321bc41d288febd5130d7172dd1dabb1ee76cabe7748ec7fd26e4"
         },
         {
@@ -138,11 +138,11 @@
     },
     {
       "id": "claim_477436eacd7240ef801afb8c28520577",
-      "statement": "The R2 shared-Mod contract (2026-10-15 thirteenth/final cut, commit 1aa620e; reused for the plate in T-DAT-001 wave 3): `Reverb::Params::sharedMod` (0..1, clamped in setParams) gates `processSharedModSmear` — a post-mix, wet-unity ADDED multi-voice chorus layer on the WET reverb output (`out = wet + amt*dsum`; NEVER a crossfade — the ear rejected it for volume drop + anti-phase clicks). The processSharedModSmear body now lives out-of-class in effects/reverb/Reverb_SharedMod.h (per-mode split); the mechanism constants live in effects/reverb/Reverb.h: kModVoices = 7 (6 delay lines v=1..6 of incommensurate depth/rate + the undelayed voice), kSharedModDepthMs = 18.0 (deepest voice at sharedMod 1), kModWriteTauMs = 80.0 (ring-write one-pole smoothing — the click/hiss fix; TAU BELONGS ON AN ADDED wet path like this, NEVER inside a feedback-loop feed: the DAT engine's first Mod attempt put an identical tau one-pole on the in-loop AP ring writes and the wet collapsed to dry-only (user A/B rejected: 'all wet disappears / only get dry'), so the in-loop LFO was removed and mode 0's Mod knob was re-bound to this stage instead), kModChorusAmt = 3.0 (layer amount, measured), per-voice 12 dB/oct darkening biquad, smoothstep output taper inaudible below ~50% Mod, fixed-sine LFO `waveValue(0, phase)`. OFF (sharedMod == 0, the default) the WHOLE path is never entered → all 6 modes bit-identical to the pre-R2 engine (pinned by R2_SharedModZeroIsBitExactAllSixModes at 15-digit level); for mode 0 the plate face's Mod knob IS the sharedMod control (face id `reverbSharedMod` via ChainBlock/ProcessorChain; the old `reverbMod` field is inert in the DAT engine). Standing rules: ALWAYS MEASURE DSP changes sonically; never ship an ear-guess without the measured ladder. Tickets: docs/tickets/complete/reverb-dry-mod-width-swing.md, docs/tickets/plate-dat-rebuild-draft.md (wave 3 log).",
+      "statement": "The R2 shared-Mod contract (2026-10-15 thirteenth/final cut, commit 1aa620e; reused for the plate in T-DAT-001 wave 3): `Reverb::Params::sharedMod` (0..1, clamped in setParams) gates `processSharedModSmear` — a post-mix, wet-unity ADDED multi-voice chorus layer on the WET reverb output (`out = wet + amt*dsum`; NEVER a crossfade — the ear rejected it for volume drop + anti-phase clicks). The processSharedModSmear body now lives out-of-class in effects/reverb/shared/Reverb_SharedMod.h (per-mode split); the mechanism constants live in effects/reverb/Reverb.h: kModVoices = 7 (6 delay lines v=1..6 of incommensurate depth/rate + the undelayed voice), kSharedModDepthMs = 18.0 (deepest voice at sharedMod 1), kModWriteTauMs = 80.0 (ring-write one-pole smoothing — the click/hiss fix; TAU BELONGS ON AN ADDED wet path like this, NEVER inside a feedback-loop feed: the DAT engine's first Mod attempt put an identical tau one-pole on the in-loop AP ring writes and the wet collapsed to dry-only (user A/B rejected: 'all wet disappears / only get dry'), so the in-loop LFO was removed and mode 0's Mod knob was re-bound to this stage instead), kModChorusAmt = 3.0 (layer amount, measured), per-voice 12 dB/oct darkening biquad, smoothstep output taper inaudible below ~50% Mod, fixed-sine LFO `waveValue(0, phase)`. OFF (sharedMod == 0, the default) the WHOLE path is never entered → all 6 modes bit-identical to the pre-R2 engine (pinned by R2_SharedModZeroIsBitExactAllSixModes at 15-digit level); for mode 0 the plate face's Mod knob IS the sharedMod control (face id `reverbSharedMod` via ChainBlock/ProcessorChain; the old `reverbMod` field is inert in the DAT engine). Standing rules: ALWAYS MEASURE DSP changes sonically; never ship an ear-guess without the measured ladder. Tickets: docs/tickets/complete/reverb-dry-mod-width-swing.md, docs/tickets/plate-dat-rebuild-draft.md (wave 3 log).",
       "evidence": [
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
-          "version": "repo-file-v1:sha256:2780510cc4cb183208aaa155b7776ef37be2478ff81215fbc3022fab0db4e33d"
+          "version": "repo-file-v1:sha256:a27594fc24436f387f276541a6e47fd2e1d720521086e1b623576eb98b7a5f7d"
         },
         {
           "resource": "repo://docs/tickets/complete/reverb-dry-mod-width-swing.md",
@@ -150,10 +150,10 @@
         },
         {
           "resource": "repo://plugin/include/effects/reverb/Reverb.h",
-          "version": "repo-file-v1:sha256:9735e62c08472ba87a2675ed56f79b84b162c0c6af074d32d580fad27a368ec6"
+          "version": "repo-file-v1:sha256:89d09d9e966809a3edd021069ae096fb05facfb719d3032fea313371186219ab"
         },
         {
-          "resource": "repo://plugin/include/effects/reverb/Reverb_SharedMod.h",
+          "resource": "repo://plugin/include/effects/reverb/shared/Reverb_SharedMod.h",
           "version": "repo-file-v1:sha256:df24acca0dff34ab55654e3f8163e465dbc891b22cba915903cd6fa7f06098c4"
         },
         {
@@ -169,6 +169,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-14T16:54:40.219Z"
+    "at": "2026-10-14T18:37:00.801Z"
   }
 }

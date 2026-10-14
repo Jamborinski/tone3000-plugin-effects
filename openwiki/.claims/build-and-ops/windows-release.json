@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:95c89a34fbd7ecb287cc060abd2920dd454b836f7bde98b8e07bea46c06b79c9",
+  "pageVersion": "sha256:30b2e2784557e4afb2ef6a4159adbfa63b16f26acc587dae242dbc714fad4f07",
   "claims": [
     {
       "id": "claim_746e41b7d7214abc8858befedfaa8e01",
@@ -8,7 +8,7 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:a80c63d947c3a243146b6c87bade0c03d813e64f1abff360fc3969ff7c06aaf8"
+          "version": "repo-file-v1:sha256:67f562da430ebd694e1886e92eb858533f52a1276ec0a0f995c01dd97311275f"
         },
         {
           "resource": "repo://test/CMakeLists.txt",
@@ -26,7 +26,7 @@
         },
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:a80c63d947c3a243146b6c87bade0c03d813e64f1abff360fc3969ff7c06aaf8"
+          "version": "repo-file-v1:sha256:67f562da430ebd694e1886e92eb858533f52a1276ec0a0f995c01dd97311275f"
         }
       ]
     },
@@ -36,27 +36,49 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:a80c63d947c3a243146b6c87bade0c03d813e64f1abff360fc3969ff7c06aaf8"
+          "version": "repo-file-v1:sha256:67f562da430ebd694e1886e92eb858533f52a1276ec0a0f995c01dd97311275f"
         }
       ]
     },
     {
-      "id": "claim_2962114fc0824d078b451369be13ad74",
-      "statement": "script/win-standalone.sh (the former scripts/win-standalone.sh, folded into script/ by the repo-organization reorg) stages the built TONE3000.exe to C:\\Users\\jambo\\Downloads\\TONE3000-win-YYYYMMDD-HHMMSS (run-timestamp only, never descriptive suffixes; older descriptive folders are historical A/B references to leave alone), with -2/-3 dedup, md5sums, and the git branch + HEAD commit printed for provenance. A plain build does not pick up a changed .env (publishable key) or new sources — it needs a reconfigure (GLOB re-runs) ~2 min.",
+      "id": "claim_aa8c9ce8627f4818ab90ef81d9277d2b",
+      "statement": "script/win-standalone.sh (the former scripts/win-standalone.sh, folded into script/ by the repo-organization reorg) is now env-driven: it loads the gitignored .env (documented in .env.example) and stages the built TONE3000.exe to ${T3K_STAGE_DIR}/TONE3000-win-YYYYMMDD-HHMMSS (run-timestamp only, never descriptive suffixes; T3K_STAGE_DIR defaults to the auto-detected /mnt/c/Users/*/Downloads with a $HOME/Downloads fallback — on this machine C:\\Users\\jambo\\Downloads), with -2/-3 dir dedup, md5sums, and the git branch + HEAD commit printed for provenance. A plain build does not pick up a changed .env (publishable key) or new sources — it needs a reconfigure (GLOB re-runs) ~2 min per docs/agents/windows-build.md.",
       "evidence": [
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:a80c63d947c3a243146b6c87bade0c03d813e64f1abff360fc3969ff7c06aaf8"
+          "version": "repo-file-v1:sha256:67f562da430ebd694e1886e92eb858533f52a1276ec0a0f995c01dd97311275f"
         },
         {
           "resource": "repo://script/win-standalone.sh",
-          "version": "repo-file-v1:sha256:d87556e2c7b3b9adb7355b1ce62d0278d2e0c6deb8d1a46a80d93e4e73eecc94"
+          "version": "repo-file-v1:sha256:516d74377de7369fbf8f2cc82d6e1c8de2e2ccfd2cffd23386185ed1efec6d35"
+        }
+      ]
+    },
+    {
+      "id": "claim_4477915d33c94ad0a6e42433b9712f36",
+      "statement": "Optional Authenticode signing (commit 3969401): with T3K_SIGN=1 in .env, win-standalone.sh signs the STAGED copy after cp (never the build-tree exe) via ${T3K_SIGNING_DIR:-$HOME/signing}/sign-exe.sh, keyed by T3K_SIGN_CERT (p12 basename), T3K_SIGN_PASS, T3K_SIGN_TS (RFC3161 URL, default http://timestamp.sectigo.com) and T3K_SIGN_VERIFY (post-sign chain check, default 1); a signing failure leaves the staged exe unsigned and fails the script. Certs/keys live outside the repo (default $HOME/signing; *.p12/*.cer gitignored, never committed); the repo ships env-driven, machine-path-free helpers script/signing/{sign-exe,build-minica,make-demo-cert,add-cert}.sh. osslsigncode 2.13 gotchas (verified live): password flag is -pass (-p means proxy), -in/-out, -out refuses existing files (sign to temp + mv), self-signed roots need verify -CAfile. build-minica.sh builds a local trust chain (25 y root + 10 y codeSigning leaf, no-password p12 + .pem/root.pem) and add-cert.sh folds a commercial CA intermediate into <cert>-full.p12 for real publisher trust.",
+      "evidence": [
+        {
+          "resource": "repo://.env.example",
+          "version": "repo-file-v1:sha256:46b33d92d331b77f531f4a6e8f7a91fc4bc5296c2364b43c5f6666ff9c921803"
+        },
+        {
+          "resource": "repo://docs/agents/windows-build.md",
+          "version": "repo-file-v1:sha256:67f562da430ebd694e1886e92eb858533f52a1276ec0a0f995c01dd97311275f"
+        },
+        {
+          "resource": "repo://script/signing/sign-exe.sh",
+          "version": "repo-file-v1:sha256:68d2dfd483a2453c385b5db7c4b2c935f87facf000227150769f49ee67c3b46d"
+        },
+        {
+          "resource": "repo://script/win-standalone.sh",
+          "version": "repo-file-v1:sha256:516d74377de7369fbf8f2cc82d6e1c8de2e2ccfd2cffd23386185ed1efec6d35"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-14T16:54:40.219Z"
+    "at": "2026-10-14T18:37:00.801Z"
   }
 }

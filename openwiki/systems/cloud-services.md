@@ -2,9 +2,6 @@
 type: "Reference"
 title: "TONE3000 Cloud and session services"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.2
-    at: 2026-10-10T18:58:45.842Z
 sources:
   - id: openwiki-source-5f5b95b3d6a215fa02ceb945
     resource: repo://.env.example
@@ -19,6 +16,9 @@ sources:
   - id: openwiki-source-a8e64dd05069a97ffce9e334
     resource: repo://plugin/ui/services/UpdateCheck.h
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
+verified:
+  - by: openwiki/0.7.2
+    at: 2026-10-14T18:37:00.801Z
 ---
 
 

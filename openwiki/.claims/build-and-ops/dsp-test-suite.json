@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:db27e6c3ec9db4eea02a6a3f2fcaf6930a7fd4a43650d0bf0d87c20743f933b3",
+  "pageVersion": "sha256:f4f18da0b3624e75337312723144834daf5beb6b7ab7ebe95b9af048c47ce34a",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -85,28 +85,6 @@
       ]
     },
     {
-      "id": "claim_5aaec57262904b98b4ed519a99796698",
-      "statement": "The DspTests suite grows with features (a count here is a lower-bound snapshot, never assert a stale total on a red run): 487 after the R2 thirteenth/final cut (2026-10-15, commit 1aa620e), 493 after the P2.1 plate density uplift (2026-10-16), 503 after the reverb-budget-quality-uplift pass (P0 ceiling pin test/src/reverb_ceiling_p0_tests.cpp suite ReverbCeiling; P1 per-mode table test/src/reverb_quality_p1_tests.cpp; probe suites test/src/reverb_probe_tmp.cpp, room_probe_tmp.cpp, chamber_probe_tmp.cpp), and 511 after the T-DAT-001 plate-DAT wave-3 closeout (2026-10-17, commit 1d069c9). The R2 measurement infrastructure is standing in test/src/effect_tests.cpp; the full legacy-plate law guard suite remains anchored at the Digital/PLT entry (mode 5, type[5]==2).",
-      "evidence": [
-        {
-          "resource": "repo://docs/tickets/plate-dat-rebuild-draft.md",
-          "version": "repo-file-v1:sha256:070df7d137403b3a191e944e6b9ca3635604cfcf75302969c8595720f44a3fdc"
-        },
-        {
-          "resource": "repo://test/src/effect_tests.cpp",
-          "version": "repo-file-v1:sha256:7cf48ee3fbf1d19a64c5246cd2119f2feb26bcc193801f3cb25ef5e129cf6195"
-        },
-        {
-          "resource": "repo://test/src/reverb_ceiling_p0_tests.cpp",
-          "version": "repo-file-v1:sha256:93e3f56217e621c343b4c839836fb8dabe664e0aa06f347834d9f9f9581901a5"
-        },
-        {
-          "resource": "repo://test/src/reverb_quality_p1_tests.cpp",
-          "version": "repo-file-v1:sha256:88e8666e338953afde8d67cb345b155e36f0bfafff5603b80ba3faa29189ba1e"
-        }
-      ]
-    },
-    {
       "id": "claim_f2a2aaaee09f48d9845b953145937d7f",
       "statement": "The T-DAT-001 plate-DAT rebuild added the standing DatGuards suite in test/src/dat_probe_tests.cpp, registered in test/CMakeLists.txt: StableAcrossSizeDecayGrid, LongerDecayKeepsTheLongTail, LoCutDropsTheLowBand (stable one-pole HPF x LPF band meter), AirLiftsTheTopBand, WidthWidensThePlateImage (width-gated M/S side gain), ModZeroIsBitPass and ModOneAudiblyChangesTheRender (both pinned to the sharedMod gate field after the wave-3 Mod rebind to the post-wet shared-chorus layer), with DatGuards.* running 8 tests total. Legacy-plate color/dwell guards re-pinned to the mode 5 / type[5]==2 arm via helpers in test/src/plate_family_tests.cpp (plateLegacyP/plateLegacyAt) and test/src/plate_texture_tests.cpp (plateLegacy Defaults/plateLegacyDecay). The interim diagnostic suites (dat_exp, goldengrid, loopsolo, loopgain, arb, rerun, boundary2, margin, finallaw, sitekill, s_datDecDrive scaffolding) were removed at closeout.",
       "evidence": [
@@ -133,10 +111,32 @@
           "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
         }
       ]
+    },
+    {
+      "id": "claim_131e772ff8c84ead9ae510f38d212ff0",
+      "statement": "The DspTests suite grows with features (a count here is a lower-bound snapshot, never assert a stale total on a red run): 487 after the R2 thirteenth/final cut (2026-10-15, commit 1aa620e), 493 after the P2.1 plate density uplift (2026-10-16), 503 after the reverb-budget-quality-uplift pass (P0 ceiling pin test/src/reverb_ceiling_p0_tests.cpp suite ReverbCeiling; P1 per-mode table test/src/reverb_quality_p1_tests.cpp; probe suites test/src/reverb_probe_tmp.cpp, room_probe_tmp.cpp, chamber_probe_tmp.cpp), and 511 after the T-DAT-001 plate-DAT wave-3 closeout (2026-10-17, commit 1d069c9) — still 511 across the repo-organization reorg (commits bc19343..1bcaf32, pure file moves: DspTests 511/511 on every gate). The R2 measurement infrastructure is standing in test/src/effect_tests.cpp; the full legacy-plate law guard suite remains anchored at the Digital/PLT entry (mode 5, type[5]==2).",
+      "evidence": [
+        {
+          "resource": "repo://docs/tickets/plate-dat-rebuild-draft.md",
+          "version": "repo-file-v1:sha256:81a72bf28565c4f50e408349cb6ab276797fa69ed4ddac57be93cabcb1b4b804"
+        },
+        {
+          "resource": "repo://test/src/effect_tests.cpp",
+          "version": "repo-file-v1:sha256:7cf48ee3fbf1d19a64c5246cd2119f2feb26bcc193801f3cb25ef5e129cf6195"
+        },
+        {
+          "resource": "repo://test/src/reverb_ceiling_p0_tests.cpp",
+          "version": "repo-file-v1:sha256:93e3f56217e621c343b4c839836fb8dabe664e0aa06f347834d9f9f9581901a5"
+        },
+        {
+          "resource": "repo://test/src/reverb_quality_p1_tests.cpp",
+          "version": "repo-file-v1:sha256:88e8666e338953afde8d67cb345b155e36f0bfafff5603b80ba3faa29189ba1e"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-14T16:54:40.219Z"
+    "at": "2026-10-14T18:37:00.801Z"
   }
 }

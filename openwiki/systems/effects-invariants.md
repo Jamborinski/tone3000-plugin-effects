@@ -9,16 +9,16 @@ sources:
     resource: repo://docs/agents/ir-reverb-training.md
   - id: openwiki-source-a57c88194aa852db387a04a3
     resource: repo://docs/tickets/complete/reverb-dry-mod-width-swing.md
-  - id: openwiki-source-652b993abfe8770db021e86f
-    resource: repo://plugin/include/effects/reverb/plate/Reverb_DAT.h
-  - id: openwiki-source-2facbc441e66db87c3b8df63
+  - id: openwiki-source-b0e24661fab1f1c9f8906b3b
     resource: repo://plugin/include/effects/reverb/digital/Reverb_Plate.h
-  - id: openwiki-source-19216030c70d0a3aeeebbfe7
-    resource: repo://plugin/include/effects/reverb/shared/Reverb_SharedMod.h
-  - id: openwiki-source-6306f3aec9a0733a17a7eab7
-    resource: repo://plugin/include/effects/reverb/spring/Reverb_Spring.h
+  - id: openwiki-source-f79e6124e5e7690b7229ec93
+    resource: repo://plugin/include/effects/reverb/plate/Reverb_DAT.h
   - id: openwiki-source-d4b9a9adb1644505c083378b
     resource: repo://plugin/include/effects/reverb/Reverb.h
+  - id: openwiki-source-64f81fc5081b9545023ce6a0
+    resource: repo://plugin/include/effects/reverb/shared/Reverb_SharedMod.h
+  - id: openwiki-source-71faa004d559bd7d9756a798
+    resource: repo://plugin/include/effects/reverb/spring/Reverb_Spring.h
   - id: openwiki-source-7fb62e48416333f990bd3d93
     resource: repo://plugin/ui/views/gallery/EffectTile.cpp
   - id: openwiki-source-4b8e7dce368774e92d99ea30
@@ -32,7 +32,7 @@ sources:
 generated: { by: "pi", at: "2026-10-14T16:54:40.219Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-14T16:54:40.219Z
+    at: 2026-10-14T18:37:00.801Z
 ---
 
 

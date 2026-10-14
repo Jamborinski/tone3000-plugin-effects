@@ -3,10 +3,14 @@ type: "Reference"
 title: "Windows release pipeline"
 openwiki_generated: true
 sources:
+  - id: openwiki-source-5f5b95b3d6a215fa02ceb945
+    resource: repo://.env.example
   - id: openwiki-source-d44494ef3e497fea81240ef8
     resource: repo://CMakeLists.txt
   - id: openwiki-source-54aa3f4134fa6c214762f246
     resource: repo://docs/agents/windows-build.md
+  - id: openwiki-source-88584cf10e435bc9ae271488
+    resource: repo://script/signing/sign-exe.sh
   - id: openwiki-source-2e86156505dd09c0183e033d
     resource: repo://script/win-standalone.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
@@ -14,7 +18,7 @@ sources:
 generated: { by: "pi", at: "2026-10-14T16:54:40.219Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-14T16:54:40.219Z
+    at: 2026-10-14T18:37:00.801Z
 ---
 
 
