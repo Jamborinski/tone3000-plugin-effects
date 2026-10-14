@@ -185,7 +185,7 @@ compared against, so "CPU headroom is fine" is almost never the limiter.
   closeout builds + stages it: `source /home/jambo/buildkit/winbuild_env.sh`
   (it exports `$CMAKE`/`$NINJA` paths, NOT cmake on PATH — call
   `$CMAKE --build build-win --target TONE3000_Standalone`), then
-  `bash scripts/win-standalone.sh` → `C:\Users\jambo\Downloads\TONE3000-win-
+  `bash script/win-standalone.sh` → `C:\Users\jambo\Downloads\TONE3000-win-
   YYYYMMDD-HHMMSS`; verify PE32+ x86-64, Windows-only DLL imports (no
   libstdc++/libwinpthread), ASIO-strings present, md5 recorded (full rules:
   `windows-build.md`).

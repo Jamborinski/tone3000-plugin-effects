@@ -105,7 +105,7 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
 ## Read before doing (the pointer index)
 | If you're about to… | Read first | The one line that matters |
 |---|---|---|
-| Build / stage a **Windows `.exe`**, change `.env` key, Wine-test | `docs/agents/windows-build.md` | Stage = `scripts/win-standalone.sh` → `TONE3000-win-YYYYMMDD-HHMMSS` (run-timestamp only); ASIO is a hard requirement; keep the 2 `T3K_MINGW_*` patches |
+| Build / stage a **Windows `.exe`**, change `.env` key, Wine-test | `docs/agents/windows-build.md` | Stage = `script/win-standalone.sh` → `TONE3000-win-YYYYMMDD-HHMMSS` (run-timestamp only); ASIO is a hard requirement; keep the 2 `T3K_MINGW_*` patches |
 | **Merge / sync `upstream`**, or push branches/tags | `docs/agents/merge-upstream.md` | `upstream`=tone-3000, `origin`=fork; resolve per-function; DspTests + Win link BEFORE committing; commit only conflicted files; push only when told |
 | Fresh-configure, **GUI** link, ALSA/X11/freetype errors, VST3 helper, add/remove sources | `docs/agents/linux-build-deep.md` | ALSA `-lasound` resolves via pkg-config (the shim — don't revert); `--sysroot` on the helper; never hand-edit `build.ninja` |
 | Touch any **param / knob / scale / tile / chain state** | `docs/agents/ui-wiring.md` | A block field needs all FOUR state places; 0..1-stored human-unit knobs MUST declare `toStored`; new 5-knob kinds need `numParams_` |
@@ -182,7 +182,7 @@ The scheduled OpenWiki GitHub Actions workflow refreshes the repository wiki. Do
 ## On ticket completion (docs/tickets close-out)
 - **STAGE A WINDOWS EXE — user-mandated, every closeout:** after DspTests /
   selftest / goldens are green and the commit is in, run
-  `bash scripts/win-standalone.sh` (background it if > 3 min) and record the
+  `bash script/win-standalone.sh` (background it if > 3 min) and record the
   staging dir (`TONE3000-win-YYYYMMDD-HHMMSS`) + md5 in the ticket log. Don't
   close a shipped ticket without it (detail: `docs/agents/windows-build.md`).
 - **When closing a ticket in `docs/tickets/` (or a session that landed
