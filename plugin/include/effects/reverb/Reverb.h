@@ -1061,10 +1061,6 @@ class Reverb {
   // post-mix Haas M/S stage (applyWidthHaas) which is the ticket's "match
   // the convolver" ask; the tap scaling remains as the spectral decorrelation
   // baseline (it was bit-exact to ship, keep it). 1ch has no Haas stage.
-  double widthTapScaleFor(int ch, int numChannels) const {
-    const double widthSpread = kMaxWidthSpread * params_.width;
-    return (ch == 0) ? (1.0 - widthSpread) : (1.0 + widthSpread);
-  }
   void applyWidthHaas(juce::AudioBuffer<float>& buffer) {
     if (!widthHaasOn_ || buffer.getNumChannels() < 2) return;
     const int n = buffer.getNumSamples();
@@ -1107,25 +1103,9 @@ class Reverb {
     // the other modes' dispatch.
     const int lawCh = (params_.mode == 5) ? typeLawMode(5, params_.type[5]) : params_.mode;
 
-    // Feedback (Decay): see decayFb() -- [50,3000] bit-identical to before, the
-    // 3000..5000 top segment nudges the tail just a touch longer (still |fb| < 1).
-    const double fb = decayFb(params_.decayMs);
-    // Normalise by a FIXED ref (not the live (1-fb), which collapses at long decay).
-    // See the Wash LEVEL reference block above for why.
-    const double norm = kDigitalWashRef / kNumLines;
-    // Tone: one-pole low-pass on the feedback path (tone 0 = no filter, bright;
-    // tone 1 = fully dark), matching the delay's damping convention.
-    const double dampAlpha = 1.0 - params_.tone;
     // Width: the shared post-mix Haas stage (see widthHaasOn_ and
     // applyWidthHaas below) -- see the Width design note in the constants
     // block. The old per-bank tap-scale spread is gone (R3, 2026-10-15).
-
-    // Digital laws are live in mode 5 only. Density (feedback coupling toward
-    // the per-lines mean) and Mod (sined read-tap waver) both reduce to the
-    // identity at 0, so when NEITHER is on the plain comb-bank path below is
-    // byte-identical to the current engine (and every other mode uses it too
-    // -> the law-inert anchor).
-    const bool densityOn = (lawCh == 5) && (params_.density > 0.0);
     // Spring (mode 1) is law-live only when armed (springs>0 or sag>0); at both
     // 0 it runs the shared plain path (the anchor + the law-inert scaffold pin
     // stay intact). Plate/Room/Chamber/Hall are still law-inert (their sigs do
@@ -1208,118 +1188,11 @@ class Reverb {
       if (sharedOn_) processSharedModSmear(buffer);
       return;
     }
-    if (!densityOn && !modOn_) {
-      for (int ch = 0; ch < numChannels; ++ch) {
-        auto& lines = lines_[static_cast<size_t>(ch)];
-        const double tapScale = widthTapScaleFor(ch, numChannels);
-        float* out = buffer.getWritePointer(ch);
-        for (int i = 0; i < numSamples; ++i) {
-          const float dry = out[i];
-          float acc = 0.0f;
-          for (int ln = 0; ln < kNumLines; ++ln) {
-            auto& L = lines[ln];
-            const int d = static_cast<int>(std::max(1.0, taps_[ln] * tapScale)) & L.mask;
-            const float delayed = L.ring[(L.write - d) & L.mask];  // e[n - d] tail
-            L.lp += dampAlpha * (delayed - L.lp);                 // low-pass it
-            L.ring[L.write] = dry + static_cast<float>(fb) * L.lp; // e[n]
-            L.write = (L.write + 1) & L.mask;
-            acc += delayed;  // wet: the tail (not the current input)
-          }
-          out[i] = static_cast<float>(acc * norm);
-        }
-      }
-      applyWidthHaas(buffer);
-      if (sharedOn_)
-        processSharedModSmear(buffer);
-      return;
-    }
-
-    // ---- Digital law path: Density (feedback coupling) and/or Mod (waver) ----
-    const float depth = modDepthSamples_;
-    const double inc = modInc_;
-    const double phase0 = modPhase_;
-    const double density = params_.density;
-    const double oneMinusDensity = 1.0 - density;
-    // Schroeder/Moorer all-pass coefficient (0 at Density 0 -> identity; the
-    // bit-identity anchor holds). Phase-only, so the level we calibrated is kept.
-    const float diffCoef = densityOn ? static_cast<float>(kDigitalDiffuse * density) : 0.0f;
-
-    for (int ch = 0; ch < numChannels; ++ch) {
-      auto& lines = lines_[static_cast<size_t>(ch)];
-      const double tapScale = widthTapScaleFor(ch, numChannels);
-      const float side = (ch == 0) ? +1.0f : -1.0f;  // L + / R - (opposite phase)
-      float* out = buffer.getWritePointer(ch);
-      float delayed[kNumLines];
-      float selfLp[kNumLines];
-      for (int i = 0; i < numSamples; ++i) {
-        const float dry = out[i];
-        // Pass A: read each line's tail (wobbled read when Mod is live -> a
-        // smooth interpolated tap; the plain integer read otherwise) and update
-        // its low-pass state. Reads and writes are split so a line's write can
-        // only affect later samples of ITS OWN ring (lines have separate rings,
-        // so the order is exactly the plain path's at Density 0).
-        const float wob = modOn_
-            ? side * depth
-              * static_cast<float>(waveValue(params_.wave, fmod(phase0 + inc * i, 2.0 * M_PI) / (2.0 * M_PI)))
-            : 0.0f;
-        for (int ln = 0; ln < kNumLines; ++ln) {
-          auto& L = lines[ln];
-          const double base = std::max(1.0, taps_[ln] * tapScale);
-          float tail;
-          if (modOn_) {
-            const double tapF = std::max(1.0, base + static_cast<double>(wob));
-            const int d0 = static_cast<int>(tapF);  // floor(tapF)
-            const float frac = static_cast<float>(tapF - static_cast<double>(d0));
-            const uint32_t iNew = static_cast<uint32_t>(((L.write - d0) & L.mask));
-            const uint32_t iOld = static_cast<uint32_t>(((L.write - d0 - 1) & L.mask));
-            tail = L.ring[iNew] + frac * (L.ring[iOld] - L.ring[iNew]);
-          } else {
-            const int d = static_cast<int>(base) & L.mask;
-            tail = L.ring[static_cast<uint32_t>(((L.write - d) & L.mask))];
-          }
-          L.lp += dampAlpha * (tail - L.lp);
-          delayed[ln] = tail;
-          selfLp[ln] = L.lp;
-        }
-        // Density: blend each line's feedback toward the mean of all lines
-        // (identity at Density 0). A convex combination of the tails -> stays
-        // within their range, so it cannot destabilise (|mix| <= max|tail|).
-        float mean = 0.0f;
-        if (densityOn) {
-          for (int k = 0; k < kNumLines; ++k) mean += selfLp[k];
-          mean /= kNumLines;
-        }
-        // Pass B: write the (possibly coupled) feedback and sum the wet tails.
-        float acc = 0.0f;
-        for (int ln = 0; ln < kNumLines; ++ln) {
-          auto& L = lines[ln];
-          const float mix = densityOn
-              ? (oneMinusDensity * selfLp[ln] + density * mean)
-              : selfLp[ln];
-          L.ring[L.write] = dry + static_cast<float>(fb) * mix;
-          L.write = (L.write + 1) & L.mask;
-          acc += delayed[ln];
-        }
-        // Schroeder/Moorer all-pass diffusion on the summed comb wash (identity at
-        // Density 0, so the anchor holds; a linear first-order APF of unity gain,
-        // blended in by the density coefficient -> live, bounded, phase-only).
-        const float xv = static_cast<float>(acc * norm);   // the comb output (AP input)
-        float yv = xv;
-        if (diffCoef != 0.0f) {
-          const float a = 0.5f;  // a fixed moderate AP coefficient (|a|<1)
-          const float yAp = a * xv + digApX_[ch] - a * digApY_[ch];  // y=a*x+x[n-1]-a*y[n-1]
-          digApX_[ch] = xv;          // x[n-1]
-          digApY_[ch] = yAp;         // y[n-1]
-          yv = static_cast<float>((1.0f - diffCoef) * xv + diffCoef * yAp);
-        }
-        out[i] = yv;
-      }
-    }
-    if (modOn_)
-      modPhase_ = phase0 + inc * numSamples;  // advance the LFO once per block
-    applyWidthHaas(buffer);
-    if (sharedOn_)
-      processSharedModSmear(buffer);  // R2: the shared, knob-gated post-mix swell
+    // Shared comb engine (digital/comb_engine.h): DIG is the raw engine; the
+    // spring/room/chamber/hall arms (and the disarmed digital subtypes) fall
+    // through here (the bit-exact anchor); the digital laws (density / mod
+    // waver) layer on top of it.
+    processComb(buffer);
   }
 
   // Subtle level-driven soft-shoulder for the spring driver color: identity
@@ -1591,6 +1464,8 @@ class Reverb {
   void processChamber(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/chamber/Reverb_Chamber.h
 
   void processHall(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/hall/Reverb_Hall.h
+  void processComb(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/digital/comb_engine.h
+  double widthTapScaleFor(int ch, int numChannels) const;  // impl: effects/reverb/digital/comb_engine.h
 
  private:
   struct Line {
@@ -1732,16 +1607,8 @@ class Reverb {
   int   datLoopTot_ = 1;    // one full A-B-A fig-8 traversal (samples, at current size)
   float datDec_ = 1.0f;     // fig-8 loop decay multiplier (Decay knob, 0.82 cap; all 6 decay sites)
 
-  // T-DAT-001: one Schroeder-I allpass pass over L with per-tap gain g.
-  // Form: a = pop; fb = a*g; ff = -x - a*g; push(x+fb); y = a + ff.
-  inline float datApf(DatLine& L, int off, float g, float x) {
-    const float a = L.readAt(static_cast<uint32_t>(off));
-    const float f = -a * g - x;
-    L.push(x + a * g);
-    return a + f;
-  }
-
-  void processDat(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/plate/Reverb_DAT.h
+  float datApf(DatLine& L, int off, float g, float x);  // impl: effects/reverb/plate/plate_engine.h
+  void processDat(juce::AudioBuffer<float>& buffer);  // impl: effects/reverb/plate/plate_engine.h
 
   // ---------------------------------------------------------------- PLT ("T-DAT-001")
 
@@ -1829,9 +1696,11 @@ class Reverb {
 };
 
 #include "spring/Reverb_Spring.h"
+#include "digital/comb_engine.h"
 #include "digital/Reverb_Plate.h"
+#include "digital/types/Reverb_DIG.h"
 #include "room/Reverb_Room.h"
 #include "chamber/Reverb_Chamber.h"
 #include "hall/Reverb_Hall.h"
-#include "plate/Reverb_DAT.h"
+#include "plate/types/Reverb_DAT.h"
 #include "shared/Reverb_SharedMod.h"
