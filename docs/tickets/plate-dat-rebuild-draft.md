@@ -24,7 +24,10 @@ User A/B on the shipped exe drove a second face wave (this commit):
 - **Gates:** DspTests **511/511** (up from 509: +2 Mod guards; LoCut taper guard re-pinned), build-ui relinked; **Windows stage** `TONE3000-win-20261013-173958` (md5 `b349a8059c372e15ac87ca060cb391c3`, `strings | grep -c reverbMod` = 11).
 
  (T-DAT-001)
-- **Engine** — `plugin/include/effects/reverb/Reverb.h`: the DAT (Dattorro) plate tank is
+- **Engine** — `plugin/include/effects/reverb/Reverb.h` (class/dispatch); after
+  the engine/wrapper reorg (9bf4469) the tank body lives at
+  `effects/reverb/plate/plate_engine.h`, thin wrapper
+  `effects/reverb/plate/types/Reverb_DAT.h`: the DAT (Dattorro) plate tank is
   the **default + only** engine for Plate (mode 0): a **modified port of the
   Dattorro plate algorithm** (2026-10-16) in repo style (per-side mono tanks,
   `DatLine`/`DatChan` rings, `processDat`), zero-latency verified (every read
