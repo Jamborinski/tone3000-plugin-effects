@@ -11,6 +11,8 @@ sources:
     resource: repo://docs/tickets/complete/reverb-dry-mod-width-swing.md
   - id: openwiki-source-4d6792d483f6b9821830338e
     resource: repo://plugin/include/Reverb.h
+  - id: openwiki-source-7fb62e48416333f990bd3d93
+    resource: repo://plugin/ui/views/gallery/EffectTile.cpp
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
   - id: openwiki-source-22db8812ec3771683e6a7ddc
@@ -22,7 +24,7 @@ sources:
 generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-17T00:00:00.000Z
+    at: 2026-10-14T01:57:16.991Z
 ---
 
 
@@ -78,8 +80,13 @@ stable); AP delay bases in **samples** (base × rs, `rs = 0.25 +
 1.5×size`, so **Size** = loop length / diffusion spread); the golden
 node-tap split (L vs R banks use different tap sets — the two tanks
 carry the stereo image); **Early** pre-ring taps 2 / 5 / 9 ms ×
-`early`; **Tone** one-pole damplings `800·16^tone` Hz on the d0 / d2
-pops; **Air** a 4.5 kHz shelf `(1 + 6·air)` on the accumulator low-pass;
+`early`; **Tone** — INVERTED in the wave-3 user A/B (m03344, "wired
+backwards"): `tinv = 1.0 − tone;` the d0 / d2 pop damplings are
+`tinv · (1 − exp(−2π·(800·16^tinv)/sr))` one-poles, so tone **1 =
+damping coef exactly 0 = full bright** (the ported all-passes undamped)
+and tone 0 = darkest (12.8 kHz one-poles); guard
+`ReverbTest.FullToneKeepsTheSustainedTail` (`effect_tests.cpp`);
+ **Air** a 4.5 kHz shelf `(1 + 6·air)` on the accumulator low-pass;
 **LoCut** a 45 Hz one-pole HPF (`0` = bit-pass, the only new param);
 in-LPF 13.5 kHz; diffusion scale `0.1 + 0.9×space`.
 
@@ -103,7 +110,18 @@ amplifying to 1e37) — not the engine; probe buffers are always
 Width in the DAT arm is a **width-gated M/S side-gain**
 (`side = 0.5(L−R)·width`, 0 = true mono, 1 = full per-side image)
 instead of the shared `applyWidthHaas` Haas-echo post stage the legacy
-modes use; the R2 shared-Mod post stage is unchanged. **CPU ceiling
+modes use; **Mod (wave 3, m03469/m03476)** is the R2 shared-Mod post
+stage itself — the face's Mod knob re-binds to `reverbSharedMod`
+→ `Params::sharedMod` → `sharedOn_` →
+`processSharedModSmear` (the wet-unity ADDED 7-voice chorus layer),
+after the user A/B rejected the in-loop LFO design ("mod could be a
+bit stronger" + a hiss class): the engine's own Mod is an in-loop LFO
+(±24·mod samples on the golden apm offsets, 15−13.5·mod Hz) which had
+to be removed for wet safety. **Standing rule: τ one-poles belong on
+an ADDED wet path (the R2 voice-rings), never inside a
+feedback-loop feed** — a τ in the loop low-passes the wet and the
+tail dies (the pre-wave-3 in-loop τ attempt collapsed the wet to
+dry-only in the user's A/B). **CPU ceiling
 (23 us/block@128) WAIVED** for this engine by the user (m00552 — the
 port is the design; the ceiling applies to the other modes). Guards:
 suite **DatGuards**, `test/src/dat_probe_tests.cpp`

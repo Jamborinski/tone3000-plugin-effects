@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:c46c626ca64bcbefa82500447f161886a62b4547ff6e50c7da661bc6aa4e8f48",
+  "pageVersion": "sha256:b4c3694149c3a46ac213c83c64f576cd5106f1cc9b8c50c8796a2ba6fbcbc0e1",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -49,16 +49,6 @@
       ]
     },
     {
-      "id": "claim_f57ccd78a5114979a806c615320a5c95",
-      "statement": "DspTests compiles the real plugin DSP sources and exactly one UI file, plugin/ui/core/Labels.cpp (the KnobScale readout formatter that the scale contract tests link); everything else in plugin/ui (views, widgets, services, NativeEditor) is excluded. Therefore a green DspTests run does NOT prove the UI links: UI changes must be verified via the testbed (--selftest / --capture diff) or a GUI plugin build target before committing. Current suite size (2026-10-16, after the reverb-budget-quality-uplift pass): 503 tests / 73 suites; it grew by 6 probe tests across reverb_probe_tmp, room_probe_tmp, and chamber_probe_tmp.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:00fce6ca0f6ce302bce2000a19ce73a50b7d3cb02efed4ab809c03e39b6f4b48"
-        }
-      ]
-    },
-    {
       "id": "claim_73de1c43a8e24f6ead2645e36181aa0f",
       "statement": "The view tree from NativeEditor (owns UiPrefs, HttpClient, Tone3000Session, Services, PluginRoot; scales the 1024-wide design space) is: PluginRoot → PluginHeader (PresetBar / AccountMenu / StereoModeToggle) + AppBanner + middle (MainScreen chain + faceplate | BlockCard for a single-block detail view | TunerView; ToneBrowser takes over middle + Faceplate while open; SignInScreen takes that slot while signing in) + Faceplate + HintBar + OverlayLayer (Settings, modals, popovers, Toast). BlockCard (views/block/BlockCard.h) is the per-block card (Tone + Mix + power) that syncHeader() re-selects its tone without recreating the in-flight handler's closure, per the data flow rule.",
       "evidence": [
@@ -92,11 +82,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:a5805ef9cb674d789aa8aee8d75a83cae8a25b267ed5fcbd5b8147aabdd1472d"
+          "version": "repo-file-v1:sha256:b40adc6572ec6489d056f994383b04d1e42a6ff17f232f28df03667d5d5fd560"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:00fce6ca0f6ce302bce2000a19ce73a50b7d3cb02efed4ab809c03e39b6f4b48"
+          "version": "repo-file-v1:sha256:85b13e0fddb68d9a04abad86005ef9385d5eb4ce323f58d7b6975efa62c344df"
         }
       ]
     },
@@ -106,31 +96,45 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:00fce6ca0f6ce302bce2000a19ce73a50b7d3cb02efed4ab809c03e39b6f4b48"
+          "version": "repo-file-v1:sha256:85b13e0fddb68d9a04abad86005ef9385d5eb4ce323f58d7b6975efa62c344df"
         }
       ]
     },
     {
-      "id": "claim_ac86244a8c3e474798097d2bddd66f3b",
-      "statement": "FINAL reverb full-tile layout after the T-DAT-001 PLT face rebuild (2026-10-17, supersedes the pre-DAT R2/R3 layout): a 6x2 grid (6 even columns per row, kCompactKnobFace 32 px applied to compact + convolution + reverb-full, 12.0 px labels). The param stream (paramsFor, EffectTile.cpp:201-265) for reverb now carries 8 base entries: Decay, Pre, Tone, Size, Width, Mod (reverbSharedMod), LoCut (reverbLoCut, fraction 0..1, 0 = off), Space (reverbSpace) — Dwell/In removed from the face (Dwell hidden via `input_.setVisible(!(reverb && !compact))` at ~:416; Dry dropped as redundant with Mix+Out). Visible grid: Row 1 = Decay(A) | Pre(B) | LoCut(F, knobF_ remap) | Tone(C) | Air (sigKnob_ slot0, binds reverbAir) | Mod (knobH_); Row 2 = Mix | Early (modKnob_ slot1, binds reverbEarly) | Size(D) | Space (knobG_ remap) | Width(E) | Out. The syncKnobs remaps (i==5->knobH_, i==6->knobF_, i==7->knobG_) sit at ~:376-380; numParams_ for reverb full = 8 (EffectTile.cpp:311-315). The two SIG slots are re-voiced per mode by reverbSigParam/Label/ScaleForMode; for the PLT face they are Air (row 1) and Early (row 2) — the legacy Bright/Bloom arms stay engine-live on the Digital PLT subtype but are OFF the visible face. TileShot goldens plugin/ui/testbed/goldens/reverb.png + reverb-shift.png were re-shot after user review and the goldens re-approved at 0 px diff (docs/agents/ui-snapshots.md flow: human approve -> --regen). Current DspTests suite count at the T-DAT-001 closeout: 509 tests (previously 503).",
+      "id": "claim_44fd2da61b2e43e0ab0e755127f834d0",
+      "statement": "DspTests compiles the real plugin DSP sources and exactly one UI file, plugin/ui/core/Labels.cpp (the KnobScale readout formatter that the scale-contract tests link); everything else in plugin/ui (views, widgets, services, NativeEditor) is excluded. Therefore a green DspTests run does NOT prove the UI links: UI changes must be verified via the testbed (--selftest / --capture diff) or a GUI plugin build target before committing. Current suite size (2026-10-17, after the T-DAT-001 wave 3 closeout): 511 tests / 75 suites; grew from 503 with the 8-test DatGuards suite (test/src/dat_probe_tests.cpp).",
       "evidence": [
         {
-          "resource": "repo://plugin/ui/testbed/goldens/reverb-shift.png",
-          "version": "repo-file-v1:sha256:9c67b4c2daaba2ddbc68e2ccd75d56e754b1a2a81c82f9b42436de043a5046aa"
+          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
+          "version": "repo-file-v1:sha256:85b13e0fddb68d9a04abad86005ef9385d5eb4ce323f58d7b6975efa62c344df"
         },
         {
-          "resource": "repo://plugin/ui/testbed/goldens/reverb.png",
-          "version": "repo-file-v1:sha256:f14c7612a303d555966d8eae13956ea87e5b0ce78e510472164e551f7ea7abf4"
+          "resource": "repo://test/src/dat_probe_tests.cpp",
+          "version": "repo-file-v1:sha256:2bad6a2a711aa31b4dc4cd4ff8d8bc422dc132a45b2272c4fa4d31c3cfcc7d63"
+        }
+      ]
+    },
+    {
+      "id": "claim_2b7d102584ec40b98a298f0f00d0c4f6",
+      "statement": "FINAL reverb full-tile layout after T-DAT-001 face waves 2+3 (2026-10-17; supersedes the pre-wave face and the 8-entry Space-included layout): the compact face applies kCompactKnobFace = 32 px to compact + convolution + reverb-full tiles (12.0 px labels). The 6x2 grid is: ROW 1 = Mix (chain-level, first slot, squared at read path in Processor.cpp) | Decay | LoCut (reverbLoCut, fraction 0..0.85, kinear loCutTaper toStored = 0.85*pow(n,0.7)) | Tone | Air (reverbAir, sigKnob_ slot 0) | Mod (reverbSharedMod, wave 3 rebind from the old reverbMod binding). ROW 2 = Dwell (reverbInput, row-2 slot 0, visible on the reverb face via `input_.setVisible(reverb && compact)`-style gate) | Pre | Early (reverbEarly, modKnob_ slot 1) | Size | Width | Out (chain-level, last slot). Space (reverbSpace) is OFF the face: user pinned space=0.73f in code (m02854); the param still exists in ChainBlock/Params but has no visible knob on the PLT reverb face. The two SIG slots (Air row 1, Early row 2) are re-voiced per mode by reverbSigParam/Label/ScaleForMode. numParams_ for the reverb face = 8 engine params + Mix + Out chain-level entries. TileShot goldens plugin/ui/testbed/goldens/reverb.png + reverb-shift.png were re-shot after user review and the goldens re-approved at 0 px diff (docs/agents/ui-snapshots.md flow: human approve -> --regen). Current DspTests suite count at the T-DAT-001 closeout: 511 tests / 75 suites.",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/ui-snapshots.md",
+          "version": "repo-file-v1:sha256:68d3345211973116f8b310a1904043c3150fae73785cde7fa70256996254a73f"
+        },
+        {
+          "resource": "repo://plugin/ui/core/KnobScale.h",
+          "version": "repo-file-v1:sha256:b40adc6572ec6489d056f994383b04d1e42a6ff17f232f28df03667d5d5fd560"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:00fce6ca0f6ce302bce2000a19ce73a50b7d3cb02efed4ab809c03e39b6f4b48"
+          "version": "repo-file-v1:sha256:85b13e0fddb68d9a04abad86005ef9385d5eb4ce323f58d7b6975efa62c344df"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-13T21:50:34.909Z"
+    "at": "2026-10-14T01:57:16.991Z"
   }
 }

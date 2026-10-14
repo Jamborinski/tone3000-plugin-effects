@@ -34,6 +34,8 @@ sources:
     resource: repo://scripts/win-standalone.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
+  - id: openwiki-source-22db8812ec3771683e6a7ddc
+    resource: repo://test/src/dat_probe_tests.cpp
   - id: openwiki-source-9122ffeb8c7fc8e2457955ce
     resource: repo://test/src/effect_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
@@ -41,7 +43,7 @@ sources:
 generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-13T21:50:34.909Z
+    at: 2026-10-14T01:57:16.991Z
 ---
 
 # TONE3000

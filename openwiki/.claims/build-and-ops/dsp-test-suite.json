@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:5b1b18de2b215feee4bae8395e81eed00f39fbbe3470ed1bcc1d2fed33365f36",
+  "pageVersion": "sha256:5f83870edb77bcad7bfa4892d21a2da648fd3f44c320966e555cfa5aa154ffab",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -81,24 +81,6 @@
       ]
     },
     {
-      "id": "claim_916532a025994ae585b6b8a9c6329055",
-      "statement": "The DspTests suite grows with features (a count here is a lower-bound snapshot, never assert a stale total on a red run): 487 after the R2 thirteenth/final cut (2026-10-15, commit 1aa620e), 493 after the P2.1 plate density uplift (2026-10-16, +ReverbCeiling P0 guard suite + PlateProbe P2.1 probes), and 503 after the full reverb-budget-quality-uplift pass (P0 ceiling pin test/src/reverb_ceiling_p0_tests.cpp suite ReverbCeiling 4 tests at 23 us/block@128 per mode with Spring <= 46; P1 per-mode table test/src/reverb_quality_p1_tests.cpp; P2.1/P2.3/P2.4 probe suites test/src/reverb_probe_tmp.cpp, room_probe_tmp.cpp, chamber_probe_tmp.cpp; P2.2 Spring / P2.5 Hall / P2.6 Digital declined in-family per user leeway). The R2 measurement infrastructure is standing in test/src/effect_tests.cpp.",
-      "evidence": [
-        {
-          "resource": "repo://test/src/effect_tests.cpp",
-          "version": "repo-file-v1:sha256:0a1020b4adf40a60a59e66d9363cc7fb0ddd8e9095dad9e9d9c7b86a28b24aea"
-        },
-        {
-          "resource": "repo://test/src/reverb_ceiling_p0_tests.cpp",
-          "version": "repo-file-v1:sha256:93e3f56217e621c343b4c839836fb8dabe664e0aa06f347834d9f9f9581901a5"
-        },
-        {
-          "resource": "repo://test/src/reverb_probe_tmp.cpp",
-          "version": "repo-file-v1:sha256:02fb43ede194d370002a8f13336992a8d8fb09cb5c873fafd98d4cfb176b3c44"
-        }
-      ]
-    },
-    {
       "id": "claim_3a509d209b1b4b2aae6190e94a245b3a",
       "statement": "The P2 probe suites added by the 2026-10-16 reverb-budget-quality-uplift pass are registered in test/CMakeLists.txt (src/reverb_probe_tmp.cpp Plate Probe suite W1 lift sweep ship 1.15, src/room_probe_tmp.cpp Room Probe suite W2 wash norm 1.20, src/chamber_probe_tmp.cpp Chamber Probe suite W2 washFrac 1.60 + 8.0 kHz cap sweep 12000->8000 Hz). They compile the real plugin sources and guard the shipped constant values so a regression in the plate lift, room wash normalization, or chamber wash fraction fails the suite.",
       "evidence": [
@@ -113,8 +95,30 @@
       ]
     },
     {
-      "id": "claim_4b0c60de51534ae498ed88ae3281cb26",
-      "statement": "The T-DAT-001 plate-DAT rebuild added the standing DatGuards suite in test/src/dat_probe_tests.cpp, registered in test/CMakeLists.txt: StableAcrossSizeDecayGrid, LongerDecayKeepsTheLongTail, LoCutDropsTheLowBand (DFT per-bin band meter), AirLiftsTheTopBand, WidthWidensThePlateImage (width-gated M/S side-gain), and ModZeroIsBitPass - guards for the new processDat engine in Reverb.h. The interim diagnostic suites (dat_exp, goldengrid, loopsolo, goldengrid, loopgain, loopsolo, arb, rerun, boundary2, margin, finallaw, sitekill) were removed at closeout; the full DspTests suite is at 509 tests as of closeout.",
+      "id": "claim_5aaec57262904b98b4ed519a99796698",
+      "statement": "The DspTests suite grows with features (a count here is a lower-bound snapshot, never assert a stale total on a red run): 487 after the R2 thirteenth/final cut (2026-10-15, commit 1aa620e), 493 after the P2.1 plate density uplift (2026-10-16), 503 after the reverb-budget-quality-uplift pass (P0 ceiling pin test/src/reverb_ceiling_p0_tests.cpp suite ReverbCeiling; P1 per-mode table test/src/reverb_quality_p1_tests.cpp; probe suites test/src/reverb_probe_tmp.cpp, room_probe_tmp.cpp, chamber_probe_tmp.cpp), and 511 after the T-DAT-001 plate-DAT wave-3 closeout (2026-10-17, commit 1d069c9). The R2 measurement infrastructure is standing in test/src/effect_tests.cpp; the full legacy-plate law guard suite remains anchored at the Digital/PLT entry (mode 5, type[5]==2).",
+      "evidence": [
+        {
+          "resource": "repo://docs/tickets/plate-dat-rebuild-draft.md",
+          "version": "repo-file-v1:sha256:9c34b3a3963cc395df8220b0646fa0cba1ee716777b9e2b9c2d00d1ce2e44bcb"
+        },
+        {
+          "resource": "repo://test/src/effect_tests.cpp",
+          "version": "repo-file-v1:sha256:7cf48ee3fbf1d19a64c5246cd2119f2feb26bcc193801f3cb25ef5e129cf6195"
+        },
+        {
+          "resource": "repo://test/src/reverb_ceiling_p0_tests.cpp",
+          "version": "repo-file-v1:sha256:93e3f56217e621c343b4c839836fb8dabe664e0aa06f347834d9f9f9581901a5"
+        },
+        {
+          "resource": "repo://test/src/reverb_quality_p1_tests.cpp",
+          "version": "repo-file-v1:sha256:88e8666e338953afde8d67cb345b155e36f0bfafff5603b80ba3faa29189ba1e"
+        }
+      ]
+    },
+    {
+      "id": "claim_f2a2aaaee09f48d9845b953145937d7f",
+      "statement": "The T-DAT-001 plate-DAT rebuild added the standing DatGuards suite in test/src/dat_probe_tests.cpp, registered in test/CMakeLists.txt: StableAcrossSizeDecayGrid, LongerDecayKeepsTheLongTail, LoCutDropsTheLowBand (stable one-pole HPF x LPF band meter), AirLiftsTheTopBand, WidthWidensThePlateImage (width-gated M/S side gain), ModZeroIsBitPass and ModOneAudiblyChangesTheRender (both pinned to the sharedMod gate field after the wave-3 Mod rebind to the post-wet shared-chorus layer), with DatGuards.* running 8 tests total. Legacy-plate color/dwell guards re-pinned to the mode 5 / type[5]==2 arm via helpers in test/src/plate_family_tests.cpp (plateLegacyP/plateLegacyAt) and test/src/plate_texture_tests.cpp (plateLegacy Defaults/plateLegacyDecay). The interim diagnostic suites (dat_exp, goldengrid, loopsolo, loopgain, arb, rerun, boundary2, margin, finallaw, sitekill, s_datDecDrive scaffolding) were removed at closeout.",
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
@@ -122,13 +126,17 @@
         },
         {
           "resource": "repo://test/src/dat_probe_tests.cpp",
-          "version": "repo-file-v1:sha256:42a4598974aca657b5a8f99b35800e9aa2c22684b5cbca6c8b63e7ed1e813b06"
+          "version": "repo-file-v1:sha256:2bad6a2a711aa31b4dc4cd4ff8d8bc422dc132a45b2272c4fa4d31c3cfcc7d63"
+        },
+        {
+          "resource": "repo://test/src/plate_family_tests.cpp",
+          "version": "repo-file-v1:sha256:68c6d057dbb6e9035276fb6e95fc6517a09023fe5171e4a6b2ee0c2149e27188"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-13T21:50:34.909Z"
+    "at": "2026-10-14T01:57:16.991Z"
   }
 }

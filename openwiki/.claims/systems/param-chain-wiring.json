@@ -1,25 +1,7 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:ad51312bbf325d28a2a4d1e5f3d40ac6e56dec6bc0284517cc56412c34004fae",
+  "pageVersion": "sha256:6afedd3ed807bff7fd9c6376fe9b807c4b157cfbab06903dcf1a76010a31f5ca",
   "claims": [
-    {
-      "id": "claim_5182e0a71fbd47bea2e298fb16e1de68",
-      "statement": "A block param field round-trips only if it exists in all FOUR state places: (1) getChainState in plugin/src/ProcessorChain.cpp (the BlockRow struct, the copyLane copy, AND params->setProperty('<field>',…) in serializeChain); (2) parseItem in plugin/ui/model/ChainState.cpp (item.<field> = num(v[\"params\"], \"<field>\", default)); (3) updateBlockParam in plugin/src/ProcessorChain.cpp (the param == \"<field>\" branch); (4) ProcessorState.cpp (blockState.setProperty + getProperty restore). Missing any one = 'works sonically, snaps back to default on sync'. Two families sit in these four places: (a) CHAIN-LAYER dry-gain params — convDry, and reverbDry since the 2026-10-13 R1 pass — whose updateBlockParam branch does NOT call an engine setParams (the gain is applied in the chain's mix loop on the dry term only); (b) ENGINE params like reverbSharedMod (R2 shared Mod depth, 0..1 clamped) and reverbWave (R2 Digital Shape, int 0..kNumWaves-1 clamped), whose updateBlockParam branch stores the clamped value AND calls block->reverb.setParams(block->reverbParams()). The R2 reverbSigRaw Digital Sig B raw-value path also routes b.reverbWave (not the shared Mod).",
-      "evidence": [
-        {
-          "resource": "repo://docs/agents/ui-wiring.md",
-          "version": "repo-file-v1:sha256:3957ba19c608190c1db689a428a03202260fbd8c66241992b5a77b63aadce428"
-        },
-        {
-          "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:4590377e2ecfb42d5e01478dc407acfdfcce91345785fd34bf1845dcd6c2cbc5"
-        },
-        {
-          "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:1d3320ac4c6605198e3918901c115f7b4a81e43de3688e7167ed3c20d018dc9e"
-        }
-      ]
-    },
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
       "statement": "ParamBinding (services/ParamBinding.h, port of useParameter.ts) is a view's handle on one host parameter, values normalised 0..1. It brackets drag writes in beginGesture/dragTo/endGesture so the host records one automation gesture, and inbound parameter echoes are ignored while the pointer is down (a stale echo must not snap the live value back). Change notifications fire on the message thread; an unknown id (a build without that parameter) yields an inert binding that reads 0 and swallows writes, so views never null-check.",
@@ -45,16 +27,6 @@
       ]
     },
     {
-      "id": "claim_548d237b5d4f4064806ccba47e6a08fc",
-      "statement": "KnobScale (plugin/ui/core/KnobScale.h, port of knobScale.ts) keeps three domains separate: normalised 0..1 knob position, a DISPLAY unit (ms/dB/%/name) for the drag readout and type-in, and a STORAGE contract via toStored/fromStored that is what actually goes into the block param. knobToStored()/knobFromStored() fall back to toDisplay/fromDisplay when no explicit storage pair is declared — bit-identical legacy behaviour for real-unit-stored and identity-stored fraction knobs. Knobs whose stored domain is 0..1 but whose display unit is human (delayHeads 1..4 heads, compClip 0..2 raw depth behind a 0..200 % face, convGain ±24 dB, reverbDry ±24 dB (added 2026-10-13 R1; SEPARATE scale mirroring convGain() exactly — identity toStored/fromStored, own scale face so the tile names them independently), convPitch 0.25x..4x, spring lines 1..6) MUST declare toStored/fromStored or the tile writes the display unit into a 0..1 param, then the engine clamps it to 1.0, then the next resync snaps the knob back to max — the 2026-10-06 Heads glitch. reverbSharedMod and reverbWave (R2) have NO custom scale: sharedMod is a plain 0..1 depth (OFF at 0 by default) and wave is an int 0..4 detent (Reverb::kNumWaves = 5, the same 5-detent law as Chorus/Tremolo; wave 0 = the exact-sine bit-exact anchor), both identity-bound.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:a5805ef9cb674d789aa8aee8d75a83cae8a25b267ed5fcbd5b8147aabdd1472d"
-        }
-      ]
-    },
-    {
       "id": "claim_c814b3d9bd3a4e5e96158208998ad651",
       "statement": "T-DAT-001 added a THIRD family member to the four-state-place rule: engine param reverbLoCut (0..1 clamped, default 0 = bit-pass). Its four places: (1) ChainBlock.h:406 field `double reverbLoCut = 0.0;` + the reverbParams() aggregate ending `reverbSharedMod, reverbWave, reverbLoCut` (:430; matches Reverb::Params struct order) + ProcessorChain.cpp BlockRow init (:1203), row mirror (:1320), and params->setProperty(\"reverbLoCut\", …) in serializeChain (:1497); (2) ChainState.h/.cpp parseItem `item.reverbLoCut = num(v[\"params\"], \"reverbLoCut\", 0.0)`; (3) ProcessorChain.cpp isReverbParam list (:1936) + updateBlockParam branch (:2221-2222, jlimit 0..1 + block->reverb.setParams(block->reverbParams())); (4) ProcessorState.cpp blockState.setProperty (:282) + jlimit restore (:472).",
       "evidence": [
@@ -75,10 +47,42 @@
           "version": "repo-file-v1:sha256:1d3320ac4c6605198e3918901c115f7b4a81e43de3688e7167ed3c20d018dc9e"
         }
       ]
+    },
+    {
+      "id": "claim_ed5f8720ca514eaa812d7cb9d59e6a2c",
+      "statement": "A block param field round-trips only if it exists in all FOUR state places: (1) getChainState in plugin/src/ProcessorChain.cpp (the BlockRow struct, the copyLane copy, AND params->setProperty('<field>',…) in serializeChain); (2) parseItem in plugin/ui/model/ChainState.cpp (item.<field> = num(v[\"params\"], \"<field>\", default)); (3) updateBlockParam in plugin/src/ProcessorChain.cpp (the param == \"<field>\" branch); (4) ProcessorState.cpp (blockState.setProperty + getProperty restore). Missing any one = 'works sonically, snaps back to default on sync'. Two families sit in these four places: (a) CHAIN-LAYER dry-gain params — convDry, and reverbDry since the 2026-10-13 R1 pass — whose updateBlockParam branch does NOT call an engine setParams (the gain is applied in the chain's mix loop on the dry term only); (b) ENGINE params like reverbSharedMod (R2 shared Mod depth, 0..1 clamped), reverbWave (R2 Digital Shape, int 0..kNumWaves-1 clamped), and reverbLoCut (T-DAT-001, 0..1 clamped, stored fraction) — whose updateBlockParam branch stores the clamped value AND calls block->reverb.setParams(block->reverbParams()).",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/ui-wiring.md",
+          "version": "repo-file-v1:sha256:b24ea89b246f8f9413bba69a21975bc567048f06675d70e3fd6e737a6021d833"
+        },
+        {
+          "resource": "repo://plugin/src/ProcessorChain.cpp",
+          "version": "repo-file-v1:sha256:4590377e2ecfb42d5e01478dc407acfdfcce91345785fd34bf1845dcd6c2cbc5"
+        },
+        {
+          "resource": "repo://plugin/ui/model/ChainState.cpp",
+          "version": "repo-file-v1:sha256:1d3320ac4c6605198e3918901c115f7b4a81e43de3688e7167ed3c20d018dc9e"
+        }
+      ]
+    },
+    {
+      "id": "claim_9cf834ee9ffd4e4d825b80f6aab73a80",
+      "statement": "KnobScale (plugin/ui/core/KnobScale.h, port of knobScale.ts) keeps three domains separate: normalised 0..1 knob position, a DISPLAY unit (ms/dB/%/name) for the drag readout and type-in, and a STORAGE contract via toStored/fromStored that is what actually goes into the block param. knobToStored()/knobFromStored() fall back to toDisplay/fromDisplay when no explicit storage pair is declared — bit-identical legacy behaviour for real-unit-stored and identity-stored fraction knobs. Knobs whose stored domain is 0..1 but whose display unit is human (delayHeads 1..4 heads, compClip 0..2 raw depth behind a 0..200 % face, convGain ±24 dB, reverbDry ±24 dB, convPitch 0.25x..4x, spring lines 1..6) MUST declare toStored/fromStored or the tile writes the display unit into a 0..1 param, then the engine clamps it to 1.0, then the next resync snaps the knob back to max — the 2026-10-06 Heads glitch. T-DAT-001 additions: reverbSharedMod and reverbWave (R2) have NO custom scale (sharedMod is a plain 0..1 depth OFF at 0 by default; wave is an int 0..4 detent, identity-bound); the LoCut knob uses the loCutTaper() scale (KnobScale.h:792) with toStored(n) = 0.85 * pow(n, 0.7) (0..0.85 fraction for the mode-0 45 Hz HPF blend — never reaches 1.0; the 40-120 Hz absolute band-floor measured at full LoCut, user m03131 approved the 80% ceiling) with an inverse fromStored.",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/ui-wiring.md",
+          "version": "repo-file-v1:sha256:b24ea89b246f8f9413bba69a21975bc567048f06675d70e3fd6e737a6021d833"
+        },
+        {
+          "resource": "repo://plugin/ui/core/KnobScale.h",
+          "version": "repo-file-v1:sha256:b40adc6572ec6489d056f994383b04d1e42a6ff17f232f28df03667d5d5fd560"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-13T21:50:34.909Z"
+    "at": "2026-10-14T01:57:16.991Z"
   }
 }

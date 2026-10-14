@@ -6,6 +6,8 @@ tags: [testing, dsp-tests, googletest, fixtures, script]
 sources:
   - id: openwiki-source-55524a0481117f837a7bb064
     resource: repo://docs/tickets/complete/reverb-budget-quality-uplift.md
+  - id: openwiki-source-c80500302f4c953f647993ed
+    resource: repo://docs/tickets/plate-dat-rebuild-draft.md
   - id: openwiki-source-fbe20d668cd183c9fb53adb2
     resource: repo://script/test-dsp.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
@@ -22,12 +24,12 @@ sources:
     resource: repo://test/src/processor_tests.cpp
   - id: openwiki-source-eb6e55b68712208f16dad484
     resource: repo://test/src/reverb_ceiling_p0_tests.cpp
-  - id: openwiki-source-5f01f50f7fc33afc7f561a56
-    resource: repo://test/src/reverb_probe_tmp.cpp
+  - id: openwiki-source-cbee6d7a85a49f4ea2d7a315
+    resource: repo://test/src/reverb_quality_p1_tests.cpp
 generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-13T21:50:34.909Z
+    at: 2026-10-14T01:57:16.991Z
 ---
 
 # DSP test suite (DspTests)
