@@ -86,31 +86,41 @@ The layout's `five`/`cols` flag is a SEPARATE gate — update both.
 
 ## Dwell = shared "In" relabelled (reverb tile only)
 The Dwell knob is the shared In/input-gain knob renamed for the reverb block
-(help key `reverbDwell`, label set in `EffectTile.cpp`). It is drive, not a
-retune knob; do not add a dedicated dwell parameter.
+(help key `reverbDwell`, label set in `EffectTile.cpp` :572-576). It is drive, not a
+retune knob; do not add a dedicated dwell parameter. On the PLT face v2 it
+sits in row 2 col 1 (visible); on the conv tile it is the Dwell label too.
 
 ## Reverb PLT face (full tile — T-DAT-001, 2026-10-17; supersedes the R1/R2 layout below)
-The reverb tile is now the **6x2 PLT face** (6 even columns, 32 px face /
-12 px labels): Row 1 = **Decay | Pre | LoCut | Tone | Air (sigKnob_) |
-Mod (knobH_)**; Row 2 = **Mix | Early (modKnob_) | Size | Space (knobG_) |
-Width | Out**. The param stream (paramsFor, EffectTile.cpp:201-265) carries
-8 reverb entries in this order: Decay, Pre, Tone, Size, Width,
-reverbSharedMod, **reverbLoCut (the only new param — 45 Hz one-pole HPF,
-0 = bit-pass, four state places: ChainBlock.h field + reverbParams()
-aggregate (ends `reverbSharedMod, reverbWave, reverbLoCut`),
-ProcessorChain.cpp ×5 sites, ProcessorState.cpp set/restore + jlimit, plus
-parse in ChainState.cpp)**, reverbSpace. Dwell/In is HIDDEN on the full
-reverb face (`input_.setVisible(!(reverb && !compact))`) — Mix takes the In
-slot; Dry is dropped (redundant with Mix+Out); Air/Early are the two SIG
-slots for the PLT face (the legacy Bright/Bloom arms stay engine-live on the
-Digital PLT subtype but are off the visible face). The syncKnobs remap is
-i==5→knobH_, i==6→knobF_ (LoCut), i==7→knobG_ (Space); numParams_ reverb
-full = 8. TileShot goldens `plugin/ui/testbed/goldens/reverb.png` +
-`reverb-shift.png` were re-shot + re-approved (human review first — see the
-ui-snapshots.md approval gate). The shared Mod (`reverbSharedMod`,
-`Reverb::Params::sharedMod`, clamped in `setParams`) is unchanged in
-effect — full-tile-only on the compact surface; Digital Sig B is
-`reverbWave` (5 detents). Goldens for the previous R1/R2 6+6 layout are gone.
+The reverb tile is now the **6x2 PLT face v2** (6 even columns, 32 px face /
+12 px labels; `kCompactKnobFace`): Row 1 = **Mix | Decay (knobA_) | LoCut
+(knobF_) | Tone (knobC_) | Air (sigKnob_) | Mod (knobH_)**; Row 2 = **Dwell
+(In, input_) | Pre (knobB_) | Early (modKnob_) | Size (knobD_) | Width
+(knobE_) | Out**. Wave-2 deltas (user m02884, committed 1b410ab): **Mix is a
+chain-level knob on row 1 col 1** (no longer effect-param 8); its wet share is
+SQUARED at the read path — `Processor.cpp` mixes as `m*m`, so a 50 % knob =
+25 % wet (guard `test/src/outgain_tests.cpp`: `kWet = kMix * kMix`); **Dwell
+(In) is re-shown in row 2 col 1** (`input_.setLabel("Dwell")`, always visible
+now — the wave-1 face had hidden it); **Space is OFF the face** — engine
+pinned `const float space = 0.73f` in `plugin/include/Reverb.h` setParams
+(reverbLoCut clamp sits just above it), ChainBlock default 0.7; the param
+still round-trips in state, it just has no visible knob. The param stream
+(paramsFor, EffectTile.cpp reverb arm) carries **7 base entries** in this
+order: Decay, Pre, Tone, Size, Width, **reverbSharedMod** (the Mod knob —
+wave 3, was reverbMod on the old face), **reverbLoCut** (the only new param
+— 45 Hz one-pole HPF blend fraction, 0 = bit-pass, four state places:
+ChainBlock.h field + reverbParams() aggregate, ProcessorChain.cpp sites,
+ProcessorState.cpp set/restore + jlimit, ChainState.cpp parse; face scale is
+`loCutTaper()` = `0.85·n^0.7` toStored, cap 0.85 = -16.5 dB heavy-but-present —
+the n^3 v2 cliff at -40 dB was user-rejected, KnobScale.h with the measured
+ladder). numParams_ reverb full = **7** (EffectTile.cpp:311-315); knobAt remap
+i==5→knobH_ (Mod), i==6→knobF_ (LoCut) — the i==7→knobG_ (Space) remap is
+gone with Space off the face. Wave 3 (1d069c9): Mod binds the R2 shared
+post-wet chorus (`params_.sharedMod`) — the in-loop LFO read was removed from
+the engine, so the face knob and the old-engine Mod are ONE control again.
+Air/Early are the two SIG slots (reverbSigParam/Label/ScaleForMode); the
+legacy Bright/Bloom arms stay engine-live on the Digital PLT subtype only.
+TileShot goldens `plugin/ui/testbed/goldens/reverb.png` + `reverb-shift.png`
+re-shot + re-approved per the ui-snapshots.md approval gate.
 
 ## (Superseded) Reverb R1/R2 knobs — 2026-10-14/15 layout
 The pre-PLT face: 6+6 COLUMN grid, Mod (index 5 → knobH_) + Dry (index 6 →

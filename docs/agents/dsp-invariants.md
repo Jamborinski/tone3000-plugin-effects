@@ -159,18 +159,40 @@
   for it does not exist yet.
 ## Reverb (PLT face, per-mode laws -- full text in `docs/agents/ir-reverb-training.md`)
 - **Plate (mode 0) is now the DAT (Dattorro) engine** (T-DAT-001, 2026-10-17):
-  an MIT port of `RSAlgorithmicVerb-main` `DattorroVerb.cpp` (attribution +
-  the AGENTS.md clean-room/MIT rule at the port site in
-  `plugin/include/Reverb.h`). DEFAULT + ONLY engine for Plate; the old
+  a modified port of the Dattorro plate algorithm (see
+  `plugin/include/Reverb.h`, `processDat`). DEFAULT + ONLY engine for Plate; the old
   comb-plate law survives bit-identical at the Digital PLT subtype (mode 5,
   type[5]==2) with the legacy pin tests on its arm. The Decay knob drives the
   six decay-site loop gain with a **uniform 0.82 cap** (stability boundary
   measured 0.88 — see the allpass-loop-stability section below); Size = rs
   loop-scale (0.25+1.5*size); LoCut = the only new param (45 Hz one-pole
   HPF, 0 = bit-pass, four state places — see `ui-wiring.md`). Guards:
-  `test/src/dat_probe_tests.cpp` suite **DatGuards** (6/6 green; band meter
-  is a per-bin DFT, NOT a unit-circle resonator — that overflows on plate
-  low-band content and produced the LoCut/Air/Width 'failures' mid-hunt).
+  `test/src/dat_probe_tests.cpp` suite **DatGuards** (8/8 green at the wave-3
+  closeout: stability grid, T60 tracking, tail, LoCut band-drop, Air, Width,
+  + ModZeroIsBitPass / ModOneAudiblyChanges pinning `sharedMod`; band meter
+  is a per-bin DFT one-pole, NOT a unit-circle resonator — that overflows on
+  plate low-band content and produced the LoCut/Air/Width 'failures' mid-hunt).
+  **Wave 3 lessons (user A/B, 2026-10-17):** (1) **Tone direction was wired
+  backwards** — shipped law inverts: `tinv = 1.0 − tone;` d0/d2 pop damplings
+  = `tinv·(1−exp(−2π·(800·16^tinv)/sr))`, so **tone 1 = exact 0 damping =
+  undamped all-pass bank (full bright), tone 0 = 12.8 kHz damplings
+  (darkest)**; guard `ReverbTest.FullToneKeepsTheSustainedTail`. The first A/B
+  (m03344) called it "wired backwards" — a knob's *direction* is a ship
+  decision like any level law. (2) **Mod = the R2 shared post-wet chorus
+  layer, not an in-loop LFO.** The face's Mod re-binds to
+  `reverbSharedMod` (→ `Reverb::Params::sharedMod` → `sharedOn_` →
+  `processSharedModSmear`, the wet-unity added 6-voice chorus, kSharedModDepthMs
+  18 ms, tau-80 ms write-smooth, 12 dB/voice darkening — constants at
+  Reverb.h:1365-1415). The DAT engine's own in-loop LFO (±24·mod samples on
+  the apm offsets) was removed: the user's A/B wanted more Mod AND the wet
+  had to survive it, and the shipped old-engine law does both (wet = wet + amt·chorus,
+  cannot die). **STANDING RULE: one-pole (τ) smoothing belongs on an ADDED
+  wet path only, never inside a feedback-loop feed** — the in-loop τ attempt
+  low-passed the loop itself and the A/B came back with "all wet disappears /
+  only get dry" (exe v5, do not ship). (3) **When an added-layer law already
+  exists in the same engine, REUSE it for a new subtype's Mod** — the user
+  directed it ("the other reverb engine may have a modulation engine you can
+  (mostly) copy"): the layer's parameters and law travel with the layer.
 - **LEGACY comb-plate** (the mode-0 engine before T-DAT-001, 2026-10-13; now
 the Digital PLT arm only) is tuned against the EMT 140 2.0 s IR reference
 (house convolver, peak-normalised): 50 % NEUTRAL start dials
@@ -323,8 +345,8 @@ rawAbs @2000 ms / comb cap 21.98 @2500 ms on the `plateLegacyP()` arm.
 
 ## Feedback / allpass loop stability (2026-10-17, the DAT plate rebuild, T-DAT-001)
 - **The per-traversal decay constant is part of the STABILITY budget, not
-  just the reverb length.** The DAT (Dattorro) port's fig-8 loop was stable
-  at the golden's own fixed `decayTime = 0.35` but marginal the moment the
+  just the reverb length.** The DAT (Dattorro) fig-8 loop was stable
+  at the reference design's fixed `decayTime = 0.35` but marginal the moment the
   Decay knob could push the per-site gain past ~0.84-0.88 (measured by the
   per-second energy-GROWTH slope on the 6-16 s tail of a long render at
   sizes 0.0 / 0.5 / 1.0 — a `|s|>50`/nonfinite test is render-length

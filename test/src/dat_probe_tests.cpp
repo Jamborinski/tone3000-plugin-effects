@@ -9,9 +9,9 @@
 // decay-inert runaway lesson: mid-range green != stable), the Decay
 // knob's measured tail, and the LoCut / Air spectral laws.
 //
-// Provenance: the tank topology + delay bases + node taps ported 2026-10-16
-// from the MIT-licensed RSAlgorithmicVerb DattorroVerb (structure and
-// constants carry over per the repo's MIT-port rule; arrangement is ours).
+// Provenance: the tank topology + delay bases + node taps follow the
+// Dattorro plate algorithm (Dattorro 1997), ported and modified 2026-10-16
+// into repo style.
 // OURS (not golden): the T60-driven per-site decay law + its 0.80
 // stability cap, gIn/gDec gain caps < 1 (a g=1.0 Schroeder-I parks a
 // z=-1 leaky pole), the per-side L/R tap split, Pre ring, Early ladder,

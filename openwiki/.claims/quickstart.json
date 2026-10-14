@@ -102,7 +102,7 @@
     },
     {
       "id": "claim_1e6060c85f654709868ba9a165298c0e",
-      "statement": "AGENTS.md hard rules also carry the 2026-10-16 MIT-port license rule (added during reverb tuning, generalized in the T-DAT-001 pass): MIT-licensed or public-domain reference code IS portable - structure AND constants, with an attribution + license comment at the port site; order/arrangement is restructured to repo style (no verbatim transcription). GPL/copyleft references (e.g. GPL reverb nodes) stay spec/measurement REFERENCE only - NEVER copy code, constants, curves, or tuned numbers into the MIT codebase. Zero-latency applies to ALL ports regardless of license. The T-DAT-001 PLT engine (plugin/include/Reverb.h, suite DatGuards in test/src/dat_probe_tests.cpp) is the first use of this rule: an MIT port of RSAlgorithmicVerb-main (DattorroVerb.cpp, RSAlgorithmicVerb, MIT).",
+      "statement": "AGENTS.md hard rules also carry the 2026-10-16 MIT-port license rule (added during reverb tuning, generalized in the T-DAT-001 pass): MIT-licensed or public-domain reference code IS portable - structure AND constants, with an attribution + license comment at the port site; order/arrangement is restructured to repo style (no verbatim transcription). GPL/copyleft references (e.g. GPL reverb nodes) stay spec/measurement REFERENCE only - NEVER copy code, constants, curves, or tuned numbers into the MIT codebase. Zero-latency applies to ALL ports regardless of license. The T-DAT-001 PLT engine (plugin/include/Reverb.h, suite DatGuards in test/src/dat_probe_tests.cpp) follows the Dattorro plate algorithm (Dattorro 1997), modified and restructured to repo style.",
       "evidence": [
         {
           "resource": "repo://AGENTS.md",

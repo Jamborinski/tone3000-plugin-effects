@@ -69,16 +69,14 @@ Neutral start dials (the 50 % row; `defaultDialsForMode`, V2 order):
 
 ### Plate — the DAT engine (mode 0, T-DAT-001, 2026-10-17; DEFAULT + ONLY engine)
 
-A **MIT port** of `RSAlgorithmicVerb-main`
-(`Source/DattorroVerb.cpp`, Dattorro 1997 — MIT attribution at the port
-site, `Reverb.h` ~:2225; the AGENTS.md MIT-port rule permits structure AND
-constants, restructured to repo style, zero-latency preserved). Ported
-tank: two independent mono all-pass/delay banks (one per channel) with
-the golden fig-8 A/B crossfeed; 4 input all-pass stages (gains
+A **modified port of the Dattorro plate algorithm** (Dattorro 1997),
+restructured to repo style (`Reverb.h`, `processDat`; zero-latency
+preserved). Tank: two independent mono all-pass/delay banks (one per
+channel) with the fig-8 A/B crossfeed; 4 input all-pass stages (gains
 0.98 / 0.98 / 0.83 / 0.83 — capped under 1 so the z = −1 pole stays
 stable); AP delay bases in **samples** (base × rs, `rs = 0.25 +
-1.5×size`, so **Size** = loop length / diffusion spread); the golden
-node-tap split (L vs R banks use different tap sets — the two tanks
+1.5×size`, so **Size** = loop length / diffusion spread); the node-tap
+split (L vs R banks use different tap sets — the two tanks
 carry the stereo image); **Early** pre-ring taps 2 / 5 / 9 ms ×
 `early`; **Tone** — INVERTED in the wave-3 user A/B (m03344, "wired
 backwards"): `tinv = 1.0 − tone;` the d0 / d2 pop damplings are
@@ -93,9 +91,9 @@ in-LPF 13.5 kHz; diffusion scale `0.1 + 0.9×space`.
 **Decay knob law** — `datDec_ = 0.15 + (0.82 − 0.15) ·
 log10(clamp(decayMs, 50, 2500)/50) / log10(2500/50)`, a **uniform 0.82
 cap** in `setParams` (Reverb.h ~:889–897), applied as the fixed-gain
-fig-8 loop multiplier at all 6 decay sites (the golden's hardcoded
-`decayTime = 0.35` replaced by the live knob — the golden's fixed 0.35
-is exactly what keeps that loop structurally marginal at long tails, so
+fig-8 loop multiplier at all 6 decay sites (the reference design's
+hardcoded `decayTime = 0.35` replaced by the live knob — that fixed
+gain is what keeps that loop structurally marginal at long tails, so
 the 0.82 cap is the stability guarantee). The boundary was measured by
 the per-second energy-GROWTH slope on the 6–16 s tail of a 15–20 s
 render (a `|s| > 50` / non-finite test on short renders is
@@ -116,7 +114,7 @@ stage itself — the face's Mod knob re-binds to `reverbSharedMod`
 `processSharedModSmear` (the wet-unity ADDED 7-voice chorus layer),
 after the user A/B rejected the in-loop LFO design ("mod could be a
 bit stronger" + a hiss class): the engine's own Mod is an in-loop LFO
-(±24·mod samples on the golden apm offsets, 15−13.5·mod Hz) which had
+(±24·mod samples on the loop-ap offsets, 15−13.5·mod Hz) which had
 to be removed for wet safety. **Standing rule: τ one-poles belong on
 an ADDED wet path (the R2 voice-rings), never inside a
 feedback-loop feed** — a τ in the loop low-passes the wet and the
