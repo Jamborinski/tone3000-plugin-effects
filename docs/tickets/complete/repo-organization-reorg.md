@@ -67,7 +67,12 @@ access because it is a friend of `Reverb`, not of any one body).
       (`C:\Users\jambo\Downloads\TONE3000-win-20261014-124012\TONE3000.exe`,
       30,112,746 bytes, md5 `304b9b347ae564a6b17730d3c3357c12`) — post per-mode
       subdirs build (1bcaf32); supersedes the earlier 095520 stage
-- [x] OpenWiki update (reconcile reverb page claims/sources for the new split)
+- [x] `script/win-standalone.sh` stage — `TONE3000-win-20261014-142112`
+      (`C:\Users\jambo\Downloads\TONE3000-win-20261014-142112\TONE3000.exe`,
+      30,112,594 bytes, md5 `b648ddd323cd24bf1bc41124918d209f`) — post
+      engine/wrapper reorg build (9bf4469); supersedes the 124012 stage
+- [x] OpenWiki update (reconcile reverb page claims/sources for the new split;
+      second pass ff0a3f94 + commit 4e1e6a0 for the engine/wrapper layout)
 - [x] this ticket log entry
 
 ## Notes
