@@ -13,8 +13,8 @@ matching sub-rule(s) before touching files.
 - **Not yet wired into the chain.** No EffectKind, no Processor dispatch,
   no ProcessorState, no UI. That is the primary remaining work item.
 - **Untracked (not committed — user has not said "commit"):**
-  - `plugin/include/ConvolutionReverb.h`
-  - `plugin/src/ConvolutionReverb.cpp`
+  - `plugin/include/effects/conv/ConvolutionReverb.h`
+  - `plugin/src/effects/conv/ConvolutionReverb.cpp`
   - `test/src/convolution_reverb_tests.cpp`
   - modified: `plugin/CMakeLists.txt` (lines ~328–329), `test/CMakeLists.txt`
 
@@ -30,7 +30,7 @@ saga on 1-tap IRs was **our own bug**, not JUCE's:
   Contents varied per binary/instance → zero kernel in some, 0.125 garbage
   reuse in others. Explains every anomaly (K/P/Q/M dead binaries,
   first-in-process pattern, R1–R4 "clean" binaries).
-- **Fixed** in `plugin/src/ConvolutionReverb.cpp` (`makeEditedState`,
+- **Fixed** in `plugin/src/effects/conv/ConvolutionReverb.cpp` (`makeEditedState`,
   2× `copyFrom(ch, 0, data, outLen)`) and in the test helper.
 - **Standing trap:** JUCE `AudioBuffer::copyFrom` has both 4-arg
   `(dest, start, const float*, numSamples)` and 5-arg
