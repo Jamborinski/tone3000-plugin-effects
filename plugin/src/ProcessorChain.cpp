@@ -1187,6 +1187,7 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
     double compToneDb = 0.0, compScHpHz = 100.0;
     double compThresholdDb = -18.0;
     int compMode = 0;
+    int compType = 0;
     bool compMbc = false;
     double compClip = 1.0, compKnee = 6.0;
     double reverbDecayMs = 1200.0, reverbPreMs = 0.0;
@@ -1287,6 +1288,7 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
           row.compScHpHz = block->compScHpHz;
           row.compThresholdDb = block->compThresholdDb;
           row.compMode = block->compMode;
+          row.compType = block->compType;
           row.compMbc = block->compMbc;
           row.compClip = block->compClip;
           row.compKnee = block->compKnee;
@@ -1459,6 +1461,7 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
         params->setProperty("compScHpHz", row.compScHpHz);
         params->setProperty("compThresholdDb", row.compThresholdDb);
         params->setProperty("compMode", row.compMode);
+        params->setProperty("compType", row.compType);
         params->setProperty("compMbc", row.compMbc);
         params->setProperty("compClip", row.compClip);
         params->setProperty("compKnee", row.compKnee);
@@ -1933,7 +1936,7 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
                              param == "tremoloSpread" || param == "tremoloWave" ||
                              param == "compRatio" || param == "compAttackMs" ||
                              param == "compReleaseMs" || param == "compToneDb" ||
-                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbDry" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbType0" || param == "reverbType1" || param == "reverbType2" || param == "reverbType3" || param == "reverbType4" || param == "reverbType5" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSharedMod" || param == "reverbWave" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace" || param == "reverbLoCut" || param == "convGain" || param == "convDry" || param == "convWidth" || param == "convStartS" || param == "convEndS" || param == "convPitch" || param == "convPreMs" || param == "convFadeIn" || param == "convFadeOut" || param == "convInCurve" || param == "convOutCurve" || param == "convToneDb";
+                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compType" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbDry" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbType0" || param == "reverbType1" || param == "reverbType2" || param == "reverbType3" || param == "reverbType4" || param == "reverbType5" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSharedMod" || param == "reverbWave" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace" || param == "reverbLoCut" || param == "convGain" || param == "convDry" || param == "convWidth" || param == "convStartS" || param == "convEndS" || param == "convPitch" || param == "convPreMs" || param == "convFadeIn" || param == "convFadeOut" || param == "convInCurve" || param == "convOutCurve" || param == "convToneDb";
   const bool isContinuous = param == "inputGain" || param == "outputGain" || param == "mix" ||
                             isEffectParam;
   const bool isKnown = isContinuous || param == "enabled" || param == "normalize";
@@ -2079,62 +2082,68 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
     block->compressor.setParams({block->compMode, block->compRatio, block->compAttackMs,
                                  block->compReleaseMs, block->compToneDb, block->compScHpHz,
                                  block->compThresholdDb, block->compMbc,
-                                 block->compClip, block->compKnee});
+                                 block->compClip, block->compKnee, block->compType});
   } else if (param == "compAttackMs") {
     block->compAttackMs = juce::jlimit(Compressor::kMinAttackMs, Compressor::kMaxAttackMs, value);
     block->compressor.setParams({block->compMode, block->compRatio, block->compAttackMs,
                                  block->compReleaseMs, block->compToneDb, block->compScHpHz,
                                  block->compThresholdDb, block->compMbc,
-                                 block->compClip, block->compKnee});
+                                 block->compClip, block->compKnee, block->compType});
   } else if (param == "compReleaseMs") {
     block->compReleaseMs = juce::jlimit(Compressor::kMinReleaseMs, Compressor::kMaxReleaseMs, value);
     block->compressor.setParams({block->compMode, block->compRatio, block->compAttackMs,
                                  block->compReleaseMs, block->compToneDb, block->compScHpHz,
                                  block->compThresholdDb, block->compMbc,
-                                 block->compClip, block->compKnee});
+                                 block->compClip, block->compKnee, block->compType});
   } else if (param == "compToneDb") {
     block->compToneDb = juce::jlimit(Compressor::kMinToneDb, Compressor::kMaxToneDb, value);
     block->compressor.setParams({block->compMode, block->compRatio, block->compAttackMs,
                                  block->compReleaseMs, block->compToneDb, block->compScHpHz,
                                  block->compThresholdDb, block->compMbc,
-                                 block->compClip, block->compKnee});
+                                 block->compClip, block->compKnee, block->compType});
   } else if (param == "compScHpHz") {
     block->compScHpHz = juce::jlimit(Compressor::kMinScHp, Compressor::kMaxScHp, value);
     block->compressor.setParams({block->compMode, block->compRatio, block->compAttackMs,
                                  block->compReleaseMs, block->compToneDb, block->compScHpHz,
                                  block->compThresholdDb, block->compMbc,
-                                 block->compClip, block->compKnee});
+                                 block->compClip, block->compKnee, block->compType});
   } else if (param == "compThresholdDb") {
     block->compThresholdDb =
         juce::jlimit(Compressor::kMinThresholdDb, Compressor::kMaxThresholdDb, value);
     block->compressor.setParams({block->compMode, block->compRatio, block->compAttackMs,
                                  block->compReleaseMs, block->compToneDb, block->compScHpHz,
                                  block->compThresholdDb, block->compMbc,
-                                 block->compClip, block->compKnee});
+                                 block->compClip, block->compKnee, block->compType});
   } else if (param == "compMode") {
     block->compMode = juce::jlimit(0, Compressor::kNumModes - 1, (int)value);
     block->compressor.setParams({block->compMode, block->compRatio, block->compAttackMs,
                                  block->compReleaseMs, block->compToneDb, block->compScHpHz,
                                  block->compThresholdDb, block->compMbc,
-                                 block->compClip, block->compKnee});
+                                 block->compClip, block->compKnee, block->compType});
+  } else if (param == "compType") {
+    block->compType = static_cast<int>(value);  // state keeps the selection verbatim; the engine clamps (setParams/numTypes)
+    block->compressor.setParams({block->compMode, block->compRatio, block->compAttackMs,
+                                 block->compReleaseMs, block->compToneDb, block->compScHpHz,
+                                 block->compThresholdDb, block->compMbc,
+                                 block->compClip, block->compKnee, block->compType});
   } else if (param == "compMbc") {
     block->compMbc = value > 0.5;
     block->compressor.setParams({block->compMode, block->compRatio, block->compAttackMs,
                                  block->compReleaseMs, block->compToneDb, block->compScHpHz,
                                  block->compThresholdDb, block->compMbc,
-                                 block->compClip, block->compKnee});
+                                 block->compClip, block->compKnee, block->compType});
   } else if (param == "compClip") {
     block->compClip = juce::jlimit(Compressor::kMinClip, Compressor::kMaxClip, value);
     block->compressor.setParams({block->compMode, block->compRatio, block->compAttackMs,
                                  block->compReleaseMs, block->compToneDb, block->compScHpHz,
                                  block->compThresholdDb, block->compMbc,
-                                 block->compClip, block->compKnee});
+                                 block->compClip, block->compKnee, block->compType});
   } else if (param == "compKnee") {
     block->compKnee = juce::jlimit(Compressor::kMinKneeDb, Compressor::kMaxKneeDb, value);
     block->compressor.setParams({block->compMode, block->compRatio, block->compAttackMs,
                                  block->compReleaseMs, block->compToneDb, block->compScHpHz,
                                  block->compThresholdDb, block->compMbc,
-                                 block->compClip, block->compKnee});
+                                 block->compClip, block->compKnee, block->compType});
   } else if (param == "reverbDecayMs") {
     block->reverbDecayMs = juce::jlimit(Reverb::kMinDecayMs, Reverb::kMaxDecayMs, value);
     block->reverb.setParams(block->reverbParams());

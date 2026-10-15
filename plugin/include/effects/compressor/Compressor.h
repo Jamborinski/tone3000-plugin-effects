@@ -174,6 +174,14 @@ class Compressor {
   static constexpr double kMinClip = 0.0, kMaxClip = 2.0;
   static constexpr double kMinKneeDb = 1.0, kMaxKneeDb = 11.0;
 
+  // Per-mode TYPE axis (a sub-model within a mode, mirrored from the reverb's
+  // `Params::type[mode]`). Today every mode carries exactly ONE self-type
+  // (type 0 = the mode's own engine, named VCA/OPT/TUB/VMU/FET in the UI);
+  // `numTypes` is the single source of truth and the face renders one entry.
+  // A future differently-built type for a mode bumps `numTypes` and lands its
+  // engine at compressor/<mode>/types/Compressor_<name>.h.
+  static constexpr int numTypes(int /*mode*/) { return 1; }
+
   struct Params {
     int mode = 0;              // 0=VCA,1=Tube-STA,2=Opto-2A,3=FET,4=Vari-Mu
     double ratio = 4.0;
@@ -187,6 +195,8 @@ class Compressor {
                                //   (noon) = the mode's normal breakup, 0 = clean.
     double kneeDb = 6.0;       // KNEE: VCA soft-knee width (dB); 6 = the classic
                                //   transition (unchanged sound at noon).
+    int type = 0;              // per-mode TYPE (sub-model); 0 = the mode's own
+                               //   engine (numTypes == 1 for every mode today).
   };
 
   void prepare(double sampleRate) {
@@ -205,6 +215,8 @@ class Compressor {
 
   void setParams(const Params& p) {
     mode_ = juce::jlimit(0, kNumModes - 1, p.mode);
+    // state keeps the type selection verbatim; the engine clamps by numTypes
+    type_ = static_cast<int>(juce::jlimit(0, numTypes(p.mode) - 1, p.type));
     ratio_ = static_cast<float>(juce::jlimit(kMinRatio, kMaxRatio, p.ratio));
     attackSec_ =
         static_cast<float>(juce::jlimit(kMinAttackMs, kMaxAttackMs, p.attackMs)) * 0.001f;
@@ -237,358 +249,30 @@ class Compressor {
         const float det = x - c.scLp;
         const float mag = std::fabs(det);
 
-        // Per-mode detector + gain reduction (gr <= 1.0). VCA runs its own
-        // RMS (power) detector; Tube-STA and Vari-Mu share the single `env` peak
-        // follower; Opto-2A drives a two-stage optical cell; FET drives a
-        // parallel hard/light pair. Detection always reads the raw signal.
+        // Per-mode detector + gain reduction (gr <= 1.0) -- bodies in the
+        // per-mode impl headers pulled in after the class close (engine/
+        // wrapper split; the per-mode laws in docs/agents/dsp-invariants.md
+        // are the contract). VCA runs its own RMS (power) detector; Tube-STA
+        // and Vari-Mu share the single `env` peak follower; Opto-2A drives a
+        // two-stage optical cell; FET drives a parallel hard/light pair.
+        // Detection always reads the raw signal.
         float gr = 1.0f;
         float grLight = 1.0f;
-        if (mode_ == 2) {
-          // Opto-2A: real optical-lag dynamics. A fast LED follows the signal and a
-          // slow photocell follows the LED (its charge = attack, recovery =
-          // release). Transients punch through the cell and it catches smoothly --
-          // the LA-2A's signature. Saturating GR from the cell.
-          // POWER (x²) METRIC: a real photocell is driven by light ∝ signal
-          // POWER (x²), not peak. Feed the cell cascade x² and recover
-          // level = sqrt(power) before the law, so the 2A reads ENERGY --
-          // forgiving of transients, solid on sustained body -- like the real
-          // optical cell. The LED/cell ballistics (the optical lag) are
-          // UNCHANGED, so the attack/release feel is preserved; only the LEVEL
-          // it meters moves from a peak envelope to an RMS-equivalent one (a
-          // sustained sine now reads ~3 dB lower than the old peak meter -- the
-          // 2A runs a touch gentler / higher, as on the real thing).
-          const float pow = mag * mag;
-          c.optLed += ledCoef_ * (pow - c.optLed);
-          if (c.optLed > c.optCell)
-            c.optCell += attackCoef_ * (c.optLed - c.optCell);
-          else
-            c.optCell += releaseCoef_ * (c.optLed - c.optCell);
-          const float nn =
-              (std::sqrt((double)std::max(c.optCell, 1e-12f)) + 1e-6f) / thresholdGain_;
-          // Ratio as COMPRESSION DEPTH (the real 2A knob sense): higher ratio =
-          // deeper GR = lower output. Same soft continuous cell-curve family,
-          // re-anchored so DETENT 4:1 = the approved keeper curve (scale = 1),
-          // 1:1 = fully open (transparent at the stage level), 20 = limiting.
-          if (nn > 1.0f)
-            gr = 1.0f / (1.0f + (nn - 1.0f) * std::max(0.0f, ratio_ - 1.0f) / 12.0f);
-          if (mbc_) {
-            // PUNCH light path (3x release): a parallel LIGHT stage -- its depth
-            // coefficient is HALF the main path's (less GR = hotter drive =
-            // louder + creamier body), so the body opens under the same
-            // transients while the ratio still means depth everywhere.
-            // Light stage: same power (x²) metric as the main cell (recovered
-            // by sqrt), so PUNCH tracks energy identically at 3x the release.
-            c.optLedL += ledCoef_ * (pow - c.optLedL);
-            if (c.optLedL > c.optCellL)
-              c.optCellL += attackCoef_ * (c.optLedL - c.optCellL);
-            else
-              c.optCellL += fetRelLCoef_ * (c.optLedL - c.optCellL);
-            const float nnL =
-                (std::sqrt((double)std::max(c.optCellL, 1e-12f)) + 1e-6f) / thresholdGain_;
-            // Light stage: half the main path's depth coefficient (same
-            // "doubling halves it" relation as before, now on the correct scale).
-            if (nnL > 1.0f)
-              grLight = 1.0f / (1.0f + (nnL - 1.0f) * std::max(0.0f, ratio_ - 1.0f) / 24.0f);
-          }
-        } else if (mode_ == 3) {
-          // FET: faithful 1176 four-amp sum. The hardware runs four parallel
-          // channels: a FAST pair and a SLOW pair (each pair's two amps are
-          // identical, so one follower per pair at a 50/50 pair blend is the
-          // exact four-amp sum, with the blend fixed -- the hardware has no
-          // blend control). As in the 1176, the knobs set the SLOW channels;
-          // the fast channels run at fixed short internal times, so they still
-          // clamp transients (the punch) even with slow dialed timings, and
-          // bounce back quickly. All four at the dialed ratio. PUNCH opens the
-          // slow pair fully (1:1) -- peak clamp stays on the fast pair, the
-          // body runs clean: steady GR halves at every ratio.
-          //
-          // Two more fidelity points (per the 1176 study, Moore):
-          //  (a) FEEDBACK DETECTION -- like the real 1176, the detector is
-          //      tapped from the already-compressed audio (behind the FETs):
-          //      detection runs on x*grPrev (applied GR from the previous sample,
-          //      causal, one-sample delay).
-          //      Consequence: a held level reads lower in the detector, so
-          //      the settled GR is SOFTER than the same feed-forward law
-          //      would give -- the "sweets and warms, but not as accurate"
-          //      behavior the 1176 literature assigns to feedback designs.
-          //  (b) PROGRAM-DEPENDENT RATIO -- the 1176 "will faithfully
-          //      compress or limit at the selected ratio for transients, but
-          //      the ratio will always increase a bit after the transient ...
-          //      material dependent" (Shanks). Modelled as a depth-based GR
-          //      swell: the deeper the detector, the more extra GR (up to
-          //      +3 dB). Brief peaks keep the selected ratio; the held body is
-          //      pushed a little further (fast pair / transient stays at ratio).
-          const float magF = mag * std::min(1.0f, c.grPrev);  // (a) feedback tap
-          if (magF > c.fetF)
-            c.fetF += fetFastAtkCoef_ * (magF - c.fetF);
-          else
-            c.fetF += fetFastRelCoef_ * (magF - c.fetF);
-          const float nF = (c.fetF + 1e-6f) / thresholdGain_;
-          gr = fetLaw(nF, ratio_);
-          // SLOW pair = the 1176's rectifier+RC AVERAGE (RMS-ish) meter: feed
-          // it power (magF²) and recover by sqrt, so the held body reads
-          // energy (forgiving on the attack, solid on the note) like the real
-          // slow channels. The FAST pair keeps the peak clamp above (the punch);
-          // only the slow/body detector moved to a power metric.
-          const float powF = magF * magF;
-          if (powF > c.fetL)
-            c.fetL += attackCoef_ * (powF - c.fetL);
-          else
-            c.fetL += releaseCoef_ * (powF - c.fetL);
-          const float nL =
-              (std::sqrt((double)std::max(c.fetL, 1e-12f)) + 1e-6f) / thresholdGain_;
-          // PUNCH in FET = the slow pair goes fully open (1:1): the fast pair
-          // still clamps peaks at the dialed ratio with its short release, and
-          // everything the slow pair gripped runs clean -- the classic punch
-          // recipe (one clamping leg, one open leg). Steady GR halves at every
-          // ratio; the transient is untouched because it is the fast pair's job.
-          grLight = (mbc_ || nL <= 1.0f) ? 1.0f : fetLaw(nL, ratio_);
-          // (b) program-dependent ratio: extra GR that grows with how deep the
-          // body (slow/dialed pair) is being gripped (up to +3 dB). The TRANSIENT
-          // (fast pair, gr) stays at the selected ratio; only the held body is
-          // pushed a little deeper -- matching the 1176's "ratio increases a bit
-          // after the transient". A manual PUNCH (mbc_) fully opens the slow pair
-          // and wins over this auto-deepening (you asked for it open).
-          if (nL > 1.0f && !mbc_) {
-            const float extraDb = 3.0f * juce::jlimit(0.0f, 1.0f, (float)std::log10((double)nL));
-            const float sw = std::pow(10.0f, -extraDb * 0.05f);
-            grLight *= sw;
-          }
-
-        } else if (mode_ == 4) {
-          // Fairchild 670 (see the file header for the design notes).
-          // (a) FEEDBACK DETECTION: the 670 sidechain meters the OUTPUT --
-          //     detect the audio after the last sample's gain (one-sample
-          //     delay, the same tap the FET uses).
-          const float magF = mag * std::min(1.0f, c.grPrev);
-          // (b) 670 TIMINGS: attack as dialed (default 0.2 ms = the 670 is a
-          //     limiter, not a pump); release = the six-position switch,
-          //     0.04 s -> ~25 s across the slider (vmRelCoef_), and above the
-          //     slider's halfway the PROGRAM-DEPENDENT hold (positions 5/6):
-          //     sustained highs charge it, then it drains on the long tail.
-          if (magF > c.env)
-            c.env += attackCoef_ * (magF - c.env);
-          else
-            c.env += vmRelCoef_ * (magF - c.env);
-          if (c.env > thresholdGain_)
-            c.vmHold += vmHoldChgCoef_ * (c.env - c.vmHold);   // charge (sustained high)
-          else
-            c.vmHold += vmHoldDecCoef_ * (0.0f - c.vmHold);    // long program tail
-          const float n = (std::max(c.env, c.vmHold * vmProg_) + 1e-6f) / thresholdGain_;
-          // (c) GR LAW: continuous bend (no hard knee -- the 670's datasheet
-          //     curve is one smooth rolloff), ratio = DEPTH (higher = deeper),
-          //     clean below threshold. In the deep region the output rolls to
-          //     a LEVEL CEILING (x*gr -> thresholdGain_/c): the 670's limiter
-          //     plateau; higher ratio = lower ceiling = harder limiting.
-          gr = (n <= 1.0f)
-                   ? 1.0f
-                   : 1.0f / (1.0f + (n - 1.0f) * std::max(0.0f, ratio_ - 1.0f) / 12.0f);
-          // (d) PUNCH: a parallel LIGHT leg (half the depth, 3x the base
-          //     release) -- the body opens under the same transients, exactly
-          //     like the other four modes.
-          if (mbc_) {
-            const float magL = mag * std::min(1.0f, c.grPrev);
-            if (magL > c.mLight)
-              c.mLight += attackCoef_ * (magL - c.mLight);
-            else
-              c.mLight += vmRelLCoef_ * (magL - c.mLight);
-            const float nL = (c.mLight + 1e-6f) / thresholdGain_;
-            grLight = (nL <= 1.0f)
-                           ? 1.0f
-                           : 1.0f / (1.0f + (nL - 1.0f) * std::max(0.0f, ratio_ - 1.0f) / 24.0f);
-          }
-        } else if (mode_ == 1) {
-          // --- Tube-STA (mode 1): the Gates STA-level per the M5167 manual.
-          // (a) DETECTOR BEHIND THE GAIN: "a sample of the output signal can be
-          //     easily rectified and sent back to an earlier stage to be used
-          //     as a bias" -- the rectifier sits AFTER the gain stage, so
-          //     detection runs on the feedback tap (mag * applied GR), exactly
-          //     like FET/670. Peak ballistics = the dialed A/R (manual: 25 ms
-          //     DOUBLE / 75 ms SINGLE attack).
-          const float magF = mag * std::min(1.0f, c.grPrev);
-          if (magF > c.env)
-            c.env += attackCoef_ * (magF - c.env);
-          else
-            c.env += releaseCoef_ * (magF - c.env);
-          // (b) The signature (the DOUBLE position, preferred for most
-          //     material): a PROGRAM-CONTROLLED release (the C10+C11
-          //     reservoir). Brief peaks store little charge and recover on the
-          //     dialed release; SUSTAINED HIGHS charge a hold that then drains
-          //     on a longer tail (2.5x -- the manual's 2.35-3.75 s sustained /
-          //     0.75-1.65 s short-peak band is ~3x). That is why it evens a
-          //     loud broadcast program without pumping. SAME two-stage
-          //     mechanism as the 670's vmHold, always on here.
-          if (c.env > thresholdGain_)
-            c.staHold += staHoldChgCoef_ * (c.env - c.staHold);   // charge (sustained high)
-          else
-            c.staHold += staHoldDecCoef_ * (0.0f - c.staHold);    // longer program tail
-          const float n = (std::max(c.env, c.staHold) + 1e-6f) / thresholdGain_;
-          // (c) GR LAW: the factory bias->GR curve (5 dB at -2.4 V bias ... 30 dB
-          //     at -43 V ... saturating at the ~40 dB the unit physically
-          //     reaches) -- sub-linear above, i.e. the soft-law shape; knob =
-          //     DEPTH, detent 4:1 = keeper (anchored near the factory 3.3:1).
-          if (n > 1.0f)
-            gr = 1.0f / (1.0f + (n - 1.0f) * std::max(0.0f, ratio_ - 1.0f) / 12.0f);
-          // (d) PUNCH: the Retro TRIPLE mode -- "clamps down on fast transient
-          //     waveforms while still retaining great musicality" = a parallel
-          //     LIGHT leg: half the main depth ((r-1)/24), 3x the dialed
-          //     release to hold the body, on the same feedback tap.
-          if (mbc_) {
-            const float magL = mag * std::min(1.0f, c.grPrev);
-            if (magL > c.mLight)
-              c.mLight += attackCoef_ * (magL - c.mLight);
-            else
-              c.mLight += fetRelLCoef_ * (magL - c.mLight);
-            const float nL = (c.mLight + 1e-6f) / thresholdGain_;
-            if (nL > 1.0f)
-              grLight = 1.0f / (1.0f + (nL - 1.0f) * std::max(0.0f, ratio_ - 1.0f) / 24.0f);
-          }
-        } else {
-          // VCA (mode 0) -- the classic GENERAL-PURPOSE VCA compressor (sources
-          // in the file-header bullet, incl. a measured bug-note):
-          //  (1) RMS (power) DETECTOR: a first-order IIR on x^2 with its OWN
-          //      fixed 50 ms ballistics (vcaDetCoef_, classic analog
-          //      RMS-meter ballistics; THAT2252-class compressor per dn00A/
-          //      dn107), then level = sqrt(2)*sqrt(power) (RPe -- a sine
-          //      reads as its AMPLITUDE, so the threshold knob keeps the
-          //      same meaning as in the other modes). The dialed
-          //      attack/release are NOT applied to x^2 itself: at audio
-          //      rates x^2 oscillates at 2f and a short time constant there
-          //      makes the "RMS" track instantaneous power -- a disguised
-          //      peak envelope (MEASURED: level read ~2.6 dB high = peak
-          //      power; the VCA then behaved like a peak compressor).
-          //  (2) LEVEL ballistics: the dialed attack/release applied to the
-          //      smoothed level -- FEEDFORWARD from the INPUT tap (accurate,
-          //      no post-compensation, deep ratios limit cleanly -- paper
-          //      s3.1: "most modern compressors are, in essence, based on
-          //      the feed-forward topology").
-          //  (3) TEXTBOOK SOFT KNEE (vcaLawDb): the ratio grows from 1:1 to
-          //      the set value in a 6 dB transition at the threshold, then
-          //      holds a constant slope -- the "less perceivable" soft-knee
-          //      curve (classic audio-engineering textbook).
-          //  (4) CLEAN MULTIPLIER: no harmonic coloration (colorizeForMode(0)
-          //      is identity) -- the defining true-VCA trait.
-          c.vcaP += vcaDetCoef_ * (det * det - c.vcaP);   // the RMS detector
-          const float rmsL = 1.41421356f * std::sqrt(c.vcaP);  // RPe level
-          if (rmsL > c.vcaL)
-            c.vcaL += attackCoef_ * (rmsL - c.vcaL);
-          else
-            c.vcaL += releaseCoef_ * (rmsL - c.vcaL);
-          const float A = 1.0f - 1.0f / std::max(1.0f, ratio_);  // slope, dB/dB
-          if (c.vcaL > thresholdGain_)
-            gr = std::pow(10.0f, -vcaLawDb(20.0f * std::log10(c.vcaL / thresholdGain_), A, kneeDb_) * 0.05f);
-          if (mbc_) {
-            // PUNCH light path: the SAME detector and knee shape, dialed 3x
-            // release, and the law at HALF slope (A/2 = EXACTLY half the dB
-            // of GR at every level -- a true "lighter leg", not a curve
-            // change); blended 50/50 with the main path in the output sum
-            // below.
-            if (rmsL > c.vcaLL)
-              c.vcaLL += attackCoef_ * (rmsL - c.vcaLL);
-            else
-              c.vcaLL += fetRelLCoef_ * (rmsL - c.vcaLL);
-            if (c.vcaLL > thresholdGain_)
-              grLight = std::pow(10.0f, -vcaLawDb(20.0f * std::log10(c.vcaLL / thresholdGain_), 0.5f * A, kneeDb_) * 0.05f);
-          }
-        }
-        // Per-pair output. FET is the literal four-amp sum: each leg keeps its
-        // OWN gain AND saturates with its OWN stage work (w = 1 - its GR).
-        // - Fast leg: short internal detector -> work spikes on peaks, so the
-        //   transient carries clamp + crunch (the 1176 attack bite).
-        // - Slow leg: dial detector -> settles on sustained material, so the
-        //   body carries crush + crunch (the 1176 grind).
-        // - PUNCH (mbc_): slow pair fully open -> wL = 0 -> that leg becomes a
-        //   clean dry path: transient = 50% clamped+crunch / 50% clean energy,
-        //   body loses half its clamp and all slow-pair crunch -- real
-        //   transient-vs-body separation, not just a level trim.
-        // (A single shared saturation blended BEFORE the 50/50 sum was the
-        // earlier form: it smeared both pairs' crunch onto one GR envelope and
-        // erased the per-amp character this is meant to model.)
+        if (mode_ == 2)       detectorOpto(c, mag, det, gr, grLight);
+        else if (mode_ == 3)  detectorFet(c, mag, det, gr, grLight);
+        else if (mode_ == 4)  detectorVariMu(c, mag, det, gr, grLight);
+        else if (mode_ == 1)  detectorTube(c, mag, det, gr, grLight);
+        else                  detectorVca(c, mag, det, gr, grLight);
+        // Per-mode output (the FET four-amp sum, the 2A stage model, the 670 /
+        // Tube-STA stage colorize, the clean VCA path) -- bodies in the
+        // per-mode impl headers. The FET comment block's design rationale
+        // lives in compressor/fet/Compressor_Fet.h.
         float y;
-        if (mode_ == 3) {
-          const float xF = fetClip(x);
-          const float wF = std::min(1.0f, std::max(0.0f, 1.0f - gr));
-          const float wL = std::min(1.0f, std::max(0.0f, 1.0f - grLight));
-          const float colF = (1.0f - wF) * x + wF * xF;   // stage coloration (fast pair)
-          const float colL = (1.0f - wL) * x + wL * xF;   // stage coloration (slow pair)
-          // TRANSFORMER FLUX body (mildest on the 1176) on both legs:
-          const float satF = clipDepth(x, fluxStep(c.fluxM, colF), clip_);
-          const float satL = clipDepth(x, fluxStep(c.fluxL, colL), clip_);
-          y = (satF * gr + satL * grLight) * 0.5f;
-        } else if (mode_ == 2) {
-          // Opto-2A STAGE MODEL (the REAL-2A wiring): a gain stage, not an
-          // attenuator. The GR acts INSIDE the stage drive -- like the 2A's
-          // photocell, which lowers the driver gain in FRONT of the hot tube
-          // stage -- and the bounded twoAClip shoulder IS the stage ceiling.
-          // Consequences (all the 2A's actual behavior):
-          //  - saturation grows with drive (kStage makes up; loud = more clip:
-          //    the "2A drive"), 3rd-dominant and bounded (measured band);
-          //  - quiet passes below the knee: clean, no low-level harmonics;
-          //  - output has a ceiling, so drive stops translating to level as
-          //    the knee is reached (the 2A "heavier, not much louder").
-          // PUNCH adds a PARALLEL LIGHT STAGE (lighter GR = hotter drive =
-          // louder + creamier body) -- the body opens under the same
-          // transients. The block's Output trim stays a transparent post-stage
-          // multiplier in every configuration.
-          const float kStage = 2.0f;  // +6 dB fixed forward makeup (the 2A's hot stage)
-          const float linM = x * gr * kStage;  // CLIP 0: compressed, uncolored drive
-          // TRANSFORMER FLUX body (moderate, early-saturating core):
-          y = clipDepth(linM, fluxStep(c.fluxM, twoAClip(linM)), clip_);
-          if (mbc_) {
-            const float linL = x * grLight * kStage;
-            y += clipDepth(linL, fluxStep(c.fluxL, twoAClip(linL)), clip_);
-          }
-          // Output normalization: the real 2A stage runs hot; bring it back
-          // down ~3 dB so it mixes at musical level (pure output trim -- the
-          // circuit, its curve and the ceiling are untouched).
-          y *= 0.7079f;  // -3 dB
-        } else if (mode_ == 4) {
-          // 670 saturation: ODD-ONLY (the balanced stage cancels evens) and
-          // GROWS WITH GAIN REDUCTION (the paper: D3 climbs from ~21 dB
-          // below fundamental at light GR to ~14 dB at heavy). Work blend:
-          // w = 1 - gr, so idle passes clean (w = 0) and the deeper the 670
-          // works the harder the balanced stage is driven.
-          const float w = juce::jlimit(0.0f, 1.0f, 1.0f - gr);
-          const float colM = (1.0f - w) * x + w * fcClip(x);    // stage coloration (main)
-          // TRANSFORMER FLUX body (hot 20 kOmega signal transformer + thump):
-          const float sat = clipDepth(x, fluxStep(c.fluxM, colM), clip_);
-          float yMain = sat * gr;
-          if (mbc_) {
-            const float wL = juce::jlimit(0.0f, 1.0f, 1.0f - grLight);
-            const float colL = (1.0f - wL) * x + wL * fcClip(x);  // stage coloration (light)
-            const float satL = clipDepth(x, fluxStep(c.fluxL, colL), clip_);
-            yMain = 0.5f * (yMain + satL * grLight);
-          }
-          y = yMain;
-        } else if (mode_ == 1) {
-          // --- Tube-STA output. The 6386/6V6 push-pull + transformers are <=1%
-          // THD even at 0-30 dB GR ("hit it very hard and the guitar still
-          // sounds like an acoustic", Tape Op) -- and the warmth GROWS WITH THE
-          // WORK: idle passes clean, working carries the smooth
-          // tube/transformer body. Work blend w = 1 - gr, like the 670; the
-          // push-pull cancels most evens and the output transformer puts the
-          // warm body back, so the clip is only MILDLY asymmetric (a small
-          // 2nd over the odd). Lighter than the 670's odd crunch, distinct
-          // from the 2A's third-dominant stage.
-          const float w = juce::jlimit(0.0f, 1.0f, 1.0f - gr);
-          const float colM = (1.0f - w) * x + w * staClip(x);   // stage coloration (main)
-          // TRANSFORMER FLUX body (RICHEST: two Triad windings + power-amp core):
-          const float sat = clipDepth(x, fluxStep(c.fluxM, colM), clip_);
-          float yTube = sat * gr;
-          if (mbc_) {
-            const float wL = juce::jlimit(0.0f, 1.0f, 1.0f - grLight);
-            const float colL = (1.0f - wL) * x + wL * staClip(x);  // stage coloration (light)
-            const float satL = clipDepth(x, fluxStep(c.fluxL, colL), clip_);
-            yTube = 0.5f * (yTube + satL * grLight);
-          }
-          y = yTube;
-        } else {
-          // VCA (mode 0): PUNCH blends main + light 50/50; the audio path
-          // stays clean (colorizeForMode(0) is identity).
-          if (mbc_) gr = 0.5f * gr + 0.5f * grLight;
-          const float yOther = colorize(x) * gr;
-          y = yOther;
-        }
+        if (mode_ == 3)       y = outputFet(c, x, det, gr, grLight);
+        else if (mode_ == 2)  y = outputOpto(c, x, det, gr, grLight);
+        else if (mode_ == 4)  y = outputVariMu(c, x, det, gr, grLight);
+        else if (mode_ == 1)  y = outputTube(c, x, det, gr, grLight);
+        else                  y = outputVca(c, x, det, gr, grLight);
 
         // FET feedback tap (a): publish the applied GR for the NEXT sample's
         // detection step (the one-sample delay above). The tone shelf is a fixed
@@ -628,6 +312,32 @@ class Compressor {
     float fluxM = 0.0f;   // TRANSFORMER FLUX integrator (modes 1-4), main leg
     float fluxL = 0.0f;   // TRANSFORMER FLUX integrator (modes 1-4), PUNCH-light leg
   };
+  // Per-mode detector + output, defined verbatim in the per-mode impl headers
+  // (compressor/{vca,tube,opto,fet,varimu}/Compressor_<Mode>.h, pulled in after
+  // the class close). detector<Mode> fills gr/grLight (gr <= 1.0);
+  // output<Mode> returns the post-stage, pre-shelf sample for this mode.
+  void detectorVca(ChState& c, const float mag, const float det,
+                   float& gr, float& grLight);
+  void detectorTube(ChState& c, const float mag, const float det,
+                    float& gr, float& grLight);
+  void detectorOpto(ChState& c, const float mag, const float det,
+                    float& gr, float& grLight);
+  void detectorFet(ChState& c, const float mag, const float det,
+                   float& gr, float& grLight);
+  void detectorVariMu(ChState& c, const float mag, const float det,
+                      float& gr, float& grLight);
+  float outputVca(ChState& c, const float x, const float det,
+                  float& gr, const float& grLight);
+  float outputTube(ChState& c, const float x, const float det,
+                   float& gr, const float& grLight);
+  float outputOpto(ChState& c, const float x, const float det,
+                   float& gr, const float& grLight);
+  float outputFet(ChState& c, const float x, const float det,
+                  float& gr, const float& grLight);
+  float outputVariMu(ChState& c, const float x, const float det,
+                     float& gr, const float& grLight);
+
+
 
   void recalc() {
     const float inv = 1.0f / rate_;
@@ -891,6 +601,7 @@ public:
 
   float rate_ = 48000.0f;
   int mode_ = 0;
+  int type_ = 0;             // per-mode TYPE (clamped by numTypes in setParams)
   float ratio_ = 4.0f;
   float attackSec_ = 0.010f;
   float releaseSec_ = 0.15f;
@@ -925,3 +636,11 @@ public:
 
   ChState ch_[2];
 };
+
+// Per-mode engine implementations (pure cuts of the detector/output arms;
+// see the mode headers for the per-mode law comments).
+#include "vca/Compressor_Vca.h"
+#include "tube/Compressor_Tube.h"
+#include "opto/Compressor_Opto.h"
+#include "fet/Compressor_Fet.h"
+#include "varimu/Compressor_VariMu.h"

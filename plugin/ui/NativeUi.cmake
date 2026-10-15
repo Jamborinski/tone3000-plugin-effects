@@ -74,6 +74,15 @@ function(t3k_add_native_ui target)
     target_include_directories(${target} PRIVATE
         "${T3K_UI_DIR}"
         "${T3K_UI_DIR}/../include"
+        # Per-effect engine dirs: ChainBlock.h includes the effect engines
+        # bare ("Delay.h", "Compressor.h") from their per-effect subdirs --
+        # the same dirs the plugin build adds (plugin/CMakeLists.txt ~L450f).
+        "${T3K_UI_DIR}/../include/effects/delay"
+        "${T3K_UI_DIR}/../include/effects/chorus"
+        "${T3K_UI_DIR}/../include/effects/tremolo"
+        "${T3K_UI_DIR}/../include/effects/compressor"
+        "${T3K_UI_DIR}/../include/effects/reverb"
+        "${T3K_UI_DIR}/../include/effects/conv"
         # ChainBlock.h -> NamEngine.h -> NAM/dsp.h: the UI needs NAM's
         # decls (and its header-only deps); the impl stays in plugin/src.
         "${T3K_UI_DIR}/../NeuralAmpModelerCore"

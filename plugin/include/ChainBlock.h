@@ -359,6 +359,9 @@ struct ChainBlock {
   double compScHpHz = 100.0;    // 20..8000 Hz (side-chain high-pass)
   double compThresholdDb = -18.0; // -48..+6 dBFS (where GR starts; default = all modes)
   int compMode = 0;             // 0=VCA,1=Opto,2=Opto-2A,3=FET,4=Vari-Mu
+  int compType = 0;             // per-mode TYPE (sub-model within the mode; 0 =
+                                // the mode's own engine today -- see Compressor
+                                // ::numTypes; engine clamps)
   bool compMbc = false;        // PUNCH: 50/50 parallel-blend (default off)
   double compClip = 1.0;       // CLIP [0..2]: 1 (noon) = that mode's normal breakup (modes 1-4)
   double compKnee = 6.0;       // KNEE [1..11] dB: VCA soft-knee width; 6 = the classic

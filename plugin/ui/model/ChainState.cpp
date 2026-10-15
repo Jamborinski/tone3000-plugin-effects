@@ -187,6 +187,7 @@ ChainItem parseItem(const juce::var& v) {
     item.compScHpHz = num(v["params"], "compScHpHz", 100.0);
     item.compThresholdDb = num(v["params"], "compThresholdDb", -32.0);
     item.compMode = num(v["params"], "compMode", 0);
+    item.compType = num(v["params"], "compType", 0);
     item.compMbc = boolean(v["params"], "compMbc", false);
     item.compClip = num(v["params"], "compClip", 1.0);
     item.compKnee = num(v["params"], "compKnee", 6.0);

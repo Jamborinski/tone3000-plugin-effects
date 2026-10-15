@@ -157,6 +157,7 @@ struct ChainItem {
   double compScHpHz = 100.0;
   double compThresholdDb = -18.0;
   int compMode = 0;
+  int compType = 0;             // per-mode TYPE; 0 = the mode's own engine
   bool compMbc = false;        // PUNCH: 50/50 parallel-blend (default off)
   double compClip = 1.0;       // CLIP [0..2]: 1 (noon) = the mode's normal breakup
   double compKnee = 6.0;       // KNEE [1..11] dB: VCA soft-knee width; 6 = classic

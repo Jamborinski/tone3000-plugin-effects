@@ -51,6 +51,31 @@ juce::String compactModeName(int compMode) {
   return names[juce::jlimit(0, 4, compMode)];
 }
 
+// The compressor's per-mode TYPE faces (a sub-model within a mode, mirrored
+// from the reverb type axis; Compressor::numTypes owns the count, today 1 per
+// mode). Type 0 = that mode's own engine (VCA/OPT/TUB/VMU/FET). A second type
+// is a new row per mode (id + blurb + engine branch + count bump).
+static const char* compactCompTypeName(int m, int t) {
+  static const char* self[Compressor::kNumModes] = {"VCA", "TUB", "OPT", "VMU", "FET"};  // engine-index order, same as the mode cycler
+  (void)t;  // one self-type per mode today
+  return self[juce::jlimit(0, Compressor::kNumModes - 1, m)];
+}
+static const char* compTypeBlurb(int m, int t) {
+  (void)t;
+  static const char* b[Compressor::kNumModes] = {
+      "general-purpose VCA -- smooth RMS soft-knee compression",
+      "Tube-STA -- warm tube detector, the output-stage saturation",
+      "Opto-2A -- two-stage optical cells, ratio-dependent slow attack",
+      "FET -- four-amp sum, fast transient grab + stage coloration",
+      "Vari-Mu 670 -- flux-core saturation, feedback detection"};
+  return b[juce::jlimit(0, Compressor::kNumModes - 1, m)];
+}
+// The block's remembered type for the compressor (a single per-block field,
+// the compMode precedent).
+static int compTypeOf(const ChainItem& b) {
+  return b.compType;
+}
+
 // The delay's five modes, compressed for the compact-tile cycle button.
 juce::String compactDelayModeName(int m) {
   static const char* names[6] = {"DIG", "TAPE", "BBD", "MOD", "MAG", "MEM"};
@@ -482,6 +507,38 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
     addAndMakeVisible(mbcToggle_);
     syncCompSig(block_.compMode);  // slot right of SC: KNEE (VCA) / CLIP (rest)
 
+    // The per-mode TYPE cycler, BOTH views: right of the mode cycler on the
+    // compact tile; right of the mode SELECTOR on the full tile. It cycles
+    // the mode's sub-models (Compressor::numTypes; 1 per mode today -- the
+    // face is the scaffolding for the mode's other, differently-built types).
+    const int ct0 = compTypeOf(block_);
+    typeCycle_.setButtonText(compactCompTypeName(block_.compMode, ct0));
+    typeCycle_.setHelpText(
+        help::text(help::Key::compType) + " -- " + compTypeBlurb(block_.compMode, ct0) +
+        " -- click to choose " + compactModeName(block_.compMode) + " type");
+    typeCycle_.onClick = [this] {
+      const int m = this->block_.compMode;
+      const int cur = compTypeOf(this->block_);
+      const int n = Compressor::numTypes(m);
+      juce::PopupMenu menu;
+      for (int i = 0; i < n; ++i)
+        menu.addItem(i + 1, juce::String(compactCompTypeName(m, i)) +
+                                juce::String(juce::CharPointer_UTF8(" \u2014 ")) + compTypeBlurb(m, i),
+                     true, (i == cur));
+      menu.showMenuAsync(
+          juce::PopupMenu::Options().withTargetComponent(typeCycle_),
+          [this] (int choice) {
+            if (choice > 0)
+              this->enterCompType(choice - 1);
+          });
+    };
+    // Compact tile: hidden. The compact header has no free slot (28..62 is the
+    // mode cycler, 65..95 the PCH toggle -- reverb's type cycler fits at 66
+    // because reverb has no PCH), and with one self-type per mode the cycler
+    // is a one-entry no-op until a mode gains a second type. Full tile only.
+    typeCycle_.setVisible(!compact_);
+    addAndMakeVisible(typeCycle_);
+
     if (compact_) {
       // Character mode as a cycle button: click steps to the next mode (and
       // its default timing/threshold), left to right: VCA -> STA -> 2A -> VM
@@ -830,7 +887,26 @@ void EffectTile::enterMode(int m) {
     services().chain.setBlockParam(blockId(), "compKnee", knee);
   }
   syncCompSig(m);
+  syncCompTypeButton(m);
   syncKnobs();
+}
+
+void EffectTile::syncCompTypeButton(int m) {
+  const int t = compTypeOf(block_);
+  typeCycle_.setButtonText(compactCompTypeName(m, t));
+  typeCycle_.setHelpText(
+      help::text(help::Key::compType) + " -- " + compTypeBlurb(m, t) +
+      " -- click to choose " + compactModeName(m) + " type");
+}
+
+void EffectTile::enterCompType(int type) {
+  if (block_.effectKind != "compressor") return;
+  const int m = block_.compMode;
+  type = juce::jlimit(0, Compressor::numTypes(m) - 1, type);
+  if (type == compTypeOf(block_)) return;
+  block_.compType = type;  // state keeps the selection verbatim; the engine clamps
+  services().chain.setBlockParam(blockId(), "compType", (double)type);
+  syncCompTypeButton(m);
 }
 
 void EffectTile::enterDelayMode(int m) {
@@ -1232,12 +1308,20 @@ void EffectTile::resized() {
     // both share the y=44 band, combo slides left to make room.
     modeCombo_.setBounds(W - 14 - 44 - 8 - 120, 44, 120, 26);
     typeCycle_.setBounds(W - 14 - 44, 44, 44, 26);
-  } else if ((compressor || delay) && !compact_)
+  } else if (compressor && !compact_) {
+    // The type cycler sits RIGHT OF THE mode selector (the user's call, same
+    // as reverb): both share the y=44 band, combo slides left to make room.
+    modeCombo_.setBounds(W - 14 - 44 - 8 - 120, 44, 120, 26);
+    typeCycle_.setBounds(W - 14 - 44, 44, 44, 26);
+  } else if (delay && !compact_)
     modeCombo_.setBounds(W - 14 - 120, 44, 120, 26);
   if (compressor)
     mbcToggle_.setBounds(compact_ ? 65 : 28, 4, compact_ ? 30 : 50, 20);
-  if (compressor && compact_)
+  if (compressor && compact_) {
     modeCycle_.setBounds(28, 4, 34, 20);
+    // typeCycle_ is hidden in compact (see the ctor): the header's free slot
+    // (65..95) belongs to the PCH toggle; it appears in full tiles only.
+  }
   if (delay && compact_)
     modeCycle_.setBounds(62, 4, 34, 20);  // right of the Sync toggle
   if (block_.effectKind == "reverb" && compact_) {

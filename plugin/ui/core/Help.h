@@ -36,7 +36,7 @@ enum class Key {
   addEffectReverb, addEffectConvolution, effectConvolution, convGain, convDry, convWidth, convStartS, convEndS, convPitch,
   convPre, convFadeIn, convFadeOut, convInCurve, convOutCurve, convTone, convIrLoad, effectReverb, reverbDecay, reverbPre, reverbTone, reverbSize, reverbWidth, reverbDwell, reverbType, reverbMode, reverbDensity, reverbMod, reverbSprings, reverbSag, reverbBright, reverbBloom, reverbEarly, reverbAir, reverbVolley, reverbBass, reverbBuild, reverbSpace, reverbDry, reverbSharedMod, reverbLoCut, reverbShape, effectDelay,
   effectChorus, effectTremolo, effectCompressor, effectMix, effectTime, effectFeedback, effectRate, effectDepth, effectInput, effectOutput,
-  effectDamping, delaySpread, effectSpread, delayMode, delayPing, delayHeads, delayChip, delayMod, delayRate, effectTone, effectWave, effectBpm, effectSubdivision, tremoloRate, tremoloDepth, tremoloTone, tremoloLfo, tremoloSpread, compRatio, compAttack, compRelease, compTone, compScHp, compMode, compThreshold, compMakeup, compIn, compMbc, compClip, compKnee, loadFileTile, loadFolderTile, blockPower,
+  effectDamping, delaySpread, effectSpread, delayMode, delayPing, delayHeads, delayChip, delayMod, delayRate, effectTone, effectWave, effectBpm, effectSubdivision, tremoloRate, tremoloDepth, tremoloTone, tremoloLfo, tremoloSpread, compRatio, compAttack, compRelease, compTone, compScHp, compMode, compThreshold, compMakeup, compIn, compMbc, compClip, compKnee, compType, loadFileTile, loadFolderTile, blockPower,
   retryLoad, swapTone, removeBlock, panLeft, panRight, panLink, monoSum, panMonoSum, soloLeft,
   soloRight, invertLeft, invertRight, swapChains, branchGap, branchJunction,
   // Block card

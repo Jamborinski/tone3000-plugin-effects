@@ -63,6 +63,8 @@ class EffectTile : public GalleryTile {
   // cycle button); loads that mode's default timing + threshold.
   void enterMode(int m);
   void syncCompSig(int m);  // bind the slot right of SC: KNEE (VCA) / CLIP (1-4)
+  void syncCompTypeButton(int m);  // re-sync the per-mode TYPE cycler after a mode change
+  void enterCompType(int type);
 
   // Convolution: the IR load picker (our-own, not copied from a tone tile --
   // a tone swap vs. a kernel install are different acts, so this is a plain
@@ -122,10 +124,11 @@ class EffectTile : public GalleryTile {
   // clicks step to the next mode with that mode's defaults.
   juce::TextButton modeCycle_;
 
-  // Reverb only, TIGHT tiles: the per-mode TYPE cycler (a sub-model within
-  // the mode -- a distinct character/law set, not a preset; Reverb::numTypes).
-  // Sits right of the mode cycler; each mode remembers its own type
-  // (block_.reverbType0..5, the sig-family precedent). reverb-modes.md.
+  // Reverb + compressor, TIGHT tiles: the per-mode TYPE cycler (a sub-model
+  // within the mode -- a distinct character/law set, not a preset;
+  // Reverb::numTypes / Compressor::numTypes). Sits right of the mode cycler;
+  // each mode remembers its own type (block_.reverbType0..5 / block_.compType,
+  // the sig-family precedent). reverb-modes.md.
   juce::TextButton typeCycle_;
 
   // Convolution only: the IR load control + the loaded kernel's readout

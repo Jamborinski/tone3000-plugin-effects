@@ -229,6 +229,7 @@ juce::ValueTree TONE3000Processor::serializeBlockSettings(const ChainBlock& bloc
       blockState.setProperty("compScHpHz", block.compScHpHz, nullptr);
       blockState.setProperty("compThresholdDb", block.compThresholdDb, nullptr);
       blockState.setProperty("compMode", block.compMode, nullptr);
+      blockState.setProperty("compType", block.compType, nullptr);
       blockState.setProperty("delayDamping", block.delayDamping, nullptr);
       blockState.setProperty("delaySpread", block.delaySpread, nullptr);
       // The delay mode set (and compMbc) were on the LOAD side but never on the
@@ -380,6 +381,7 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
                                                blockState.getProperty("compThresholdDb", -32.0)));
       block.compMode = juce::jlimit(0, Compressor::kNumModes - 1,
                                     static_cast<int>(blockState.getProperty("compMode", 0)));
+      block.compType = static_cast<int>(blockState.getProperty("compType", 0));  // state keeps the selection verbatim; the engine clamps
       block.compMbc = blockState.getProperty("compMbc", false);
       block.compClip = juce::jlimit(Compressor::kMinClip, Compressor::kMaxClip,
                                     static_cast<double>(blockState.getProperty("compClip", 1.0)));
@@ -510,7 +512,7 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
       block.compressor.setParams({block.compMode, block.compRatio, block.compAttackMs,
                                   block.compReleaseMs, block.compToneDb, block.compScHpHz,
                                   block.compThresholdDb, block.compMbc,
-                                  block.compClip, block.compKnee});
+                                  block.compClip, block.compKnee, block.compType});
       block.reverb.setParams(block.reverbParams());
     }
     // Size the rate-dependent engines (EQ/spectrum + built-in effects) for the
