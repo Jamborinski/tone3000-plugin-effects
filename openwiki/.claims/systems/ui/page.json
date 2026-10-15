@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:25143b49e90656162ce86fd2c6883c6ca86ac0271abc505e6c5f7b01f2261a72",
+  "pageVersion": "sha256:e67ed2c548b90c65e609e108da3d446d55d15d6e11aff980a76243f6f61cb76e",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -72,7 +72,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
+          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
         }
       ]
     },
@@ -153,10 +153,48 @@
           "version": "repo-file-v1:sha256:06a37049715c6fb45c482aade1ee2d3115a1a2aa89568eeacf9785162c8746b3"
         }
       ]
+    },
+    {
+      "id": "claim_764c0fb08a294c53a3c47dc2f820e910",
+      "statement": "The 2026-10-14 swappable-theme change converted the Theme.h colour tokens from compile-time constants to mutable `inline juce::Colour` globals, added `struct ThemePalette` (a snapshot of every token), and `applyPalette(const ThemePalette&)` / `resetPalette()` which restore the defaults. The live (NativeEditor/Processor) UI always uses the defaults; palette swapping is a testbed-only feature (TileShot/UiTestbed), so the shipped plugin looks unchanged.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/core/Theme.h",
+          "version": "repo-file-v1:sha256:ff803ecd8c2bd7adf8279db09e31eeb4aac2d222d0636a0f1d57139243c555fc"
+        }
+      ]
+    },
+    {
+      "id": "claim_a498c18c9ce14736a3eacc8ad1291e78",
+      "statement": "The 2026-10-14 OCR capture mode adds `--ocr` to TileShot (and UiTestbed capture): it calls `theme::applyPalette(theme::ocrPalette())` before building the component (and `resetPalette()` after) to render a black-on-white high-contrast variant where the 12px type-chip labels become machine-readable. `theme::ocrPalette()` (a function-local static in Theme.h) maps brandBlue/Yellow/Red and linkBlue to black and all dark-surface tokens to white. `script/tile-ocr.sh` shoots a tile with `--ocr`, crops a button region by design coordinates, up-scales + binarizes, and reads it with Tesseract (psm 7/13/10, char whitelist A-Z) — the measured pass bar is the comp-shift type chip reading its model letter.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/testbed/Main.cpp",
+          "version": "repo-file-v1:sha256:d695fc524369be13ea55e62e7ad83e250dc0f7016011ff709dfafff8f2e2849a"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/TileShot.cpp",
+          "version": "repo-file-v1:sha256:db431fa658bf30b5fb2ace086bfbeb64b676d01539a966805217ee6886436b4d"
+        },
+        {
+          "resource": "repo://script/tile-ocr.sh",
+          "version": "repo-file-v1:sha256:9ec4c236cbb588707f38e4b0ff24444da1c8b785676633a4357bfce32d84b5fd"
+        }
+      ]
+    },
+    {
+      "id": "claim_6b1738fffe4447ce8a5afd626e77404e",
+      "statement": "The swappable-theme ticket added test/src/theme_palette_tests.cpp to DspTests, which compiles the real plugin/ui/core/Theme.h and guards the palette contract: the default palette round-trips through applyPalette/resetPalette, and ocrPalette() inverts the brand colours to black while keeping white text on white surfaces.",
+      "evidence": [
+        {
+          "resource": "repo://test/src/theme_palette_tests.cpp",
+          "version": "repo-file-v1:sha256:a4b2c7e546782ded3ed6111eaa5ec87899a54c3e64e765a738637710d46f18c8"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-15T01:09:16.180Z"
+    "at": "2026-10-15T03:13:24.025Z"
   }
 }

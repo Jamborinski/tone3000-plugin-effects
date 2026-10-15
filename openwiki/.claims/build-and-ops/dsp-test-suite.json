@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:0b8004da51044d3aca855e85e38ca586597e8b9d712c29bc894ad14e89bf2966",
+  "pageVersion": "sha256:a081338c32bec35f97d0dcb4dca4d4bec3db5ec8ef99ca5cdcab648b3e7ed4a4",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -18,7 +18,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
+          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
         }
       ]
     },
@@ -28,7 +28,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
+          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
         }
       ]
     },
@@ -38,7 +38,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
+          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
         }
       ]
     },
@@ -48,7 +48,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
+          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
@@ -80,7 +80,7 @@
         },
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
+          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
         }
       ]
     },
@@ -90,7 +90,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
+          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
         },
         {
           "resource": "repo://test/src/dat_probe_tests.cpp",
@@ -108,7 +108,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
+          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
         }
       ]
     },
@@ -133,10 +133,20 @@
           "version": "repo-file-v1:sha256:88e8666e338953afde8d67cb345b155e36f0bfafff5603b80ba3faa29189ba1e"
         }
       ]
+    },
+    {
+      "id": "claim_99714b23cf00411783d117e6d8b99cfe",
+      "statement": "The swappable-theme ticket (2026-10-14) added src/theme_palette_tests.cpp to the DspTests target_sources, which compiles the real plugin/ui/core/Theme.h inline palette globals (ThemePalette / applyPalette / resetPalette / ocrPalette) and asserts the default palette round-trips, so the UI colour tokens are exercised by the headless suite without pulling in any other UI source beyond the existing Labels.cpp.",
+      "evidence": [
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-15T01:09:16.180Z"
+    "at": "2026-10-15T03:13:24.025Z"
   }
 }

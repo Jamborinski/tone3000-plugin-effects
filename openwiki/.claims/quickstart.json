@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:8b80086c25aa9af5ad9b1c50adba9a4b66d3f5220071164eb31d57d47cb292d5",
+  "pageVersion": "sha256:3271f8ae93d5aad0044a3d3db4cb27e32388096a7c04a4cdc457d3d1e443bc31",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -69,32 +69,6 @@
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
           "version": "repo-file-v1:sha256:98597409fc24a416a9fc2053986ee435456b609a48430b38f072774cd54a85d9"
-        }
-      ]
-    },
-    {
-      "id": "claim_6f4e5fb83976440187e3f256afd859f8",
-      "statement": "The DSP test loop is ./script/test-dsp.sh [gtest-filter]: configure-if-needed -> cmake --build build --target DspTests -> running build/test/DspTests_artefacts/.../DspTests. The suite compiles the REAL plugin sources (not copies) against the fixtures in test/files/ (NAM A2 captures a2-amp-test.nam / a2-amp-cab-test.nam / a2-am-test-2.nam, cab-ir-test(-2).wav, reverb-ir-mono/stereo-test.wav, em240-gold-plate-5s.wav); from plugin/ui it pulls in only core/Labels.cpp (KnobScale readout formatter for the scale-contract tests), so a green DspTests does NOT prove the UI links (verify with the GUI target, e.g. TONE3000_Standalone, or the testbed). The suite grows with features — a count is a LOWER-BOUND snapshot, never assert a stale total on a red run: 469 after the plate '140' final pass, 487 after the thirteenth/final R2 cut (2026-10-15), 503 / 73 suites after the 2026-10-16 reverb-budget-quality-uplift pass, and 511 / 75 suites after the T-DAT-001 wave 3 closeout (2026-10-17: +8-test DatGuards suite in test/src/dat_probe_tests.cpp; the legacy plate pins — level-law 93.95 @2000 ms, comb cap 21.98 @2500 ms — were re-pinned to the Digital mode-5 / type[5]==2 arm via plateLegacyP()/plateLegacyAt()). Also: the gtest silent-0 trap — a ',' filter list can run 0 tests with exit 0; always confirm the 'Running N tests' line. Full record: docs/tickets/plate-dat-rebuild-draft.md + docs/tickets/complete/reverb-budget-quality-uplift.md.",
-      "evidence": [
-        {
-          "resource": "repo://script/test-dsp.sh",
-          "version": "repo-file-v1:sha256:9687741a4aeff5266793a02cff1b407fb03cd1d9bba6a05aff8798a46366cf9e"
-        },
-        {
-          "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:b7ee04aef2cc2db0d36278563da840d2fc0ffcb1ce072e14fb28952a6d0e937b"
-        },
-        {
-          "resource": "repo://test/src/dat_probe_tests.cpp",
-          "version": "repo-file-v1:sha256:d25de9e0ad214a7757b0064448c64558324eabeb1deae1b2a6e09c0695222ef4"
-        },
-        {
-          "resource": "repo://test/src/effect_tests.cpp",
-          "version": "repo-file-v1:sha256:7cf48ee3fbf1d19a64c5246cd2119f2feb26bcc193801f3cb25ef5e129cf6195"
-        },
-        {
-          "resource": "repo://test/src/plate_family_tests.cpp",
-          "version": "repo-file-v1:sha256:68c6d057dbb6e9035276fb6e95fc6517a09023fe5171e4a6b2ee0c2149e27188"
         }
       ]
     },
@@ -171,10 +145,32 @@
           "version": "repo-file-v1:sha256:874d200a4c5281dbf7bd434098d31a1e5d9b47f1666a5f50acc965ac03e8d829"
         }
       ]
+    },
+    {
+      "id": "claim_440af38cf3974f35b3cee1bc6bf5ef68",
+      "statement": "The DSP test loop is ./script/test-dsp.sh [gtest-filter]: configure-if-needed -> cmake --build build --target DspTests -> running build/test/DspTests_artefacts/.../DspTests. The suite compiles the REAL plugin sources (not copies) against the fixtures in test/files/ (NAM A2 captures a2-amp-test.nam / a2-amp-cab-test.nam / a2-am-test-2.nam, cab-ir-test(-2).wav, reverb-ir-mono/stereo-test.wav, em240-gold-plate-5s.wav); from plugin/ui it pulls in core/Labels.cpp (KnobScale readout formatter) plus the theme tokens compiled inline by test/src/theme_palette_tests.cpp, so a green DspTests does NOT prove the UI links (verify with the GUI target, e.g. TONE3000_Standalone, or the testbed). The suite grows with features — a count is a LOWER-BOUND snapshot, never assert a stale total on a red run: 469 after the plate '140' final pass, 487 after the R2 thirteenth cut (2026-10-15), 503 / 73 suites after the 2026-10-16 reverb-budget-quality-uplift pass, 511 / 75 after the T-DAT-001 wave-3 closeout (2026-10-17), and 512 / 75 after the 2026-10-14 swappable-theme palette test. Also: the gtest silent-0 trap — a ',' filter list can run 0 tests with exit 0; always confirm the 'Running N tests' line.",
+      "evidence": [
+        {
+          "resource": "repo://script/test-dsp.sh",
+          "version": "repo-file-v1:sha256:9687741a4aeff5266793a02cff1b407fb03cd1d9bba6a05aff8798a46366cf9e"
+        },
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
+        },
+        {
+          "resource": "repo://test/src/dat_probe_tests.cpp",
+          "version": "repo-file-v1:sha256:d25de9e0ad214a7757b0064448c64558324eabeb1deae1b2a6e09c0695222ef4"
+        },
+        {
+          "resource": "repo://test/src/theme_palette_tests.cpp",
+          "version": "repo-file-v1:sha256:a4b2c7e546782ded3ed6111eaa5ec87899a54c3e64e765a738637710d46f18c8"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-15T01:09:16.180Z"
+    "at": "2026-10-15T03:13:24.025Z"
   }
 }

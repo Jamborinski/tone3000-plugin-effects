@@ -15,6 +15,8 @@ sources:
     resource: repo://plugin/ui/core/Help.h
   - id: openwiki-source-2cc0983ddb88288e69accf75
     resource: repo://plugin/ui/core/KnobScale.h
+  - id: openwiki-source-da304caef10b32452ef11981
+    resource: repo://plugin/ui/core/Theme.h
   - id: openwiki-source-4ec0c8381f33cd3ba0cb99f5
     resource: repo://plugin/ui/NativeEditor.h
   - id: openwiki-source-01229dcf87d08fe26802a88a
@@ -23,6 +25,10 @@ sources:
     resource: repo://plugin/ui/services/Services.h
   - id: openwiki-source-3f6e8a6ed2edd60ef99f8565
     resource: repo://plugin/ui/testbed/CMakeLists.txt
+  - id: openwiki-source-b68d5a6792d458694c05da8b
+    resource: repo://plugin/ui/testbed/Main.cpp
+  - id: openwiki-source-ddbfab857e6d7cadc2cf06f7
+    resource: repo://plugin/ui/testbed/TileShot.cpp
   - id: openwiki-source-adf8cc0014ed2fd3ed9fe7d4
     resource: repo://plugin/ui/views/block/BlockCard.h
   - id: openwiki-source-7fb62e48416333f990bd3d93
@@ -31,14 +37,18 @@ sources:
     resource: repo://plugin/ui/views/gallery/EffectTile.h
   - id: openwiki-source-174467a0c2e30a63c2e8869e
     resource: repo://plugin/ui/views/PluginRoot.h
+  - id: openwiki-source-b3e537fe86dd20c6a400c242
+    resource: repo://script/tile-ocr.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
   - id: openwiki-source-22db8812ec3771683e6a7ddc
     resource: repo://test/src/dat_probe_tests.cpp
+  - id: openwiki-source-fde83b2ad879efba1865ca8d
+    resource: repo://test/src/theme_palette_tests.cpp
 generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-15T01:09:16.180Z
+    at: 2026-10-15T03:13:24.025Z
 ---
 
 
@@ -157,8 +167,9 @@ UiTestbed --bench --seconds 10 --json out.json             # CPU / memory under 
 ```
 
 The testbed is how UI changes are *proven* — a green `DspTests` run does
-NOT link `plugin/ui` (DspTests includes only
-`plugin/ui/core/Labels.cpp`); a UI change must be validated with the
+NOT link `plugin/ui` (DspTests compiles only
+`plugin/ui/core/Labels.cpp` and `#include`s `core/Theme.h` inline for the
+palette tests); a UI change must be validated with the
 testbed or a GUI plugin build.
 
 ## Reverb tile: mode + type (subtype) selectors (2026-10-16)
@@ -212,15 +223,39 @@ The reverb tile carries TWO independent selectors, both in
   work — the six-mode row is the mode axis, and the type axis is the new
   second chip beside it.
 
+## Theme: swappable colour palette + `--ocr` capture mode (2026-10-14)
+
+`core/Theme.h` holds the UI colour tokens as **mutable `inline juce::Colour`
+globals** (not compile-time constants). `struct ThemePalette` snapshots every
+token; `applyPalette(const ThemePalette&)` installs one and `resetPalette()`
+restores the shipped dark defaults. The live plugin (NativeEditor/Processor)
+always uses the defaults — palette swapping is a **testbed-only** feature, so
+the shipped UI looks unchanged.
+
+`theme::ocrPalette()` (a function-local static in `Theme.h`) is a
+black-on-white high-contrast variant: brandBlue/Yellow/Red and linkBlue go to
+black, dark-surface tokens go to white, white stays white — so the 12px
+type-chip labels render machine-readable. `TileShot --tile <t> --ocr` (and
+`UiTestbed` capture with `--ocr`) calls `applyPalette(ocrPalette())` before
+build and `resetPalette()` after. `script/tile-ocr.sh` shoots the tile with
+`--ocr`, crops a button region by design coordinates, up-scales + binarizes,
+and reads it with Tesseract (psm 7/13/10, `tessedit_char_whitelist=A–Z`) —
+the measured pass bar is the comp-shift type chip reading its model letter.
+`test/src/theme_palette_tests.cpp` (in DspTests) guards the contract: the
+default palette round-trips through applyPalette/resetPalette, and
+`ocrPalette()` inverts the brand colours.
+
 ## DspTests vs. UI linkage (the load-bearing distinction)
 
 `DspTests` — the GoogleTest suite — compiles the *real* plugin DSP sources
-and one UI file (`plugin/ui/core/Labels.cpp`, the `KnobScale` readout
-formatter).  It does **not** compile the rest of `plugin/ui` (no views, no
-widgets, no services, no `NativeEditor`).  A green `DspTests` therefore
-proves the DSP is correct against fixtures; it says nothing about whether
-the UI links. Verify UI changes with the testbed (`--selftest`) or a GUI
-build target before committing.
+plus `plugin/ui/core/Labels.cpp` (the `KnobScale` readout formatter) as its
+only UI *source* file, and additionally `#include`s
+`plugin/ui/core/Theme.h` inline (via `test/src/theme_palette_tests.cpp`) to
+guard the palette contract.  It does **not** compile the rest of `plugin/ui`
+(no views, no widgets, no services, no `NativeEditor`).  A green `DspTests`
+therefore proves the DSP is correct against fixtures; it says nothing about
+whether the UI links. Verify UI changes with the testbed (`--selftest`) or a
+GUI build target before committing.
 
 ## Cross-references
 

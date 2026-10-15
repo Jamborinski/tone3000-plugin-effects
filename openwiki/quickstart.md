@@ -48,14 +48,12 @@ sources:
     resource: repo://test/CMakeLists.txt
   - id: openwiki-source-22db8812ec3771683e6a7ddc
     resource: repo://test/src/dat_probe_tests.cpp
-  - id: openwiki-source-9122ffeb8c7fc8e2457955ce
-    resource: repo://test/src/effect_tests.cpp
-  - id: openwiki-source-0368da5a39fa50284e393846
-    resource: repo://test/src/plate_family_tests.cpp
+  - id: openwiki-source-fde83b2ad879efba1865ca8d
+    resource: repo://test/src/theme_palette_tests.cpp
 generated: { by: "pi", at: "2026-10-14T21:12:00.922Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-15T01:09:16.180Z
+    at: 2026-10-15T03:13:24.025Z
 ---
 
 # TONE3000
