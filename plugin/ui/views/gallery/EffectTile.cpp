@@ -56,7 +56,9 @@ juce::String compactModeName(int compMode) {
 // mode). Type 0 = that mode's own engine (VCA/OPT/TUB/VMU/FET). A second type
 // is a new row per mode (id + blurb + engine branch + count bump).
 static const char* compactCompTypeName(int m, int t) {
-  static const char* self[Compressor::kNumModes] = {"VCA", "TUB", "OPT", "VMU", "FET"};  // engine-index order, same as the mode cycler
+  // ENGINE-index order (0=VCA 1=Tube 2=Opto 3=FET 4=Vari-Mu) -- NOT the mode
+  // cycler's display order, which puts Vari-Mu before FET.
+  static const char* self[Compressor::kNumModes] = {"VCA", "TUB", "OPT", "FET", "VMU"};
   (void)t;  // one self-type per mode today
   return self[juce::jlimit(0, Compressor::kNumModes - 1, m)];
 }
@@ -67,7 +69,7 @@ static const char* compTypeBlurb(int m, int t) {
       "Tube-STA -- warm tube detector, the output-stage saturation",
       "Opto-2A -- two-stage optical cells, ratio-dependent slow attack",
       "FET -- four-amp sum, fast transient grab + stage coloration",
-      "Vari-Mu 670 -- flux-core saturation, feedback detection"};
+      "Vari-Mu 670 -- release-position ladder, feedback detection, odd-only crunch"};
   return b[juce::jlimit(0, Compressor::kNumModes - 1, m)];
 }
 // The block's remembered type for the compressor (a single per-block field,
@@ -475,6 +477,9 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
       knobE_.setDefaultValue((float)scales::compThreshold().fromDisplay(defDb));  // Thresh is knob E
     output_.setHelp(help::Key::compMakeup);
     input_.setHelp(help::Key::compIn);
+    // Item id == mode + 1 (the handler reads getSelectedId() - 1; the engine
+    // enum is 0=VCA 1=Tube 2=Opto 3=FET 4=Vari-Mu). Display order matches
+    // the compact cycle button's order; the ids must follow the engine order.
     modeCombo_.addItem("VCA", 1);
     modeCombo_.addItem("Tube", 2);
     modeCombo_.addItem("Opto", 3);
