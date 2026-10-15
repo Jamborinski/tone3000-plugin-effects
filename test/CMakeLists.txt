@@ -36,6 +36,7 @@ target_sources(DspTests PRIVATE
     src/spring_conv_compare.cpp
     src/spring_ir_test.cpp
     src/effect_ui_scale_tests.cpp
+    src/theme_palette_tests.cpp
     src/eq_chain_rate_tests.cpp
     src/eq_post_routing_tests.cpp
     src/factory_preset_tests.cpp

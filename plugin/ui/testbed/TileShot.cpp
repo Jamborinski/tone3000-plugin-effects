@@ -8,7 +8,7 @@
 // approval is a human act (--regen), never CI. See docs/agents/ui-snapshots.md.
 //
 //   TileShot --list
-//   TileShot --tile conv-full [--size 224] [--scale 2] [--out shot.png]
+//   TileShot --tile conv-full [--size 224] [--scale 2] [--out shot.png] [--ocr]
 //   TileShot --golden shot.png goldens/conv-full.png [--tol 24] [--diff d.png]
 //       exit 0: identical within tolerance
 //       exit 1: mismatching pixels (bounds + % reported)
@@ -260,6 +260,7 @@ int runTile(const juce::StringArray& a) {
   juce::File out;
   int size = 0;
   float scale = 2.0f;  // retina, like --capture
+  bool ocr = false;
   for (int i = 2; i < a.size(); ++i) {
     if (a[i] == "--out" && i + 1 < a.size())
       out = cwd.getChildFile(a[++i]);
@@ -267,6 +268,8 @@ int runTile(const juce::StringArray& a) {
       size = a[++i].getIntValue();
     else if (a[i] == "--scale" && i + 1 < a.size())
       scale = (float)a[++i].getDoubleValue();
+    else if (a[i] == "--ocr")
+      ocr = true;
   }
 
   // The spec must outlive its lookups: shots() is a temporary, so copy it
@@ -307,6 +310,13 @@ int runTile(const juce::StringArray& a) {
   world.setKernel(spec->kernel());
   const auto item = spec->item();
 
+  // --ocr: testbed-only high-contrast palette (pure black on pure white,
+  // no alpha) for machine reading (Tesseract). Applied before the snapshot;
+  // reset immediately after (see post-snapshot resetPalette) so nothing
+  // downstream sees it. OCR renders are captures, never goldens.
+  if (ocr)
+    theme::applyPalette(theme::ocrPalette());
+
   juce::Component host;
   std::unique_ptr<GalleryTile> tile;
   if (spec->tone)
@@ -319,6 +329,8 @@ int runTile(const juce::StringArray& a) {
 
   juce::MessageManager::getInstance()->runDispatchLoopUntil(400);  // async settle, like --capture
   const auto image = host.createComponentSnapshot(host.getLocalBounds(), true, scale);
+  if (ocr)
+    theme::resetPalette();
 
   out.deleteFile();
   juce::PNGImageFormat png;
@@ -498,7 +510,7 @@ public:
     else if (args.size() == 1 && args[0] == "--list")
       code = runList();
     else
-      std::cerr << "TileShot --list | --tile <name> [--size 224] [--scale 2] [--out f.png]\n"
+      std::cerr << "TileShot --list | --tile <name> [--size 224] [--scale 2] [--out f.png] [--ocr]\n"
                    "          --dump <name>          (child-control bounds, for layout bugs)\n"
                    "          --golden <candidate> <reference> [--tol N] [--diff d.png]\n"
                    "          --regen <golden> --from <shot>\n"

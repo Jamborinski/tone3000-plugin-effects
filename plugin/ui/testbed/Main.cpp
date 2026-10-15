@@ -20,6 +20,7 @@
 #include "Scenarios.h"
 #include "SelfTests.h"
 #include "core/Design.h"
+#include "core/Theme.h"
 #include "views/PluginRoot.h"
 
 namespace t3k::ui::testbed {
@@ -73,10 +74,15 @@ int runCapture(const juce::StringArray& args) {
   const juce::File outDir(juce::File::getCurrentWorkingDirectory().getChildFile(args[1]));
   outDir.createDirectory();
   juce::File refDir;
+  bool ocr = false;  // --ocr: testbed-only high-contrast palette (machine-readable
+  // captures). Captures are scratch files by definition -- this never touches
+  // goldens/ and the palette is reset before return.
   juce::StringArray filters;  // substrings; a scenario runs if it matches any
   for (int i = 2; i < args.size(); ++i) {
     if (args[i] == "--ref" && i + 1 < args.size())
       refDir = juce::File::getCurrentWorkingDirectory().getChildFile(args[++i]);
+    else if (args[i] == "--ocr")
+      ocr = true;
     else
       filters.add(args[i]);
   }
@@ -88,6 +94,8 @@ int runCapture(const juce::StringArray& args) {
   };
 
   const auto fixtures = Fixtures::load(fixturesDir().getChildFile("scenarios.json"));
+  if (ocr)
+    theme::applyPalette(theme::ocrPalette());
   juce::PNGImageFormat png;
   int captured = 0, unnamedTotal = 0;
   for (const auto& scenario : fixtures.scenarios) {
@@ -119,6 +127,8 @@ int runCapture(const juce::StringArray& args) {
     }
     std::cout << line << std::endl;
   }
+  if (ocr)
+    theme::resetPalette();
   std::cout << captured << " scenario(s) captured to " << outDir.getFullPathName() << std::endl;
   if (unnamedTotal > 0) {
     std::cout << unnamedTotal << " Tab stop(s) without a screen-reader name (see a11y lines above)" << std::endl;

@@ -77,6 +77,36 @@ inline const ThemePalette& defaultPalette() {
   return kDefault;
 }
 
+// OCR palette (ui-ocr-capture-mode): pure black on pure white, NO alpha
+// anywhere — the shipped look is tuned for humans (muted alpha on
+// near-black); this one is tuned for Tesseract. Testbed-only by contract
+// (TileShot --ocr); never reachable from shipped plugin state.
+inline const ThemePalette& ocrPalette() {
+  static const ThemePalette kOcr = [] {
+    ThemePalette p;
+    const juce::Colour w{0xffffffff}, b{0xff000000};
+    p.brandBlue = b;
+    p.brandYellow = b;
+    p.brandRed = b;
+    p.linkBlue = b;
+    p.white = w;
+    p.black = b;
+    p.muted = w;    // rgba(...) 60% -> opaque: text on white surfaces
+    p.subtle = w;   // 40% -> opaque
+    p.highlight = b;  // 18% -> black: pressed/active fills become dark chips
+    // with white text (JUCE TextButton default look) -- the highest-contrast
+    // arrangement for the tiny 12px button labels (typeCycle_ OPT/VCA chip)
+    p.gray = b;
+    p.border = b;  // hairlines: opaque black
+    p.surface = w;
+    p.surfaceRaised = w;
+    p.segmentedTrack = b;  // dark track, white text in both states
+    p.panelBg = w;
+    return p;
+  }();
+  return kOcr;
+}
+
 // The live token globals. Names are stable — every call site reads these.
 inline juce::Colour kBrandBlue{defaultPalette().brandBlue};
 inline juce::Colour kBrandYellow{defaultPalette().brandYellow};
