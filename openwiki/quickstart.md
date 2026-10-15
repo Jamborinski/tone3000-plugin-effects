@@ -18,6 +18,8 @@ sources:
     resource: repo://docs/agents/windows-build.md
   - id: openwiki-source-e2fb14576702431774114c7c
     resource: repo://plugin/include/ChainBlock.h
+  - id: openwiki-source-bf96acd1df7b85a128b0bb8a
+    resource: repo://plugin/include/effects/compressor/Compressor.h
   - id: openwiki-source-98413be46f92c72f6215e812
     resource: repo://plugin/include/effects/conv/ConvolutionReverb.h
   - id: openwiki-source-5fba7bd6fbd3028bb9aa2a86
@@ -53,7 +55,7 @@ sources:
 generated: { by: "pi", at: "2026-10-14T21:12:00.922Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-14T21:12:00.922Z
+    at: 2026-10-15T01:09:16.180Z
 ---
 
 # TONE3000
@@ -225,6 +227,12 @@ is available on this machine for smoke-testing the staged exe.
   `hall/Reverb_Hall.h`, `shared/Reverb_SharedMod.h` — plus thin type wrappers
   at `digital/types/Reverb_DIG.h` and `plate/types/Reverb_DAT.h` (engine/wrapper
   split),
+  `effects/conv/ConvolutionReverb.h`, and the compressor host
+  `effects/compressor/Compressor.h` with one engine header per mode family —
+  `vca/Compressor_Vca.h`, `tube/Compressor_Tube.h`, `opto/Compressor_Opto.h`,
+  `fet/Compressor_Fet.h`, `varimu/Compressor_VariMu.h` — plus thin type wrappers
+  at `<mode>/types/Compressor_<Mode>.h` (engine/wrapper split, commit 3ffb35b;
+  the per-block `compType` field selects the mode's sub-type, 1 per mode today),
   `effects/conv/ConvolutionReverb.h`) together with
   `docs/agents/dsp-invariants.md` for the CONSIDERED &
   DECLINED contracts.

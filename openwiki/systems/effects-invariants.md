@@ -9,6 +9,18 @@ sources:
     resource: repo://docs/agents/ir-reverb-training.md
   - id: openwiki-source-a57c88194aa852db387a04a3
     resource: repo://docs/tickets/complete/reverb-dry-mod-width-swing.md
+  - id: openwiki-source-bf96acd1df7b85a128b0bb8a
+    resource: repo://plugin/include/effects/compressor/Compressor.h
+  - id: openwiki-source-91074e18f1fa0619e744b65b
+    resource: repo://plugin/include/effects/compressor/fet/types/Compressor_Fet.h
+  - id: openwiki-source-22acd7a4a3a9fb7bf2af6703
+    resource: repo://plugin/include/effects/compressor/opto/types/Compressor_Opto.h
+  - id: openwiki-source-962e62ae51f8899785945824
+    resource: repo://plugin/include/effects/compressor/tube/types/Compressor_Tube.h
+  - id: openwiki-source-798e5f71ade62241b4735853
+    resource: repo://plugin/include/effects/compressor/varimu/types/Compressor_VariMu.h
+  - id: openwiki-source-84a81621176cc9450e0ac15f
+    resource: repo://plugin/include/effects/compressor/vca/types/Compressor_Vca.h
   - id: openwiki-source-b0e24661fab1f1c9f8906b3b
     resource: repo://plugin/include/effects/reverb/digital/Reverb_Plate.h
   - id: openwiki-source-5fba7bd6fbd3028bb9aa2a86
@@ -34,7 +46,7 @@ sources:
 generated: { by: "pi", at: "2026-10-14T21:12:00.922Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-14T21:12:00.922Z
+    at: 2026-10-15T01:09:16.180Z
 ---
 
 
@@ -290,7 +302,19 @@ non-Digital identity). Type face names: DIG/SPR/PLT/SML/CHM/HAL (the
 earlier DAT face name was renamed DIG; the "Digital" *mode* name is
 unchanged).
 
-## Compressor (`Compressor.h`) — six signature modes, one shared law scale
+## Compressor (`effects/compressor/Compressor.h`) — six signature modes, one shared law scale
+
+Engine/wrapper layout (commit 3ffb35b, mirroring the reverb reorg): `Compressor.h`
+is the HOST class (mode names, `defaultTimingForMode`/`defaultThresholdForMode`,
+`numTypes(mode) = 1` always, the 11-field `Params` aggregate ending in `clip, kneeDb,
+type`, `prepare`/`setParams`/`recalc` and the `process` loop that dispatches
+detector<Mode>/output<Mode> per mode); the per-mode detector/output bodies live in
+one engine header per family — `vca/Compressor_Vca.h`, `tube/Compressor_Tube.h`,
+`opto/Compressor_Opto.h`, `fet/Compressor_Fet.h`, `varimu/Compressor_VariMu.h` —
+`#include`'d at the end of `Compressor.h` (vca→tube→opto→fet→varimu), with thin
+identity wrappers at `<mode>/types/Compressor_<Mode>.h`. The per-block `compType`
+field (the 11th `Params` member) selects the mode's sub-type; the UI exposes a
+typeCycle_ cycler on the full tile (see the UI page).
 
 Shared law: **ratio = DEPTH (higher = deeper GR = lower output)** with the
 soft law `(n−1)·(R−1)/12` and the PUNCH light path `(n−1)/24`; **detent 4:1

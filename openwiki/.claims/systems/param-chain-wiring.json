@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:c294f077a20c433d18a0e6bcef5995568a569afc3367176649a4fd54f25f9257",
+  "pageVersion": "sha256:a408950e990317974f254aac485927414242802633d2c1723c2ccb20c75bc6db",
   "claims": [
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
@@ -27,28 +27,6 @@
       ]
     },
     {
-      "id": "claim_c814b3d9bd3a4e5e96158208998ad651",
-      "statement": "T-DAT-001 added a THIRD family member to the four-state-place rule: engine param reverbLoCut (0..1 clamped, default 0 = bit-pass). Its four places: (1) ChainBlock.h:406 field `double reverbLoCut = 0.0;` + the reverbParams() aggregate ending `reverbSharedMod, reverbWave, reverbLoCut` (:430; matches Reverb::Params struct order) + ProcessorChain.cpp BlockRow init (:1203), row mirror (:1320), and params->setProperty(\"reverbLoCut\", …) in serializeChain (:1497); (2) ChainState.h/.cpp parseItem `item.reverbLoCut = num(v[\"params\"], \"reverbLoCut\", 0.0)`; (3) ProcessorChain.cpp isReverbParam list (:1936) + updateBlockParam branch (:2221-2222, jlimit 0..1 + block->reverb.setParams(block->reverbParams())); (4) ProcessorState.cpp blockState.setProperty (:282) + jlimit restore (:472).",
-      "evidence": [
-        {
-          "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:63032fe01274786abfda0c4245c7322139b08e78a5d9cf10783b9bf55ab5289b"
-        },
-        {
-          "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:4590377e2ecfb42d5e01478dc407acfdfcce91345785fd34bf1845dcd6c2cbc5"
-        },
-        {
-          "resource": "repo://plugin/src/ProcessorState.cpp",
-          "version": "repo-file-v1:sha256:815d98ea551b9a28bc61fa201ac26c1aa93a042a314d3468b44c884464eca807"
-        },
-        {
-          "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:1d3320ac4c6605198e3918901c115f7b4a81e43de3688e7167ed3c20d018dc9e"
-        }
-      ]
-    },
-    {
       "id": "claim_ed5f8720ca514eaa812d7cb9d59e6a2c",
       "statement": "A block param field round-trips only if it exists in all FOUR state places: (1) getChainState in plugin/src/ProcessorChain.cpp (the BlockRow struct, the copyLane copy, AND params->setProperty('<field>',…) in serializeChain); (2) parseItem in plugin/ui/model/ChainState.cpp (item.<field> = num(v[\"params\"], \"<field>\", default)); (3) updateBlockParam in plugin/src/ProcessorChain.cpp (the param == \"<field>\" branch); (4) ProcessorState.cpp (blockState.setProperty + getProperty restore). Missing any one = 'works sonically, snaps back to default on sync'. Two families sit in these four places: (a) CHAIN-LAYER dry-gain params — convDry, and reverbDry since the 2026-10-13 R1 pass — whose updateBlockParam branch does NOT call an engine setParams (the gain is applied in the chain's mix loop on the dry term only); (b) ENGINE params like reverbSharedMod (R2 shared Mod depth, 0..1 clamped), reverbWave (R2 Digital Shape, int 0..kNumWaves-1 clamped), and reverbLoCut (T-DAT-001, 0..1 clamped, stored fraction) — whose updateBlockParam branch stores the clamped value AND calls block->reverb.setParams(block->reverbParams()).",
       "evidence": [
@@ -58,11 +36,11 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:4590377e2ecfb42d5e01478dc407acfdfcce91345785fd34bf1845dcd6c2cbc5"
+          "version": "repo-file-v1:sha256:eb983d4c9a842350f8b2c3a912946e264b6e4cb91e7e51a0d6445529c21b9a10"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:1d3320ac4c6605198e3918901c115f7b4a81e43de3688e7167ed3c20d018dc9e"
+          "version": "repo-file-v1:sha256:abab3a474ad9d073e6f6844cfa328047a41078ac2e08f205af0245191a17e2a4"
         }
       ]
     },
@@ -79,10 +57,58 @@
           "version": "repo-file-v1:sha256:b40adc6572ec6489d056f994383b04d1e42a6ff17f232f28df03667d5d5fd560"
         }
       ]
+    },
+    {
+      "id": "claim_049ac154b25041fe8fa0bf8414e0fdcf",
+      "statement": "T-DAT-001 added a THIRD family member to the four-state-place rule: engine param reverbLoCut (0..1 clamped, default 0 = bit-pass). Its four places (line numbers as of the compressor reorg, commit 3ffb35b): (1) ChainBlock.h:409 field `double reverbLoCut = 0.0;` + the reverbParams() aggregate ending `reverbSharedMod, reverbWave, reverbLoCut` (reverbParams() at :423, aggregate end :433; matches Reverb::Params struct order) + ProcessorChain.cpp BlockRow init (:1204), row mirror (:1322), and params->setProperty(\"reverbLoCut\", …) in serializeChain (:1500); (2) ChainState.cpp parseItem :230 `item.reverbLoCut = num(v[\"params\"], \"reverbLoCut\", 0.0)`; (3) ProcessorChain.cpp isEffectParam list (:1939) + updateBlockParam branch (:2230-2231, jlimit 0..1 + block->reverb.setParams(block->reverbParams())); (4) ProcessorState.cpp blockState.setProperty (:283) + jlimit restore (:474).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/ChainBlock.h",
+          "version": "repo-file-v1:sha256:f565ebe0c69c7717e5cae3393bfe5f96a62c9d828b754ed96d906e786f22748b"
+        },
+        {
+          "resource": "repo://plugin/src/ProcessorChain.cpp",
+          "version": "repo-file-v1:sha256:eb983d4c9a842350f8b2c3a912946e264b6e4cb91e7e51a0d6445529c21b9a10"
+        },
+        {
+          "resource": "repo://plugin/src/ProcessorState.cpp",
+          "version": "repo-file-v1:sha256:565b90ee1f75127b37af186406ab07259497abd4b2cad507ed88cb7543025b39"
+        },
+        {
+          "resource": "repo://plugin/ui/model/ChainState.cpp",
+          "version": "repo-file-v1:sha256:abab3a474ad9d073e6f6844cfa328047a41078ac2e08f205af0245191a17e2a4"
+        }
+      ]
+    },
+    {
+      "id": "claim_5b55b75567f348e0bd7babb60b817954",
+      "statement": "The compressor TYPE axis added a fourth family member to the four-state-place rule: compType (int; per-mode sub-model within the compressor mode; 0 = the mode's own engine, the only type today — Compressor::numTypes(mode) returns 1 for every mode). Its four places: (1) ChainBlock.h:362 field `int compType = 0;` (immediately after compMode :361) + ProcessorChain.cpp BlockRow init (:1190), copyLane mirror row.compType = block->compType (:1291), and params->setProperty(\"compType\", row.compType) in serializeChain (:1464); (2) ChainState.h:160 `int compType = 0;` on ChainItem + ChainState.cpp parseItem :190 `item.compType = num(v[\"params\"], \"compType\", 0)`; (3) ProcessorChain.cpp param == \"compType\" in the isEffectParam list (:1939) + the else-if branch (:2123-2124) which stores the value VERBATIM (`block->compType = static_cast<int>(value)`) — no clamp here, the engine clamps via setParams (jlimit 0..numTypes-1) — and appends block->compType to the compressor setParams call site (:2128); (4) ProcessorState.cpp blockState.setProperty :232 + getProperty restore :384 (cast to int, verbatim). compType is the 11th and last field of the Compressor::Params aggregate, so every block->compressor.setParams({...}) call site (8 in ProcessorChain.cpp :2085-2146, 1 in ProcessorState.cpp :515) passes block->compType last.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/ChainBlock.h",
+          "version": "repo-file-v1:sha256:f565ebe0c69c7717e5cae3393bfe5f96a62c9d828b754ed96d906e786f22748b"
+        },
+        {
+          "resource": "repo://plugin/src/ProcessorChain.cpp",
+          "version": "repo-file-v1:sha256:eb983d4c9a842350f8b2c3a912946e264b6e4cb91e7e51a0d6445529c21b9a10"
+        },
+        {
+          "resource": "repo://plugin/src/ProcessorState.cpp",
+          "version": "repo-file-v1:sha256:565b90ee1f75127b37af186406ab07259497abd4b2cad507ed88cb7543025b39"
+        },
+        {
+          "resource": "repo://plugin/ui/model/ChainState.cpp",
+          "version": "repo-file-v1:sha256:abab3a474ad9d073e6f6844cfa328047a41078ac2e08f205af0245191a17e2a4"
+        },
+        {
+          "resource": "repo://plugin/ui/model/ChainState.h",
+          "version": "repo-file-v1:sha256:fdeb2be4cc68f23249c01d46001d47d40186f49d5bf4b2448319c51857cded01"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-14T16:54:40.219Z"
+    "at": "2026-10-15T01:09:16.180Z"
   }
 }

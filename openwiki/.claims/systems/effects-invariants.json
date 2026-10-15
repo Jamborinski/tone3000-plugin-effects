@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:9e9a0f20269a40019b776b050a21600fb545396b4936890ae5c6dab41659ff8e",
+  "pageVersion": "sha256:3b918297b803aae141c0bdf8af01b31d625ce7d7bc5923502d167bd168780534",
   "claims": [
     {
       "id": "claim_9c6f8afc68d34500bf778a2da1af5f07",
@@ -106,7 +106,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:85b13e0fddb68d9a04abad86005ef9385d5eb4ce323f58d7b6975efa62c344df"
+          "version": "repo-file-v1:sha256:b154dd623e94ea75c3a9cb0c8f6dc5c66b27df31f76fb93b8258d5be9150c331"
         }
       ]
     },
@@ -169,10 +169,64 @@
           "version": "repo-file-v1:sha256:7cf48ee3fbf1d19a64c5246cd2119f2feb26bcc193801f3cb25ef5e129cf6195"
         }
       ]
+    },
+    {
+      "id": "claim_b182ce18c8da4cb6b9ccb416dea74d99",
+      "statement": "COMPRESSION (5 modes; engine/wrapper reorg, commit 3ffb35b, mirroring the reverb engine reorg 9bf4469): plugin/include/effects/compressor/Compressor.h is now the HOST class — kNumModes=5, mode names (0=VCA,1=Tube-STA,2=Opto-2A,3=FET,4=Vari-Mu), defaultTimingForMode/defaultThresholdForMode/defaultClipForMode/defaultKneeForMode, colorizeForMode, the shared range constants, the 11-field Params aggregate (mode, ratio, attackMs, releaseMs, toneDb, scHpHz, thresholdDb, mbc, clip, kneeDb, type), setParams (clamps type_ by numTypes), process dispatching detector<Mode>/output<Mode>, recalc, the flux integrator, and the per-mode law functions. The per-mode detector/output bodies live out-of-class in compressor/{vca,tube,opto,fet,varimu}/Compressor_<X>.h, pulled in by #include at the end of Compressor.h (vca→tube→opto→fet→varimu).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/effects/compressor/Compressor.h",
+          "version": "repo-file-v1:sha256:5ffe74a1aceac4d3bb9095480ceb3d21ad7e2fc752d2ca2d9e0a458cfb0d5c5d"
+        }
+      ]
+    },
+    {
+      "id": "claim_a150d0dec35d4cb7a48cc9ccc9a21f38",
+      "statement": "The per-mode TYPE axis is mirrored from the reverb's Params::type[mode]: Compressor::numTypes(mode) is the single source of truth and returns 1 for every mode today, so each mode carries exactly ONE self-type (type 0 = the mode's own engine, named VCA/TUB/OPT/VMU/FET in the UI). compressor/<mode>/types/Compressor_<X>.h are thin IDENTITY WRAPPERS (each just #includes the mode's engine header plus a provenance comment) and are the landing point for future differently-built types; a future type bumps numTypes and lands its engine under that types/ dir. The compressor modes keep the per-mode laws pinned by tests: FET = the 1176 four-amp sum (fast peak pair + slow RMS pair) with the true hard-knee law, FET clip=1.0 at noon is the bit-identical keeper anchor; VCA = clean RMS soft-knee multiplier (no added harmonics) + PUNCH 50/50 parallel blend; Opto-2A = two-stage optical cell, 3rd-harmonic-dominant color, optical attack ~40 ms / cell recovery 600 ms; Tube-STA = tube detector + output stage, 3rd-dominant warmth, A 50 ms / R 1000 ms; Vari-Mu (670) = flux-core feedback detection with ODD-ONLY GR-driven saturation, 0.2 ms catch.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/effects/compressor/Compressor.h",
+          "version": "repo-file-v1:sha256:5ffe74a1aceac4d3bb9095480ceb3d21ad7e2fc752d2ca2d9e0a458cfb0d5c5d"
+        },
+        {
+          "resource": "repo://plugin/include/effects/compressor/fet/types/Compressor_Fet.h",
+          "version": "repo-file-v1:sha256:477b44bf65a6d31b92b0242727b3021d79e5b1c5571d798f8fa9a5b92c0fa778"
+        },
+        {
+          "resource": "repo://plugin/include/effects/compressor/opto/types/Compressor_Opto.h",
+          "version": "repo-file-v1:sha256:1b58c36aafefc0d73f99d5ef8928cd90e36503b5f65d9d65b4f7f329711c17ed"
+        },
+        {
+          "resource": "repo://plugin/include/effects/compressor/tube/types/Compressor_Tube.h",
+          "version": "repo-file-v1:sha256:d5aebab4104c9be2e6173386fc91a6b9133483287527d4e199df2e7322d35c34"
+        },
+        {
+          "resource": "repo://plugin/include/effects/compressor/varimu/types/Compressor_VariMu.h",
+          "version": "repo-file-v1:sha256:22d582d22411c9a3e4897270cf753d5ac386bc95e5b69ccfd09cd671d2ff95cd"
+        },
+        {
+          "resource": "repo://plugin/include/effects/compressor/vca/types/Compressor_Vca.h",
+          "version": "repo-file-v1:sha256:adb875e1daa1f772f776b1556f097798678d11e4480c74f0ebf490f3a0322bee"
+        }
+      ]
+    },
+    {
+      "id": "claim_fa5945da978f44ab83e89d52e9c29101",
+      "statement": "The compType subtype is wired through the UI type chip: the full compressor tile carries a per-mode type cycler button (typeCycle_) that cycles compactCompTypeName labels {VCA, TUB, OPT, VMU, FET} and calls setBlockParam(\"compType\", i); the compact tile hides it (one self-type is a no-op). This is the compressor instance of the GENERAL mode/subtype tuning rule — numTypes() is the gate, defaultDialsForType()-style defaults may be added per type, and every other mode stays bit-identical (DspTests 511/511 held across the reorg).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/effects/compressor/Compressor.h",
+          "version": "repo-file-v1:sha256:5ffe74a1aceac4d3bb9095480ceb3d21ad7e2fc752d2ca2d9e0a458cfb0d5c5d"
+        },
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
+          "version": "repo-file-v1:sha256:b154dd623e94ea75c3a9cb0c8f6dc5c66b27df31f76fb93b8258d5be9150c331"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-14T21:12:00.922Z"
+    "at": "2026-10-15T01:09:16.180Z"
   }
 }

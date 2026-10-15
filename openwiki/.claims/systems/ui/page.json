@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:c51dda5917dc8a90e4341ead8d33aff29f2365adda6331e2f0410a7d30ab4530",
+  "pageVersion": "sha256:25143b49e90656162ce86fd2c6883c6ca86ac0271abc505e6c5f7b01f2261a72",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -86,7 +86,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:85b13e0fddb68d9a04abad86005ef9385d5eb4ce323f58d7b6975efa62c344df"
+          "version": "repo-file-v1:sha256:b154dd623e94ea75c3a9cb0c8f6dc5c66b27df31f76fb93b8258d5be9150c331"
         }
       ]
     },
@@ -96,21 +96,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:85b13e0fddb68d9a04abad86005ef9385d5eb4ce323f58d7b6975efa62c344df"
-        }
-      ]
-    },
-    {
-      "id": "claim_44fd2da61b2e43e0ab0e755127f834d0",
-      "statement": "DspTests compiles the real plugin DSP sources and exactly one UI file, plugin/ui/core/Labels.cpp (the KnobScale readout formatter that the scale-contract tests link); everything else in plugin/ui (views, widgets, services, NativeEditor) is excluded. Therefore a green DspTests run does NOT prove the UI links: UI changes must be verified via the testbed (--selftest / --capture diff) or a GUI plugin build target before committing. Current suite size (2026-10-17, after the T-DAT-001 wave 3 closeout): 511 tests / 75 suites; grew from 503 with the 8-test DatGuards suite (test/src/dat_probe_tests.cpp).",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:85b13e0fddb68d9a04abad86005ef9385d5eb4ce323f58d7b6975efa62c344df"
-        },
-        {
-          "resource": "repo://test/src/dat_probe_tests.cpp",
-          "version": "repo-file-v1:sha256:d25de9e0ad214a7757b0064448c64558324eabeb1deae1b2a6e09c0695222ef4"
+          "version": "repo-file-v1:sha256:b154dd623e94ea75c3a9cb0c8f6dc5c66b27df31f76fb93b8258d5be9150c331"
         }
       ]
     },
@@ -128,13 +114,49 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:85b13e0fddb68d9a04abad86005ef9385d5eb4ce323f58d7b6975efa62c344df"
+          "version": "repo-file-v1:sha256:b154dd623e94ea75c3a9cb0c8f6dc5c66b27df31f76fb93b8258d5be9150c331"
+        }
+      ]
+    },
+    {
+      "id": "claim_0f2ab92333fd48e4912ae1d25e6c076e",
+      "statement": "DspTests compiles the real plugin DSP sources and exactly one UI file, plugin/ui/core/Labels.cpp (the KnobScale readout formatter that the scale-contract tests link); everything else in plugin/ui (views, widgets, services, NativeEditor) is excluded. Therefore a green DspTests run does NOT prove the UI links: UI changes must be verified via the testbed (--selftest / --capture diff) or a GUI plugin build target before committing. Current suite size (2026-10-17, after the T-DAT-001 wave 3 closeout AND the compressor engine/wrapper reorg commit 3ffb35b): 511 tests / 74 test suites (re-verified green on every reorg gate).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
+          "version": "repo-file-v1:sha256:b154dd623e94ea75c3a9cb0c8f6dc5c66b27df31f76fb93b8258d5be9150c331"
+        },
+        {
+          "resource": "repo://test/src/dat_probe_tests.cpp",
+          "version": "repo-file-v1:sha256:d25de9e0ad214a7757b0064448c64558324eabeb1deae1b2a6e09c0695222ef4"
+        }
+      ]
+    },
+    {
+      "id": "claim_7a35e225e4e540e09fe5d4300dc7a546",
+      "statement": "COMPRESSOR TYPE CYCLER (commit 3ffb35b): the full compressor tile carries a per-mode TYPE cycler button (typeCycle_, a juce::TextButton) that mirrors the reverb tile's type cycler. Bounds (resized(), full view): typeCycle_ at (W - 14 - 44, 44, 44, 26) — right of the mode selector, which slides left to modeCombo_ (W - 14 - 44 - 8 - 120, 44, 120, 26); both share the y=44 band. It is HIDDEN in the compact tile (typeCycle_.setVisible(!compact_)) because the compact header's free slot (65..95) belongs to the PUNCH toggle and 28..62 to the mode cycler, and with one self-type per mode the cycler is a one-entry no-op until a mode gains a second type. Button text = compactCompTypeName(block_.compMode, compType): the self-type labels in engine-index order {VCA, TUB, OPT, VMU, FET} (the Opto label is OPT, corrected from OP in this commit). Help text = help::text(help::Key::compType) (a new Key in Help.h, desktop blurb in Help.cpp) + a per-mode compTypeBlurb (\"general-purpose VCA -- smooth RMS soft-knee compression\" / \"Tube-STA -- warm tube detector...\" / \"Opto-2A -- two-stage optical cells...\" / \"FET -- four-amp sum...\" / \"Vari-Mu 670 -- flux-core saturation...\"). onClick opens a PopupMenu listing i in [0, Compressor::numTypes(m)) as \"<label> — <blurb>\" (current checked) and calls enterCompType(choice-1). syncCompTypeButton(m) re-syncs button + help text (called from enterMode :890); enterCompType(type) is a no-op if type == compTypeOf(block_), else sets block_.compType VERBATIM (the engine clamps via setParams/numTypes) and calls services().chain.setBlockParam(blockId(), \"compType\", (double)type), then syncCompTypeButton.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/core/Help.cpp",
+          "version": "repo-file-v1:sha256:4ea51688a9a42416685fe25eb3ebca174497e1e54d8008f7a1b57916e64348e7"
+        },
+        {
+          "resource": "repo://plugin/ui/core/Help.h",
+          "version": "repo-file-v1:sha256:19061525603a477f5a50bda0bc0919c194613a4ab0b256ad0b6f2bf9dcc0e7ca"
+        },
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
+          "version": "repo-file-v1:sha256:b154dd623e94ea75c3a9cb0c8f6dc5c66b27df31f76fb93b8258d5be9150c331"
+        },
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectTile.h",
+          "version": "repo-file-v1:sha256:06a37049715c6fb45c482aade1ee2d3115a1a2aa89568eeacf9785162c8746b3"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-14T16:54:40.219Z"
+    "at": "2026-10-15T01:09:16.180Z"
   }
 }

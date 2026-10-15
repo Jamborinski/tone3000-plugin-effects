@@ -17,6 +17,8 @@ sources:
     resource: repo://plugin/ui/core/KnobScale.h
   - id: openwiki-source-20c83d572d97ba03f654862b
     resource: repo://plugin/ui/model/ChainState.cpp
+  - id: openwiki-source-44f6dfbbe93c22f4f01d2fc3
+    resource: repo://plugin/ui/model/ChainState.h
   - id: openwiki-source-9c84f7315af438c161067be5
     resource: repo://plugin/ui/services/ParamBinding.cpp
   - id: openwiki-source-5b6ba89ac0a58ff2acd95eed
@@ -24,7 +26,7 @@ sources:
 generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-14T16:54:40.219Z
+    at: 2026-10-15T01:09:16.180Z
 ---
 
 

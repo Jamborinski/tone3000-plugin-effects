@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:36c21848872a68f80eccfae9997d06cbdfb63abc583633f7da21e050cc24c16a",
+  "pageVersion": "sha256:8975d59a98f8b2711d523611db09a148bae31dd551828237e2624d9d5c8bc8c2",
   "claims": [
     {
       "id": "claim_85d7c01917814cdd8ed3b245b004829d",
@@ -38,7 +38,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:63032fe01274786abfda0c4245c7322139b08e78a5d9cf10783b9bf55ab5289b"
+          "version": "repo-file-v1:sha256:f565ebe0c69c7717e5cae3393bfe5f96a62c9d828b754ed96d906e786f22748b"
         }
       ]
     },
@@ -48,7 +48,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:63032fe01274786abfda0c4245c7322139b08e78a5d9cf10783b9bf55ab5289b"
+          "version": "repo-file-v1:sha256:f565ebe0c69c7717e5cae3393bfe5f96a62c9d828b754ed96d906e786f22748b"
         }
       ]
     },
@@ -78,7 +78,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:4590377e2ecfb42d5e01478dc407acfdfcce91345785fd34bf1845dcd6c2cbc5"
+          "version": "repo-file-v1:sha256:eb983d4c9a842350f8b2c3a912946e264b6e4cb91e7e51a0d6445529c21b9a10"
         }
       ]
     },
@@ -88,13 +88,33 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:63032fe01274786abfda0c4245c7322139b08e78a5d9cf10783b9bf55ab5289b"
+          "version": "repo-file-v1:sha256:f565ebe0c69c7717e5cae3393bfe5f96a62c9d828b754ed96d906e786f22748b"
+        }
+      ]
+    },
+    {
+      "id": "claim_a597e9068dbe45efab24d11469bc679b",
+      "statement": "The ChainBlock effect-param struct carries the compressor subtype field compType (added alongside compMode): compMode is 0=VCA,1=Opto,2=Opto-2A,3=FET,4=Vari-Mu and compType is the per-mode TYPE (sub-model within the mode; 0 = the mode's own engine, clamped by Compressor::numTypes).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/ChainBlock.h",
+          "version": "repo-file-v1:sha256:f565ebe0c69c7717e5cae3393bfe5f96a62c9d828b754ed96d906e786f22748b"
+        }
+      ]
+    },
+    {
+      "id": "claim_ca32d23cd5af4370bec4c1a5dd5fa73e",
+      "statement": "ProcessorChain's per-lane BlockRow state row copies compType from the block (row.compType = block->compType), serializes it via params->setProperty(\"compType\", ...), and setBlockParam accepts \"compType\" in the effect-param list; all compressor setParams call sites pass block->compType.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/src/ProcessorChain.cpp",
+          "version": "repo-file-v1:sha256:eb983d4c9a842350f8b2c3a912946e264b6e4cb91e7e51a0d6445529c21b9a10"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-14T16:54:40.219Z"
+    "at": "2026-10-15T01:09:16.180Z"
   }
 }

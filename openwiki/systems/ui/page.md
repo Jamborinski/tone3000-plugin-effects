@@ -9,6 +9,10 @@ sources:
     resource: repo://plugin/docs/native-ui.md
   - id: openwiki-source-d03af21fb5ca3fcbf4437434
     resource: repo://plugin/ui/core/Design.h
+  - id: openwiki-source-e57b45326a18fab8a4fe2253
+    resource: repo://plugin/ui/core/Help.cpp
+  - id: openwiki-source-9af7ea122a661abb63161219
+    resource: repo://plugin/ui/core/Help.h
   - id: openwiki-source-2cc0983ddb88288e69accf75
     resource: repo://plugin/ui/core/KnobScale.h
   - id: openwiki-source-4ec0c8381f33cd3ba0cb99f5
@@ -23,6 +27,8 @@ sources:
     resource: repo://plugin/ui/views/block/BlockCard.h
   - id: openwiki-source-7fb62e48416333f990bd3d93
     resource: repo://plugin/ui/views/gallery/EffectTile.cpp
+  - id: openwiki-source-09eb1e1b1a7ba24f59d68de1
+    resource: repo://plugin/ui/views/gallery/EffectTile.h
   - id: openwiki-source-174467a0c2e30a63c2e8869e
     resource: repo://plugin/ui/views/PluginRoot.h
   - id: openwiki-source-4b8e7dce368774e92d99ea30
@@ -32,7 +38,7 @@ sources:
 generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-14T16:54:40.219Z
+    at: 2026-10-15T01:09:16.180Z
 ---
 
 
