@@ -1,6 +1,13 @@
 // Shared theme tokens (port of theme.ts): black surfaces, white/gray chrome
 // and three brand accents. Every colour/size literal in the UI comes from
 // here, so the palette changes in one place.
+//
+// Runtime swappability (2026-10-17, ui-swappable-theme): the COLOUR tokens
+// are mutable globals (the palette's live values) — a `ThemePalette` snapshot
+// can swap all of them in one `applyPalette()` call, and `resetPalette()`
+// restores the shipped dark look. The shipped plugin never calls
+// applyPalette; only the testbed may (see TileShot --ocr). Size/layout
+// tokens below stay constexpr — only colours are runtime.
 #pragma once
 
 #include <juce_graphics/juce_graphics.h>
@@ -32,32 +39,84 @@ inline constexpr int faceplateChromeLift(int secondaryKnobSize) {
   return -(kKnobLabelGap + 14 + secondaryKnobSize / 2 - kIconBoxSize / 2);
 }
 
-inline const juce::Colour kBrandBlue{0xff0000ff};
-inline const juce::Colour kBrandYellow{0xffffff00};
-inline const juce::Colour kBrandRed{0xffff0000};
-// Inline doc / "Learn More" links in settings.
-inline const juce::Colour kLinkBlue{0xff40a6ff};
+// --- Colour palette (runtime-mutable) -------------------------------------
 
-inline const juce::Colour kWhite{0xffffffff};
-inline const juce::Colour kBlack{0xff000000};
+// The full colour set. `defaultPalette()` is the shipped dark look; every
+// token global below mirrors it, so an unmodified build renders exactly the
+// original palette (bit-identical goldens prove it). (Dynamic init —
+// juce::Colour has no constexpr ctor in this JUCE.)
+struct ThemePalette {
+  juce::Colour brandBlue{0xff0000ff};
+  juce::Colour brandYellow{0xffffff00};
+  juce::Colour brandRed{0xffff0000};
+  // Inline doc / "Learn More" links in settings.
+  juce::Colour linkBlue{0xff40a6ff};
+  juce::Colour white{0xffffffff};
+  juce::Colour black{0xff000000};
+  // rgba(235, 235, 245, a) family: primary muted text, secondary labels,
+  // pressed/active fill.
+  juce::Colour muted = juce::Colour(235, 235, 245).withAlpha(0.60f);
+  juce::Colour subtle = juce::Colour(235, 235, 245).withAlpha(0.40f);
+  juce::Colour highlight = juce::Colour(235, 235, 245).withAlpha(0.18f);
+  // Disabled/idle icon gray.
+  juce::Colour gray{0xff8d8d93};
+  // Hairline used by every card/section/segment border (1px).
+  juce::Colour border = juce::Colour(84, 84, 88).withAlpha(0.65f);
+  // Card body background / raised chrome.
+  juce::Colour surface{0xff151517};
+  juce::Colour surfaceRaised{0xff1c1c1e};
+  // Shared fill behind LITE/FULL and the EQ view switcher.
+  juce::Colour segmentedTrack = juce::Colour(120, 120, 128).withAlpha(0.36f);
+  // Floating panels (popovers, menus, the image deck): #141416, hairline
+  // border, 14px corners.
+  juce::Colour panelBg{0xff141416};
+};
 
-// rgba(235, 235, 245, a) family: primary muted text, secondary labels,
-// pressed/active fill.
-inline const juce::Colour kMuted = juce::Colour(235, 235, 245).withAlpha(0.60f);
-inline const juce::Colour kSubtle = juce::Colour(235, 235, 245).withAlpha(0.40f);
-inline const juce::Colour kHighlight = juce::Colour(235, 235, 245).withAlpha(0.18f);
-// Disabled/idle icon gray.
-inline const juce::Colour kGray{0xff8d8d93};
-// Hairline used by every card/section/segment border (1px).
-inline const juce::Colour kBorder = juce::Colour(84, 84, 88).withAlpha(0.65f);
-// Card body background / raised chrome.
-inline const juce::Colour kSurface{0xff151517};
-inline const juce::Colour kSurfaceRaised{0xff1c1c1e};
-// Shared fill behind LITE/FULL and the EQ view switcher.
-inline const juce::Colour kSegmentedTrack = juce::Colour(120, 120, 128).withAlpha(0.36f);
-// Floating panels (popovers, menus, the image deck): #141416, hairline
-// border, 14px corners.
-inline const juce::Colour kPanelBg{0xff141416};
+inline const ThemePalette& defaultPalette() {
+  static const ThemePalette kDefault{};
+  return kDefault;
+}
+
+// The live token globals. Names are stable — every call site reads these.
+inline juce::Colour kBrandBlue{defaultPalette().brandBlue};
+inline juce::Colour kBrandYellow{defaultPalette().brandYellow};
+inline juce::Colour kBrandRed{defaultPalette().brandRed};
+inline juce::Colour kLinkBlue{defaultPalette().linkBlue};
+inline juce::Colour kWhite{defaultPalette().white};
+inline juce::Colour kBlack{defaultPalette().black};
+inline juce::Colour kMuted{defaultPalette().muted};
+inline juce::Colour kSubtle{defaultPalette().subtle};
+inline juce::Colour kHighlight{defaultPalette().highlight};
+inline juce::Colour kGray{defaultPalette().gray};
+inline juce::Colour kBorder{defaultPalette().border};
+inline juce::Colour kSurface{defaultPalette().surface};
+inline juce::Colour kSurfaceRaised{defaultPalette().surfaceRaised};
+inline juce::Colour kSegmentedTrack{defaultPalette().segmentedTrack};
+inline juce::Colour kPanelBg{defaultPalette().panelBg};
+
+// Swap every colour token to `p` in one call. Testbed-only by contract: the
+// shipped plugin (and its UiPrefs/ChainState) never calls this.
+inline void applyPalette(const ThemePalette& p) {
+  kBrandBlue = p.brandBlue;
+  kBrandYellow = p.brandYellow;
+  kBrandRed = p.brandRed;
+  kLinkBlue = p.linkBlue;
+  kWhite = p.white;
+  kBlack = p.black;
+  kMuted = p.muted;
+  kSubtle = p.subtle;
+  kHighlight = p.highlight;
+  kGray = p.gray;
+  kBorder = p.border;
+  kSurface = p.surface;
+  kSurfaceRaised = p.surfaceRaised;
+  kSegmentedTrack = p.segmentedTrack;
+  kPanelBg = p.panelBg;
+}
+
+// Restore the shipped dark palette (idempotent).
+inline void resetPalette() { applyPalette(defaultPalette()); }
+
 inline constexpr float kPanelCorner = 14.0f;
 
 }  // namespace t3k::ui::theme
