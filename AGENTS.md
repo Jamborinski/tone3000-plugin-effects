@@ -37,6 +37,8 @@ Retrieval: local `openwiki` v0.7.2 (pi tools `openwiki_begin` / `submit_plan`
 section. Source code and tests remain authoritative over the wiki; a wiki
 statement is a claim to be verified, not a fact to be believed.
 
+- **IF `openwiki/` EXISTS (committed pages on disk), NEVER RUN `openwiki_begin(mode="init")` — ALWAYS `mode="update"`.** init wipes and rebuilds from scratch (it only keeps pages in its plan, deletes all others). `update` reconciles claims + sources/verified per page and preserves existing pages. For NEW pages: hand-write the `.md` prose, submit claims via the update plan, commit with the rest. If a stale run blocks you: read `openwiki/.run.json` ONCE, then act — never loop `begin`. **Recovery from an accidental init:** `git checkout HEAD -- openwiki/` restores all committed pages; new untracked pages survive the restore. (User call 2026-10-15: init destroyed 16 pages twice.)
+
 ## Protocol (mandatory, not a suggestion)
 1. **Match by PATH, not by vibes, before you edit anything:**
    - touch `plugin/include/effects/{delay,chorus,tremolo,compressor}/**|plugin/src/effects/*` or `test/src/*` → **`docs/agents/dsp-invariants.md`** — and **`docs/agents/audio-testing.md`** (the sonic measurement protocol: click-index/jump metrics, comb & dropout laws, per-effect probe matrix, the hunt→measure→guard loop)
@@ -81,7 +83,7 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   foreground tool calls start with a **minimal env**: `cmake: command not
   found`, missing stage libs. Export the two canonical lines (`PATH` +
   `LD_LIBRARY_PATH`) at the top of EVERY build/test command.
-- The suite **grows with features** (503 as of the 2026-10-16 reverb-budget-quality-uplift pass; 487 was the 2026-10-15 R2 thirteenth-cut closeout) — **never assert a
+- The suite **grows with features** (512 as of the 2026-10-17 theme/OCR/label closeout; 503 was the 2026-10-16 reverb-budget pass; 487 the 2026-10-15 R2 closeout) — **never assert a
   stale total** on failure; check build RC and that the test names actually ran.
 - **gtest silent-0 trap:** a comma list like `--gtest_filter='A*,B*'` can run
   **0 tests with exit 0** (a green lie); a single `A*` works. Always confirm the

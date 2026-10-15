@@ -1110,6 +1110,137 @@
    "hasDrive": false
   },
   {
+   "id": "node-main",
+   "section": "main",
+   "title": "Signal chain - node grid",
+   "description": "The node view: the left lane drawn as a 4x3 grid reading one snake signal path, with five effect nodes (delay, chorus, reverb) and two open + slots, a palette row under the grid, and the parameter strip for the selected node. The header toggle is on the node segment.",
+   "chain": {
+    "revision": 1,
+    "canUndo": true,
+    "canRedo": false,
+    "stereoEnabled": false,
+    "activeSide": "left",
+    "stereoInput": false,
+    "standalone": false,
+    "inputMode": "stereo",
+    "namFullSize": false,
+    "multiCore": true,
+    "sampleRate": 48000,
+    "chain": [
+     {
+      "blockId": "fx-delay",
+      "kind": "effect",
+      "effectKind": "delay",
+      "params": {
+       "enabled": true,
+       "mix": 0.5,
+       "inputGain": 0.5,
+       "outputGain": 0.5,
+       "delayTimeMs": 350,
+       "delayBpm": 120,
+       "delaySynced": false,
+       "delayMode": 0,
+       "delayPing": false,
+       "delayHeads": 1,
+       "delayChip": false,
+       "delayMod": 0.0,
+       "delayMmRateHz": 0.5,
+       "delayMagRateHz": 0.2,
+       "delayRateHz": 6,
+       "delayFeedback": 0.3,
+       "delayDamping": 0.5,
+       "delaySpread": 0.0
+      }
+     },
+     {
+      "blockId": "fx-chorus",
+      "kind": "effect",
+      "effectKind": "chorus",
+      "params": {
+       "enabled": true,
+       "mix": 0.5,
+       "inputGain": 0.5,
+       "outputGain": 0.5,
+       "chorusRateHz": 0.8,
+       "chorusDepthMs": 1.5,
+       "chorusSpread": 1.0,
+       "chorusTone": 0.0,
+       "chorusWaveV2": 0
+      }
+     },
+     {
+      "blockId": "ins-1",
+      "kind": "insert"
+     },
+     {
+      "blockId": "fx-conv",
+      "kind": "effect",
+      "effectKind": "convolution",
+      "params": {
+       "enabled": true,
+       "mix": 0.5,
+       "inputGain": 0.5,
+       "outputGain": 0.5,
+       "convGain": 0.5,
+       "convDry": 0.5,
+       "convWidth": 1.0,
+       "convWidthMono": 0.0,
+       "convWidthStereo": 1.0,
+       "convStartS": 0.0,
+       "convEndS": 1.8,
+       "convPitch": 0.5,
+       "convPreMs": 0.0,
+       "convFadeIn": 0.0,
+       "convFadeOut": 0.0
+      }
+     },
+     {
+      "blockId": "ins-2",
+      "kind": "insert"
+     },
+     {
+      "blockId": "fx-reverb",
+      "kind": "effect",
+      "effectKind": "reverb",
+      "params": {
+       "enabled": true,
+       "mix": 0.5,
+       "inputGain": 0.5,
+       "outputGain": 0.5,
+       "reverbDecayMs": 2000.0,
+       "reverbPreMs": 10.0,
+       "reverbTone": 0.5,
+       "reverbSize": 0.6,
+       "reverbWidth": 1.0,
+       "reverbDry": 0.5,
+       "reverbMode": 0,
+       "reverbModeOrderV1": true,
+       "reverbType0": 0,
+       "reverbType1": 0,
+       "reverbType2": 0,
+       "reverbType3": 0,
+       "reverbType4": 0,
+       "reverbType5": 0,
+       "reverbDensity": 0.0,
+       "reverbMod": 0.0,
+       "reverbSharedMod": 0.0,
+       "reverbWave": 0,
+       "reverbSprings": 0.4,
+       "reverbSag": 0.4,
+       "reverbBright": 0.5
+      }
+     }
+    ]
+   },
+   "hints": true,
+   "banner": false,
+   "auth": false,
+   "localStorage": {
+    "t3k.nodeView": "true"
+   },
+   "hasDrive": false
+  },
+  {
    "id": "main-meters-hot",
    "section": "main",
    "title": "Signal chain - hot meters (clip latched)",
@@ -6638,7 +6769,7 @@
    "id": "load-oauth-leaving",
    "section": "loading",
    "title": "Sign in - waiting on the browser",
-   "description": "The sign-in screen the instant a login hands off to the system browser (Select Tone mockup 13342:46017): a full page in the tone browser's slot with a bare ← to abandon it, the loading dots over \"Sign in with your browser\", and under them the ways round a browser that may not have opened: \"Browser didn't open? Copy link to sign in, then return here.\" with the Copy Link button (the authorize URL, for any browser on this machine), and the grey \"Sign in on a different device\" link to the device-flow page. The browser path stays live throughout.",
+   "description": "The sign-in screen the instant a login hands off to the system browser (Select Tone mockup 13342:46017): a full page in the tone browser's slot with a bare \u2190 to abandon it, the loading dots over \"Sign in with your browser\", and under them the ways round a browser that may not have opened: \"Browser didn't open? Copy link to sign in, then return here.\" with the Copy Link button (the authorize URL, for any browser on this machine), and the grey \"Sign in on a different device\" link to the device-flow page. The browser path stays live throughout.",
    "chain": {
     "revision": 1,
     "canUndo": true,
@@ -8641,7 +8772,7 @@
    "id": "load-oauth-error",
    "section": "loading",
    "title": "Sign in - failed",
-   "description": "A sign-in that failed (the browser came back with an error, or the token exchange did): the reason on the sign-in screen with Try again / Dismiss in place of the dots; ← dismisses too.",
+   "description": "A sign-in that failed (the browser came back with an error, or the token exchange did): the reason on the sign-in screen with Try again / Dismiss in place of the dots; \u2190 dismisses too.",
    "chain": {
     "revision": 1,
     "canUndo": true,
@@ -12981,7 +13112,7 @@
    "id": "browser-sort-cleared",
    "section": "browser",
    "title": "Tone browser - clearing a chip closes its open menu",
-   "description": "Sort set to Newest, its menu reopened, then the chip's × pressed: the sort is back to Trending and the menu is gone; any filter change closes an open menu.",
+   "description": "Sort set to Newest, its menu reopened, then the chip's \u00d7 pressed: the sort is back to Trending and the menu is gone; any filter change closes an open menu.",
    "chain": {
     "revision": 1,
     "canUndo": true,
@@ -13269,7 +13400,7 @@
    "id": "browser-zoom-wide",
    "section": "browser",
    "title": "Tone browser - window at 1.3x, the body holds 1x",
-   "description": "The ← row zooms with the window; everything under it does not. The search box, filter row and cards keep their 1x height and widen to fill the column, so the bigger window shows more of the page.",
+   "description": "The \u2190 row zooms with the window; everything under it does not. The search box, filter row and cards keep their 1x height and widen to fill the column, so the bigger window shows more of the page.",
    "chain": {
     "revision": 1,
     "canUndo": true,
@@ -15288,7 +15419,7 @@
    "id": "browser-signed-out-card",
    "section": "browser",
    "title": "Tone browser - signed out: a card clicked",
-   "description": "Signed out, a card opens the sign-in page: the bare ← (back to the cards) and the centred prompt, whose button starts the browse-intent OAuth flow.",
+   "description": "Signed out, a card opens the sign-in page: the bare \u2190 (back to the cards) and the centred prompt, whose button starts the browse-intent OAuth flow.",
    "chain": {
     "revision": 1,
     "canUndo": true,
@@ -15576,7 +15707,7 @@
    "id": "browser-signed-out-signing-in",
    "section": "browser",
    "title": "Tone browser - signed out: signing in",
-   "description": "The card page's CTA starts the browse-intent login: the same sign-in screen takes over the browser (← returns to it), and a finished sign-in lands back on the browser signed in.",
+   "description": "The card page's CTA starts the browse-intent login: the same sign-in screen takes over the browser (\u2190 returns to it), and a finished sign-in lands back on the browser signed in.",
    "chain": {
     "revision": 1,
     "canUndo": true,
@@ -18195,7 +18326,7 @@
    "id": "browser-search-typed",
    "section": "browser",
    "title": "Tone browser - search text",
-   "description": "Enter submits the text; the × on the right clears it and submits again.",
+   "description": "Enter submits the text; the \u00d7 on the right clears it and submits again.",
    "chain": {
     "revision": 1,
     "canUndo": true,
@@ -19347,7 +19478,7 @@
    "id": "browser-profile-recent",
    "section": "browser",
    "title": "Tone browser - Recently used",
-   "description": "A profile filter set: the chip shows it with an ×, and the catalog-only filters park (those streams take a title search and gear alone; the search box stays live).",
+   "description": "A profile filter set: the chip shows it with an \u00d7, and the catalog-only filters park (those streams take a title search and gear alone; the search box stays live).",
    "chain": {
     "revision": 1,
     "canUndo": true,
@@ -20796,7 +20927,7 @@
    "id": "browser-format-ir",
    "section": "browser",
    "title": "Tone browser - Format: IR",
-   "description": "A format picked: the chip shows it with an × and the results narrow to impulse responses.",
+   "description": "A format picked: the chip shows it with an \u00d7 and the results narrow to impulse responses.",
    "chain": {
     "revision": 1,
     "canUndo": true,
@@ -21372,7 +21503,7 @@
    "id": "browser-tags-picked",
    "section": "browser",
    "title": "Tone browser - tags picked",
-   "description": "A pick closes the menu and narrows the results; reopened, the chosen tags lead the list ticked. The chip lists them with an ×.",
+   "description": "A pick closes the menu and narrows the results; reopened, the chosen tags lead the list ticked. The chip lists them with an \u00d7.",
    "chain": {
     "revision": 1,
     "canUndo": true,
@@ -21660,7 +21791,7 @@
    "id": "browser-sort-newest",
    "section": "browser",
    "title": "Tone browser - Sort set",
-   "description": "Newest picked: the Sort chip names it in white with an × back to the default, and the filters button would carry the dot once folded.",
+   "description": "Newest picked: the Sort chip names it in white with an \u00d7 back to the default, and the filters button would carry the dot once folded.",
    "chain": {
     "revision": 1,
     "canUndo": true,
@@ -29247,7 +29378,9 @@
      "name": "Crunch Rhythm"
     }
    },
-   "toggles": { "pitchEnabled": true },
+   "toggles": {
+    "pitchEnabled": true
+   },
    "meters": {
     "input": [
      -18,

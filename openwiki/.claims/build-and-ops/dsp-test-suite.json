@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:a081338c32bec35f97d0dcb4dca4d4bec3db5ec8ef99ca5cdcab648b3e7ed4a4",
+  "pageVersion": "sha256:5fc4240efbf1b3b1d42c462d4f2fe32d0eaca760851dcbc1de396653044d00b1",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -143,10 +143,20 @@
           "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
         }
       ]
+    },
+    {
+      "id": "claim_35bbb85979a644a98ed600f9a5dbd9dc",
+      "statement": "The DspTests suite count advanced to 512 at the 2026-10-17 theme/OCR/label closeout (511 had been the count since T-DAT-001 wave-3 across the reorg commits) — the count is a lower-bound snapshot, never assert a stale total on a red run.",
+      "evidence": [
+        {
+          "resource": "repo://AGENTS.md",
+          "version": "repo-file-v1:sha256:7890e7799091c9fbd1d898808314a9db03d0544a7a3287fd227f74e3c152b965"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-15T03:13:24.025Z"
+    "at": "2026-10-15T16:15:57.360Z"
   }
 }

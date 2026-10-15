@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:3271f8ae93d5aad0044a3d3db4cb27e32388096a7c04a4cdc457d3d1e443bc31",
+  "pageVersion": "sha256:26967fe7409db5ff028da6e0168d203301712dd62ed5beca63fe735a268d3aa4",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -60,7 +60,7 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:127e89b3c797db8fbb481d9f76b82ba6aee3763ad331b0620d2d2db2c44defe6"
+          "version": "repo-file-v1:sha256:7890e7799091c9fbd1d898808314a9db03d0544a7a3287fd227f74e3c152b965"
         },
         {
           "resource": "repo://docs/agents/audio-testing.md",
@@ -82,7 +82,7 @@
         },
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:67f562da430ebd694e1886e92eb858533f52a1276ec0a0f995c01dd97311275f"
+          "version": "repo-file-v1:sha256:f685ded94d575b183595358fb7860c8d3d84ce8654de4eaccfc8bd781177d90a"
         },
         {
           "resource": "repo://script/signing/sign-exe.sh",
@@ -100,7 +100,7 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:127e89b3c797db8fbb481d9f76b82ba6aee3763ad331b0620d2d2db2c44defe6"
+          "version": "repo-file-v1:sha256:7890e7799091c9fbd1d898808314a9db03d0544a7a3287fd227f74e3c152b965"
         },
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
@@ -171,6 +171,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-15T03:13:24.025Z"
+    "at": "2026-10-15T16:15:57.360Z"
   }
 }

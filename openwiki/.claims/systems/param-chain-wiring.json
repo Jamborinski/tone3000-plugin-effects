@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:a408950e990317974f254aac485927414242802633d2c1723c2ccb20c75bc6db",
+  "pageVersion": "sha256:4a78e1349b5131b6f0c63a89f39c000e55ef65baf6d2e3fd0fd4652b9b6d62f9",
   "claims": [
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
@@ -105,10 +105,24 @@
           "version": "repo-file-v1:sha256:fdeb2be4cc68f23249c01d46001d47d40186f49d5bf4b2448319c51857cded01"
         }
       ]
+    },
+    {
+      "id": "claim_6b557f9d0a6d4a0988b79d794105abcb",
+      "statement": "The node-view (grid block interface) toggle is persisted as a UiPrefs key, not a block/chain param: UiPrefs::kNodeView = \"t3k.nodeView\" (UiPrefs.h:68), a plain getBool/setBool preference (default false = gallery view). The gallery|node toggle in PluginHeader (NodeViewToggle, a StereoModeToggle-style 80x36 two-segment control) reads it at construction via services_.prefs.getBool(UiPrefs::kNodeView, false) (PluginHeader.cpp:47) and fires onNodeViewToggle(nodeView) on click; PluginRoot writes the pref back with prefs.setBool and calls chainScreen().setView(nodeView) to swap the visible view.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/services/UiPrefs.h",
+          "version": "repo-file-v1:sha256:78f45663d871343ac9b62a04129fbb5338b6e8cee510a287ee18f6cc3c15ac4b"
+        },
+        {
+          "resource": "repo://plugin/ui/views/PluginHeader.cpp",
+          "version": "repo-file-v1:sha256:d8510ec1692fb9f72c6594184be1f5524284616d03cbe1f87ba0494c736bca51"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-15T01:09:16.180Z"
+    "at": "2026-10-15T16:15:57.360Z"
   }
 }

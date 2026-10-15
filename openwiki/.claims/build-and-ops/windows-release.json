@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:eff2ecbe75e57e021cc2741c09b335ccf05c7b9922d6bbc369da9dfe6b5fd626",
+  "pageVersion": "sha256:5a2c5f3bcc07f0d11dd9239b8d6f10ce9509f3019cb448b026a7905ce346b729",
   "claims": [
     {
       "id": "claim_746e41b7d7214abc8858befedfaa8e01",
@@ -8,7 +8,7 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:67f562da430ebd694e1886e92eb858533f52a1276ec0a0f995c01dd97311275f"
+          "version": "repo-file-v1:sha256:f685ded94d575b183595358fb7860c8d3d84ce8654de4eaccfc8bd781177d90a"
         },
         {
           "resource": "repo://test/CMakeLists.txt",
@@ -26,7 +26,7 @@
         },
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:67f562da430ebd694e1886e92eb858533f52a1276ec0a0f995c01dd97311275f"
+          "version": "repo-file-v1:sha256:f685ded94d575b183595358fb7860c8d3d84ce8654de4eaccfc8bd781177d90a"
         }
       ]
     },
@@ -36,17 +36,17 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:67f562da430ebd694e1886e92eb858533f52a1276ec0a0f995c01dd97311275f"
+          "version": "repo-file-v1:sha256:f685ded94d575b183595358fb7860c8d3d84ce8654de4eaccfc8bd781177d90a"
         }
       ]
     },
     {
       "id": "claim_aa8c9ce8627f4818ab90ef81d9277d2b",
-      "statement": "script/win-standalone.sh (the former scripts/win-standalone.sh, folded into script/ by the repo-organization reorg) is now env-driven: it loads the gitignored .env (documented in .env.example) and stages the built TONE3000.exe to ${T3K_STAGE_DIR}/TONE3000-win-YYYYMMDD-HHMMSS (run-timestamp only, never descriptive suffixes; T3K_STAGE_DIR defaults to the auto-detected /mnt/c/Users/*/Downloads with a $HOME/Downloads fallback — on this machine C:\\Users\\jambo\\Downloads), with -2/-3 dir dedup, md5sums, and the git branch + HEAD commit printed for provenance. A plain build does not pick up a changed .env (publishable key) or new sources — it needs a reconfigure (GLOB re-runs) ~2 min per docs/agents/windows-build.md.",
+      "statement": "script/win-standalone.sh (folded into script/ by the repo-organization reorg) is env-driven: it loads the gitignored .env (documented in .env.example) and stages the built TONE3000.exe to ${T3K_STAGE_DIR}/TONE3000-win-YYYYMMDD-HHMMSS (run-timestamp only, never descriptive suffixes), with -2/-3 dir dedup, md5sums, and the git branch + HEAD commit printed for provenance. T3K_STAGE_DIR gotcha: unset, the default `ls -d /mnt/c/Users/*/Downloads | head -1` glob picks the FIRST alphabetical user dir, which on this box is a broken/empty stub `/mnt/c/Users/Default User/Downloads` — NOT jambo — so staging silently lands in the wrong user folder; .env.example sets T3K_STAGE_DIR=/mnt/c/Users/jambo/Downloads to fix it. A plain build does not pick up a changed .env (publishable key) or new sources — it needs a reconfigure (GLOB re-runs) ~2 min per docs/agents/windows-build.md.",
       "evidence": [
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:67f562da430ebd694e1886e92eb858533f52a1276ec0a0f995c01dd97311275f"
+          "version": "repo-file-v1:sha256:f685ded94d575b183595358fb7860c8d3d84ce8654de4eaccfc8bd781177d90a"
         },
         {
           "resource": "repo://script/win-standalone.sh",
@@ -64,7 +64,7 @@
         },
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:67f562da430ebd694e1886e92eb858533f52a1276ec0a0f995c01dd97311275f"
+          "version": "repo-file-v1:sha256:f685ded94d575b183595358fb7860c8d3d84ce8654de4eaccfc8bd781177d90a"
         },
         {
           "resource": "repo://script/signing/sign-exe.sh",
@@ -79,6 +79,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-15T03:13:24.025Z"
+    "at": "2026-10-15T16:15:57.360Z"
   }
 }

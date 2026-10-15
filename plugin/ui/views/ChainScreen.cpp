@@ -4,12 +4,23 @@
 
 namespace t3k::ui {
 
-ChainScreen::ChainScreen(Services& services) : services_(services), gallery_(services) {
+ChainScreen::ChainScreen(Services& services)
+    : services_(services), gallery_(services), node_(services) {
   gallery_.onOpenBlock = [this](const std::string& id) { openDetail(id); };
   gallery_.onSelectTone = [this](ChainSide side, const std::string& id) {
     if (onSelectTone) onSelectTone(side, id);
   };
+  // A tone node clicked in the grid opens its detail card (the grid is a
+  // views layer; the card is where a tone block's settings live).
+  node_.onOpenTone = [this](const std::string& id) { openDetail(id); };
   addAndMakeVisible(gallery_);
+  addAndMakeVisible(node_);
+  node_.setNodeView(false);
+
+  // The view mode is a UiPref (the ticket's views layer: not a block param,
+  // no four-state-place work).
+  const bool nodeView = services_.prefs.getBool(UiPrefs::kNodeView, false);
+  if (nodeView) setView(true);
 
   // Reopen the card a swap / OAuth round trip left behind, unless its block
   // is gone (the chain changed underneath the round trip).
@@ -43,7 +54,10 @@ void ChainScreen::openDetail(const std::string& blockId) {
     if (onSelectTone) onSelectTone(right ? ChainSide::right : ChainSide::left, id);
   };
   addAndMakeVisible(*detail_);
+  // The takeover hides BOTH views; closeDetail restores the one the user
+  // was in (nodeView_ decides).
   gallery_.setVisible(false);
+  node_.setVisible(false);
   resized();
 }
 
@@ -51,7 +65,16 @@ void ChainScreen::closeDetail() {
   services_.prefs.session.erase(UiPrefs::kDetailBlockId);
   if (!detail_) return;
   detail_.reset();
-  gallery_.setVisible(true);
+  gallery_.setVisible(!nodeView_);
+  node_.setNodeView(nodeView_);
+  resized();
+}
+
+void ChainScreen::setView(bool nodeView) {
+  if (nodeView_ == nodeView) return;
+  nodeView_ = nodeView;
+  gallery_.setVisible(!nodeView);
+  node_.setNodeView(nodeView);
   resized();
 }
 
@@ -62,6 +85,7 @@ void ChainScreen::returnToGallery() {
 
 void ChainScreen::resized() {
   gallery_.setBounds(getLocalBounds());
+  node_.setBounds(getLocalBounds());
   if (detail_) detail_->setBounds(getLocalBounds());
 }
 

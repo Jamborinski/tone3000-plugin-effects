@@ -32,7 +32,10 @@ enum class Key {
   // Sign-in screen
   signInBack, signInCopyLink, signInPhone, signInNewCode, signInRetry, signInDismiss,
   // Chain gallery
-  addTile, closeToneBrowser, copyBlock, pasteBlock, addEffectDelay, addEffectChorus, addEffectTremolo, addEffectCompressor,
+  addTile, closeToneBrowser, copyBlock, pasteBlock,
+  // Node view (small block grid + parameter strip, views/nodeview)
+  nodeViewToggle, nodeView, nodeEmptySlot, node, nodePower, nodeRemove, nodeMode,
+  addEffectDelay, addEffectChorus, addEffectTremolo, addEffectCompressor,
   addEffectReverb, addEffectConvolution, effectConvolution, convGain, convDry, convWidth, convStartS, convEndS, convPitch,
   convPre, convFadeIn, convFadeOut, convInCurve, convOutCurve, convTone, convIrLoad, effectReverb, reverbDecay, reverbPre, reverbTone, reverbSize, reverbWidth, reverbDwell, reverbType, reverbMode, reverbDensity, reverbMod, reverbSprings, reverbSag, reverbBright, reverbBloom, reverbEarly, reverbAir, reverbVolley, reverbBass, reverbBuild, reverbSpace, reverbDry, reverbSharedMod, reverbLoCut, reverbShape, effectDelay,
   effectChorus, effectTremolo, effectCompressor, effectMix, effectTime, effectFeedback, effectRate, effectDepth, effectInput, effectOutput,

@@ -54,6 +54,14 @@ gitignored — keys/paths in `.env.example`) →
 Older descriptive folders in Downloads are historical A/B references — do not
 touch them. Naming is **run-timestamp only** (user preference).
 
+- **`T3K_STAGE_DIR` gotcha (set it in `.env`):** the script's default
+  `ls -d /mnt/c/Users/*/Downloads | head -1` glob picks the FIRST alphabetical
+  user dir, which on this box is `/mnt/c/Users/Default User/Downloads` (a
+  broken/empty stub) — NOT `jambo`. Set `T3K_STAGE_DIR=/mnt/c/Users/jambo/Downloads`
+  in `.env` (already in `.env.example`) so every Stage A closeout lands in the
+  real Downloads. Symptom if unset: the staging "succeeds" into the wrong user
+  folder and the exe is missing from `C:\Users\jambo\Downloads`.
+
 ## Authenticode signing (optional, `T3K_SIGN=1` in `.env`)
 Certs/keys live OUTSIDE the repo (`$T3K_SIGNING_DIR`, default `$HOME/signing`;
 `*.p12`/`*.cer` are gitignored) and are **never committed**. Infra:

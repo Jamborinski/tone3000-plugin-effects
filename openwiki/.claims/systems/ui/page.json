@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:662a676b81c86a11fedeab14c1d48015f215d2780e5a6309d0a730801b82e3ff",
+  "pageVersion": "sha256:8c456138702f32807abb73d67460508a5ea05c06a54e87db0259048b4e152808",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -86,7 +86,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:d7a8aee2ef037f9753f686178c2e214f27fa3f96ab236e896147813e05d28790"
+          "version": "repo-file-v1:sha256:3e4e0ca918ea11e93170bca5e19ea9de17fe20647c8b524dc289b65b530a08ef"
         }
       ]
     },
@@ -96,25 +96,29 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:d7a8aee2ef037f9753f686178c2e214f27fa3f96ab236e896147813e05d28790"
+          "version": "repo-file-v1:sha256:3e4e0ca918ea11e93170bca5e19ea9de17fe20647c8b524dc289b65b530a08ef"
         }
       ]
     },
     {
       "id": "claim_2b7d102584ec40b98a298f0f00d0c4f6",
-      "statement": "FINAL reverb full-tile layout after T-DAT-001 face waves 2+3 (2026-10-17; supersedes the pre-wave face and the 8-entry Space-included layout): the compact face applies kCompactKnobFace = 32 px to compact + convolution + reverb-full tiles (12.0 px labels). The 6x2 grid is: ROW 1 = Mix (chain-level, first slot, squared at read path in Processor.cpp) | Decay | LoCut (reverbLoCut, fraction 0..0.85, kinear loCutTaper toStored = 0.85*pow(n,0.7)) | Tone | Air (reverbAir, sigKnob_ slot 0) | Mod (reverbSharedMod, wave 3 rebind from the old reverbMod binding). ROW 2 = Dwell (reverbInput, row-2 slot 0, visible on the reverb face via `input_.setVisible(reverb && compact)`-style gate) | Pre | Early (reverbEarly, modKnob_ slot 1) | Size | Width | Out (chain-level, last slot). Space (reverbSpace) is OFF the face: user pinned space=0.73f in code (m02854); the param still exists in ChainBlock/Params but has no visible knob on the PLT reverb face. The two SIG slots (Air row 1, Early row 2) are re-voiced per mode by reverbSigParam/Label/ScaleForMode. numParams_ for the reverb face = 8 engine params + Mix + Out chain-level entries. TileShot goldens plugin/ui/testbed/goldens/reverb.png + reverb-shift.png were re-shot after user review and the goldens re-approved at 0 px diff (docs/agents/ui-snapshots.md flow: human approve -> --regen). Current DspTests suite count at the T-DAT-001 closeout: 511 tests / 75 suites.",
+      "statement": "FINAL reverb full-tile layout after T-DAT-001 face waves 2+3 (2026-10-17; supersedes the pre-wave face and the 8-entry Space-included layout): the compact face applies kCompactKnobFace = 32 px to compact + convolution + reverb-full tiles (12.0 px labels). The 6x2 grid is: ROW 1 = Mix (chain-level, first slot, squared at read path in Processor.cpp) | Decay | LoCut (reverbLoCut, fraction 0..0.85, linear loCutTaper toStored = 0.85*pow(n,0.7)) | Tone | Air (reverbAir, sigKnob_ slot 0) | Mod (reverbSharedMod, wave 3 rebind from the old reverbMod binding). ROW 2 = Dwell (reverbInput, row-2 slot 0, visible on the reverb face via `input_.setVisible(reverb && compact)`-style gate) | Pre | Early (reverbEarly, modKnob_ slot 1) | Size | Width | Out (chain-level, last slot). Space (reverbSpace) is OFF the face: user pinned space=0.73f in code; the param still exists in ChainBlock/Params but has no visible knob on the PLT reverb face. The two SIG slots (Air row 1, Early row 2) are re-voiced per mode by reverbSigParam/Label/ScaleForMode. numParams_ for the reverb face = 8 engine params + Mix + Out chain-level entries. TileShot goldens plugin/ui/testbed/goldens/reverb.png + reverb-shift.png were re-shot after user review and the goldens re-approved at 0 px diff (docs/agents/ui-snapshots.md flow: human approve -> --regen). The 2026-10-17 node-view ticket also added the gallery|node toggle to PluginHeader (left of the preset bar, UiPrefs kNodeView, wired to ChainScreen::setView — see the node-view page); the 2026-10-17 closeout DspTests count is 512 (advanced from 511 by same-day theme/OCR/label work).",
       "evidence": [
         {
           "resource": "repo://docs/agents/ui-snapshots.md",
-          "version": "repo-file-v1:sha256:68d3345211973116f8b310a1904043c3150fae73785cde7fa70256996254a73f"
+          "version": "repo-file-v1:sha256:a9392989029c60461eee0ebb3c27b158ce78cb6c7cdcf350ba3817f6c6f94cd2"
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
           "version": "repo-file-v1:sha256:b40adc6572ec6489d056f994383b04d1e42a6ff17f232f28df03667d5d5fd560"
         },
         {
+          "resource": "repo://plugin/ui/views/PluginHeader.cpp",
+          "version": "repo-file-v1:sha256:d8510ec1692fb9f72c6594184be1f5524284616d03cbe1f87ba0494c736bca51"
+        },
+        {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:d7a8aee2ef037f9753f686178c2e214f27fa3f96ab236e896147813e05d28790"
+          "version": "repo-file-v1:sha256:3e4e0ca918ea11e93170bca5e19ea9de17fe20647c8b524dc289b65b530a08ef"
         }
       ]
     },
@@ -138,11 +142,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/Help.cpp",
-          "version": "repo-file-v1:sha256:37606144b844685b71a64b23c88c38f8e0dc1b358bed56e991e9eba267ecb5ae"
+          "version": "repo-file-v1:sha256:a905fc5161afd2a9bdaabb2838f441d722d2646b754c8703fdfb855be1787164"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:d7a8aee2ef037f9753f686178c2e214f27fa3f96ab236e896147813e05d28790"
+          "version": "repo-file-v1:sha256:3e4e0ca918ea11e93170bca5e19ea9de17fe20647c8b524dc289b65b530a08ef"
         }
       ]
     },
@@ -187,6 +191,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-15T03:46:55.825Z"
+    "at": "2026-10-15T16:15:57.360Z"
   }
 }

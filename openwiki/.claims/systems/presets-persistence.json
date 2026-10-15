@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:17ebe381701ae0804d1674c6f70be41459c88b7b157a2485bc5a37285d588206",
+  "pageVersion": "sha256:8b7d6ca36c40a856e31ea357f46b10d09c004270d56feacdff14edf857e3fdd8",
   "claims": [
     {
       "id": "claim_2e79f0d644c648b78ca40190d3145e2a",
@@ -15,10 +15,28 @@
           "version": "repo-file-v1:sha256:6b34bb74739d529b3f8a1bb9300463b2cd067def7eca7c082bc0ee19f6ca716c"
         }
       ]
+    },
+    {
+      "id": "claim_980f1b48bc2c4aebaba9fb77c2e20ecd",
+      "statement": "UiPrefs gained the t3k.nodeView key (UiPrefs::kNodeView, UiPrefs.h:68) for the gallery|node view toggle in the 2026-10-17 node-view ticket. It is stored as a plain string round-tripped by UiPrefs::getBool (UiPrefs.cpp:33-37: \"true\" → true, \"false\" → false, anything else → the fallback), with PluginHeader seeding the toggle from prefs.getBool(UiPrefs::kNodeView, false) and the testbed seeding it via the fixture's \"localStorage\" block. Like all UiPrefs keys it lives in the shared prefs file, NOT in .t3kpreset bodies.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/services/UiPrefs.cpp",
+          "version": "repo-file-v1:sha256:5740953aab29cc3bce89ae4112fa301fa830619d07f8693794068deca9484c1c"
+        },
+        {
+          "resource": "repo://plugin/ui/services/UiPrefs.h",
+          "version": "repo-file-v1:sha256:78f45663d871343ac9b62a04129fbb5338b6e8cee510a287ee18f6cc3c15ac4b"
+        },
+        {
+          "resource": "repo://plugin/ui/views/PluginHeader.cpp",
+          "version": "repo-file-v1:sha256:d8510ec1692fb9f72c6594184be1f5524284616d03cbe1f87ba0494c736bca51"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-10T18:58:45.842Z"
+    "at": "2026-10-15T16:15:57.360Z"
   }
 }

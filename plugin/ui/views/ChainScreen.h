@@ -1,9 +1,13 @@
-// The chain area between the meters: the gallery, or the detail takeover
-// for one block (ChainView.tsx's two branches). Owns the detail block id,
-// remembered for the editor's lifetime so a swap from the detail view
-// (which the tone browser takes over the screen for, and may bounce
-// through OAuth) reopens the same card on return; cleared when the user
-// backs out, so gallery-initiated swaps land on the gallery.
+// The chain area between the meters: the gallery, the node grid (the
+// ticket ui-block-interface-draft.md views layer), or the detail takeover
+// for one block (ChainView.tsx's branches). The gallery and the node view
+// are two renderings of the SAME left lane, both left alive (one hidden)
+// so a toggle is instant and the DragScroller the scroll keys go to is
+// always the gallery's. Owns the detail block id, remembered for the
+// editor's lifetime so a swap from the detail view (which the tone browser
+// takes over the screen for, and may bounce through OAuth) reopens the same
+// card on return; cleared when the user backs out, so gallery-initiated
+// swaps land on the gallery.
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -14,6 +18,7 @@
 
 #include "block/BlockDetail.h"
 #include "gallery/ChainView.h"
+#include "nodeview/NodeView.h"
 #include "services/Services.h"
 
 namespace t3k::ui {
@@ -28,10 +33,13 @@ public:
 
   // Preset load / reset: close the detail view and rewind the gallery.
   void returnToGallery();
+  // The view-mode toggle (gallery | node grid): the node view is a views
+  // layer, so this only shows/hides; the lane order is untouched.
+  void setView(bool nodeView);
 
   ChainView& gallery() { return gallery_; }
   // The scroller in front: the detail's column while one is open, else
-  // the gallery's lane.
+  // the gallery's lane (the node grid has no scroller of its own).
   DragScroller& scroller() { return detail_ != nullptr ? detail_->scroller() : gallery_.scroller(); }
 
   void resized() override;
@@ -42,7 +50,9 @@ private:
 
   Services& services_;
   ChainView gallery_;
+  nodeview::NodeView node_;
   std::unique_ptr<BlockDetail> detail_;
+  bool nodeView_ = false;
 };
 
 }  // namespace t3k::ui

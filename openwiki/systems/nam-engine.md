@@ -2,9 +2,6 @@
 type: "Reference"
 title: "NAM engine and model loading"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.2
-    at: 2026-10-10T18:58:45.842Z
 sources:
   - id: openwiki-source-7972e348eb71f7e41c3dfcdf
     resource: repo://plugin/include/NamEngine.h
@@ -13,6 +10,9 @@ sources:
   - id: openwiki-source-44860b873f7c76816588a971
     resource: repo://plugin/src/NamEngine.cpp
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
+verified:
+  - by: openwiki/0.7.2
+    at: 2026-10-15T16:15:57.360Z
 ---
 
 

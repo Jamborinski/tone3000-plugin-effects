@@ -31,6 +31,8 @@ sources:
     resource: repo://plugin/ui/views/block/BlockCard.h
   - id: openwiki-source-7fb62e48416333f990bd3d93
     resource: repo://plugin/ui/views/gallery/EffectTile.cpp
+  - id: openwiki-source-78c1e0c44679b66507a1889c
+    resource: repo://plugin/ui/views/PluginHeader.cpp
   - id: openwiki-source-174467a0c2e30a63c2e8869e
     resource: repo://plugin/ui/views/PluginRoot.h
   - id: openwiki-source-b3e537fe86dd20c6a400c242
@@ -42,7 +44,7 @@ sources:
 generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-15T03:46:55.825Z
+    at: 2026-10-15T16:15:57.360Z
 ---
 
 

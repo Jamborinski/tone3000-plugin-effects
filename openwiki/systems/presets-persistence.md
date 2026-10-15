@@ -3,15 +3,21 @@ type: systems
 title: Presets and runtime persistence
 description: The .t3kpreset on-disk format (v1 T3KB / v2 T3KH), the PresetManager three-tier layout and lazy migration, bounded chain undo history, per-machine UI prefs, and the standalone autosave path.
 tags: [presets, persistence, t3kpreset, presetmanager, undo, prefs, autosave]
-verified:
-  - by: openwiki/0.7.2
-    at: 2026-10-10T18:58:45.842Z
 sources:
   - id: openwiki-source-922de02f4a2b8188788f50e7
     resource: repo://plugin/include/PresetFile.h
   - id: openwiki-source-9b427132a1d345ae7e7734ef
     resource: repo://plugin/src/PresetFile.cpp
+  - id: openwiki-source-e7bf1d2f34f6dff9ef218ca0
+    resource: repo://plugin/ui/services/UiPrefs.cpp
+  - id: openwiki-source-1ab80eacb9347c8b1c174e6c
+    resource: repo://plugin/ui/services/UiPrefs.h
+  - id: openwiki-source-78c1e0c44679b66507a1889c
+    resource: repo://plugin/ui/views/PluginHeader.cpp
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
+verified:
+  - by: openwiki/0.7.2
+    at: 2026-10-15T16:15:57.360Z
 ---
 
 # Presets and runtime persistence

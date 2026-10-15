@@ -23,10 +23,14 @@ sources:
     resource: repo://plugin/ui/services/ParamBinding.cpp
   - id: openwiki-source-5b6ba89ac0a58ff2acd95eed
     resource: repo://plugin/ui/services/ParamBinding.h
+  - id: openwiki-source-1ab80eacb9347c8b1c174e6c
+    resource: repo://plugin/ui/services/UiPrefs.h
+  - id: openwiki-source-78c1e0c44679b66507a1889c
+    resource: repo://plugin/ui/views/PluginHeader.cpp
 generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-15T01:09:16.180Z
+    at: 2026-10-15T16:15:57.360Z
 ---
 
 

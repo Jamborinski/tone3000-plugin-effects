@@ -44,6 +44,12 @@ PluginHeader::PluginHeader(Services& services)
   };
   addAndMakeVisible(stereo_);
 
+  viewToggle_.setNodeView(services_.prefs.getBool(UiPrefs::kNodeView, false));
+  viewToggle_.onToggle = [this](bool nodeView) {
+    if (onNodeViewToggle) onNodeViewToggle(nodeView);
+  };
+  addAndMakeVisible(viewToggle_);
+
   tuner_.setHelpText(help::text(help::Key::tuner));
   tuner_.setFillWhenActive(true);
   tuner_.onClick = [this] {
@@ -136,6 +142,7 @@ void PluginHeader::resized() {
   x = place(undo_, x) - kGroupGap;
   x = place(tuner_, x) - kGroupGap;
   x = place(stereo_, x) - kGroupGap;
+  x = place(viewToggle_, x) - kGroupGap;
   place(presetBar_, x);
 }
 

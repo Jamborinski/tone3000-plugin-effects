@@ -28,6 +28,12 @@ PluginRoot::PluginRoot(Services& services)
   header_.onStereoToggle = [this](bool stereo) {
     closeTunerThen([&] { services_.chain.setStereoMode(stereo); });
   };
+  header_.onNodeViewToggle = [this](bool nodeView) {
+    // A views-layer switch: write the pref (the header toggle is the source
+    // of truth) and show/hide the two renderings of the same left lane.
+    services_.prefs.setBool(UiPrefs::kNodeView, nodeView);
+    main_.chainScreen().setView(nodeView);
+  };
   header_.onUndo = [this] { closeTunerThen([&] { services_.chain.undo(); }); };
   header_.onRedo = [this] { closeTunerThen([&] { services_.chain.redo(); }); };
   header_.presetBar().beforeSave = [this] { closeTunerThen({}); };

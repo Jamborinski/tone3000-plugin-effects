@@ -194,6 +194,22 @@ std::map<Key, String> buildTable() {
       U("Add Reverb: insert a digital comb-bank reverb in this slot. Right-click to tune decay, pre-delay, tone, size and modulation.");
   t[Key::addEffectConvolution] =
       U("Add Convolver: insert a true-conversion reverb block. Load an IR (mono/stereo/quad wav) to tune trim, length scale, width and gain.");
+
+  // Node view
+  t[Key::nodeViewToggle] =
+      U("View: switch the chain screen between the tile gallery and the node grid (the small block signal path + parameter strip).");
+  t[Key::nodeView] =
+      U("Node grid: the left lane as one snake signal path (top row left-to-right, middle right-to-left, bottom left-to-right). An empty slot is a pass-through; drag a block to move it, or drop one from the palette to place it.");
+  t[Key::nodeEmptySlot] =
+      U("Empty slot: the signal passes straight through. Drop a block from the palette (or drag an existing one in) to populate it.");
+  t[Key::node] =
+      U("Node: a chain block in the grid. Click to select it and load its settings into the parameter strip below; drag to move it to another slot.");
+  t[Key::nodePower] =
+      U("Power: enable or disable this block (the same toggle as the tile\u2019s power switch; a disabled block passes signal through).");
+  t[Key::nodeRemove] =
+      U("Remove: delete this block from the chain (its slot becomes an empty pass-through).");
+  t[Key::nodeMode] =
+      U("Mode/type: the block\u2019s operating mode (the same selector as the tile\u2019s right-click mode menu).");
   t[Key::effectConvolution] = U("Convolution setting: adjust the value for this block.");
   t[Key::convGain] = knobDesktop("Gain", "convolver output level, -24..+24 dB (0.5 = unity). The IR is energy-normalised on load.");
   t[Key::convDry] = knobDesktop("Dry", "level of the DRY (un-processed) path that blends in under the Mix, -24..+24 dB (0.5 = unity). Does not touch the wet/IR; Mix and Dwell keep their usual roles.");

@@ -48,4 +48,30 @@ inline constexpr const char* kAudioInterface =
 inline constexpr const char* kAvatarFallback =
     R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 224 224" fill="none"><path d="M112 224C96.7007 224 82.2797 221.072 68.7373 215.216C55.268 209.36 43.3725 201.271 33.051 190.949C22.7294 180.628 14.6405 168.732 8.78431 155.263C2.9281 141.72 0 127.299 0 112C0 96.7008 2.9281 82.3165 8.78431 68.8472C14.6405 55.3047 22.6928 43.3727 32.9412 33.0511C43.2627 22.7295 55.1582 14.6406 68.6274 8.78442C82.1699 2.92821 96.5908 0.000106812 111.89 0.000106812C127.19 0.000106812 141.61 2.92821 155.153 8.78442C168.695 14.6406 180.627 22.7295 190.949 33.0511C201.271 43.3727 209.359 55.3047 215.216 68.8472C221.072 82.3165 224 96.7008 224 112C224 127.299 221.072 141.72 215.216 155.263C209.359 168.732 201.271 180.628 190.949 190.949C180.627 201.271 168.695 209.36 155.153 215.216C141.684 221.072 127.299 224 112 224ZM112 207.31C120.345 207.31 128.617 206.175 136.816 203.906C145.088 201.71 152.847 198.489 160.094 194.243C167.341 190.071 173.783 185.02 179.42 179.09C175.467 172.795 170.05 167.451 163.169 163.059C156.361 158.594 148.565 155.226 139.78 152.957C131.069 150.614 121.809 149.443 112 149.443C102.044 149.443 92.6745 150.614 83.8902 152.957C75.1059 155.299 67.3098 158.703 60.502 163.169C53.7673 167.561 48.4235 172.868 44.4706 179.09C50.1072 185.02 56.549 190.071 63.7961 194.243C71.1163 198.489 78.8758 201.71 87.0745 203.906C95.2732 206.175 103.582 207.31 112 207.31ZM112 130.777C119.027 130.85 125.359 129.093 130.996 125.506C136.706 121.846 141.244 116.868 144.612 110.573C147.979 104.277 149.663 97.2132 149.663 89.3805C149.663 81.987 147.979 75.2158 144.612 69.0668C141.244 62.9178 136.706 58.0132 130.996 54.353C125.286 50.6197 118.954 48.753 112 48.753C104.973 48.753 98.6039 50.6197 92.8941 54.353C87.1843 58.0132 82.6457 62.9178 79.2784 69.0668C75.9111 75.2158 74.264 81.987 74.3372 89.3805C74.3372 97.2132 75.9843 104.241 79.2784 110.463C82.6457 116.685 87.1477 121.626 92.7843 125.286C98.4941 128.873 104.899 130.703 112 130.777Z" fill="#ffffff"/></svg>)svg";
 
+// Node-view effect-kind glyphs (NodeModel.cpp kind table, 2026-10-17):
+// tiny 24x24 stroke marks, one per effect kind, drawn inside each grid node
+// so a wall of colour-coded blocks reads at a glance. Local design, 24-unit
+// box, stroke 2 (Lucide house style).
+// View-mode toggle segments (NodeViewToggle, 2026-10-17): big tiles vs the
+// small block grid.
+inline constexpr const char* kViewTiles =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>)svg";
+inline constexpr const char* kViewNodes =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h5v4H5zM14 6h5v4h-5z"/><path d="M5 14h5v4H5zM14 14h5v4h-5z"/><path d="M10 8h4M10 16h4M7 10v6M16 10v6"/></svg>)svg";
+
+inline constexpr const char* kFxDelay =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>)svg";
+inline constexpr const char* kFxChorus =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10c2-3 4-3 6 0s4 3 6 0"/><path d="M4 15c2-3 4-3 6 0s4 3 6 0"/></svg>)svg";
+inline constexpr const char* kFXTremolo =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M8 9c2 2 6 2 8 0M8 15c2-2 6-2 8 0"/></svg>)svg";
+inline constexpr const char* kFxCompressor =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M3 17h18"/><path d="M8 7v10M16 7v10"/></svg>)svg";
+inline constexpr const char* kFxReverb =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V6l7 8 7-8v14"/></svg>)svg";
+inline constexpr const char* kFxConv =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h5v5H4zM15 15h5v5h-5z"/><path d="M9 9l6 6"/></svg>)svg";
+inline constexpr const char* kFxTone =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><circle cx="12" cy="12" r="2.5"/></svg>)svg";
+
 }  // namespace t3k::ui::custom_icons

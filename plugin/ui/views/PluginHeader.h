@@ -5,6 +5,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "AccountMenu.h"
+#include "nodeview/NodeViewToggle.h"
 #include "PresetBar.h"
 #include "StereoModeToggle.h"
 #include "services/Services.h"
@@ -25,6 +26,8 @@ public:
 
   std::function<void(bool show)> onToggleTuner;
   std::function<void(bool stereo)> onStereoToggle;
+  // The views-mode switch (gallery | node grid), left of the preset bar.
+  std::function<void(bool nodeView)> onNodeViewToggle;
   std::function<void()> onUndo, onRedo, onOpenSettings, onLogin, onLogout;
 
   void paint(juce::Graphics& g) override;
@@ -43,6 +46,7 @@ private:
   std::unique_ptr<LogoLink> logo_;
   PresetBar presetBar_;
   StereoModeToggle stereo_;
+  NodeViewToggle viewToggle_;
   IconButton tuner_;
   IconButton undo_{Icon::Undo2, 28};
   IconButton redo_{Icon::Redo2, 28};
