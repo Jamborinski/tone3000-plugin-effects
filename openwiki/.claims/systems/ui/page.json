@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:e67ed2c548b90c65e609e108da3d446d55d15d6e11aff980a76243f6f61cb76e",
+  "pageVersion": "sha256:662a676b81c86a11fedeab14c1d48015f215d2780e5a6309d0a730801b82e3ff",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -86,7 +86,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:b154dd623e94ea75c3a9cb0c8f6dc5c66b27df31f76fb93b8258d5be9150c331"
+          "version": "repo-file-v1:sha256:d7a8aee2ef037f9753f686178c2e214f27fa3f96ab236e896147813e05d28790"
         }
       ]
     },
@@ -96,7 +96,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:b154dd623e94ea75c3a9cb0c8f6dc5c66b27df31f76fb93b8258d5be9150c331"
+          "version": "repo-file-v1:sha256:d7a8aee2ef037f9753f686178c2e214f27fa3f96ab236e896147813e05d28790"
         }
       ]
     },
@@ -114,43 +114,35 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:b154dd623e94ea75c3a9cb0c8f6dc5c66b27df31f76fb93b8258d5be9150c331"
+          "version": "repo-file-v1:sha256:d7a8aee2ef037f9753f686178c2e214f27fa3f96ab236e896147813e05d28790"
         }
       ]
     },
     {
       "id": "claim_0f2ab92333fd48e4912ae1d25e6c076e",
-      "statement": "DspTests compiles the real plugin DSP sources and exactly one UI file, plugin/ui/core/Labels.cpp (the KnobScale readout formatter that the scale-contract tests link); everything else in plugin/ui (views, widgets, services, NativeEditor) is excluded. Therefore a green DspTests run does NOT prove the UI links: UI changes must be verified via the testbed (--selftest / --capture diff) or a GUI plugin build target before committing. Current suite size (2026-10-17, after the T-DAT-001 wave 3 closeout AND the compressor engine/wrapper reorg commit 3ffb35b): 511 tests / 74 test suites (re-verified green on every reorg gate).",
+      "statement": "DspTests compiles the real plugin DSP sources plus the two UI files test/CMakeLists.txt names: plugin/ui/core/Labels.cpp (the KnobScale readout formatter that the scale-contract tests link) and the theme palette via the theme_palette_tests.cpp #include of plugin/ui/core/Theme.h (the swappable-theme ticket); everything else in plugin/ui (views, widgets, services, NativeEditor) is excluded. Therefore a green DspTests run does NOT prove the UI links: UI changes must be verified via the testbed (--selftest / --capture diff) or a GUI plugin build target before committing. Current suite size (2026-10-17, after the T-DAT-001 wave 3 closeout, the compressor engine/wrapper reorg commit 3ffb35b, the swappable-theme + OCR-capture tickets, and the FET/Vari-Mu label fix commit 5f93ab9): 512 tests / 75 test suites (re-verified green on every gate).",
       "evidence": [
         {
-          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:b154dd623e94ea75c3a9cb0c8f6dc5c66b27df31f76fb93b8258d5be9150c331"
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
         },
         {
-          "resource": "repo://test/src/dat_probe_tests.cpp",
-          "version": "repo-file-v1:sha256:d25de9e0ad214a7757b0064448c64558324eabeb1deae1b2a6e09c0695222ef4"
+          "resource": "repo://test/src/theme_palette_tests.cpp",
+          "version": "repo-file-v1:sha256:a4b2c7e546782ded3ed6111eaa5ec87899a54c3e64e765a738637710d46f18c8"
         }
       ]
     },
     {
       "id": "claim_7a35e225e4e540e09fe5d4300dc7a546",
-      "statement": "COMPRESSOR TYPE CYCLER (commit 3ffb35b): the full compressor tile carries a per-mode TYPE cycler button (typeCycle_, a juce::TextButton) that mirrors the reverb tile's type cycler. Bounds (resized(), full view): typeCycle_ at (W - 14 - 44, 44, 44, 26) — right of the mode selector, which slides left to modeCombo_ (W - 14 - 44 - 8 - 120, 44, 120, 26); both share the y=44 band. It is HIDDEN in the compact tile (typeCycle_.setVisible(!compact_)) because the compact header's free slot (65..95) belongs to the PUNCH toggle and 28..62 to the mode cycler, and with one self-type per mode the cycler is a one-entry no-op until a mode gains a second type. Button text = compactCompTypeName(block_.compMode, compType): the self-type labels in engine-index order {VCA, TUB, OPT, VMU, FET} (the Opto label is OPT, corrected from OP in this commit). Help text = help::text(help::Key::compType) (a new Key in Help.h, desktop blurb in Help.cpp) + a per-mode compTypeBlurb (\"general-purpose VCA -- smooth RMS soft-knee compression\" / \"Tube-STA -- warm tube detector...\" / \"Opto-2A -- two-stage optical cells...\" / \"FET -- four-amp sum...\" / \"Vari-Mu 670 -- flux-core saturation...\"). onClick opens a PopupMenu listing i in [0, Compressor::numTypes(m)) as \"<label> — <blurb>\" (current checked) and calls enterCompType(choice-1). syncCompTypeButton(m) re-syncs button + help text (called from enterMode :890); enterCompType(type) is a no-op if type == compTypeOf(block_), else sets block_.compType VERBATIM (the engine clamps via setParams/numTypes) and calls services().chain.setBlockParam(blockId(), \"compType\", (double)type), then syncCompTypeButton.",
+      "statement": "COMPRESSOR TYPE CYCLER (commit 3ffb35b; label order fixed 2026-10-14, commit 5f93ab9): the full compressor tile carries a per-mode TYPE cycler button (typeCycle_, a juce::TextButton) that mirrors the reverb tile's type cycler. Bounds (resized(), full view): typeCycle_ at (W - 14 - 44, 44, 44, 26) — right of the mode selector, which slides left to modeCombo_ (W - 14 - 44 - 8 - 120, 44, 120, 26); both share the y=44 band. It is HIDDEN in the compact tile (typeCycle_.setVisible(!compact_)) because the compact header's free slot (65..95) belongs to the PUNCH toggle and 28..62 to the mode cycler, and with one self-type per mode the cycler is a one-entry no-op until a mode gains a second type. Button text = compactCompTypeName(block_.compMode, compType): the self-type labels in ENGINE-index order {VCA, TUB, OPT, FET, VMU} (0=VCA 1=Tube 2=Opto 3=FET 4=Vari-Mu; the 5f93ab9 fix reordered the array from the old display order {… VMU, FET} so the chip text matches the loaded engine — FET is the 1176, Vari-Mu the 670). Help text = help::text(help::Key::compType) (a Key in Help.h, desktop blurb in Help.cpp) + a per-mode compTypeBlurb (\"general-purpose VCA -- smooth RMS soft-knee compression\" / \"Tube-STA -- warm tube detector, the output-stage saturation\" / \"Opto-2A -- two-stage optical cells, ratio-dependent slow attack\" / \"FET -- four-amp sum, fast transient grab + stage coloration\" / \"Vari-Mu 670 -- release-position ladder, feedback detection, odd-only crunch\"); the compMode help text in Help.cpp distinguishes FET (the 1176 four-amp feedback detector) from Vari-Mu (the Fairchild 670 release-position ladder). onClick opens a PopupMenu listing i in [0, Compressor::numTypes(m)) as \"<label> — <blurb>\" (current checked) and calls enterCompType(choice-1). syncCompTypeButton(m) re-syncs button + help text (called from enterMode); enterCompType(type) is a no-op if type == compTypeOf(block_), else sets block_.compType VERBATIM (the engine clamps via setParams/numTypes) and calls services().chain.setBlockParam(blockId(), \"compType\", (double)type), then syncCompTypeButton.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/Help.cpp",
-          "version": "repo-file-v1:sha256:4ea51688a9a42416685fe25eb3ebca174497e1e54d8008f7a1b57916e64348e7"
-        },
-        {
-          "resource": "repo://plugin/ui/core/Help.h",
-          "version": "repo-file-v1:sha256:19061525603a477f5a50bda0bc0919c194613a4ab0b256ad0b6f2bf9dcc0e7ca"
+          "version": "repo-file-v1:sha256:37606144b844685b71a64b23c88c38f8e0dc1b358bed56e991e9eba267ecb5ae"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:b154dd623e94ea75c3a9cb0c8f6dc5c66b27df31f76fb93b8258d5be9150c331"
-        },
-        {
-          "resource": "repo://plugin/ui/views/gallery/EffectTile.h",
-          "version": "repo-file-v1:sha256:06a37049715c6fb45c482aade1ee2d3115a1a2aa89568eeacf9785162c8746b3"
+          "version": "repo-file-v1:sha256:d7a8aee2ef037f9753f686178c2e214f27fa3f96ab236e896147813e05d28790"
         }
       ]
     },
@@ -195,6 +187,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-15T03:13:24.025Z"
+    "at": "2026-10-15T03:46:55.825Z"
   }
 }

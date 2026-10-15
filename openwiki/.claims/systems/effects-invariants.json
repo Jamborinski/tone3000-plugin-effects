@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:49d4fa8b93b54f06369de90b3395223865cbc96bde827aeb4e28b78fdd95e8f2",
+  "pageVersion": "sha256:e5a62b05a4c34d68d6b82e684e80cc76f3c2b7ae1724852bcdafc95b4c64e9e4",
   "claims": [
     {
       "id": "claim_9c6f8afc68d34500bf778a2da1af5f07",
@@ -106,7 +106,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:b154dd623e94ea75c3a9cb0c8f6dc5c66b27df31f76fb93b8258d5be9150c331"
+          "version": "repo-file-v1:sha256:d7a8aee2ef037f9753f686178c2e214f27fa3f96ab236e896147813e05d28790"
         }
       ]
     },
@@ -212,7 +212,7 @@
     },
     {
       "id": "claim_fa5945da978f44ab83e89d52e9c29101",
-      "statement": "The compType subtype is wired through the UI type chip: the full compressor tile carries a per-mode type cycler button (typeCycle_) that cycles compactCompTypeName labels {VCA, TUB, OPT, VMU, FET} and calls setBlockParam(\"compType\", i); the compact tile hides it (one self-type is a no-op). This is the compressor instance of the GENERAL mode/subtype tuning rule — numTypes() is the gate, defaultDialsForType()-style defaults may be added per type, and every other mode stays bit-identical (DspTests 511/511 held across the reorg).",
+      "statement": "The compType subtype is wired through the UI type chip: the full compressor tile carries a per-mode type cycler button (typeCycle_) that cycles compactCompTypeName labels in ENGINE-index order {VCA, TUB, OPT, FET, VMU} (0=VCA 1=Tube 2=Opto 3=FET 4=Vari-Mu; the 2026-10-14 label fix, commit 5f93ab9, reordered the self[] array from the old display order {…VMU, FET} to engine order {…FET, VMU} so the chip text matches the loaded engine) and calls setBlockParam(\"compType\", i); the compact tile hides it (one self-type is a no-op). This is the compressor instance of the GENERAL mode/subtype tuning rule — numTypes() is the gate, defaultDialsForType()-style defaults may be added per type, and every other mode stays bit-identical (DspTests 512/512 held across the reorg and the label fix).",
       "evidence": [
         {
           "resource": "repo://plugin/include/effects/compressor/Compressor.h",
@@ -220,13 +220,13 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:b154dd623e94ea75c3a9cb0c8f6dc5c66b27df31f76fb93b8258d5be9150c331"
+          "version": "repo-file-v1:sha256:d7a8aee2ef037f9753f686178c2e214f27fa3f96ab236e896147813e05d28790"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-15T03:13:24.025Z"
+    "at": "2026-10-15T03:46:55.825Z"
   }
 }
