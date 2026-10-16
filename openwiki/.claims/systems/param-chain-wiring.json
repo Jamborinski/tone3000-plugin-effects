@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:4a78e1349b5131b6f0c63a89f39c000e55ef65baf6d2e3fd0fd4652b9b6d62f9",
+  "pageVersion": "sha256:b1b02c6f2c178728d47c6b0740a10fdb416199f7c1815efb6321c464f139b655",
   "claims": [
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
@@ -40,7 +40,7 @@
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:abab3a474ad9d073e6f6844cfa328047a41078ac2e08f205af0245191a17e2a4"
+          "version": "repo-file-v1:sha256:c384ac0419ad92593913b7a810ec897c1839c55b6ca1f3a5f09fc781803c9181"
         }
       ]
     },
@@ -76,7 +76,7 @@
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:abab3a474ad9d073e6f6844cfa328047a41078ac2e08f205af0245191a17e2a4"
+          "version": "repo-file-v1:sha256:c384ac0419ad92593913b7a810ec897c1839c55b6ca1f3a5f09fc781803c9181"
         }
       ]
     },
@@ -98,7 +98,7 @@
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:abab3a474ad9d073e6f6844cfa328047a41078ac2e08f205af0245191a17e2a4"
+          "version": "repo-file-v1:sha256:c384ac0419ad92593913b7a810ec897c1839c55b6ca1f3a5f09fc781803c9181"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.h",
@@ -123,6 +123,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-15T16:15:57.360Z"
+    "at": "2026-10-16T00:50:33.519Z"
   }
 }

@@ -1,26 +1,47 @@
-// The node view (ticket docs/tickets/ui-block-interface-draft.md): a second
-// VIEWS layer over the SAME ChainState the gallery draws. A fixed 4x3 grid of
-// small blocks reads the left lane as ONE snake signal path (top row
-// left->right, middle right->left, bottom left->right); an EMPTY SLOT is a
-// valid pass-through. Below the grid: a palette row (long-press a chip to
-// drag a new effect in) and a wide parameter strip for the selected block
-// (name / mode / power / remove / that block's knobs — the shared paramsFor
-// table, one KnobScale per face). No DragScroller: the whole grid fits.
-// A slot's contents ARE the ChainBlocks; placing/moving = lane re-order, so
-// toggling the view never touches the DSP.
+// The node view (ticket docs/tickets/ui-node-view-fixups-draft.md, reworked
+// 2026-10 against the reference UIs): a second VIEWS layer over the SAME
+// ChainState the gallery draws.
+//
+// The row — ONE horizontal signal line (In -> ... -> Out) carrying up to
+// Row::kSlotCount small node squares, label UNDER each square ("you can
+// still have text under or above the node" — user). An empty square is a
+// lane INSERT: a short click opens the add menu (the six built-ins); an
+// effect square adds into the empty slot it lands on. Dragging ANY square
+// (effect, tone, or empty) reorders the lane — that is also how empty
+// squares end up mid-row (user: mid-row empties are the point; "current"
+// means the gallery, where that ability is added too). Pointer grammar:
+// short left click selects (or adds, on an empty square), a 250 ms hold
+// starts a drag, right click opens the action sheet (power / remove).
+//
+// The strip — the selected block's name + mode cycler + power (+ remove
+// for effects), then the block's knobs (the SHARED paramsFor table; tone
+// nodes: In/Out/Mix) in up to two rows, each with the knob's readout held
+// visible at all times (the reference param screen shows every value under
+// its knob).
+//
+// TONE nodes in this view stay on their strip and never open the gallery's
+// detail card (that surface is gallery-only — user ruling).
+//
+// Crash guard (the live switch gallery->node sank the old build): ChainState
+// is re-parsed and reassigned per revision, so this view caches no ChainItem*
+// across a refresh — cells and the strip resolve by block id at paint /
+// event time, and chainChanged() refreshes UNCONDITIONALLY (the old code
+// skipped the refresh while hidden and then dereferenced a stale snapshot
+// the moment the node view came up).
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <functional>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "NodeModel.h"
-#include "widgets/Popover.h"
+#include "model/ChainState.h"
 #include "services/ChainStore.h"
 #include "services/Services.h"
-#include "widgets/Knob.h"
+#include "widgets/Popover.h"  // OverlayHost (the root's overlay layer: the drag ghost's home)
 
 namespace t3k::ui::nodeview {
 
@@ -29,62 +50,71 @@ public:
   explicit NodeView(Services& services);
   ~NodeView() override;
 
-  // Open a tone block in the gallery's detail card (the node grid is a
-  // views layer; the card is where a tone block's settings live).
+  // (Kept for the ChainScreen wiring; in THIS view a tone node stays on its
+  // strip and never triggers it — the detail card is gallery-only.)
   std::function<void(const std::string& blockId)> onOpenTone;
 
-  // Show/hide the whole view (the header toggle); the component bounds stay
-  // put so ChainScreen can leave `resized()` unchanged.
   void setNodeView(bool active);
   void paint(juce::Graphics& g) override;
   void resized() override;
 
 private:
-  class NodeBlock;       // one grid slot
-  class PaletteItem;     // one palette chip (a drag source for a new effect)
-  class NodeStrip;       // the selected block's param row
-  class DragHostOverlay; // routes the pointer while a drag is in flight
-  class Ghost;
-  // The in-flight drag (block move, palette placement). Complete in the
-  // header: isDragging() below reads it inline.
-  struct NodeDragManager {
-    enum class Source { block, palette };
-    Source source = Source::block;
-    std::string blockId;       // Source::block
-    juce::String effectKind;   // Source::palette
-    juce::Point<float> cursor; // last pointer position (local)
-    int targetSlot = -1;
-    bool active = false;
-  };
+  friend class NodeCell;
+
+  class NodeCell;   // one square on the signal line
+  class NodeStrip;  // the selected block's name + knobs
+  class Ghost;      // the snapshot that trails the pointer during a drag
 
   void chainChanged(const ChainState& state) override;
-  void refresh();
+  void refresh();  // rebuild cell states + strip from the live chain
   void syncStrip();
 
-  // NodeBlock / PaletteItem reach in:
-  void selectBlock(const std::string& blockId);
+  // Cell actions.
+  void selectCell(const std::string& blockId);
   void togglePower(const std::string& blockId);
-  void beginDragFor(NodeBlock& slot);
-  void beginPaletteDragFor(const juce::String& kind);
-  void attachOverlayHost(juce::Component& overlay);
-  bool isDragging() const { return drag_ != nullptr && drag_->active; }
+  void addIntoCell(int index, const juce::String& kind);
+
+  // The lane drag (a 250 ms hold starts it; JUCE keeps routing the drag to
+  // the CELL that captured the press, like the gallery's tiles). The press
+  // point travels in cell-local coordinates: the ghost offsets from it so
+  // the snapshot sits under the pointer exactly where the press landed.
+  void beginCellDrag(NodeCell& cell, const juce::Point<int>& pressLocal);
+  void cellDragMove(NodeCell& cell, const juce::Point<float>& centreInView);
+  void cellDragEnd(NodeCell& cell);
+  bool isDragging() const { return dragCell_ != nullptr; }
   Services& hostServices() const { return services_; }
   const Model& modelRef() const { return model_; }
 
-  void doDrag(const juce::Point<float>& localPoint);
-  void finishDrag();
-  void cancelDrag();
+  void cancelDrag();  // take the ghost down, drop the drag
+
+  // Strip layout (called from NodeStrip::resized / chain refreshes).
+  void layoutStripKnobs();
+  // In-place strip refresh when a revision lands on the SAME selected block
+  // (a knob in flight): chrome + knob values only, no rebuild.
+  void updateStripChrome(const ChainItem&);
+  void updateStripKnobValues(NodeStrip&, const ChainItem&);
 
   Services& services_;
   Model model_;
   NodeStrip* strip_ = nullptr;
-  std::vector<std::unique_ptr<NodeBlock>> slots_;
-  std::vector<std::unique_ptr<PaletteItem>> palette_;
-  DragHostOverlay* overlay_ = nullptr;
+  std::vector<std::unique_ptr<NodeCell>> cells_;
   Ghost* ghost_ = nullptr;
-  std::unique_ptr<NodeDragManager> drag_;
+  NodeCell* dragCell_ = nullptr;
   juce::Point<float> grabOffset_;
+  std::string draggingId_;  // the lane item in flight (inserts are lane items too)
+  int dragFromCell_ = -1;
   bool nodeView_ = true;
+
+  // Row layout metrics (resized()).
+  int rowX_ = 0;
+  int rowY_ = 0;
+  int cellW_ = 1;
+  // The row's square size (paint geometry); 0 until the first resized().
+  int cellSquare_ = 0;
+  int cellSquare() const { return cellSquare_; }
+  // The dragged square's snapshot (the Ghost's source; kept so a refresh
+  // mid-drag cannot churn the image).
+  juce::Image snapshot_;
 };
 
 }  // namespace t3k::ui::nodeview

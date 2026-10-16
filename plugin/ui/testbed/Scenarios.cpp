@@ -40,6 +40,24 @@ namespace {
 const std::map<juce::String, Drive>& drives() {
   using namespace drive;
   static const std::map<juce::String, Drive> table = {
+      {"node-main",
+       [](PluginRoot& root, MockBackend&) {
+         // Select the first block so the parameter strip shows its knobs.
+         clickByHelp(root, "Node: ");
+         wait(400);
+       }},
+      {"node-toggle-live",
+       [](PluginRoot& root, MockBackend&) {
+         if (auto* seg = byHelpPrefix(root, "View: switch the chain screen")) {
+           // Click the NODE segment (the toggle's second child), not the
+           // already-selected gallery one.
+           for (int i = 0; i < seg->getParentComponent()->getNumChildComponents(); ++i) {
+             auto* c = seg->getParentComponent()->getChildComponent(i);
+             if (c != nullptr && c != seg) click(root, *c);
+           }
+         }
+         wait(400);
+       }},
       {"chrome-account-signed-out",
        [](PluginRoot& root, MockBackend&) {
          clickByHelp(root, "Account:");

@@ -36,28 +36,25 @@ const char* Model::paletteLabel(const juce::String& effectKind) {
   return kind(effectKind).label;
 }
 
-const ChainItem* Model::blockAt(int slot) const {
-  // The grid maps the left lane 1:1 in lane order: slot i = lane block i; the
-  // tail slots are empty (bypassed pass-through).
-  if (slot < 0) return nullptr;
+const ChainItem* Model::blockAt(int index) const {
+  if (index < 0) return nullptr;
   const auto& lane = laneOf(*state);
-  if (slot >= (int)lane.size()) return nullptr;
-  return &lane[slot];
+  if (index >= (int)lane.size()) return nullptr;
+  return &lane[static_cast<size_t>(index)];
 }
 
-int Model::slotOf(const std::string& blockId) const {
-  for (int i = 0; i < Grid::kSlotCount; ++i) {
-    const ChainItem* b = blockAt(i);
-    if (b != nullptr && b->blockId == blockId) return i;
-  }
+int Model::indexOf(const std::string& blockId) const {
+  const auto& lane = laneOf(*state);
+  for (size_t i = 0; i < lane.size(); ++i)
+    if (lane[i].blockId == blockId) return (int)i;
   return -1;
 }
 
 std::vector<std::string> Model::orderWith(const std::string& blockId, int targetSlot) const {
-  // Splice: take the FULL left-lane id list, move `blockId` to lane position
-  // `targetSlot` (clamped), keep every other block's relative order, and
-  // return the list. That is a valid single-lane permutation for
-  // ProcessorChain::reorderChainBlocks (it infers the lane from the ids).
+  // Splice: take the FULL left-lane id list (inserts included — the reorder
+  // backend takes a permutation of the lane, "successfully reordered chain
+  // blocks (including insert block)"), move `blockId` to `targetSlot`
+  // (clamped), keep every other item's relative order.
   const auto& lane = laneOf(*state);
   std::vector<std::string> ids;
   ids.reserve(lane.size());
@@ -73,14 +70,6 @@ std::vector<std::string> Model::orderWith(const std::string& blockId, int target
   if (to > (int)ids.size()) to = (int)ids.size();
   ids.insert(ids.begin() + to, blockId);
   return ids;
-}
-
-void Model::select(const std::string& blockId) { selectedSlot = slotOf(blockId); }
-
-void Model::clearSelection(const std::string& vanishedBlockId) {
-  if (selectedSlot < 0) return;
-  const ChainItem* b = blockAt(selectedSlot);
-  if (b != nullptr && b->blockId == vanishedBlockId) selectedSlot = -1;
 }
 
 }  // namespace t3k::ui::nodeview

@@ -193,3 +193,10 @@ not those apps' single-face-with-3D-preview layout.
   - OpenWiki: `openwiki/systems/ui/node-view.md` added + linked from
     `openwiki/systems/ui/index.md` (hand-written per the update-mode
     caveat; committed with the claims).
+- **User verdict 2026-10-20 (post-ship, first hands-on):** live switch
+  gallery → node **crashes** (cold start into node view works; switching back
+  works); node visuals "do not look like what I had in mind" and several
+  interactions don't work — "this is a start". Follow-up ticket:
+  `docs/tickets/ui-node-view-fixups-draft.md` (user-driven design/bug pass
+  in a vision-capable session). Shipped state is the starting point, not the
+  target.

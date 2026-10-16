@@ -298,9 +298,15 @@ ChainState ChainState::parse(const juce::var& v) {
 }
 
 const ChainItem* ChainState::findBlock(const std::string& blockId) const {
-  for (const auto* block : toneBlocks())
-    if (block->blockId == blockId)
-      return block;
+  // Any lane item (tone OR effect) — the node view's strip resolves its
+  // selected block here.
+  for (const auto& item : chain)
+    if (item.blockId == blockId)
+      return &item;
+  if (chainRight)
+    for (const auto& item : *chainRight)
+      if (item.blockId == blockId)
+        return &item;
   return nullptr;
 }
 

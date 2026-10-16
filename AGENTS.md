@@ -161,8 +161,9 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   (long-job patterns, GPU, build env): the global pi AGENTS.md at
   `C:\\Users\\jambo\\.pi\\agent\\AGENTS.md` (WSL path
   `/mnt/c/Users/jambo/.pi/agent/AGENTS.md`); Cline →
-  `C:\\Users\\jambo\\Documents\\Cline\\Rules\\global.md`. Never write
-  passwords into either — ask for them when a task needs sudo.
+  `C:\\Users\\jambo\\Documents\\Cline\\Rules\\global.md`. The WSL `jambo`
+  sudo password lives in the global AGENTS.md Credentials section —
+  use it there (local, never-committed file); never commit it, and do NOT ask the user for it.
 
 <!-- OPENWIKI:START -->
 

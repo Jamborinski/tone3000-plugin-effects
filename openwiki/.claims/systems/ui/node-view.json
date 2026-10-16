@@ -1,109 +1,7 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:d72bf602799f17a6a49aa1888c4614869263d72e06be43f06cebf1a466e41346",
+  "pageVersion": "sha256:bbee199cc6609f9d9e58d45ea9e19d8fce5a8331e6db792440191590a5185684",
   "claims": [
-    {
-      "id": "claim_7cb446bc57394509b1c92b290fe782e3",
-      "statement": "The node grid is a fixed 4 columns x 3 rows = 12 slots (Grid::kColumns=4, kRows=3, kSlotCount=12 in NodeModel.h — the ticket's open question resolved at build time, not a UiPref); slot cells are 84x60 px with a 12 px gap, origin at (24, 44).",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeModel.h",
-          "version": "repo-file-v1:sha256:8259eab3deb64730312f69662b8ff451fd968c49b01ebe178c833dc0b8f3c89d"
-        }
-      ]
-    },
-    {
-      "id": "claim_093a44a529d74eb2b6005558eab4c08b",
-      "statement": "The slots form one snake signal path: slotOrigin mirrors the column for the middle row (row % 2 == 1) so the path runs top row left->right, middle row right->left, bottom row left->right — one contiguous input->output path, not three independent lanes.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeModel.h",
-          "version": "repo-file-v1:sha256:8259eab3deb64730312f69662b8ff451fd968c49b01ebe178c833dc0b8f3c89d"
-        }
-      ]
-    },
-    {
-      "id": "claim_630e04c307b446f495690be04fe3a34b",
-      "statement": "The grid maps the left lane 1:1 in lane order (slot i = lane block i, blockAt returns &lane[slot] for ANY block kind); tail slots beyond the lane length are empty = a valid bypassed pass-through state, the key difference from the gallery where every tile is an effect. Right-lane-only blocks get an overflow note, not their own lane (out of scope).",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeModel.cpp",
-          "version": "repo-file-v1:sha256:519d490e9f4782a53865cd96c5936826824b383c0b882f6f0e18ab285ae8e6a1"
-        }
-      ]
-    },
-    {
-      "id": "claim_b3f9c11296cb4444b46529cd3fe26319",
-      "statement": "Grid exposes slotAt(point) (point-in-cell) and slotNearest(point, radius) (nearest slot centre within a drop tolerance, so a dragged node lands where aimed, not only when the pointer is inside the cell); hit testing uses the item-centre convention (MIT port of the reference grid, 2026-10-17).",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeModel.h",
-          "version": "repo-file-v1:sha256:8259eab3deb64730312f69662b8ff451fd968c49b01ebe178c833dc0b8f3c89d"
-        }
-      ]
-    },
-    {
-      "id": "claim_6b8947f00b8544acb721b180fcbcc436",
-      "statement": "orderWith(blockId, targetSlot) splices the full left-lane id list (erase the block, insert at the clamped target position, keep every other block's relative order) and returns a valid single-lane permutation for ChainStore::reorderBlocks.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeModel.cpp",
-          "version": "repo-file-v1:sha256:519d490e9f4782a53865cd96c5936826824b383c0b882f6f0e18ab285ae8e6a1"
-        }
-      ]
-    },
-    {
-      "id": "claim_5bad2694aac74f15b9d88b1db431b3cf",
-      "statement": "The per-kind table carries a local (non-theme) colour, a custom_icons glyph, and a short label: delay (62,207,142) kFxDelay \"Delay\", chorus (88,144,235) \"Chorus\", tremolo (116,160,245) \"Trem\", compressor (160,160,168) \"Comp\", reverb (64,224,208) \"Rev\", convolution (235,120,150) \"IR\", and tone/other (235,170,80) \"Tone\"; paletteKinds() offers the six effect kinds (tone blocks are not palette nodes).",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/core/CustomIcons.h",
-          "version": "repo-file-v1:sha256:05f01560ce24deec9dd977a84900a1af808701a38b6344146de8c068952b0139"
-        },
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeModel.cpp",
-          "version": "repo-file-v1:sha256:519d490e9f4782a53865cd96c5936826824b383c0b882f6f0e18ab285ae8e6a1"
-        }
-      ]
-    },
-    {
-      "id": "claim_30e67ffd26a94f7488aec1b9be02c47e",
-      "statement": "NodeView (juce::Component + ChainStore::Listener, refreshes on every chain change) owns the inner classes NodeBlock (one grid slot), PaletteItem (a chip that is a drag source for a new effect), NodeStrip (the selected block's param row), DragHostOverlay (routes the pointer while a drag is in flight), Ghost, and the NodeDragManager struct.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:58e1db6746cbe970ff81c676730bd970a312956e4e8c79a5a46a19045a1cef6d"
-        },
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeView.h",
-          "version": "repo-file-v1:sha256:54637d4ec922120e8dbdac96856dbfb9d8565163cb54d5c1c88629bf887c1289"
-        }
-      ]
-    },
-    {
-      "id": "claim_674bb4e827614829b98be73523b172cb",
-      "statement": "Pointer grammar on a node (the reference grid's MIT port): a short click selects the block (params appear in the strip), a 250 ms hold (kLongPressMs) begins a drag, motion before the hold cancels, right-click opens the block menu (power toggle — help key nodePower — and remove, help key nodeRemove); drops land via Grid::slotNearest(centre, 36.0f) and commit through chain.reorderBlocks(model_.orderWith(id, slot)).",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:58e1db6746cbe970ff81c676730bd970a312956e4e8c79a5a46a19045a1cef6d"
-        }
-      ]
-    },
-    {
-      "id": "claim_ca3f4a91f85b484b9c2b2755c1aa27bf",
-      "statement": "The param strip (kStripH=112 px, below the palette row) shows the selected block's name / mode / power / remove plus its knobs from the SHARED paramsFor table (hoisted to views/gallery/EffectParams.h from the gallery tile; tone nodes show only In/Out/Mix trims); every write goes through ChainStore, so the strip can never disagree with the gallery.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/views/gallery/EffectParams.h",
-          "version": "repo-file-v1:sha256:8c7fbc08f12ee156d848e197802fd28f6b0e57cc9503e6baffb78ecca92b0c51"
-        },
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:58e1db6746cbe970ff81c676730bd970a312956e4e8c79a5a46a19045a1cef6d"
-        }
-      ]
-    },
     {
       "id": "claim_4e8284a0f0bc4fe0b4e5fa2bda920264",
       "statement": "NodeViewToggle is a StereoModeToggle-style 80x36 two-segment gallery|node control (kViewTiles / kViewNodes icons, help key nodeViewToggle, setNodeView + onToggle callbacks) inserted LEFT of the preset bar in PluginHeader; the header seeds it from services_.prefs.getBool(UiPrefs::kNodeView, false) at construction.",
@@ -161,28 +59,122 @@
       ]
     },
     {
-      "id": "claim_f5f2f8928a4c4367b83930a9cebca51b",
-      "statement": "The testbed node-main scenario (scenarios.json) inserts a populated chain (delay, chorus, insert, convolution, insert, reverb — all enabled at mix 0.5) and seeds \"localStorage\": {\"t3k.nodeView\": \"true\"} so the node view is the visible surface; --capture auto-iterates all scenarios, so node-main gets a golden with no Main.cpp change.",
+      "id": "claim_31e700addfee4efe97bf51aae659a9bf",
+      "statement": "The node view is a second, TOGGLEABLE views layer over the same ChainState the gallery draws (ticket ui-block-interface-draft.md): no new DSP — a slot's contents ARE the existing ChainBlocks re-arranged in ChainState lane order, and every mutation goes back through ChainStore so gallery and node view can never disagree. The old 4x3 snake grid (kColumns=4/kRows=3, 84x60 cells, Grid::slotNearest drops) was replaced 2026-10-15 by the signal-line grid.",
       "evidence": [
         {
-          "resource": "repo://plugin/ui/testbed/fixtures/scenarios.json",
-          "version": "repo-file-v1:sha256:b63ad76ed3398152d1425d631297c25a475d30617c082c68d2168db5e99f3748"
+          "resource": "repo://plugin/ui/views/nodeview/NodeModel.h",
+          "version": "repo-file-v1:sha256:bd04fe648a37dcbf47b59d447d9ddb00d956501c2c705cc881fd30e0e106976e"
         }
       ]
     },
     {
-      "id": "claim_8ae1c08146704e6ba79e1248ebfddec9",
-      "statement": "The node view is a second, TOGGLEABLE views layer over the same ChainState the gallery draws (ticket ui-block-interface-draft.md, user-specified 2026-10-17): no new DSP — a slot's contents ARE the existing ChainBlocks re-arranged in the ChainState lane order, and every mutation goes back through ChainStore so the gallery and node view can never disagree about the chain.",
+      "id": "claim_96762951f8fd44a79059a14f545e3dd7",
+      "statement": "The grid is ONE row of 10 slots (Row::kSlotCount = 10, Row::kLabelH = 18 label band under each square, NodeModel.h:34-36); a SECOND row of 10 appears only when the lane exceeds 10 blocks (NodeView::paint/resized compute nCells = 10 + (lane.size() > 10 ? 10 : 0)) so lanes of 10 or fewer render a single row. Cell i = lane item i (1:1 left-lane map); tail cells beyond the lane are EMPTY = a valid bypassed pass-through state (the key difference from the gallery, where every tile is an effect).",
       "evidence": [
         {
-          "resource": "repo://docs/tickets/ui-block-interface-draft.md",
-          "version": "repo-file-v1:sha256:7fd95620ed76704754cf551f9d0f54c05d8b17fa9783abfffbd446bad02eda37"
+          "resource": "repo://plugin/ui/views/nodeview/NodeModel.h",
+          "version": "repo-file-v1:sha256:bd04fe648a37dcbf47b59d447d9ddb00d956501c2c705cc881fd30e0e106976e"
+        },
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:addd3a24a0889c93027c3a0dd72c54b9bc24fdfff6595f10b7092df7ddc1354f"
+        }
+      ]
+    },
+    {
+      "id": "claim_a838f8d36e094b69889989f03a7ad5a4",
+      "statement": "Cell paint states (the Q-Cortex/Line 6 transparency law): an ACTIVE block paints an opaque theme::kSurface fill (so the signal line STOPS at its edges) with kind-colour border at full alpha and white icon; a POWER-OFF block paints NO fill (the line runs THROUGH it) with border at 0.35 alpha and a muted icon; an EMPTY slot is invisible EXCEPT on mouse hover or when the whole lane is empty/insert-only (CellState.presetEmpty) — then a dashed border + plus glyph + 'add' label so the user knows where to click.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:addd3a24a0889c93027c3a0dd72c54b9bc24fdfff6595f10b7092df7ddc1354f"
+        }
+      ]
+    },
+    {
+      "id": "claim_88e2413829c94ffea0cf023ba552d34f",
+      "statement": "The signal line (NodeView::paint, ~:570-586) draws, per VISIBLE row, a 2 px white.withAlpha(0.45f) fillRect at the row's square-centre Y from rowX_ to W - rowX_, labelled 'In'/'Out' in the gutters, and it is painted BEFORE the cells so cells paint over it — active squares' opaque fill stops it, power-off/empty squares let it run through. It is painted only when nodeView_ is set.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:addd3a24a0889c93027c3a0dd72c54b9bc24fdfff6595f10b7092df7ddc1354f"
+        }
+      ]
+    },
+    {
+      "id": "claim_441ea648a8da42e1a2e44f6f5e8108a0",
+      "statement": "Repaint invariants (bug found in the 2026-10-15 capture hunt — the line stayed invisible for a whole debug session): setNodeView(bool) (NodeView.cpp:412) and chainChanged() (NodeView.cpp:419) both END WITH repaint(), because refresh() only updates the cell children; the body (signal line, In/Out labels, strip) must repaint on first-time activation, on lane row gain/loss, and on selection change or the line silently stays absent until an unrelated invalidate.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:addd3a24a0889c93027c3a0dd72c54b9bc24fdfff6595f10b7092df7ddc1354f"
+        }
+      ]
+    },
+    {
+      "id": "claim_ec9d78fd709d4ecd8fcab8e54d15cabc",
+      "statement": "NodeStrip is the selected block's SINGLE-ROW parameter strip (44 px stacked header, kStripHeadH = 44, NodeView.cpp:54) in Line 6 stadium style: the per-knob VALUE readout paints persistently ABOVE the knob face (NodeStrip::values_ filled with KnobScale::format(knobFromStored(*scale, raw)) — the real-unit value, not the 0..1 stored one; passing the stored value produced the '-1776.0 dB' / '-922337203…' garbage), while the knob's own name label sits below it (Knob Options labelOnTop = true). Stacked header: block-kind label in caps (titleFont) over the mode line (Delay/Compressor/Reverb::modeName or the kind name) in the kind accent colour — display-only; mode cycling lives in the cell right-click menu. Panel is contained + centred (jmin(W - 16, 1100) wide), theme::kPanelBg @ 0.55 tinted fill, 10 px radius. Knobs are owned std::vector<Knob*> (created on selection, deleted in clearContent()); their onChange writes back through chain.setBlockParam(id, param, knobToStored(...)). Params come from the SHARED paramsFor table in views/gallery/EffectParams.h (tone nodes show only In/Out/Mix trims).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectParams.h",
+          "version": "repo-file-v1:sha256:8c7fbc08f12ee156d848e197802fd28f6b0e57cc9503e6baffb78ecca92b0c51"
+        },
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:addd3a24a0889c93027c3a0dd72c54b9bc24fdfff6595f10b7092df7ddc1354f"
+        }
+      ]
+    },
+    {
+      "id": "claim_0f53d5e8c6d843d68bd551170247cbd0",
+      "statement": "Pointer grammar on a node: a short click selects the block (params load into the strip); a 250 ms hold (kHoldMs = 250, NodeView.cpp:58) begins a lane drag; motion before the hold cancels the timer; right-click opens the block menu (power toggle, help key nodePower; remove, help key nodeRemove; plus the palette add-menu over Model::paletteKinds()). Drags use juce::Component::createComponentSnapshot ghosts (JUCE 9 API) and a suppress-click-until timestamp keeps a drop from firing a stray select; drops commit through chain.reorderBlocks with the spliced full-lane id list.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:addd3a24a0889c93027c3a0dd72c54b9bc24fdfff6595f10b7092df7ddc1354f"
+        }
+      ]
+    },
+    {
+      "id": "claim_b9014912ba4946828c040eabf7b879f5",
+      "statement": "Persistence: UiPrefs::kNodeView = \"t3k.nodeView\" (UiPrefs.h:68) is a plain STRING pref \"true\"/\"false\" — UiPrefs::getBool accepts only those two spellings, anything else (including JUCE var::toString()'s \"1\") falls back to the default false. ChainScreen's ctor reads it and calls setView(true) when set; PluginRoot::onNodeViewToggle (fired by the PluginHeader NodeViewToggle, an 80x36 two-segment gallery|node control, help key nodeViewToggle) writes the pref and forwards to chainScreen().setView(nodeView). ChainScreen::setView hides the gallery / shows the node view; the node view has no DragScroller.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/services/UiPrefs.cpp",
+          "version": "repo-file-v1:sha256:5740953aab29cc3bce89ae4112fa301fa830619d07f8693794068deca9484c1c"
+        },
+        {
+          "resource": "repo://plugin/ui/services/UiPrefs.h",
+          "version": "repo-file-v1:sha256:78f45663d871343ac9b62a04129fbb5338b6e8cee510a287ee18f6cc3c15ac4b"
+        },
+        {
+          "resource": "repo://plugin/ui/views/ChainScreen.cpp",
+          "version": "repo-file-v1:sha256:967215b9e008625cc81a1c57b7facf41bba0d5d542fff6b800d0bc036121096a"
+        },
+        {
+          "resource": "repo://plugin/ui/views/PluginRoot.cpp",
+          "version": "repo-file-v1:sha256:b6ce6c30fbda66d6995a26b792aaad4bf00e6eb1c17574e655258fb293fa285c"
+        }
+      ]
+    },
+    {
+      "id": "claim_e9a722676d2544a5b352026ac2bc9e12",
+      "statement": "Testbed: the node-main scenario (scenarios.json) carries a 3-block left lane (compressor selected, chorus, insert) and seeds \"localStorage\": {\"t3k.nodeView\": \"true\"} so the node view is the visible surface. TWO landmines: (1) the seed value MUST be the string \"true\" — Host::seedPrefs does prefs.set(name, value.toString()) and a JSON bool becomes \"1\", which getBool rejects (the signal line stayed invisible for the whole 2026-10-15 capture hunt until this was fixed); (2) UiTestbed --capture <outDir> <scenario> is what writes PNGs (--selftest does not), and --capture auto-iterates all scenarios, so node-main gets a golden with no Main.cpp change.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/testbed/Host.cpp",
+          "version": "repo-file-v1:sha256:12a93b1f6394f4ca0e8c103cd2ee8d7c9557084eb128fff6d25ab6798af0f7f9"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/fixtures/scenarios.json",
+          "version": "repo-file-v1:sha256:498707bc45940d29fdb0efd6a97ec4bfdeb631504f8e19c0b4425835ab8b4172"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-15T16:15:57.360Z"
+    "at": "2026-10-16T00:50:33.519Z"
   }
 }

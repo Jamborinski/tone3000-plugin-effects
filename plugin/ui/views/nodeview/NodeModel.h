@@ -1,13 +1,19 @@
 // Node view model (the "M" of views/nodeview/): a pure read-side model over
-// ChainState. The node grid is a second VIEWS layer over the SAME chain the
-// gallery draws (ticket docs/tickets/ui-block-interface-draft.md): the left
-// lane's blocks map 1:1, in lane order, onto a fixed 4x3 grid drawn as one
-// snake signal path (top row left->right, middle right->left, bottom
-// left->right). An EMPTY SLOT is a valid state: the signal passes through
-// unprocessed — the key difference from the gallery, where every tile IS an
-// effect. This model owns no state of its own beyond the selected slot; every
-// mutation goes back through ChainStore, so the gallery and the node view can
-// never disagree about the chain.
+// ChainState. The node view is a second VIEWS layer over the SAME chain the
+// gallery draws (ticket docs/tickets/ui-node-view-fixups-draft.md, reworked
+// 2026-10 against the reference UIs): the left lane's items map 1:1, in lane
+// order, onto ONE ROW of up to kSlotCount small node squares drawn over a
+// horizontal signal line (In -> ... -> Out), with the label UNDER each
+// square. An EMPTY SQUARE (a lane insert — a real, first-class lane item,
+// not a hole) is a pass-through: click it to add an effect into that
+// position, and dragging a node past (or into) one is what leaves an empty
+// square in the middle of the row.
+//
+// Crash guard for the live switcher (the defect that sank the old grid
+// build): this model and the view hold BLOCK IDs / LANES BY INDEX ONLY.
+// ChainState is re-parsed and its vectors re-assigned per revision, so any
+// ChainItem* captured before a revision is stale; the old grid held one per
+// slot and dereferenced them on the first live switch into node view.
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -19,97 +25,61 @@
 
 namespace t3k::ui::nodeview {
 
-// The fixed grid: 4 columns x 3 rows = 12 slots (ticket open question,
-// resolved: fixed at build time, not a UiPref).
-struct Grid {
-  static constexpr int kColumns = 4;
-  static constexpr int kRows = 3;
-  static constexpr int kSlotCount = kColumns * kRows;
-  static constexpr int kSlotW = 84;
-  static constexpr int kSlotH = 60;
-  static constexpr int kGap = 12;
-
-  static juce::Rectangle<int> origin() { return {24, 44}; }
-  static constexpr int width() { return kColumns * kSlotW + (kColumns - 1) * kGap; }
-  static constexpr int height() { return kRows * kSlotH + (kRows - 1) * kGap; }
-
-  // Snake mapping: slot index -> cell point (top-left of the cell).
-  static juce::Point<int> slotOrigin(int index) {
-    const int row = index / kColumns;
-    int col = index % kColumns;
-    if (row % 2 == 1) col = kColumns - 1 - col;  // middle row runs right->left
-    const auto o = origin();
-    return {o.getX() + col * (kSlotW + kGap), o.getY() + row * (kSlotH + kGap)};
-  }
-  static juce::Rectangle<int> slotBounds(int index) {
-    const auto p = slotOrigin(index);
-    return {p, {kSlotW, kSlotH}};
-  }
-  // Slot centre, for the signal-path line and item-centre hit testing (the
-  // item-centre convention the reference grid uses; MIT port, 2026-10-17).
-  static juce::Point<float> slotCentre(int index) { return slotBounds(index).getCentre().toFloat(); }
-  // Which slot contains this local point (-1: none).
-  static int slotAt(const juce::Point<float>& p) {
-    for (int i = 0; i < kSlotCount; ++i)
-      if (slotBounds(i).contains(p.x, p.y)) return i;
-    return -1;
-  }
-  // Slot containing this point's NEAREST neighbour, within `radius` px of a
-  // slot centre (drop tolerance so a dragged node lands where aimed, not
-  // only when the pointer is inside the cell).
-  static int slotNearest(const juce::Point<float>& p, float radius) {
-    int best = -1;
-    float bestDist = radius;
-    for (int i = 0; i < kSlotCount; ++i) {
-      const auto c = slotCentre(i);
-      const float d = std::hypot(p.x - c.x, p.y - c.y);
-      if (d < bestDist) {
-        bestDist = d;
-        best = i;
-      }
-    }
-    return best;
-  }
+// One row of node squares (user: "we can probably just do 10 in a row to
+// start with"). Cell i = lane item i; a lane with fewer than kSlotCount
+// items trails "add" cells; a lane with more overflows past the last cell
+// with a "…" marker — the block still exists in the chain (reachable from
+// the gallery), the row just caps its footprint.
+struct Row {
+  static constexpr int kSlotCount = 10;
+  // Fixed space under each square for its label.
+  static constexpr int kLabelH = 18;
 };
 
 // Per-kind identity: colour coding (modulation blue, delay green, reverb
 // turquoise, dynamics gray, cab/IR coral — research/references block
-// interface notes, 2026-10-16/17) + the block icon + a short grid label.
-// Toned to this repo's own palette; the colours are local constants, not
-// theme tokens.
+// interface notes, 2026-10-16/17) + the block icon + a short label. Toned
+// to this repo's dark surfaces; the colours are local constants, not theme
+// tokens.
 struct Kind {
   juce::Colour colour;
   const char* icon;  // custom_icons::*
   const char* label;
 };
 
-struct Model {
-  static constexpr const char* kHelpAddPrefix = "Add a node";
-
+class Model {
+public:
   const ChainState* state;
 
   explicit Model(const ChainState& s) : state(&s) {}
 
   static const Kind& kind(const juce::String& effectKind);
-  // The kind the palette offers, in menu order (tone blocks are not palette
-  // nodes: the node grid edits the effect lane the DSP chain already has).
+  // The kinds the "add to a square" menu offers, in menu order — the six
+  // built-in effects (tone loading is the gallery's flow and stays there).
   static std::vector<juce::String> paletteKinds();
   static const char* paletteLabel(const juce::String& effectKind);
 
-  // Left lane = the node grid. (The grid shows the left lane; right-lane-only
-  // blocks get an overflow note, not their own lane — out of scope for the
-  // block-interface ticket.)
+  // Left lane = the node row (right-lane blocks are the gallery's stereo
+  // surface).
   static const std::vector<ChainItem>& laneOf(const ChainState& s) { return s.chain; }
-  const ChainItem* blockAt(int slot) const;      // null: empty slot
-  int slotOf(const std::string& blockId) const;  // -1: not a grid node
+
+  // Lane item i (effect / tone / insert); past the end = nullptr. Call at
+  // paint / event time — never cache the returned pointer across a revision.
+  const ChainItem* blockAt(int index) const;
+  // Lane index of a block (-1: not in the left lane).
+  int indexOf(const std::string& blockId) const;
   // The left-lane id order that puts `blockId` into `targetSlot` (a
-  // permutation of the current lane, safe for ChainStore::reorderBlocks).
+  // permutation of the current lane — inserts included — safe for
+  // ChainStore::reorderBlocks). Dropping a node into an empty square's
+  // POSITION is what leaves an empty square mid-row.
   std::vector<std::string> orderWith(const std::string& blockId, int targetSlot) const;
 
-  // The selected slot (view state, not chain state).
-  int selectedSlot = -1;
-  void select(const std::string& blockId);
-  void clearSelection(const std::string& vanishedBlockId);
+  // The selected square (view state, not chain state), by block id.
+  std::string selectedId;
+  void select(const std::string& blockId) { selectedId = blockId; }
+  void clearSelection(const std::string& vanishedBlockId) {
+    if (selectedId == vanishedBlockId) selectedId.clear();
+  }
 };
 
 }  // namespace t3k::ui::nodeview
