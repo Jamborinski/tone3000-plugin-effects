@@ -57,6 +57,8 @@ target_sources(DspTests PRIVATE
     src/pitch_shift_tests.cpp
     src/preset_tests.cpp
     src/processor_tests.cpp
+    src/midi_map_tests.cpp
+    src/node_model_tests.cpp
     src/spread_tests.cpp
     src/state_cache_tests.cpp
     src/swap_fade_tests.cpp
@@ -95,6 +97,10 @@ target_sources(DspTests PRIVATE
     # KnobScale make() scales format through labels::toFixed (the UI
     # readout formatter) -- the contract tests need its definition linked.
     ../plugin/ui/core/Labels.cpp
+    # The node grid's read-side model (NodeModel tests): the strip/drag
+    # logic the node view paints from. ChainState is its data source.
+    ../plugin/ui/views/nodeview/NodeModel.cpp
+    ../plugin/ui/model/ChainState.cpp
     ../plugin/src/TunerDetector.cpp
 )
 
@@ -110,6 +116,10 @@ target_include_directories(DspTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/include/effects/conv
     # KnobScale.h (the UI scale contract tests) needs the ui/core headers.
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/ui/core
+    # NodeModel.h includes "model/ChainState.h" from the ui tree root.
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/ui
+    # NodeModel.h itself lives in the nodeview subdir.
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/ui/views/nodeview
     # ChainDomain.h pulls in the AudioDSPTools resampling boundary.
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/AudioDSPTools
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/AudioDSPTools/dsp/ResamplingContainer/Dependencies

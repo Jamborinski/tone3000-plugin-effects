@@ -55,6 +55,7 @@ public:
   std::function<void(const std::string& blockId)> onOpenTone;
 
   void setNodeView(bool active);
+  bool nodeViewActive() const { return nodeView_; }
   void paint(juce::Graphics& g) override;
   void resized() override;
 
@@ -93,6 +94,12 @@ private:
   // (a knob in flight): chrome + knob values only, no rebuild.
   void updateStripChrome(const ChainItem&);
   void updateStripKnobValues(NodeStrip&, const ChainItem&);
+  void cycleStripMode();
+  void cycleStripType();
+  void pullConvPreview(NodeStrip&, const ChainItem&);
+  // Convolution node: the strip's "Load IR..." button (async FileChooser,
+  // mirrors EffectTile's convIrChooser_ flow).
+  void startConvIrLoader(const std::string& blockId);
 
   Services& services_;
   Model model_;
@@ -103,6 +110,8 @@ private:
   juce::Point<float> grabOffset_;
   std::string draggingId_;  // the lane item in flight (inserts are lane items too)
   int dragFromCell_ = -1;
+  bool dragInGrid_ = false;
+  std::unique_ptr<juce::FileChooser> convIrChooser_;  // strip "Load IR..."
   bool nodeView_ = true;
 
   // Row layout metrics (resized()).
