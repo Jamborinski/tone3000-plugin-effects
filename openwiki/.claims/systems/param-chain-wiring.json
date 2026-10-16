@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:b1b02c6f2c178728d47c6b0740a10fdb416199f7c1815efb6321c464f139b655",
+  "pageVersion": "sha256:871cf8eb2134a5cb72686c45342f550174b1205e0b75eafa3665356b2d9804ce",
   "claims": [
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
@@ -36,7 +36,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:eb983d4c9a842350f8b2c3a912946e264b6e4cb91e7e51a0d6445529c21b9a10"
+          "version": "repo-file-v1:sha256:a78d2fe7057e90722bb58261fe63cdac4ebdb241ad87e9d93bf7376966f06607"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
@@ -68,7 +68,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:eb983d4c9a842350f8b2c3a912946e264b6e4cb91e7e51a0d6445529c21b9a10"
+          "version": "repo-file-v1:sha256:a78d2fe7057e90722bb58261fe63cdac4ebdb241ad87e9d93bf7376966f06607"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
@@ -90,7 +90,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:eb983d4c9a842350f8b2c3a912946e264b6e4cb91e7e51a0d6445529c21b9a10"
+          "version": "repo-file-v1:sha256:a78d2fe7057e90722bb58261fe63cdac4ebdb241ad87e9d93bf7376966f06607"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
@@ -119,10 +119,38 @@
           "version": "repo-file-v1:sha256:d8510ec1692fb9f72c6594184be1f5524284616d03cbe1f87ba0494c736bca51"
         }
       ]
+    },
+    {
+      "id": "claim_87ca425570364639985441cad66c1a38",
+      "statement": "The gallery/node view toggle is persisted as UiPrefs::kNodeView = \"t3k.nodeView\" (plugin/ui/services/UiPrefs.h:68); ChainScreen reads it at startup (getBool default false) and calls setView() to activate the node view, and the PluginHeader toggle writes it back on every click.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/services/UiPrefs.h",
+          "version": "repo-file-v1:sha256:78f45663d871343ac9b62a04129fbb5338b6e8cee510a287ee18f6cc3c15ac4b"
+        },
+        {
+          "resource": "repo://plugin/ui/views/ChainScreen.cpp",
+          "version": "repo-file-v1:sha256:967215b9e008625cc81a1c57b7facf41bba0d5d542fff6b800d0bc036121096a"
+        }
+      ]
+    },
+    {
+      "id": "claim_25df709ee60b4e88b38898718b8a0563",
+      "statement": "removeChainBlock persists intermediate empty slots (node-view batch 2, 2026-10-16): after pushing history it moves the block out and inserts a FRESH ChainBlock of type INSERT at the erased position (`it = chain.erase(it); chain.insert(it, std::make_unique<ChainBlock>(juce::Uuid()…, ChainBlockType::INSERT));`), so a mid-lane removal leaves the lane length unchanged with the gap in place; a subsequent addEffectBlock/landToneBlock into that index fills the gap in place instead of prepending. Inserts themselves are still not removable (the insert branch returns false). Covered by AddAtSlot.MidLaneGapIsFilledInPlace in test/src/add_at_slot_tests.cpp, which also re-baselined ChainBranchTest.AlignsBranchLaneEndWithTrunk (trunk stays at kMinLaneSlots=5 after removal; branch end 4→3).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/src/ProcessorChain.cpp",
+          "version": "repo-file-v1:sha256:a78d2fe7057e90722bb58261fe63cdac4ebdb241ad87e9d93bf7376966f06607"
+        },
+        {
+          "resource": "repo://test/src/add_at_slot_tests.cpp",
+          "version": "repo-file-v1:sha256:7bd93c2831b06ae76d46f1241363ccb5195b957423fd1c1b56ce157a22a4f996"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-16T00:50:33.519Z"
+    "at": "2026-10-16T18:52:35.705Z"
   }
 }

@@ -19,14 +19,18 @@ sources:
   - resource: repo://plugin/ui/testbed/fixtures/scenarios.json
   - resource: repo://plugin/ui/testbed/Host.cpp
   - resource: repo://docs/tickets/handoff/HANDOFF-nodeview.md
+  - id: openwiki-source-c3846816d3d592e2ee7c8d4e
+    resource: repo://plugin/ui/services/ChainStore.h
   - id: openwiki-source-5ce285990005ab7ecadd0e65
     resource: repo://plugin/ui/views/ChainScreen.h
-  - id: openwiki-source-6c2abe72c3679eefdf9c9c53
-    resource: repo://plugin/ui/views/gallery/EffectParams.h
+  - id: openwiki-source-4b8e7dce368774e92d99ea30
+    resource: repo://test/CMakeLists.txt
+  - id: openwiki-source-949fdcdad6535ec560064216
+    resource: repo://test/src/node_model_tests.cpp
 generated: { by: "pi", at: "2026-10-15T17:55:00.000Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-16T00:50:33.519Z
+    at: 2026-10-16T18:52:35.705Z
 ---
 
 # Node view: the signal-line grid
@@ -73,27 +77,45 @@ can never disagree about the chain because every mutation goes through the same
     is empty/insert-only (`presetEmpty` in `CellState`) — then a dashed border
     + plus glyph + "add" label so the user knows where to click.
 - **NodeStrip** — the selected block's **single-row** parameter strip
-  (44 px stacked header + one knob row; `kStripHeadH = 44`). Line 6 stadium
+  (56 px header; `kStripHeadH = 56`) docked to the **bottom** of the view
+  (full width). Line 6 stadium
   style: the per-knob **value readout paints ABOVE the face** (persistently,
-  from `NodeStrip::values_` — the shared `KnobScale::format` on the un-stored
-  real-unit value), the knob's own name label below it (`labelOnTop = true`).
-  Stacked header: block-kind label in caps (`titleFont`) over the mode line
-  (`Delay/Compressor/Reverb::modeName` or the kind name) in the kind accent
-  colour — **display-only** (mode cycling lives in the cell right-click menu).
-  Right side: remove + power `IconButton`s. Panel: contained + centred
-  (`jmin(W - 16, 1100)`), `theme::kPanelBg @ 0.55` tinted fill, 10 px radius.
+  from `NodeStrip::values_` — the shared `KnobScale::format` on
+  `knobFromStored(*scale, raw)`, the real-unit value; each knob also gets
+  `setValue(knobFromStored(...))` after construction so the face sits at the
+  real value — the Knob ctor clamps to `options.min`), the knob's own name
+  label below it (`labelOnTop = true`). Stacked header: block-kind label in
+  caps (`titleFont`) over the mode line — **batch 2 (2026-10-16)** replaced
+  the click/hold cyclers with **context menus**: `modeB_` / `typeB_` are
+  `juce::TextButton`s whose onClick call `NodeView::openModeMenu()` /
+  `openTypeMenu()`, which build `std::vector<ContextMenu::Item>` lists (delay
+  4 / Compressor 5 / reverb 6 modes, current entry disabled with a leading
+  marker; the reverb type list is shown only when `Reverb::numTypes(mode) >
+  1`) and open them centred over the strip via `showStripMenu`
+  (`widgets/ContextMenu`, local-coordinate `openAtPoint` — NodeStrip has no
+  desktop-coordinate conversion). Right side: **hide** (`hide_`, Icon::X — the
+  ONLY strip close; `hideStrip()` clears the selection) + remove + power
+  `IconButton`s; the strip stays open while the mouse is inside it (knob
+  turns no longer rebuild-and-close it, batch-2 item 9). Panel:
+  `theme::kPanelBg @ 0.55` tinted fill, 10 px radius.
   Knobs are owned `std::vector<Knob*>` (created on selection, deleted in
   `clearContent()`); their onChange writes back through
   `chain.setBlockParam(id, param, knobToStored(...))`.
 - **Ghost** (component-snapshot drag ghost) — the desktop-level overlay routes
   the pointer while a drag is in flight.
 
-**Signal line** (2026-10-15): `NodeView::paint` draws, per visible row, a 2 px
-white @ 0.45 line at the row's square-centre Y from `rowX_` to
-`W - rowX_`, labelled "In" / "Out" in the gutters, **BEFORE the cells** so
-cells paint over it — active squares' opaque fill stops it, power-off/empty
-squares let it run through (the "the line goes through deactivated effects"
-law). Painted only when `nodeView_` is set.
+**Signal line** (2026-10-15, batch-2 two-row fix 2026-10-16): `NodeView::paint`
+draws, per visible row, **2 px white @ 0.45 SEGMENTS** with a gap around
+**every occupied cell** (active AND power-off): an "In" stub before the first
+node, ±5 px gaps around each node, an "Out" stub to the row's right edge —
+empty slots between nodes stay clear. The two-row transition is Line 6
+stadium style (batch 2 — **no snake elbow**): row 1's line ends with a 13 px
+`Icon::ArrowRight` at the grid's right edge, row 2 starts with a 13 px
+`Icon::ArrowRight` at the grid's left edge; both rows flow left→right and row
+2 enters its leftmost node. The line is painted **BEFORE the cells**, and
+`if (!nodeView_) return;` is the **first line of `paint`** (batch-2 fix,
+m03703: the old opaque panel fill before the visibility guard covered the
+inactive gallery through the node view).
 
 **Repaint invariants** (bug found in the 2026-10-15 capture hunt):
 `setNodeView(bool)` and `chainChanged()` both end with `repaint()` —
@@ -105,8 +127,20 @@ an unrelated invalidate.
 **Pointer grammar**: click selects (params load into the strip); 250 ms hold
 (`kHoldMs`) begins a drag; motion before the hold cancels; right-click opens
 the block menu (power toggle `nodePower`, remove `nodeRemove`, plus the
-palette add-menu). Drag uses `componentCreateSnapshot` ghosts; the suppress-
-click-until timer keeps the drop from firing a stray select.
+palette add-menu); **double-click toggles the block's power**
+(`NodeCell::mouseDoubleClick -> NodeView::togglePower`). Cell hover sets a
+help text (occupied title, " (powered off)" suffix when off, `help::Key::
+nodeEmptySlot` for true gaps — batch 2 dropped the hardcoded em-dash string
+whose mojibake showed on tone nodes) which drives both the JUCE tooltip and
+the bottom hint bar via the HintBus HintTracker. Drag uses
+`componentCreateSnapshot` ghosts; the suppress-click-until timer keeps the
+drop from firing a stray select.
+
+**Tone nodes** (batch 2, item 6): occupied inserts (NAM/conv) are NOT empty
+slots — `NodeCell::paint` treats `!s.has || s.insert` as the dashed+plus gap
+state only, `NodeCell::update` shows the block's own title on hover, and
+clicking a tone node **selects** it (strip shows In/Out/Mix trims) rather
+than opening the add menu.
 
 ## Toggle, persistence, wiring
 
@@ -134,3 +168,13 @@ for the whole 2026-10-15 capture hunt until this was fixed); and
 `UiTestbed --capture <outDir> <scenario>` is what writes PNGs
 (`--selftest` does not). `--capture` auto-iterates all scenarios, so
 `node-main` gets a golden with no `Main.cpp` change.
+
+Batch 2 (2026-10-16) also extended the drives: `node-toggle-live` imitates
+the user's click sequence — toggle gallery→node, jassert the node view is
+visible, select a block, turn a strip knob, jassert the strip survives, then
+toggle back to the gallery — so the live switch is click-imitated, not
+one-shot captured. Headless knob coverage lives in `test/src/
+strip_knob_tests.cpp` (7 StripKnob tests over every `paramsFor` knob) and
+gap/add-at-slot coverage in `test/src/add_at_slot_tests.cpp` (2 AddAtSlot
+tests over `removeChainBlock`'s fresh-INSERT gap and
+`landToneBlock`'s in-place fill).

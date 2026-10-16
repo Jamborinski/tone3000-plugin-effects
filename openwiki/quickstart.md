@@ -48,12 +48,14 @@ sources:
     resource: repo://test/CMakeLists.txt
   - id: openwiki-source-22db8812ec3771683e6a7ddc
     resource: repo://test/src/dat_probe_tests.cpp
+  - id: openwiki-source-949fdcdad6535ec560064216
+    resource: repo://test/src/node_model_tests.cpp
   - id: openwiki-source-fde83b2ad879efba1865ca8d
     resource: repo://test/src/theme_palette_tests.cpp
 generated: { by: "pi", at: "2026-10-14T21:12:00.922Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-15T16:15:57.360Z
+    at: 2026-10-16T18:52:35.705Z
 ---
 
 # TONE3000
@@ -185,9 +187,11 @@ That's: configure-if-needed → `cmake --build build --target DspTests` →
 `build/test/DspTests_artefacts/.../DspTests`.
 
 The suite compiles **the real plugin sources** (not copies) against the
-fixtures in `test/files/`. It only pulls in one UI file (
-`plugin/ui/core/Labels.cpp`, the `KnobScale` readout formatter for the
-scale-contract tests), so a green DspTests does not prove the UI links.
+fixtures in `test/files/`. It only pulls in a few UI files (`plugin/ui/core/
+Labels.cpp` the `KnobScale` readout formatter, the node model
+`views/nodeview/NodeModel.cpp` + `model/ChainState.cpp`, and the shared knob
+table `views/gallery/EffectParams.cpp` — the latter two added by the node-view
+closeouts), so a green DspTests does not prove the UI links.
 
 ## UI testbed (optional, UI iteration)
 

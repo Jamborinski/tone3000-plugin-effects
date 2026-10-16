@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:26967fe7409db5ff028da6e0168d203301712dd62ed5beca63fe735a268d3aa4",
+  "pageVersion": "sha256:5c258ced6e4ddcd7a4f895bc1c525aa1d4d215e8765eae59b783c14e1f2666bd",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -60,7 +60,7 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:7890e7799091c9fbd1d898808314a9db03d0544a7a3287fd227f74e3c152b965"
+          "version": "repo-file-v1:sha256:c8840f84356e8d2930401838ac9d12ed3da224694ff94846f0ff32d205fef308"
         },
         {
           "resource": "repo://docs/agents/audio-testing.md",
@@ -100,7 +100,7 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:7890e7799091c9fbd1d898808314a9db03d0544a7a3287fd227f74e3c152b965"
+          "version": "repo-file-v1:sha256:c8840f84356e8d2930401838ac9d12ed3da224694ff94846f0ff32d205fef308"
         },
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
@@ -147,8 +147,8 @@
       ]
     },
     {
-      "id": "claim_440af38cf3974f35b3cee1bc6bf5ef68",
-      "statement": "The DSP test loop is ./script/test-dsp.sh [gtest-filter]: configure-if-needed -> cmake --build build --target DspTests -> running build/test/DspTests_artefacts/.../DspTests. The suite compiles the REAL plugin sources (not copies) against the fixtures in test/files/ (NAM A2 captures a2-amp-test.nam / a2-amp-cab-test.nam / a2-am-test-2.nam, cab-ir-test(-2).wav, reverb-ir-mono/stereo-test.wav, em240-gold-plate-5s.wav); from plugin/ui it pulls in core/Labels.cpp (KnobScale readout formatter) plus the theme tokens compiled inline by test/src/theme_palette_tests.cpp, so a green DspTests does NOT prove the UI links (verify with the GUI target, e.g. TONE3000_Standalone, or the testbed). The suite grows with features — a count is a LOWER-BOUND snapshot, never assert a stale total on a red run: 469 after the plate '140' final pass, 487 after the R2 thirteenth cut (2026-10-15), 503 / 73 suites after the 2026-10-16 reverb-budget-quality-uplift pass, 511 / 75 after the T-DAT-001 wave-3 closeout (2026-10-17), and 512 / 75 after the 2026-10-14 swappable-theme palette test. Also: the gtest silent-0 trap — a ',' filter list can run 0 tests with exit 0; always confirm the 'Running N tests' line.",
+      "id": "claim_31f0ef541ff94a4585e702c670f14435",
+      "statement": "The DSP test loop is ./script/test-dsp.sh [gtest-filter]: configure-if-needed -> cmake --build build --target DspTests -> running build/test/DspTests_artefacts/.../DspTests. The suite compiles the REAL plugin sources (not copies) against the fixtures in test/files/ (NAM A2 captures a2-amp-test.nam / a2-amp-cab-test.nam / a2-am-test-2.nam, cab-ir-test(-2).wav, reverb-ir-mono/stereo-test.wav, em240-gold-plate-5s.wav); from plugin/ui it pulls in core/Labels.cpp (KnobScale readout formatter), views/nodeview/NodeModel.cpp + model/ChainState.cpp (the node grid's read-side model, added by the 2026-10-18 node-view closeout), views/gallery/EffectParams.cpp (the shared paramsFor knob table, added by the node-view batch 2 for the per-knob strip readout tests), plus the theme tokens compiled inline by test/src/theme_palette_tests.cpp, so a green DspTests does NOT prove the UI links (verify with the GUI target, e.g. TONE3000_Standalone, or the testbed). The suite grows with features — a count is a LOWER-BOUND snapshot, never assert a stale total on a red run: 469 after the plate '140' final pass, 487 after the R2 thirteenth cut (2026-10-15), 503 / 73 suites after the 2026-10-16 reverb-budget-quality-uplift pass, 511 / 75 after the T-DAT-001 wave-3 closeout (2026-10-17), 512 / 75 after the 2026-10-14 swappable-theme palette test, 521 after the 2026-10-18 node-view closeout (9 new NodeModel tests), and 530 / 78 after the node-view batch-2 closeout (7 StripKnob + 2 AddAtSlot tests). Also: the gtest silent-0 trap — a ',' filter list can run 0 tests with exit 0; always confirm the 'Running N tests' line.",
       "evidence": [
         {
           "resource": "repo://script/test-dsp.sh",
@@ -156,11 +156,15 @@
         },
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
+          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
         },
         {
           "resource": "repo://test/src/dat_probe_tests.cpp",
           "version": "repo-file-v1:sha256:d25de9e0ad214a7757b0064448c64558324eabeb1deae1b2a6e09c0695222ef4"
+        },
+        {
+          "resource": "repo://test/src/node_model_tests.cpp",
+          "version": "repo-file-v1:sha256:9b5c4f1890d0df5cfedddbec7b8b346f8ff5da1db446d5cd7e5bbf31be15180e"
         },
         {
           "resource": "repo://test/src/theme_palette_tests.cpp",
@@ -171,6 +175,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-15T16:15:57.360Z"
+    "at": "2026-10-16T18:52:35.705Z"
   }
 }

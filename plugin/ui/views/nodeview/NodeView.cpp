@@ -158,7 +158,7 @@ public:
     // component's help text (HintBus walks up from the event component).
     setHelpText(s.has && !s.insert
                     ? juce::String(s.title) + (s.active ? juce::String{} : " (powered off)")
-                    : (s.has ? juce::String("Empty slot \u2014 click to add an effect") : juce::String{}));
+                    : (s.has ? help::text(help::Key::nodeEmptySlot) : juce::String{}));
     repaint();
   }
 
@@ -291,10 +291,13 @@ private:
         v_.modelRef().blockAt(i_) != nullptr &&
         v_.modelRef().blockAt(i_)->blockId == v_.modelRef().selectedId;
 
-    // Empty lane slot: invisible by default; a quiet dashed "add" hint only on
-    // hover (or when the lane is wholly empty) — transparent, so the signal
-    // line shows through it (Q-Cortex / Line 6 signal view).
-    if (!s.has) {
+    // Empty lane slot: invisible by default (a mid-lane gap is a TRUE gap —
+    // a continuous line through it, no square, until the mouse arrives —
+    // m03708); a quiet dashed "add" hint ONLY on hover (or a wholly empty
+    // lane). An insert is NOT a tone block (it read "tone" on the readout
+    // and looked like an empty orange block — m02657). Transparent, so the
+    // signal line shows through.
+    if (!s.has || s.insert) {
       if (hover_ || s.presetEmpty) {
         paint::dashedBorder(g, sq, 8.0f, theme::kMuted.withAlpha(0.5f), 1.5f);
         Icons::draw(g, Icon::Plus, sq.reduced(9.0f),
@@ -304,12 +307,11 @@ private:
       // Effect / tone square: kind-colour border + block icon. Active blocks
       // get an opaque fill (the signal line stops at their edges); power-off
       // blocks stay transparent so the line runs THROUGH them.
-      const juce::String kind = s.insert ? "tone" : s.kind;
       if (s.active) paint::fill(g, sq, 8.0f, theme::kSurface);
       paint::border(g, sq, 8.0f,
-                    Model::kind(kind).colour.withAlpha(s.active ? 1.0f : 0.35f),
+                    Model::kind(s.kind).colour.withAlpha(s.active ? 1.0f : 0.35f),
                     2.0f);
-      Icons::draw(g, kindSvg(kind), sq.reduced(8.0f),
+      Icons::draw(g, kindSvg(s.kind), sq.reduced(8.0f),
                   s.active ? juce::Colours::white
                            : theme::kMuted.withAlpha(0.5f));
     }
@@ -317,11 +319,16 @@ private:
     if (selected)
       paint::border(g, sq.reduced(3.0f), 6.0f, theme::kHighlight, 2.0f);
 
-    // Label under the square (suppressed for a hidden empty slot).
+    // Label under the square (suppressed for a hidden empty slot; a gap's
+    // "add" label is hover-only, matching the dashed square — m03708).
+    const bool gapShowing =
+        !s.has || s.insert ? (hover_ || s.presetEmpty) : s.has;
     if (s.has || hover_ || s.presetEmpty) {
       juce::Font f = labelFont();
-      juce::String t = s.has ? s.title : juce::String("add");
-      if (s.has && !s.active) t = t + "  (off)";
+      const bool gap = !s.has || s.insert;  // an insert is an empty slot
+      if (gap && !gapShowing) return;
+      juce::String t = gap ? juce::String("add") : s.title;
+      if (!gap && !s.active) t = t + "  (off)";
       const juce::Rectangle<int> label(
           cell.getX() + 2, cell.getBottom() - Row::kLabelH, cell.getWidth() - 4,
           Row::kLabelH);
@@ -356,12 +363,14 @@ class NodeView::NodeStrip : public juce::Component {
 public:
   explicit NodeStrip(NodeView& v) : v_(v) {
     addAndMakeVisible(name_);
-    modeB_.onClick = [this] { v_.cycleStripMode(); };
+    modeB_.onClick = [this] { v_.openModeMenu(); };
     addAndMakeVisible(modeB_);
-    typeB_.onClick = [this] { v_.cycleStripType(); };
+    typeB_.onClick = [this] { v_.openTypeMenu(); };
     addAndMakeVisible(typeB_);
     addAndMakeVisible(power_);
     addAndMakeVisible(remove_);
+    hide_.onClick = [this] { v_.hideStrip(); };
+    addAndMakeVisible(hide_);
     addAndMakeVisible(convPlot_);
     convPlot_.setVisible(false);
     loadIr_.onClick = [this] { v_.startConvIrLoader(g_lastStripBlockId); };
@@ -377,6 +386,7 @@ public:
   juce::TextButton& typeB() { return typeB_; }
   IconButton& power() { return power_; }
   IconButton& remove() { return remove_; }
+  IconButton& hide() { return hide_; }
   KernelPlot& convPlot() { return convPlot_; }
   juce::TextButton& loadIr() { return loadIr_; }
   std::vector<Knob*>& knobs() { return knobs_; }
@@ -392,6 +402,7 @@ public:
     typeB_.setVisible(false);
     power_.setVisible(false);
     remove_.setVisible(false);
+    hide_.setVisible(false);
     convPlot_.setVisible(false);
     loadIr_.setVisible(false);
     repaint();
@@ -434,6 +445,7 @@ private:
   juce::TextButton typeB_;
   IconButton power_{Icon::Power, 20};
   IconButton remove_{Icon::Trash2, 20};
+  IconButton hide_{Icon::X, 20};  // the strip's ONLY close (left of power)
   juce::TextButton loadIr_;
   KernelPlot convPlot_;
   std::vector<Knob*> knobs_;
@@ -480,7 +492,13 @@ void NodeView::chainChanged(const ChainState&) {
 }
 
 void NodeView::refresh() {
+  // A revision is usually OUR gesture (a knob turn in the strip below).
+  // Preserve the selection across the rebuild, or the strip closes the very
+  // moment the user touches a knob. clearSelection below still drops a block
+  // that genuinely left the chain.
+  const std::string selected = model_.selectedId;
   model_ = Model(services_.chain.state());
+  if (!selected.empty()) model_.select(selected);
   const auto& lane = Model::laneOf(services_.chain.state());
   bool presetEmpty = true;
   for (const auto& it : lane)
@@ -646,8 +664,11 @@ void NodeView::cancelDrag() {
 // ------------------------------------------------------------------ paint
 
 void NodeView::paint(juce::Graphics& g) {
+  if (!nodeView_) return;  // must be FIRST: this component sits ON TOP of
+  // the gallery in ChainScreen (added after it, same bounds) — painting the
+  // panel background while inactive hides the gallery, so BOTH header pills
+  // end up showing the node view (user m03703).
   paint::fill(g, getLocalBounds().toFloat(), 0.0f, theme::kPanelBg);
-  if (!nodeView_) return;
 
   // The signal line(s): row 1 always; row 2 only while it carries blocks.
   // Drawn as SEGMENTS behind the cells — the line disappears around every
@@ -685,13 +706,20 @@ void NodeView::paint(juce::Graphics& g) {
     }
   }
 
-  // Elbow connector: row 0's line ends at the grid's right edge, drops down
-  // to row 1's level, and enters row 1 from the left (snake topology).
+  // Two-row transition (Line 6 stadium): NO snake elbow. Row 0's line ends
+  // at the grid's right edge with a small out arrow; row 1 starts at the
+  // grid's left edge with an in arrow. Both rows flow left -> right.
   if (nRows == 2) {
     const float y0 = rowY_ + cellSquare_ / 2.0f;
     const float y1 = rowY_ + (kRowH + kRowGap) + cellSquare_ / 2.0f;
     const float gridRight = rowX_ + Row::kSlotCount * cellW_;
-    g.fillRect(juce::Rectangle<float>(gridRight - 1.0f, y0, 2.0f, y1 - y0));
+    g.setColour(theme::kMuted);
+    Icons::draw(g, Icon::ArrowRight,
+                juce::Rectangle<float>(gridRight - 13.0f, y0 - 6.5f, 13.0f, 13.0f),
+                theme::kMuted);
+    Icons::draw(g, Icon::ArrowRight,
+                juce::Rectangle<float>(rowX_ - 13.0f, y1 - 6.5f, 13.0f, 13.0f),
+                theme::kMuted);
   }
 
   // In / Out labels: "In" left of the line start, "Out" right of the end.
@@ -913,7 +941,8 @@ void NodeView::updateStripKnobValues(NodeStrip& st, const ChainItem& b) {
   const double out = b.params.outputGain;
   auto setv = [&](size_t i, const KnobScale* sc, double raw) {
     if (i < knobs.size()) knobs[i]->setValue((float)knobFromStored(*sc, raw));
-    if (i < vals.size()) vals[i] = sc->format(raw);
+    if (i < vals.size())
+      vals[i] = sc->format(knobFromStored(*sc, raw));
   };
   if (b.isEffect) {
     setv(0, &scales::percent(), mix);
@@ -933,13 +962,13 @@ void NodeView::updateStripKnobValues(NodeStrip& st, const ChainItem& b) {
 void NodeView::layoutStripKnobs() {
   auto& st = *strip_;
   if (!strip_->isVisible()) return;
-  // Header: name left, mode cycler centred in the gap to its right,
-  // power/remove at the far right (buttons fixed first).
+  // Header: name left; power / remove / hide at the far right (buttons fixed
+  // first). The hide X is the strip's ONLY close — left of the power button.
   st.power().setBounds(st.getWidth() - 32, 10, 20, 20);
-  st.remove().setBounds(st.power().getX() - 8 - 20, 9,
-                        20, 24);
+  st.remove().setBounds(st.power().getX() - 8 - 20, 9, 20, 24);
+  st.hide().setBounds(st.remove().getX() - 8 - 20, 9, 20, 24);
   // Stacked header: bold name over the coloured mode line (Q-Cortex).
-  const int nameW = juce::jmax(0, juce::jmin(st.getWidth() - 220, 320));
+  const int nameW = juce::jmax(0, juce::jmin(st.getWidth() - 248, 320));
   st.name().setBounds(14, 3, nameW, 20);
   st.modeB().setBounds(14, 23, nameW, 22);
   st.typeB().setBounds(14, 46, nameW, 14);
@@ -969,27 +998,58 @@ void NodeView::layoutStripKnobs() {
 
 
 
-void NodeView::cycleStripMode() {
+// The strip's mode/type menu shares the cell-menu lifecycle: one live
+// ContextMenu at a time, released before the next opens.
+void NodeView::showStripMenu(std::vector<ContextMenu::Item> items) {
+  if (auto* old = stripMenu_.release()) {
+    old->close();
+    juce::MessageManager::callAsync([old] { delete old; });
+  }
+  stripMenu_ = std::make_unique<ContextMenu>(std::move(items));
+  // openAtPoint takes the CONTEXT component's LOCAL coordinates (same
+  // convention as NodeCell::openMenu).
+  stripMenu_->openAtPoint(*strip_,
+                          juce::Point<int>(strip_->getWidth() / 2,
+                                           strip_->getHeight() / 2));
+}
+
+// Menu opener for the strip's mode line (m02657: menus, not click/hold
+// cyclers). A row per mode of the block's engine; the current one is marked.
+void NodeView::openModeMenu() {
   const auto* b = model_.selectedId.empty()
                       ? nullptr
                       : services_.chain.state().findBlock(model_.selectedId);
   if (b == nullptr || !b->isEffect) return;
   const std::string k = b->effectKind.toStdString();
   const std::string id = model_.selectedId;
+  std::vector<ContextMenu::Item> items;
+  const auto push = [&](int m, const juce::String& label, bool current) {
+    items.push_back({"• " + label, Icon::Check, help::Key::nodeMode,
+                     [this, id, k, m] {
+                       if (k == "delay")
+                         services_.chain.setBlockParam(id, "delayMode", (double)m);
+                       else if (k == "compressor")
+                         services_.chain.setBlockParam(id, "compMode", (double)m);
+                       else
+                         services_.chain.setBlockParam(id, "reverbMode", (double)m);
+                     },
+                     current});
+  };
   if (k == "delay") {
-    services_.chain.setBlockParam(id, "delayMode",
-                                  (double)((b->delayMode + 1) % Delay::kNumModes));
+    for (int m = 0; m < Delay::kNumModes; ++m) push(m, Delay::modeName(m), b->delayMode == m);
   } else if (k == "compressor") {
-    services_.chain.setBlockParam(id, "compMode",
-                                  (double)((b->compMode + 1) % Compressor::kNumModes));
+    for (int m = 0; m < Compressor::kNumModes; ++m) push(m, Compressor::modeName(m), b->compMode == m);
   } else if (k == "reverb") {
-    services_.chain.setBlockParam(id, "reverbMode",
-                                  (double)((b->reverbMode + 1) % Reverb::kNumModes));
+    for (int m = 0; m < Reverb::kNumModes; ++m)
+      push(m, juce::String(std::string(Reverb::modeName(m))), b->reverbMode == m);
+  } else {
+    return;  // chorus / tremolo / convolution have no mode axis.
   }
-  // chorus / tremolo / convolution have no mode axis.
+  showStripMenu(std::move(items));
 }
 
-void NodeView::cycleStripType() {
+// Menu opener for the strip's type line (multi-type reverb modes only).
+void NodeView::openTypeMenu() {
   const auto* b = model_.selectedId.empty()
                       ? nullptr
                       : services_.chain.state().findBlock(model_.selectedId);
@@ -997,9 +1057,30 @@ void NodeView::cycleStripType() {
   const int m = juce::jlimit(0, Reverb::kNumModes - 1, b->reverbMode);
   const int n = Reverb::numTypes(m);
   if (n < 2) return;
-  const int t = (nodeReverbTypeOf(*b, m) + 1) % n;
-  services_.chain.setBlockParam(model_.selectedId,
-                                "reverbType" + juce::String(m), (double)t);
+  const std::string id = model_.selectedId;
+  std::vector<ContextMenu::Item> items;
+  for (int t = 0; t < n; ++t)
+    items.push_back(
+        {reverbTypeName(m, t), Icon::Check, help::Key::nodeMode,
+         [this, id, m, t] {
+           services_.chain.setBlockParam(
+               id, "reverbType" + juce::String(m), (double)t);
+         },
+         t == nodeReverbTypeOf(*b, m)});
+  showStripMenu(std::move(items));
+}
+
+bool NodeView::stripShown() const {
+  return strip_ != nullptr && strip_->isVisible();
+}
+
+void NodeView::hideStrip() {
+  // The X (left of power) is the strip's ONLY close: clear the selection and
+  // the strip follows. Turning a knob must never close it (refresh() now keeps
+  // the selection across revisions).
+  if (!model_.selectedId.empty()) model_.clearSelection(model_.selectedId);
+  syncStrip();
+  for (auto& c : cells_) c->repaint();
 }
 
 void NodeView::pullConvPreview(NodeStrip& st, const ChainItem& b) {

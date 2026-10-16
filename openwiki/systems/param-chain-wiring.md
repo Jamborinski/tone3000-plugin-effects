@@ -25,12 +25,16 @@ sources:
     resource: repo://plugin/ui/services/ParamBinding.h
   - id: openwiki-source-1ab80eacb9347c8b1c174e6c
     resource: repo://plugin/ui/services/UiPrefs.h
+  - id: openwiki-source-96abacb5521ee5e28cd21153
+    resource: repo://plugin/ui/views/ChainScreen.cpp
   - id: openwiki-source-78c1e0c44679b66507a1889c
     resource: repo://plugin/ui/views/PluginHeader.cpp
+  - id: openwiki-source-a20d64964340cf417ace1f84
+    resource: repo://test/src/add_at_slot_tests.cpp
 generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-16T00:50:33.519Z
+    at: 2026-10-16T18:52:35.705Z
 ---
 
 

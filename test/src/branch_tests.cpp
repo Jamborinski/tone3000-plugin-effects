@@ -378,14 +378,15 @@ TEST(ChainBranchTest, AlignsBranchLaneEndWithTrunk) {
   EXPECT_EQ(laneSize(proc.getChainState(-1), "chainRight"), 3);
 
   // Structural trunk edits keep the ends even: removing the un-tapped tone
-  // shortens the trunk's prefix (blk-b slides to index 0), so the branch
-  // lane grows back to 4.
+  // LEAVES ITS SLOT AS A GAP (m02657 item 8: empty slots persist), so the
+  // trunk keeps its 5 slots, blk-b slides to index 1, and the tap sits one
+  // column deeper — the branch lane trims to 5 - 2.
   ASSERT_TRUE(proc.removeChainBlock("blk-a"));
   {
     const juce::var state = proc.getChainState(-1);
     ASSERT_TRUE(state["branch"].isObject());
     EXPECT_EQ(laneSize(state, "chain"), 5);
-    EXPECT_EQ(laneSize(state, "chainRight"), 4);
+    EXPECT_EQ(laneSize(state, "chainRight"), 3);
   }
 
   // Clearing the branch restores the plain per-lane minimum.

@@ -804,7 +804,15 @@ bool TONE3000Processor::removeChainBlock(const std::string& blockId) {
         }
         pushChainHistory();
         removed = std::move(*it);
-        chain.erase(it);
+        it = chain.erase(it);
+        // Leave the gap: a fresh insert AT the erase position is what the
+        // grid renders as an empty slot. `it` is chain.erase(it)'s return —
+        // the first element after the hole, so the placeholder goes exactly
+        // where the block was. normalizeLaneInserts trims only TAIL surplus,
+        // so a mid-lane gap persists (m02657).
+        chain.insert(it, std::make_unique<ChainBlock>(
+                             juce::Uuid().toString().toStdString(),
+                             ChainBlockType::INSERT));
         // Dropping below the minimum grows the lane back to it (at the end);
         // removing the tapped block clears the branch, and a shortened trunk
         // re-aligns the branch lane's end.

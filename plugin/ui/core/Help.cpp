@@ -199,7 +199,7 @@ std::map<Key, String> buildTable() {
   t[Key::nodeViewToggle] =
       U("View: switch the chain screen between the tile gallery and the node grid (the small block signal path + parameter strip).");
   t[Key::nodeView] =
-      U("Node grid: the left lane as one snake signal path (top row left-to-right, middle right-to-left, bottom left-to-right). An empty slot is a pass-through; drag a block to move it, or drop one from the palette to place it.");
+      U("Node grid: the left lane as a signal path in one or two left-to-right rows (row 2 enters under the In label after row 1's out arrow). An empty slot is a pass-through; drag a block to move it, or drop one from the palette to place it.");
   t[Key::nodeEmptySlot] =
       U("Empty slot: the signal passes straight through. Drop a block from the palette (or drag an existing one in) to populate it.");
   t[Key::node] =

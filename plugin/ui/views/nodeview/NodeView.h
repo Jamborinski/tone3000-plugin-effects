@@ -41,6 +41,7 @@
 #include "model/ChainState.h"
 #include "services/ChainStore.h"
 #include "services/Services.h"
+#include "widgets/ContextMenu.h"  // showStripMenu's Item vector (nested name)
 #include "widgets/Popover.h"  // OverlayHost (the root's overlay layer: the drag ghost's home)
 
 namespace t3k::ui::nodeview {
@@ -56,6 +57,9 @@ public:
 
   void setNodeView(bool active);
   bool nodeViewActive() const { return nodeView_; }
+  // The strip's current visibility (probe for the toggle drive's assertion).
+  // Defined in the .cpp: NodeStrip is a nested class, incomplete here.
+  bool stripShown() const;
   void paint(juce::Graphics& g) override;
   void resized() override;
 
@@ -94,8 +98,10 @@ private:
   // (a knob in flight): chrome + knob values only, no rebuild.
   void updateStripChrome(const ChainItem&);
   void updateStripKnobValues(NodeStrip&, const ChainItem&);
-  void cycleStripMode();
-  void cycleStripType();
+  void openModeMenu();
+  void openTypeMenu();
+  void showStripMenu(std::vector<ContextMenu::Item> items);
+  void hideStrip();  // the strip's X (left of power) — the ONLY close path
   void pullConvPreview(NodeStrip&, const ChainItem&);
   // Convolution node: the strip's "Load IR..." button (async FileChooser,
   // mirrors EffectTile's convIrChooser_ flow).
@@ -112,6 +118,7 @@ private:
   int dragFromCell_ = -1;
   bool dragInGrid_ = false;
   std::unique_ptr<juce::FileChooser> convIrChooser_;  // strip "Load IR..."
+  std::unique_ptr<ContextMenu> stripMenu_;  // the strip's mode/type menus
   bool nodeView_ = true;
 
   // Row layout metrics (resized()).

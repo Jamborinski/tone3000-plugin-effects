@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:8c456138702f32807abb73d67460508a5ea05c06a54e87db0259048b4e152808",
+  "pageVersion": "sha256:4af9a8ffc8be4dd56ab72301b7c526f96fe17f7b8e8bb6ab60cca8f2d14bc971",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -67,16 +67,6 @@
       ]
     },
     {
-      "id": "claim_e52cce16c067481c852c206903add27c",
-      "statement": "DspTests compiles the real plugin DSP sources and exactly one UI file, ../plugin/ui/core/Labels.cpp (the KnobScale readout formatter that the scale-contract tests link); everything else in plugin/ui (views, widgets, services, NativeEditor) is excluded. A green DspTests run (e.g. the 2026-10-13 plate final pass, 469/469) therefore does NOT prove the UI links -- UI changes must be verified via the GUI plugin build target (cmake --build build --target TONE3000_Standalone, done for the plate pass) or the testbed before committing.",
-      "evidence": [
-        {
-          "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
-        }
-      ]
-    },
-    {
       "id": "claim_82abd5a8c472415b94d24c18a3759cb4",
       "statement": "The reverb tile's Dry knob uses scales::reverbDry(), a standalone scale that mirrors scales::convGain() exactly (toDisplay linear-maps 0..1 to -24..+24 dB, toStored/fromStored are the identity, format renders signed dB). It is a separate scale so reverb-tile and conv-tile each name their own dry face independently; the conv tile's convDry knob keeps using scales::convGain().",
       "evidence": [
@@ -123,26 +113,12 @@
       ]
     },
     {
-      "id": "claim_0f2ab92333fd48e4912ae1d25e6c076e",
-      "statement": "DspTests compiles the real plugin DSP sources plus the two UI files test/CMakeLists.txt names: plugin/ui/core/Labels.cpp (the KnobScale readout formatter that the scale-contract tests link) and the theme palette via the theme_palette_tests.cpp #include of plugin/ui/core/Theme.h (the swappable-theme ticket); everything else in plugin/ui (views, widgets, services, NativeEditor) is excluded. Therefore a green DspTests run does NOT prove the UI links: UI changes must be verified via the testbed (--selftest / --capture diff) or a GUI plugin build target before committing. Current suite size (2026-10-17, after the T-DAT-001 wave 3 closeout, the compressor engine/wrapper reorg commit 3ffb35b, the swappable-theme + OCR-capture tickets, and the FET/Vari-Mu label fix commit 5f93ab9): 512 tests / 75 test suites (re-verified green on every gate).",
-      "evidence": [
-        {
-          "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
-        },
-        {
-          "resource": "repo://test/src/theme_palette_tests.cpp",
-          "version": "repo-file-v1:sha256:a4b2c7e546782ded3ed6111eaa5ec87899a54c3e64e765a738637710d46f18c8"
-        }
-      ]
-    },
-    {
       "id": "claim_7a35e225e4e540e09fe5d4300dc7a546",
       "statement": "COMPRESSOR TYPE CYCLER (commit 3ffb35b; label order fixed 2026-10-14, commit 5f93ab9): the full compressor tile carries a per-mode TYPE cycler button (typeCycle_, a juce::TextButton) that mirrors the reverb tile's type cycler. Bounds (resized(), full view): typeCycle_ at (W - 14 - 44, 44, 44, 26) — right of the mode selector, which slides left to modeCombo_ (W - 14 - 44 - 8 - 120, 44, 120, 26); both share the y=44 band. It is HIDDEN in the compact tile (typeCycle_.setVisible(!compact_)) because the compact header's free slot (65..95) belongs to the PUNCH toggle and 28..62 to the mode cycler, and with one self-type per mode the cycler is a one-entry no-op until a mode gains a second type. Button text = compactCompTypeName(block_.compMode, compType): the self-type labels in ENGINE-index order {VCA, TUB, OPT, FET, VMU} (0=VCA 1=Tube 2=Opto 3=FET 4=Vari-Mu; the 5f93ab9 fix reordered the array from the old display order {… VMU, FET} so the chip text matches the loaded engine — FET is the 1176, Vari-Mu the 670). Help text = help::text(help::Key::compType) (a Key in Help.h, desktop blurb in Help.cpp) + a per-mode compTypeBlurb (\"general-purpose VCA -- smooth RMS soft-knee compression\" / \"Tube-STA -- warm tube detector, the output-stage saturation\" / \"Opto-2A -- two-stage optical cells, ratio-dependent slow attack\" / \"FET -- four-amp sum, fast transient grab + stage coloration\" / \"Vari-Mu 670 -- release-position ladder, feedback detection, odd-only crunch\"); the compMode help text in Help.cpp distinguishes FET (the 1176 four-amp feedback detector) from Vari-Mu (the Fairchild 670 release-position ladder). onClick opens a PopupMenu listing i in [0, Compressor::numTypes(m)) as \"<label> — <blurb>\" (current checked) and calls enterCompType(choice-1). syncCompTypeButton(m) re-syncs button + help text (called from enterMode); enterCompType(type) is a no-op if type == compTypeOf(block_), else sets block_.compType VERBATIM (the engine clamps via setParams/numTypes) and calls services().chain.setBlockParam(blockId(), \"compType\", (double)type), then syncCompTypeButton.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/Help.cpp",
-          "version": "repo-file-v1:sha256:a905fc5161afd2a9bdaabb2838f441d722d2646b754c8703fdfb855be1787164"
+          "version": "repo-file-v1:sha256:e72f421c0524295a648fca84cc5c8f08093a21b3f16c54262295a57e3835d395"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
@@ -187,10 +163,24 @@
           "version": "repo-file-v1:sha256:a4b2c7e546782ded3ed6111eaa5ec87899a54c3e64e765a738637710d46f18c8"
         }
       ]
+    },
+    {
+      "id": "claim_67e54747bf2042d4bde94436c2ddf84d",
+      "statement": "DspTests compiles the real plugin DSP sources plus exactly FOUR plugin/ui files: plugin/ui/core/Labels.cpp (the KnobScale readout formatter the scale-contract tests link), plugin/ui/views/nodeview/NodeModel.cpp + plugin/ui/model/ChainState.cpp (the node grid's read-side model and its data source), and plugin/ui/views/gallery/EffectParams.cpp (the shared paramsFor knob table, added by the node-view batch 2 for the strip_knob_tests.cpp per-knob readout tests; include path adds plugin/ui and plugin/ui/views/nodeview). The theme palette is exercised by theme_palette_tests.cpp's #include of plugin/ui/core/Theme.h. Everything else in plugin/ui (views, widgets, services, NativeEditor) is excluded, so a green DspTests run (530 tests after the batch-2 pass; the count is a lower-bound snapshot) does NOT prove the UI links: UI changes must be verified via the testbed (--selftest / --capture) or a GUI plugin build target before committing.",
+      "evidence": [
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+        },
+        {
+          "resource": "repo://test/src/strip_knob_tests.cpp",
+          "version": "repo-file-v1:sha256:a3697da383741fc698923439943bacde1ddf063beb539b895e560cd2da06778e"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-15T16:15:57.360Z"
+    "at": "2026-10-16T18:52:35.705Z"
   }
 }

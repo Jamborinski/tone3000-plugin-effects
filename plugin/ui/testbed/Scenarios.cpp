@@ -8,6 +8,8 @@
 #include "views/browser/FilterChip.h"
 #include "widgets/DbMeter.h"
 #include "widgets/DragScroller.h"
+#include "widgets/Knob.h"
+#include "views/nodeview/NodeViewToggle.h"
 
 namespace t3k::ui::testbed {
 
@@ -48,15 +50,57 @@ const std::map<juce::String, Drive>& drives() {
        }},
       {"node-toggle-live",
        [](PluginRoot& root, MockBackend&) {
-         if (auto* seg = byHelpPrefix(root, "View: switch the chain screen")) {
-           // Click the NODE segment (the toggle's second child), not the
-           // already-selected gallery one.
-           for (int i = 0; i < seg->getParentComponent()->getNumChildComponents(); ++i) {
-             auto* c = seg->getParentComponent()->getChildComponent(i);
-             if (c != nullptr && c != seg) click(root, *c);
-           }
-         }
+         // The m02657 imitated-click proof: the user turned the strip's knobs
+         // in the node view and then clicked the GALLERY segment of the
+         // header toggle, expecting the gallery back. This drive plays the
+         // FULL cycle with visibility assertions, so a broken direction or a
+         // self-closing strip fails the selftest instead of a capture:
+         //   gallery -> node -> select + turn a knob -> gallery -> node.
+         auto* node = find(root, [](juce::Component& c) {
+           return dynamic_cast<nodeview::NodeView*>(&c) != nullptr;
+         });
+         auto* gallery = find(root, [](juce::Component& c) {
+           return dynamic_cast<ChainView*>(&c) != nullptr;
+         });
+         auto* toggle = find(root, [](juce::Component& c) {
+           return dynamic_cast<NodeViewToggle*>(&c) != nullptr;
+         });
+         jassert(node != nullptr && gallery != nullptr && toggle != nullptr);
+         if (node == nullptr || gallery == nullptr || toggle == nullptr) return;
+         // The toggle's two segments paint left=gallery, right=node.
+         auto* left = toggle->getChildComponent(0);
+         auto* right = toggle->getChildComponent(1);
+         jassert(left != nullptr && right != nullptr);
+         if (left == nullptr || right == nullptr) return;
+         const auto* nv = dynamic_cast<nodeview::NodeView*>(node);
+         // Start on the gallery (the scenario's initial state).
+         jassert(gallery->isVisible() && !node->isVisible());
+         // 1. gallery -> node.
+         click(root, *right);
          wait(400);
+         jassert(!gallery->isVisible() && node->isVisible());
+         // 2. select a block + turn its knob while in the node view.
+         clickByHelp(root, "Node: ");
+         wait(200);
+         jassert(nv->stripShown());
+         if (auto* knob = find(root, [](juce::Component& c) {
+               return dynamic_cast<Knob*>(static_cast<juce::Component*>(&c)) != nullptr
+                      && c.isVisible();
+             })) {
+           dynamic_cast<Knob*>(knob)->setValue(0.66f);
+           wait(200);
+           // The strip SURVIVES the knob turn (m02657 item 9: it used to
+           // close on the revision the turn lands).
+           jassert(nv->stripShown());
+         }
+         // 3. node -> gallery (THE direction the user could not do).
+         click(root, *left);
+         wait(400);
+         jassert(gallery->isVisible() && !node->isVisible());
+         // 4. gallery -> node again (the capture's end state).
+         click(root, *right);
+         wait(400);
+         jassert(!gallery->isVisible() && node->isVisible());
        }},
       {"chrome-account-signed-out",
        [](PluginRoot& root, MockBackend&) {

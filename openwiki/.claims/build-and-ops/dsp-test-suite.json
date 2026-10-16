@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:5fc4240efbf1b3b1d42c462d4f2fe32d0eaca760851dcbc1de396653044d00b1",
+  "pageVersion": "sha256:968438f020b1e19675906f74ddd92165d7f49c0c767e32cb3c536a31813e6a22",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -13,22 +13,12 @@
       ]
     },
     {
-      "id": "claim_3890caf1a2e74a6d9fc7b3dffe71d557",
-      "statement": "GUI sources are excluded from DspTests: the only UI file pulled in is plugin/ui/core/Labels.cpp (the KnobScale readout formatter the scale-contract tests link), with plugin/ui/core on the include path — so a green DspTests run does not prove the UI links.",
-      "evidence": [
-        {
-          "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
-        }
-      ]
-    },
-    {
       "id": "claim_5a6caa1d89544c4da8088d5e4fd846de",
       "statement": "The fixture set in test/files/ ships the ground truth: NAM A2 captures (a2-am-test-2.nam, a2-amp-test.nam, a2-amp-cab-test.nam), cabinet IRs (cab-ir-test.wav, cab-ir-test-2.wav), reverb IRs (reverb-ir-mono-test.wav, reverb-ir-stereo-test.wav), and em240-gold-plate-5s.wav, the EMT 240 plate reference used by the plate-mode law tests.",
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
+          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
         }
       ]
     },
@@ -38,7 +28,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
+          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
         }
       ]
     },
@@ -48,7 +38,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
+          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
@@ -80,7 +70,7 @@
         },
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
+          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
         }
       ]
     },
@@ -90,7 +80,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
+          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
         },
         {
           "resource": "repo://test/src/dat_probe_tests.cpp",
@@ -108,7 +98,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
+          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
         }
       ]
     },
@@ -140,23 +130,55 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:7c7ff45edb5fd7c59e001ea5bc7b2a8e7494060cf9cda5f6f6deb226af4e3d27"
+          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
         }
       ]
     },
     {
-      "id": "claim_35bbb85979a644a98ed600f9a5dbd9dc",
-      "statement": "The DspTests suite count advanced to 512 at the 2026-10-17 theme/OCR/label closeout (511 had been the count since T-DAT-001 wave-3 across the reorg commits) — the count is a lower-bound snapshot, never assert a stale total on a red run.",
+      "id": "claim_9b3c22799b234c21904ef8fd83186f6e",
+      "statement": "DspTests pulls exactly FOUR UI files from the plugin tree: plugin/ui/core/Labels.cpp (the KnobScale readout formatter the scale-contract tests link), plugin/ui/views/nodeview/NodeModel.cpp (the node grid's read-side model) + plugin/ui/model/ChainState.cpp (NodeModel's data source, added by the 2026-10-18 node-view closeout), and plugin/ui/views/gallery/EffectParams.cpp (the shared paramsFor knob table, added by the node-view batch-2 closeout for the per-knob strip readout tests); the include path adds plugin/ui and plugin/ui/views/nodeview on top of plugin/ui/core. A green DspTests run still does not prove the full UI links — views, widgets, and services remain excluded.",
       "evidence": [
         {
-          "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:7890e7799091c9fbd1d898808314a9db03d0544a7a3287fd227f74e3c152b965"
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+        }
+      ]
+    },
+    {
+      "id": "claim_b93e1f70f63e44658da686909cdb9d82",
+      "statement": "The node-view closeout (2026-10-18, commit 9201777) added src/node_model_tests.cpp — 9 NodeModel tests covering the kind table, paletteKinds, blockAt/indexOf, and the orderWith erase+insert splice used by grid drag-and-drop (permutation invariance, exact-slot move, same-slot no-op, unknown-id untouched, target clamping, empty-square move) — bringing the suite to 521 tests. The count is a lower-bound snapshot; never assert a stale total on a red run.",
+      "evidence": [
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+        },
+        {
+          "resource": "repo://test/src/node_model_tests.cpp",
+          "version": "repo-file-v1:sha256:9b5c4f1890d0df5cfedddbec7b8b346f8ff5da1db446d5cd7e5bbf31be15180e"
+        }
+      ]
+    },
+    {
+      "id": "claim_76cf8b4cdbf04167b3a7cc46f7fe28f0",
+      "statement": "The node-view batch-2 closeout (2026-10-16) added two registered suites — src/strip_knob_tests.cpp (7 StripKnob tests: every paramsFor knob of Delay/Chorus/Tremolo/Compressor vca+clip/Reverb (all 6 modes)/Convolution/Tone round-trips through knobFromStored/knobToStored in [0,1] and formats to a finite readout; numeric readouts are capped at 4 chars so INT64-scale garbage fails) and src/add_at_slot_tests.cpp (2 AddAtSlot tests: landToneBlock fills a mid-lane gap in place and a trailing insert at the end; the mid-lane test also asserts a removed effect's blockId is gone while the gap persists, exercising removeChainBlock's fresh-INSERT-at-erased-position behavior). test/CMakeLists.txt also compiles ../plugin/ui/views/gallery/EffectParams.cpp (the per-kind knob table the strip and EffectTile share) for the strip tests. Suite total after this pass: 530 tests from 78 suites; the count is a lower-bound snapshot — never assert a stale total on a red run.",
+      "evidence": [
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+        },
+        {
+          "resource": "repo://test/src/add_at_slot_tests.cpp",
+          "version": "repo-file-v1:sha256:7bd93c2831b06ae76d46f1241363ccb5195b957423fd1c1b56ce157a22a4f996"
+        },
+        {
+          "resource": "repo://test/src/strip_knob_tests.cpp",
+          "version": "repo-file-v1:sha256:a3697da383741fc698923439943bacde1ddf063beb539b895e560cd2da06778e"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-15T16:15:57.360Z"
+    "at": "2026-10-16T18:52:35.705Z"
   }
 }

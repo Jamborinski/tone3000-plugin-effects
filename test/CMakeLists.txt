@@ -99,8 +99,17 @@ target_sources(DspTests PRIVATE
     ../plugin/ui/core/Labels.cpp
     # The node grid's read-side model (NodeModel tests): the strip/drag
     # logic the node view paints from. ChainState is its data source.
+    # EffectParams.cpp: the per-kind knob table the strip (and the EffectTile)
+    # build from — the per-knob readout tests (strip_knob_tests.cpp) compile
+    # the REAL face, not a copy.
     ../plugin/ui/views/nodeview/NodeModel.cpp
     ../plugin/ui/model/ChainState.cpp
+    ../plugin/ui/views/gallery/EffectParams.cpp
+    # The node strip's per-knob readout guards (m02657).
+    src/strip_knob_tests.cpp
+    # The node grid's add-at-slot guards (m02657 item 7): landToneBlock
+    # fills a clicked mid-lane gap in place instead of prepending.
+    src/add_at_slot_tests.cpp
     ../plugin/src/TunerDetector.cpp
 )
 
@@ -120,6 +129,8 @@ target_include_directories(DspTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/ui
     # NodeModel.h itself lives in the nodeview subdir.
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/ui/views/nodeview
+    # EffectParams.h (the strip's knob table) includes gallery-relative headers.
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/ui/views/gallery
     # ChainDomain.h pulls in the AudioDSPTools resampling boundary.
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/AudioDSPTools
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/AudioDSPTools/dsp/ResamplingContainer/Dependencies

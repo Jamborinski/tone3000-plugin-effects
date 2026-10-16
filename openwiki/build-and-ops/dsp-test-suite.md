@@ -4,8 +4,6 @@ title: DSP test suite (DspTests)
 description: The GoogleTest suite under test/ that compiles the real plugin sources against shipped fixtures — the canonical ./script/test-dsp.sh loop, the gtest silent-0 comma-filter trap, and the a2-amp / cab-ir / reverb-ir fixture set.
 tags: [testing, dsp-tests, googletest, fixtures, script]
 sources:
-  - id: openwiki-source-8037e2358a2c4f9b2c722a11
-    resource: repo://AGENTS.md
   - id: openwiki-source-55524a0481117f837a7bb064
     resource: repo://docs/tickets/complete/reverb-budget-quality-uplift.md
   - id: openwiki-source-c80500302f4c953f647993ed
@@ -14,10 +12,14 @@ sources:
     resource: repo://script/test-dsp.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
+  - id: openwiki-source-a20d64964340cf417ace1f84
+    resource: repo://test/src/add_at_slot_tests.cpp
   - id: openwiki-source-22db8812ec3771683e6a7ddc
     resource: repo://test/src/dat_probe_tests.cpp
   - id: openwiki-source-9122ffeb8c7fc8e2457955ce
     resource: repo://test/src/effect_tests.cpp
+  - id: openwiki-source-949fdcdad6535ec560064216
+    resource: repo://test/src/node_model_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
     resource: repo://test/src/plate_family_tests.cpp
   - id: openwiki-source-9ff2ef0f7a4a77aed9113ced
@@ -28,10 +30,12 @@ sources:
     resource: repo://test/src/reverb_ceiling_p0_tests.cpp
   - id: openwiki-source-cbee6d7a85a49f4ea2d7a315
     resource: repo://test/src/reverb_quality_p1_tests.cpp
+  - id: openwiki-source-a9b10161f0531edad6c09d8e
+    resource: repo://test/src/strip_knob_tests.cpp
 generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-15T16:15:57.360Z
+    at: 2026-10-16T18:52:35.705Z
 ---
 
 # DSP test suite (DspTests)
@@ -123,9 +127,15 @@ confirm the "Running N tests" line is non-zero before trusting the result.**
 
 ## Suite size
 
-The suite grows with features — **503 tests as of the 2026-10-16
-reverb-budget-quality-uplift + Digital-subtype closeout** (487 after the
-2026-10-15 R2 final cut; 493 after the P2.1 plate density uplift; 503 after
-the full pass 1 + the `TypeScaffold` re-scope). On a failure or count
-mismatch, **never assert a stale total** — check the build RC and that the
-test names you expect actually ran.
+The suite grows with features — **530 tests / 78 suites as of the 2026-10-16
+node-view batch-2 closeout** (7 StripKnob per-knob readout tests in
+`test/src/strip_knob_tests.cpp` + 2 AddAtSlot lane-gap tests in `test/src/
+add_at_slot_tests.cpp`; history: 487 after the 2026-10-15 R2 final cut; 493
+after the P2.1 plate density uplift; 503 after the full pass 1 + the
+`TypeScaffold` re-scope; 511 / 75 after the T-DAT-001 wave-3 closeout
+(2026-10-17, plate/probe suites + StandaloneStateAutosave stub); 512 / 75
+after the 2026-10-14 swappable-theme palette test; 521 after the 2026-10-18
+node-view closeout (9 NodeModel tests + `views/gallery/EffectParams.cpp`
+pulled into the compile)). On a failure or count mismatch, **never assert a
+stale total** — check the build RC and that the test names you expect
+actually ran.
