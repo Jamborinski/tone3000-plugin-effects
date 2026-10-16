@@ -81,3 +81,20 @@ test/CMakeLists.txt, test/src/branch_tests.cpp, test/src/strip_knob_tests.cpp
 (new), test/src/add_at_slot_tests.cpp (new).
 NEXT ON RESUME: OpenWiki update (528→530) → commit (batch-2 files only) →
 ticket log → Stage A win-standalone → spec spc-1792124703829-5965 → met.
+
+## CLOSEOUT (2026-10-16, final)
+- OpenWiki update run e52c7e6b: 8/8 pages complete (stale claims reconciled;
+  snake-elbow + NodeStrip-56px claims retracted; strip menus/hide/gaps/tone-node
+  claims added; 530/78 count history in quickstart + dsp-test-suite).
+- Prose hand-edits: system(s)/ui/node-view.md (4 sections), quickstart.md,
+  build-and-ops/dsp-test-suite.md "Suite size" (→530/78 history).
+- COMMIT f840af0 on refactor/repo-organization: 30 files, batch-2 only
+  (plugin src + ui + tests + openwiki + this handoff + node-main/*.png).
+  NOT in the commit (other tickets / local): docs/agents/ui-snapshots.md,
+  docs/tickets/*-draft.md, release-notes-v0.0.1{2,3}.md, .pi/.
+- DspTests 530/530 (77→78 suites) at closeout; UiTestbed links; selftest
+  baseline failures (DragScroller/CrossLaneDrag/ScrollSurfaces ×5) proven
+  pre-existing via git stash.
+- Stage A: script/win-standalone.sh in progress at this writing.
+- Spec spc-1792124703829-5965 → met (all 9 items in code + click-imitated
+  verification + 7 StripKnob unit tests).
