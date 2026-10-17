@@ -199,6 +199,95 @@ void MockBackend::setNamSlimSizeDefault(double slimSize) {
 
 // Written through like the processor does it, so the store's synchronous
 // refresh after the call replays into the open block card.
+// Batch-3: real chain mutations (the testbed drives add/remove/knob-change
+// through these; no-ops made the drives prove nothing). The `obj` helper is
+// the anonymous-namespace one above.
+
+bool MockBackend::removeChainBlock(const std::string& blockId) {
+  for (const auto* lane : {"chain", "chainRight"}) {
+    if (auto* blocks = chain_[lane].getArray()) {
+      for (int i = 0; i < blocks->size(); ++i) {
+        const auto& block = (*blocks)[i];
+        if (block["blockId"].toString().toStdString() != blockId) continue;
+        if (block["kind"].toString() == "insert") continue;  // inserts are not removable
+        blocks->remove(i);
+        bumpChain();
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool MockBackend::reorderChainBlocks(const std::vector<std::string>& orderedIds) {
+  // The id list is per-lane: find the lane whose ids are all present, then
+  // re-sort that lane's array to match (inserts move with the effects, as in
+  // the processor's orderWith + normalizeLaneInserts).
+  for (const auto* lane : {"chain", "chainRight"}) {
+    auto* blocks = chain_[lane].getArray();
+    if (blocks == nullptr || blocks->size() != static_cast<int>(orderedIds.size()))
+      continue;
+    std::vector<juce::var> byId;
+    byId.reserve(blocks->size());
+    for (int i = 0; i < blocks->size(); ++i) {
+      const auto& b = (*blocks)[i];
+      bool inList = false;
+      for (const auto& id : orderedIds)
+        inList |= (b["blockId"].toString().toStdString() == id);
+      if (inList) byId.push_back(b);
+    }
+    if (static_cast<int>(byId.size()) != static_cast<int>(orderedIds.size())) continue;
+    blocks->clearQuick();
+    for (const auto& id : orderedIds) {
+      for (int i = 0; i < static_cast<int>(byId.size()); ++i)
+        if (byId[i]["blockId"].toString().toStdString() == id)
+          blocks->add(byId[i]);
+    }
+    if (blocks->size() != static_cast<int>(orderedIds.size())) return false;
+    bumpChain();
+    return true;
+  }
+  return false;
+}
+
+std::string MockBackend::addEffectBlock(const juce::String& kind,
+                                        const juce::String& side, int index) {
+  const juce::String laneName = (side.toStdString() == "right") ? "chainRight" : "chain";
+  auto* blocks = chain_[laneName.toRawUTF8()].getArray();
+  if (blocks == nullptr) return {};
+  const std::string id = juce::Uuid().toString().toStdString();
+  // The mock never hydrates an engine, so the block is live (loaded) the
+  // moment it lands, like the real addEffectBlock.
+  juce::var params = obj({{"enabled", 1.0},
+                          {"mix", (kind == "compressor") ? 1.0 : 0.5},
+                          {"inputGain", 0.5},
+                          {"outputGain", 0.5}});
+  juce::var item =
+      obj({{"blockId", juce::String(id)}, {"kind", "effect"}, {"effectKind", kind},
+           {"params", params}});
+  const int at = juce::jlimit(0, blocks->size(), index);
+  blocks->insert(at, item);
+  bumpChain();
+  return id;
+}
+
+bool MockBackend::setBlockParam(const std::string& blockId,
+                                const juce::String& param, double value) {
+  for (const auto* lane : {"chain", "chainRight"}) {
+    if (auto* blocks = chain_[lane].getArray()) {
+      for (auto& block : *blocks) {
+        auto* params = block["params"].getDynamicObject();
+        if (block["blockId"].toString().toStdString() != blockId || params == nullptr)
+          continue;
+        params->setProperty(param, value);
+        bumpChain();
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool MockBackend::setBlockSlimSize(const std::string& blockId, double slimSize) {
   for (const auto* lane : {"chain", "chainRight"}) {
     if (auto* blocks = chain_[lane].getArray()) {

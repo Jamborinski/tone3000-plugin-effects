@@ -98,6 +98,7 @@ private:
   // (a knob in flight): chrome + knob values only, no rebuild.
   void updateStripChrome(const ChainItem&);
   void updateStripKnobValues(NodeStrip&, const ChainItem&);
+  void refreshModeLine(NodeStrip&, const ChainItem&);
   void openModeMenu();
   void openTypeMenu();
   void showStripMenu(std::vector<ContextMenu::Item> items);

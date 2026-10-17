@@ -46,6 +46,7 @@ explicit UTF-8 pointer: `juce::String (juce::CharPointer_UTF8 ("text \u2014"))`.
 
 ## GUI / display runs (this repo)
 - **Never run GUI selftests on the live X display** — `juce::Process::makeForegroundProcess()` + `grabFocus()` steals the operator's keyboard/mouse. UI tests run under a private display: `xvfb-run -a -s "-screen 0 1280x800x24" <bin> --selftest` (`script/test-ui.sh` wraps this).
+- **`UiTestbed --help` / unknown flags fall through to the LIVE interactive window** on the user's real display — there is no `--help` flag. Any UiTestbed/TileShot invocation not deliberately aimed at a shot/selftest must run under `xvfb-run -a`; a stray live window = kill it (`pkill UiTestbed_artefacts`) and re-run isolated.
 - **`xvfb-run` + a relative binary path: not found** (its dash wrapper cd's elsewhere) — invoke by ABSOLUTE path.
 - **`build/` vs `build-ui/` are separate CMake trees:** `TONE3000_Standalone` builds in `build/`; `TileShot` + `UiTestbed` live in `build-ui/`. A stale `TileShot` silently dumps the OLD layout — rebuild after C++ edits before `--tile`.
 - **Tool flag ownership:** `TileShot` owns `--list/--dump/--tile/--golden/--regen`; `UiTestbed` owns `--selftest`. Passing a flag to the wrong tool just HANGS — kill and retry with the right binary.

@@ -126,6 +126,29 @@ void clickByHelp(PluginRoot& root, const juce::String& helpPrefix, bool right) {
   if (auto* c = byHelpPrefix(root, helpPrefix)) click(root, *c, right);
 }
 
+void dragTo(PluginRoot& root, juce::Component& source, juce::Component& dest) {
+  auto source2 = juce::Desktop::getInstance().getMainMouseSource();
+  const auto start = source.getLocalBounds().getCentre().toFloat();
+  const auto end = source.getLocalPoint(&dest, dest.getLocalBounds().getCentre()).toFloat();
+  const auto mods = juce::ModifierKeys::leftButtonModifier;
+  const auto now = juce::Time::getCurrentTime();
+  const auto mk = [&](const juce::Point<float>& pos, int buttons) {
+    return juce::MouseEvent(source2, pos, mods, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, &source,
+                            &source, now, pos, now, buttons, false);
+  };
+  source.mouseDown(mk(start, 1));
+  wait(10);
+  // A handful of intermediate points: the first crosses the drag travel
+  // threshold (starts the ghost), the rest drive the drop highlight.
+  for (int i = 1; i <= 6; ++i) {
+    const auto p = start + (end - start) * (i / 6.0f);
+    source.mouseDrag(mk(p, 1));
+    wait(10);
+  }
+  source.mouseUp(mk(end, 1));
+  wait(10);
+}
+
 void fill(PluginRoot& root, const juce::String& placeholder, const juce::String& text) {
   if (auto* e = inputWithPlaceholder(root, placeholder)) {
     hover(root, *e);

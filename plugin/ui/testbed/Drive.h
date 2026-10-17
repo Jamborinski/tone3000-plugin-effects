@@ -38,6 +38,13 @@ void scrollIntoView(juce::Component& target);
 // disappears, whatever is now under the pointer gets the hover.
 void click(PluginRoot& root, juce::Component& target, bool right = false);
 void clickByHelp(PluginRoot& root, const juce::String& helpPrefix, bool right = false);
+// A real drag: press at `source`'s centre, travel through a few intermediate
+// points (so the target component's mouseDrag sees pointer movement), release
+// at `dest`'s centre. Components must share a coordinate ancestor deep enough
+// that the travel crosses the drag threshold (the node grid's cell drag);
+// `source` receives the press AND the drag stream — its mouseDrag drives the
+// ghost (see NodeCell::mouseDrag / NodeView::cellDragMove).
+void dragTo(PluginRoot& root, juce::Component& source, juce::Component& dest);
 // Type into a field (replaces its contents, fires change callbacks).
 void fill(PluginRoot& root, const juce::String& placeholder, const juce::String& text);
 // fill() then Return.

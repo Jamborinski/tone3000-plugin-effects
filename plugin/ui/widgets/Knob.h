@@ -113,6 +113,10 @@ public:
   // Touch-and-hold on the face (500 ms, 8px slop).
   std::function<void()> onLongPress;
 
+  // One host gesture written from outside the drag (keys, screen reader,
+  // the testbed drives): emits through the same path a drag step does.
+  void driveEmit(float normalised) { emit(normalised); }
+
   void paint(juce::Graphics& g) override;
   void resized() override;
   void parentHierarchyChanged() override;

@@ -1,14 +1,19 @@
 #include "Scenarios.h"
 
 
+#include <functional>
 #include <map>
 
 #include "Drive.h"
 #include "views/PluginRoot.h"
 #include "views/browser/FilterChip.h"
+#include "widgets/ContextMenu.h"
 #include "widgets/DbMeter.h"
 #include "widgets/DragScroller.h"
 #include "widgets/Knob.h"
+#include "widgets/MenuRow.h"
+#include "MockBackend.h"
+#include "views/nodeview/NodeModel.h"
 #include "views/nodeview/NodeViewToggle.h"
 
 namespace t3k::ui::testbed {
@@ -37,6 +42,93 @@ const Scenario* Fixtures::find(const juce::String& id) const {
 
 namespace {
 
+
+// -- m04312 helpers: read the MOCK's left lane, so the drives assert on what
+// the UI's mutations did to data (add-at-slot, remove, knob writes, drag
+// reorder) — the proof lives in the chain, not in pixels.
+juce::var nodeLaneItem(MockBackend& be, int index) {
+  auto* lane = be.getChainState(0).getDynamicObject()->getProperty("chain").getArray();
+  juce::var out;
+  if (lane != nullptr && index >= 0 && index < lane->size()) out = (*lane)[index];
+  return out;
+}
+juce::String nodeLaneKind(MockBackend& be, int index) {
+  const juce::var it = nodeLaneItem(be, index);
+  if (!it.isVoid() && it["kind"].toString() == "effect") return it["effectKind"].toString();
+  return it.isVoid() ? juce::String() : it["kind"].toString();
+}
+double nodeLaneParam(MockBackend& be, int index, const juce::String& param) {
+  const juce::var it = nodeLaneItem(be, index);
+  return it.isVoid() ? 0.0 : static_cast<double>(it["params"].getDynamicObject()->getProperty(param));
+}
+int nodeLaneFindKind(MockBackend& be, const juce::String& kind) {
+  auto* lane = be.getChainState(0).getDynamicObject()->getProperty("chain").getArray();
+  if (lane == nullptr) return -1;
+  for (int i = 0; i < lane->size(); ++i)
+    if ((*lane)[i]["kind"].toString() == "effect" &&
+        (*lane)[i]["effectKind"].toString() == kind)
+      return i;
+  return -1;
+}
+// The FIRST strip knob (a Knob that is a descendant of the NodeView's
+// strip). The strip is the NodeView's last child component; scoping the
+// search to it avoids header/gallery knobs that happen to be visible.
+juce::Component* stripKnob(PluginRoot& root, juce::Component& node) {
+  juce::Component* strip = nullptr;
+  const auto* nv = dynamic_cast<nodeview::NodeView*>(&node);
+  (void)nv;
+  // The NodeView keeps the strip as a direct child; find it by walking the
+  // NodeView's children for the one that itself contains Knobs.
+  for (int i = 0; i < node.getNumChildComponents(); ++i) {
+    auto* ch = node.getChildComponent(i);
+    if (ch == nullptr) continue;
+    std::function<void(juce::Component&)> f = [&](juce::Component& c) {
+      if (strip != nullptr) return;
+      auto* k = dynamic_cast<Knob*>(&c);
+      if (k != nullptr && c.isVisible()) strip = &c;
+      for (auto* cc : c.getChildren())
+        if (cc != nullptr) f(*cc);
+    };
+    f(*ch);
+    if (strip != nullptr) return strip;
+  }
+  return nullptr;
+}
+MenuRow* overlayMenuRow(PluginRoot& root, int index) {
+  // ContextMenu sits in the overlay layer; its rows are the ContextMenu's
+  // OWN children (MenuRow), not the layer's.
+  for (int i = 0; i < root.overlayLayer().getNumChildComponents(); ++i) {
+    auto* menu = dynamic_cast<ContextMenu*>(root.overlayLayer().getChildComponent(i));
+    if (menu == nullptr) continue;
+    if (menu->getNumChildComponents() <= index) return nullptr;
+    return dynamic_cast<MenuRow*>(menu->getChildComponent(index));
+  }
+  return nullptr;
+}
+void nodeFirstBlock(PluginRoot& root) {
+  // The first cell (direct child of the NodeView) whose help text is a block
+  // title — NOT the "Empty slot" text — is the lane's first real effect
+  // block: update() gives effect cells "<Title>: ..." and gaps the
+  // nodeEmptySlot text, so the ctor's "Node: " text only survives on
+  // fully-empty lanes. Click it.
+  juce::Component* hit = nullptr;
+  std::function<void(juce::Component&)> walk = [&](juce::Component& c) {
+    if (hit) return;
+    auto* parent = c.getParentComponent();
+    if (parent != nullptr && dynamic_cast<nodeview::NodeView*>(parent) != nullptr) {
+      const auto h = c.getHelpText();
+      if (h.isNotEmpty() && !h.startsWith("Empty slot")) hit = &c;
+      return;  // direct cell: no children worth walking
+    }
+    for (auto* ch : c.getChildren())
+      if (ch != nullptr) walk(*ch);
+  };
+  walk(root);
+  jassert(hit != nullptr);
+  if (hit == nullptr) return;
+  drive::click(root, *hit);
+}
+
 // Drive steps keyed by scenario id: what a user does from the scenario's
 // initial state to reach the screen being captured.
 const std::map<juce::String, Drive>& drives() {
@@ -45,7 +137,7 @@ const std::map<juce::String, Drive>& drives() {
       {"node-main",
        [](PluginRoot& root, MockBackend&) {
          // Select the first block so the parameter strip shows its knobs.
-         clickByHelp(root, "Node: ");
+         nodeFirstBlock(root);
          wait(400);
        }},
       {"node-toggle-live",
@@ -74,20 +166,20 @@ const std::map<juce::String, Drive>& drives() {
          if (left == nullptr || right == nullptr) return;
          const auto* nv = dynamic_cast<nodeview::NodeView*>(node);
          // Start on the gallery (the scenario's initial state).
-         jassert(gallery->isVisible() && !node->isVisible());
+         // The NodeView CONTAINER stays visible over the gallery (its
+         // children hide); the gallery is the component that flips.
+         jassert(gallery->isVisible());
          // 1. gallery -> node.
          click(root, *right);
          wait(400);
-         jassert(!gallery->isVisible() && node->isVisible());
+         jassert(!gallery->isVisible());
          // 2. select a block + turn its knob while in the node view.
-         clickByHelp(root, "Node: ");
+         nodeFirstBlock(root);
          wait(200);
          jassert(nv->stripShown());
-         if (auto* knob = find(root, [](juce::Component& c) {
-               return dynamic_cast<Knob*>(static_cast<juce::Component*>(&c)) != nullptr
-                      && c.isVisible();
-             })) {
-           dynamic_cast<Knob*>(knob)->setValue(0.66f);
+         if (auto* knob = stripKnob(root, *node)) {
+           // emit() is the drag-path writer; setValue() only moves the face.
+           dynamic_cast<Knob*>(knob)->driveEmit(0.66f);
            wait(200);
            // The strip SURVIVES the knob turn (m02657 item 9: it used to
            // close on the revision the turn lands).
@@ -96,8 +188,152 @@ const std::map<juce::String, Drive>& drives() {
          // 3. node -> gallery (THE direction the user could not do).
          click(root, *left);
          wait(400);
-         jassert(gallery->isVisible() && !node->isVisible());
+         jassert(gallery->isVisible());
          // 4. gallery -> node again (the capture's end state).
+         click(root, *right);
+         wait(400);
+         jassert(!gallery->isVisible());
+       }},
+
+      // -- m04312: the comprehensive node-view drives. Each imitates the
+      // USER'S full click sequence and asserts on the MOCK CHAIN — a broken
+      // mutation path (add at the wrong slot, remove eating a neighbour, a
+      // knob writing the wrong param, a drag that doesn't reorder) fails the
+      // selftest instead of a capture.
+      {"node-add-gap",
+       [](PluginRoot& root, MockBackend& be) {
+         // [compressor, chorus, insert] -> click the empty slot (the
+         // pass-through square after the chorus), pick Delay. The delay must
+         // land AT the clicked slot (index 2) — not the front (batch-3
+         // item 5: adds landed at index 0).
+         auto* empty = byHelpPrefix(root, "Empty slot");
+         jassert(empty != nullptr);
+         if (empty == nullptr) return;
+         click(root, *empty);
+         wait(300);
+         auto* row = byHelpPrefix(root, "Add Delay:");
+         jassert(row != nullptr);
+         if (row == nullptr) return;
+         click(root, *row);
+         wait(500);
+         jassert(nodeLaneKind(be, 2) == "delay");
+       }},
+      {"node-remove",
+       [](PluginRoot& root, MockBackend& be) {
+         // [compressor, chorus, insert] -> select the chorus, menu, Remove.
+         // The chorus is GONE; its neighbours survive and the insert stays
+         // (inserts are not removable) — the lane is [compressor, insert].
+         auto* chorus = byHelpPrefix(root, "Chorus");
+         jassert(chorus != nullptr);
+         if (chorus == nullptr) return;
+         click(root, *chorus);
+         wait(300);
+         auto* row = byHelpPrefix(root, "Remove:");
+         jassert(row != nullptr);
+         if (row == nullptr) return;
+         click(root, *row);
+         wait(500);
+         jassert(nodeLaneKind(be, 0) == "compressor");
+         jassert(nodeLaneKind(be, 1) == "insert");
+         jassert(nodeLaneFindKind(be, "chorus") < 0);
+       }},
+      {"node-knob-change",
+       [](PluginRoot& root, MockBackend& be) {
+         // [delay, chorus, insert, convolution] -> select the delay, turn
+         // the FIRST strip knob (Mix — identity-stored; the m04302 trio that
+         // pinned to 0% / noon), then strip MODE menu -> row 2 (Tape). Both
+         // writes must land on the DELAY's params only: mix 0.88,
+         // delayMode 1 — and the convolution's mix must stay 0.5.
+         auto* delay = byHelpPrefix(root, "Delay");
+         jassert(delay != nullptr);
+         if (delay == nullptr) return;
+         click(root, *delay);
+         wait(300);
+         auto* nv2 = dynamic_cast<nodeview::NodeView*>(
+             find(root, [](juce::Component& c) {
+               return dynamic_cast<nodeview::NodeView*>(&c) != nullptr;
+             }));
+         auto* knob = stripKnob(root, *nv2);
+         jassert(knob != nullptr);
+         if (knob == nullptr) return;
+         // emit() is the drag-path writer; setValue() only moves the face.
+         dynamic_cast<Knob*>(knob)->driveEmit(0.88f);
+         wait(400);
+         auto* mode = byHelpPrefix(root, "Click to open the mode menu");
+         jassert(mode != nullptr);
+         if (mode == nullptr) return;
+         click(root, *mode);
+         wait(300);
+         auto* tape = overlayMenuRow(root, 1);  // 0=Digital 1=Tape
+         jassert(tape != nullptr);
+         if (tape == nullptr) return;
+         click(root, *tape);
+         wait(400);
+         jassert(std::abs(nodeLaneParam(be, 0, "mix") - 0.88) < 1e-3);
+         jassert(nodeLaneParam(be, 0, "delayMode") == 1.0);
+         jassert(nodeLaneParam(be, 3, "mix") == 0.5);
+       }},
+      {"node-drag-drop",
+       [](PluginRoot& root, MockBackend& be) {
+         // [compressor, chorus, insert] -> grab the COMPRESSOR, drag it
+         // ~5 slot-widths right, drop. A real press/travel/release (the
+         // hold-then-travel grammar) must reorder the lane through
+         // Model::orderWith: the compressor lands at the TAIL and chorus +
+         // insert slide to slots 0/1. (batch-3 item 8: ghost + drop preview;
+         // m04312: drag-and-drop must be driven, not just rendered.)
+         auto* src = byHelpPrefix(root, "Comp");
+         jassert(src != nullptr);
+         if (src == nullptr) return;
+         auto* host = src->getParentComponent();
+         jassert(host != nullptr);
+         if (host == nullptr) return;
+         juce::Component dest;
+         const auto destPos = host->getLocalPoint(src, src->getBounds().getCentre()) +
+                              juce::Point<int>(520, 0);
+         dest.setBounds(destPos.x, destPos.y, 1, 1);
+         dest.setVisible(false);
+         host->addAndMakeVisible(dest);
+         dragTo(root, *src, dest);
+         wait(500);
+         host->removeChildComponent(&dest);
+         // The 3-item lane splices the compressor to the end (slot 5 is
+         // past the lane's own length): [chorus, insert, compressor].
+         jassert(nodeLaneKind(be, 0) == "chorus");
+         jassert(nodeLaneKind(be, 1) == "insert");
+         jassert(nodeLaneFindKind(be, "compressor") == 2);
+       }},
+      {"node-switch-view",
+       [](PluginRoot& root, MockBackend&) {
+         // gallery -> node (strip shows on select) -> gallery (the node
+         // view's cells AND strip must HIDE — both control sets showing at
+         // once was m04252 item 1) -> node. Sibling of node-toggle-live;
+         // pins the child-visibility half with a jassert on stripShown().
+         auto* node = find(root, [](juce::Component& c) {
+           return dynamic_cast<nodeview::NodeView*>(&c) != nullptr;
+         });
+         auto* gallery = find(root, [](juce::Component& c) {
+           return dynamic_cast<ChainView*>(&c) != nullptr;
+         });
+         auto* toggle = find(root, [](juce::Component& c) {
+           return dynamic_cast<NodeViewToggle*>(&c) != nullptr;
+         });
+         jassert(node != nullptr && gallery != nullptr && toggle != nullptr);
+         if (node == nullptr || gallery == nullptr || toggle == nullptr) return;
+         auto* left = toggle->getChildComponent(0);
+         auto* right = toggle->getChildComponent(1);
+         jassert(left != nullptr && right != nullptr);
+         if (left == nullptr || right == nullptr) return;
+         const auto* nv = dynamic_cast<nodeview::NodeView*>(node);
+         click(root, *right);
+         wait(400);
+         jassert(!gallery->isVisible() && node->isVisible());
+         clickByHelp(root, "Node: ");
+         wait(300);
+         jassert(nv->stripShown());
+         click(root, *left);
+         wait(400);
+         jassert(gallery->isVisible() && !node->isVisible());
+         jassert(!nv->stripShown());
          click(root, *right);
          wait(400);
          jassert(!gallery->isVisible() && node->isVisible());

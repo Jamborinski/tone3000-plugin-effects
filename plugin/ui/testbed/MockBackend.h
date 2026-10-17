@@ -41,8 +41,8 @@ public:
   bool refreshToneMetadata(const juce::String&) override { return true; }
   bool switchModel(const std::string&, int, const juce::var&) override { return true; }
   bool retryModelLoad(const std::string&) override { return true; }
-  bool removeChainBlock(const std::string&) override { return true; }
-  bool reorderChainBlocks(const std::vector<std::string>&) override { return true; }
+  bool removeChainBlock(const std::string& blockId) override;
+  bool reorderChainBlocks(const std::vector<std::string>&) override;
   // Moves the block between lanes like the processor, and records the call
   // so self-tests can check what a cross-lane drop asked for.
   bool moveBlockToChain(const std::string& blockId, const juce::String& side, int index) override;
@@ -55,7 +55,7 @@ public:
   std::string duplicateChainBlock(const std::string&, const juce::String&, int) override { return {}; }
   bool copyChainBlock(const std::string&) override { return true; }
   std::string pasteChainBlock(const juce::String&, int) override { return {}; }
-  std::string addEffectBlock(const juce::String&, const juce::String&, int) override { return {}; }
+  std::string addEffectBlock(const juce::String&, const juce::String&, int) override;
   bool swapChains() override { return true; }
   bool setChainBranch(const juce::String&, const std::string&) override { return true; }
   bool clearChainBranch() override { return true; }
@@ -72,7 +72,7 @@ public:
   void persistParamAsMachineDefault(const juce::String& id) override { machineDefaults_.push_back(id); }
   const std::vector<juce::String>& machineDefaults() const { return machineDefaults_; }
 
-  bool setBlockParam(const std::string&, const juce::String&, double) override { return true; }
+  bool setBlockParam(const std::string&, const juce::String&, double) override;
   bool setBlockSlimSize(const std::string& blockId, double slimSize) override;
   bool setBlockEqBand(const std::string&, int, const juce::var&) override { return true; }
   bool setBlockEqEnabled(const std::string&, bool) override { return true; }

@@ -172,3 +172,141 @@ TEST(StripKnob, ToneEveryKnob) {
   for (const auto& e : stripKnobs(b))
     checkKnob("tone", e.label, *e.scale, e.raw);
 }
+
+// ---------------------------------------------------------------------------
+// m04302 — DRIVE the knob, don't just format it.
+//
+// The batch-2 tests above only checked the SCALES (knobFromStored / format),
+// not the strip's own position math. That is why the Mix slammed to ~0% and
+// In/Out pinned to noon (0.5 stored → knobFromStored(gainDb,0.5)≈0.5104)
+// without a single test failing: the strip was computing the knob position
+// with knobFromStored even for the identity-stored trio (Mix %, In/Out dB),
+// which maps the raw 0..1 storage through a display scale. The strip fix
+// (NodeView::syncStrip / updateStripKnobValues): identity scales
+// (percent / gainDb) take the RAW stored value as the 0..1 knob position,
+// every other scale keeps knobFromStored. Pin EXACTLY that mapping:
+//   1. computed position is inside [0,1];
+//   2. for Mix/In/Out the position is the raw value verbatim (==, not ~);
+//   3. round-trip through the strip's own write path (identity ? pos :
+//      knobToStored) returns the same position — a turn cannot drift the
+//      readout.
+namespace {
+
+// The strip's position math, verbatim (NodeView::syncStrip + setv).
+float stripPosition(const KnobScale& sc, double raw) {
+  const bool identity =
+      (&sc == &t3k::ui::scales::percent() || &sc == &t3k::ui::scales::gainDb());
+  return identity ? (float)raw
+                  : (float)knobFromStored(sc, raw);
+}
+
+void checkPosition(const std::string& kind, const EffectParams& e,
+                   bool isIdentityTrio) {
+  const float pos = stripPosition(*e.scale, e.raw);
+  EXPECT_GE(pos, 0.0f) << kind << " / " << e.label << " pos(" << e.raw << ")";
+  EXPECT_LE(pos, 1.0f) << kind << " / " << e.label << " pos(" << e.raw << ")";
+  if (isIdentityTrio) {
+    // THE m04302 assertion: identity-stored knobs take the raw value.
+    EXPECT_FLOAT_EQ(pos, (float)e.raw)
+        << kind << " / " << e.label << " must be raw-stored (==), got " << pos
+        << " from raw " << e.raw;
+  }
+  // Round-trip through the strip's own write path (onChange: identity ? v :
+  // knobToStored). A programmatic turn lands where the readout says it will.
+  const double raw2 =
+      (isIdentityTrio) ? pos : knobToStored(*e.scale, pos);
+  const float pos2 = stripPosition(*e.scale, raw2);
+  EXPECT_NEAR(pos2, pos, 1e-5f)
+      << kind << " / " << e.label << " turn round-trip: " << pos << " -> "
+      << raw2 << " -> " << pos2;
+  // The readout the user sees for that position is sane (short, ASCII).
+  const juce::String t = e.scale->format(pos);
+  EXPECT_FALSE(t.isEmpty()) << kind << " / " << e.label;
+  EXPECT_EQ(t.length(), (int)t.toStdString().size())
+      << kind << " / " << e.label << " format non-ASCII: " << t;
+  const std::string ts = t.toStdString();
+  bool numeric = !ts.empty();
+  for (const char c : ts) numeric &= (c >= '0' && c <= '9') || c == '-' || c == '.';
+  if (numeric) EXPECT_LE(ts.size(), 4) << kind << " / " << e.label << " = '" << t << "'";
+}
+
+void driveAll(const std::string& label, ChainItem& b) {
+  for (const auto& e : stripKnobs(b)) {
+    const bool trio =
+        (e.param == "mix" || e.param == "inputGain" || e.param == "outputGain");
+    checkPosition(label, e, trio);
+  }
+}
+
+}  // namespace
+
+TEST(StripKnobPosition, MixInOutAreRawForEveryKind) {
+  for (const char* k : {"delay", "chorus", "tremolo", "compressor",
+                        "reverb", "convolution"}) {
+    auto b = itemFor(k);
+    // Walk the trio through several real stored values (not just 0.5) so the
+    // raw mapping is pinned across the face, not at a single point.
+    for (double v : {0.0, 0.25, 0.5, 0.75, 0.999}) {
+      b.params.mix = v;
+      b.params.inputGain = v;
+      b.params.outputGain = v;
+      for (const auto& e : stripKnobs(b)) {
+        const bool trio =
+            (e.param == "mix" || e.param == "inputGain" ||
+             e.param == "outputGain");
+        if (trio) checkPosition(k, e, true);
+      }
+    }
+  }
+}
+
+TEST(StripKnobPosition, DelayDrive) {
+  auto b = itemFor("delay");
+  driveAll("delay", b);
+}
+
+TEST(StripKnobPosition, ChorusDrive) {
+  auto b = itemFor("chorus");
+  driveAll("chorus", b);
+}
+
+TEST(StripKnobPosition, TremoloDrive) {
+  auto b = itemFor("tremolo");
+  driveAll("tremolo", b);
+}
+
+TEST(StripKnobPosition, CompressorDrive) {
+  auto vca = itemFor("compressor");
+  vca.compMode = 0;
+  driveAll("compressor[vca]", vca);
+  auto clip = itemFor("compressor");
+  clip.compMode = 2;  // the CLIP arm face
+  driveAll("compressor[clip]", clip);
+}
+
+TEST(StripKnobPosition, ReverbDriveEveryMode) {
+  for (int m = 0; m < Reverb::kNumModes; ++m) {
+    auto b = itemFor("reverb");
+    b.reverbMode = m;
+    driveAll("reverb[mode" + std::to_string(m) + "]", b);
+  }
+}
+
+TEST(StripKnobPosition, ConvolutionDrive) {
+  auto b = itemFor("convolution");
+  driveAll("conv", b);
+}
+
+TEST(StripKnobPosition, ToneDrive) {
+  ChainItem b;
+  b.isInsert = false;
+  b.isEffect = false;
+  b.params.inputGain = 0.5;
+  b.params.outputGain = 0.5;
+  b.params.mix = 1.0;
+  for (const auto& e : stripKnobs(b)) {
+    const bool trio =
+        (e.param == "mix" || e.param == "inputGain" || e.param == "outputGain");
+    checkPosition("tone", e, trio);
+  }
+}

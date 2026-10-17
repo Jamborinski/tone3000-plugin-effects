@@ -1307,6 +1307,407 @@
       "hasDrive": true
     },
     {
+      "id": "node-add-gap",
+      "section": "main",
+      "title": "Signal chain - node grid, add into the empty slot",
+      "description": "The node view with compressor + chorus + an empty slot. The drive clicks the empty slot, opens the add menu, and picks Delay: the delay lands AT the clicked slot, not the front of the chain.",
+      "chain": {
+        "revision": 1,
+        "canUndo": true,
+        "canRedo": false,
+        "stereoEnabled": false,
+        "activeSide": "left",
+        "stereoInput": false,
+        "standalone": false,
+        "inputMode": "stereo",
+        "namFullSize": false,
+        "multiCore": true,
+        "sampleRate": 48000,
+        "chain": [
+          {
+            "blockId": "fx-compressor0",
+            "kind": "effect",
+            "effectKind": "compressor",
+            "params": {
+              "enabled": true,
+              "mix": 0.5,
+              "inputGain": 0.5,
+              "outputGain": 0.5,
+              "compMode": 0,
+              "compRatio": 0.5,
+              "compAttackMs": 0.5,
+              "compReleaseMs": 0.5,
+              "compThresh": 0.5,
+              "compDrive": 0.25,
+              "compKnee": 0.5,
+              "compClip": 0.5,
+              "compPunch": 0.5
+            }
+          },
+          {
+            "blockId": "fx-chorus0",
+            "kind": "effect",
+            "effectKind": "chorus",
+            "params": {
+              "enabled": true,
+              "mix": 0.5,
+              "inputGain": 0.5,
+              "outputGain": 0.5,
+              "chorusRateHz": 0.8,
+              "chorusDepthMs": 1.5,
+              "chorusSpread": 1.0,
+              "chorusTone": 0.0,
+              "chorusWaveV2": 0
+            }
+          },
+          {
+            "blockId": "ins-1",
+            "kind": "insert"
+          }
+        ]
+      },
+      "hints": true,
+      "banner": false,
+      "auth": false,
+      "localStorage": {
+        "t3k.nodeView": "true"
+      },
+      "hasDrive": true
+    },
+    {
+      "id": "node-remove",
+      "section": "main",
+      "title": "Signal chain - node grid, remove a block",
+      "description": "The node view with compressor + chorus + an empty slot. The drive selects the chorus, opens its menu, and removes it: the chorus is gone, its neighbours survive, and the insert stays.",
+      "chain": {
+        "revision": 1,
+        "canUndo": true,
+        "canRedo": false,
+        "stereoEnabled": false,
+        "activeSide": "left",
+        "stereoInput": false,
+        "standalone": false,
+        "inputMode": "stereo",
+        "namFullSize": false,
+        "multiCore": true,
+        "sampleRate": 48000,
+        "chain": [
+          {
+            "blockId": "fx-compressor0",
+            "kind": "effect",
+            "effectKind": "compressor",
+            "params": {
+              "enabled": true,
+              "mix": 0.5,
+              "inputGain": 0.5,
+              "outputGain": 0.5,
+              "compMode": 0,
+              "compRatio": 0.5,
+              "compAttackMs": 0.5,
+              "compReleaseMs": 0.5,
+              "compThresh": 0.5,
+              "compDrive": 0.25,
+              "compKnee": 0.5,
+              "compClip": 0.5,
+              "compPunch": 0.5
+            }
+          },
+          {
+            "blockId": "fx-chorus0",
+            "kind": "effect",
+            "effectKind": "chorus",
+            "params": {
+              "enabled": true,
+              "mix": 0.5,
+              "inputGain": 0.5,
+              "outputGain": 0.5,
+              "chorusRateHz": 0.8,
+              "chorusDepthMs": 1.5,
+              "chorusSpread": 1.0,
+              "chorusTone": 0.0,
+              "chorusWaveV2": 0
+            }
+          },
+          {
+            "blockId": "ins-1",
+            "kind": "insert"
+          }
+        ]
+      },
+      "hints": true,
+      "banner": false,
+      "auth": false,
+      "localStorage": {
+        "t3k.nodeView": "true"
+      },
+      "hasDrive": true
+    },
+    {
+      "id": "node-knob-change",
+      "section": "main",
+      "title": "Signal chain - node grid, turn a strip knob + pick a mode",
+      "description": "The node view with delay + chorus + empty slot + convolution. The drive selects the delay, turns its first strip knob (Mix), then opens the strip mode menu and picks Tape: both writes land on the delay's params only.",
+      "chain": {
+        "revision": 1,
+        "canUndo": true,
+        "canRedo": false,
+        "stereoEnabled": false,
+        "activeSide": "left",
+        "stereoInput": false,
+        "standalone": false,
+        "inputMode": "stereo",
+        "namFullSize": false,
+        "multiCore": true,
+        "sampleRate": 48000,
+        "chain": [
+          {
+            "blockId": "fx-delay",
+            "kind": "effect",
+            "effectKind": "delay",
+            "params": {
+              "enabled": true,
+              "mix": 0.5,
+              "inputGain": 0.5,
+              "outputGain": 0.5,
+              "delayTimeMs": 350,
+              "delayBpm": 120,
+              "delaySynced": false,
+              "delayMode": 0,
+              "delayPing": false,
+              "delayHeads": 1,
+              "delayChip": false,
+              "delayMod": 0.0,
+              "delayMmRateHz": 0.5,
+              "delayMagRateHz": 0.2,
+              "delayRateHz": 6,
+              "delayFeedback": 0.3,
+              "delayDamping": 0.5,
+              "delaySpread": 0.0
+            }
+          },
+          {
+            "blockId": "fx-chorus",
+            "kind": "effect",
+            "effectKind": "chorus",
+            "params": {
+              "enabled": true,
+              "mix": 0.5,
+              "inputGain": 0.5,
+              "outputGain": 0.5,
+              "chorusRateHz": 0.8,
+              "chorusDepthMs": 1.5,
+              "chorusSpread": 1.0,
+              "chorusTone": 0.0,
+              "chorusWaveV2": 0
+            }
+          },
+          {
+            "blockId": "ins-1",
+            "kind": "insert"
+          },
+          {
+            "blockId": "fx-conv",
+            "kind": "effect",
+            "effectKind": "convolution",
+            "params": {
+              "enabled": true,
+              "mix": 0.5,
+              "inputGain": 0.5,
+              "outputGain": 0.5,
+              "convGain": 0.5,
+              "convDry": 0.5,
+              "convWidth": 1.0,
+              "convWidthMono": 0.0,
+              "convWidthStereo": 1.0,
+              "convStartS": 0.0,
+              "convEndS": 1.8,
+              "convPitch": 0.5,
+              "convPreMs": 0.0,
+              "convFadeIn": 0.0,
+              "convFadeOut": 0.0
+            }
+          },
+          {
+            "blockId": "ins-2",
+            "kind": "insert"
+          },
+          {
+            "blockId": "fx-reverb",
+            "kind": "effect",
+            "effectKind": "reverb",
+            "params": {
+              "enabled": true,
+              "mix": 0.5,
+              "inputGain": 0.5,
+              "outputGain": 0.5,
+              "reverbDecayMs": 2000.0,
+              "reverbPreMs": 10.0,
+              "reverbTone": 0.5,
+              "reverbSize": 0.6,
+              "reverbWidth": 1.0,
+              "reverbDry": 0.5,
+              "reverbMode": 0,
+              "reverbModeOrderV1": true,
+              "reverbType0": 0,
+              "reverbType1": 0,
+              "reverbType2": 0,
+              "reverbType3": 0,
+              "reverbType4": 0,
+              "reverbType5": 0,
+              "reverbDensity": 0.0,
+              "reverbMod": 0.0,
+              "reverbSharedMod": 0.0,
+              "reverbWave": 0,
+              "reverbSprings": 0.4,
+              "reverbSag": 0.4,
+              "reverbBright": 0.5
+            }
+          }
+        ]
+      },
+      "hints": true,
+      "banner": false,
+      "auth": false,
+      "localStorage": {
+        "t3k.nodeView": "true"
+      },
+      "hasDrive": true
+    },
+    {
+      "id": "node-drag-drop",
+      "section": "main",
+      "title": "Signal chain - node grid, drag a block to a new slot",
+      "description": "The node view with compressor + chorus + an empty slot. The drive grabs the compressor, drags it ~5 slots right, and drops: the lane reorders with the compressor at the tail, chorus and the insert sliding to fill.",
+      "chain": {
+        "revision": 1,
+        "canUndo": true,
+        "canRedo": false,
+        "stereoEnabled": false,
+        "activeSide": "left",
+        "stereoInput": false,
+        "standalone": false,
+        "inputMode": "stereo",
+        "namFullSize": false,
+        "multiCore": true,
+        "sampleRate": 48000,
+        "chain": [
+          {
+            "blockId": "fx-compressor0",
+            "kind": "effect",
+            "effectKind": "compressor",
+            "params": {
+              "enabled": true,
+              "mix": 0.5,
+              "inputGain": 0.5,
+              "outputGain": 0.5,
+              "compMode": 0,
+              "compRatio": 0.5,
+              "compAttackMs": 0.5,
+              "compReleaseMs": 0.5,
+              "compThresh": 0.5,
+              "compDrive": 0.25,
+              "compKnee": 0.5,
+              "compClip": 0.5,
+              "compPunch": 0.5
+            }
+          },
+          {
+            "blockId": "fx-chorus0",
+            "kind": "effect",
+            "effectKind": "chorus",
+            "params": {
+              "enabled": true,
+              "mix": 0.5,
+              "inputGain": 0.5,
+              "outputGain": 0.5,
+              "chorusRateHz": 0.8,
+              "chorusDepthMs": 1.5,
+              "chorusSpread": 1.0,
+              "chorusTone": 0.0,
+              "chorusWaveV2": 0
+            }
+          },
+          {
+            "blockId": "ins-1",
+            "kind": "insert"
+          }
+        ]
+      },
+      "hints": true,
+      "banner": false,
+      "auth": false,
+      "localStorage": {
+        "t3k.nodeView": "true"
+      },
+      "hasDrive": true
+    },
+    {
+      "id": "node-switch-view",
+      "section": "main",
+      "title": "Signal chain - node grid, switch interfaces with the strip open",
+      "description": "The node view with compressor + chorus + an empty slot. The drive selects a block (strip shows), switches to the gallery (the node view's cells AND strip must hide), and back to the node view.",
+      "chain": {
+        "revision": 1,
+        "canUndo": true,
+        "canRedo": false,
+        "stereoEnabled": false,
+        "activeSide": "left",
+        "stereoInput": false,
+        "standalone": false,
+        "inputMode": "stereo",
+        "namFullSize": false,
+        "multiCore": true,
+        "sampleRate": 48000,
+        "chain": [
+          {
+            "blockId": "fx-compressor0",
+            "kind": "effect",
+            "effectKind": "compressor",
+            "params": {
+              "enabled": true,
+              "mix": 0.5,
+              "inputGain": 0.5,
+              "outputGain": 0.5,
+              "compMode": 0,
+              "compRatio": 0.5,
+              "compAttackMs": 0.5,
+              "compReleaseMs": 0.5,
+              "compThresh": 0.5,
+              "compDrive": 0.25,
+              "compKnee": 0.5,
+              "compClip": 0.5,
+              "compPunch": 0.5
+            }
+          },
+          {
+            "blockId": "fx-chorus0",
+            "kind": "effect",
+            "effectKind": "chorus",
+            "params": {
+              "enabled": true,
+              "mix": 0.5,
+              "inputGain": 0.5,
+              "outputGain": 0.5,
+              "chorusRateHz": 0.8,
+              "chorusDepthMs": 1.5,
+              "chorusSpread": 1.0,
+              "chorusTone": 0.0,
+              "chorusWaveV2": 0
+            }
+          },
+          {
+            "blockId": "ins-1",
+            "kind": "insert"
+          }
+        ]
+      },
+      "hints": true,
+      "banner": false,
+      "auth": false,
+      "localStorage": {},
+      "hasDrive": true
+    },
+    {
       "id": "main-meters-hot",
       "section": "main",
       "title": "Signal chain - hot meters (clip latched)",
