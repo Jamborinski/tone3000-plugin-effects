@@ -126,7 +126,8 @@ void clickByHelp(PluginRoot& root, const juce::String& helpPrefix, bool right) {
   if (auto* c = byHelpPrefix(root, helpPrefix)) click(root, *c, right);
 }
 
-void dragTo(PluginRoot& root, juce::Component& source, juce::Component& dest) {
+// Shared body: press at `source`'s centre, travel to `dest`'s centre.
+static void dragTravel(PluginRoot& root, juce::Component& source, juce::Component& dest) {
   auto source2 = juce::Desktop::getInstance().getMainMouseSource();
   const auto start = source.getLocalBounds().getCentre().toFloat();
   const auto end = source.getLocalPoint(&dest, dest.getLocalBounds().getCentre()).toFloat();
@@ -145,10 +146,34 @@ void dragTo(PluginRoot& root, juce::Component& source, juce::Component& dest) {
     source.mouseDrag(mk(p, 1));
     wait(10);
   }
-  source.mouseUp(mk(end, 1));
+}
+
+void dragTo(PluginRoot& root, juce::Component& source, juce::Component& dest) {
+  dragTravel(root, source, dest);
+  source.mouseUp(juce::MouseEvent(
+      juce::Desktop::getInstance().getMainMouseSource(),
+      source.getLocalPoint(&dest, dest.getLocalBounds().getCentre()).toFloat(),
+      juce::ModifierKeys::leftButtonModifier, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, &source,
+      &source, juce::Time::getCurrentTime(),
+      source.getLocalPoint(&dest, dest.getLocalBounds().getCentre()).toFloat(),
+      juce::Time::getCurrentTime(), 1, false));
   wait(10);
 }
 
+void dragToPending(PluginRoot& root, juce::Component& source, juce::Component& dest) {
+  dragTravel(root, source, dest);
+  // NO mouseUp: the button is held so the mid-drag indicators stay live.
+}
+
+void releaseDrag(PluginRoot& root, juce::Component& source, juce::Component& dest) {
+  const auto end = source.getLocalPoint(&dest, dest.getLocalBounds().getCentre()).toFloat();
+  source.mouseUp(juce::MouseEvent(
+      juce::Desktop::getInstance().getMainMouseSource(), end,
+      juce::ModifierKeys::leftButtonModifier, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, &source,
+      &source, juce::Time::getCurrentTime(), end, juce::Time::getCurrentTime(), 1,
+      false));
+  wait(10);
+}
 void fill(PluginRoot& root, const juce::String& placeholder, const juce::String& text) {
   if (auto* e = inputWithPlaceholder(root, placeholder)) {
     hover(root, *e);

@@ -4,7 +4,67 @@
 // drift apart.
 #include "EffectParams.h"
 
+#include "effects/reverb/Reverb.h"
+
 namespace t3k::ui {
+
+// The reverb mode sig slots (hoisted verbatim from EffectTile's anonymous
+// namespace on 2026-10-17 so the tile face and the node strip bind the SAME
+// per-mode pair and can never drift apart: Plate = Air/Early, Spring =
+// Springs/Sag, Room = Early/Air, Chamber = Volley/Bass, Hall = Build/Space,
+// Digital = Density/Shape). All stored 0..1; Springs is the single stepped
+// sig (1..6); Digital slot 1 = the 5-detent Shape.
+// (plugin/docs/reverb-modes.md.)
+const char* reverbSigParam(int mode, int localSlot) {
+  static const char* p[Reverb::kNumModes][2] = {
+      {"reverbAir", "reverbEarly"},  {"reverbSprings", "reverbSag"},  // 2026-10-17 PLT: sig A (row 1) = Air, sig B (row 2) = Early (Bright/Bloom off the face)
+      {"reverbEarly", "reverbAir"},   {"reverbVolley", "reverbBass"},
+      {"reverbBuild", "reverbSpace"}, {"reverbDensity", "reverbWave"}};
+  return p[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
+}
+const char* reverbSigLabel(int mode, int localSlot) {
+  static const char* n[Reverb::kNumModes][2] = {
+      {"Air", "Early"},     {"Springs", "Sag"}, {"Early", "Air"},
+      {"Volley", "Bass"}, {"Build", "Space"}, {"Density", "Shape"}};
+  return n[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
+}
+const KnobScale* reverbSigScaleForMode(int mode, int localSlot) {
+  const int m = juce::jlimit(0, Reverb::kNumModes - 1, mode);
+  if (m == 1 && !localSlot)
+    return &scales::springs();  // the only stepped sig (Springs 1..6, mode 1)
+  if (m == 5 && localSlot)
+    return &scales::reverbWave();  // R2: Digital Sig B is now the 5-detent Shape
+  return &scales::fraction01();
+}
+help::Key reverbSigHelp(int mode, int localSlot) {
+  static const help::Key k[Reverb::kNumModes][2] = {
+      {help::Key::reverbAir, help::Key::reverbEarly},
+      {help::Key::reverbSprings, help::Key::reverbSag},
+      {help::Key::reverbEarly, help::Key::reverbAir},
+      {help::Key::reverbVolley, help::Key::reverbBass},
+      {help::Key::reverbBuild, help::Key::reverbSpace},
+      {help::Key::reverbDensity, help::Key::reverbShape}};
+  return k[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
+}
+// The mode's Sig A/B raw (0..1) block-field value for the display.
+double reverbSigRaw(const ChainItem& b, int mode, int localSlot) {
+  const int m = juce::jlimit(0, Reverb::kNumModes - 1, mode);
+  const int s = localSlot ? 1 : 0;
+  switch (m) {
+    case 0: return s ? b.reverbEarly : b.reverbAir;     break;  // 2026-10-17 PLT face: slot0 (sigKnob_, row 1) = Air, slot1 (modKnob_, row 2) = Early
+    case 1: return s ? b.reverbSag : b.reverbSprings;  break;
+    case 2: return s ? b.reverbAir : b.reverbEarly;    break;
+    case 3: return s ? b.reverbBass : b.reverbVolley;  break;
+    case 4: return s ? b.reverbSpace : b.reverbBuild;  break;
+    default: return s ? (double)b.reverbWave : b.reverbDensity; break;
+  }
+}
+EffectParams reverbSigSlot(const ChainItem& b, int mode, int localSlot) {
+  const int m = juce::jlimit(0, Reverb::kNumModes - 1, mode);
+  return {reverbSigScaleForMode(m, localSlot), reverbSigParam(m, localSlot),
+          reverbSigLabel(m, localSlot), reverbSigRaw(b, m, localSlot),
+          reverbSigHelp(m, localSlot)};
+}
 
 std::vector<EffectParams> paramsFor(const ChainItem& b, bool compact) {
   const juce::String k = b.effectKind;

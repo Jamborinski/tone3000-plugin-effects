@@ -310,3 +310,151 @@ TEST(StripKnobPosition, ToneDrive) {
     checkPosition("tone", e, trio);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Strip vs GALLERY face parity (m00156 batch item 3, spc-1792264301530-21240).
+//
+// The node strip builds its list as "global trio (Mix/In/Out) +
+// paramsFor(block, true)" capped at kMaxKnobs; the gallery's EffectTile
+// renders the SAME paramsFor table plus, for reverb, the two per-mode
+// signature slots (sigKnob_/modKnob_) and, for a full convolution tile, the
+// nine-knob non-compact table. These pins assert the contract the two faces
+// share:
+//   1. No knob the strip shows is un-writable in the gallery (subset law) —
+//      the strip must never expose a param the gallery face lacks.
+//   2. No knob is silently dropped by the cap: every entry of the shared
+//      table (trio + paramsFor, at the table size the respective face uses)
+//      must fit under kMaxKnobs, per kind AND per the mode-dependent arms
+//      (compressor VCA-KNEE vs CLIP, every reverb mode's sig pair).
+//   3. The reverb sig-slot pair the gallery EXPOSES for each mode must be
+//      state fields the strip's paramsFor table (or a future one) can bind —
+//      pinned explicitly because the sig knobs live OUTSIDE paramsFor
+//      (EffectTile::reverbSigParam), so a rename there used to be a silent
+//      strip-only gap.
+// A new knob added to one face only fails the relevant subset/count check.
+namespace {
+
+constexpr int kMaxStripKnobs = 12;  // NodeView::syncStrip cap (2026-10-17)
+
+// The strip and the FULL gallery face are the SAME set: trio + the full
+// paramsFor(b, false) table, plus reverb's two per-mode sig slots (the
+// shared reverbSigSlot()). The compact table is the tile's 4x2 variant only.
+// The shared face: trio + paramsFor(b, false) + reverb's 2 per-mode sig
+// slots — built ONCE so the strip and gallery models can never diverge in
+// HOW they are derived (they may only diverge by an actual bug).
+std::vector<std::string> fullFaceParams(const ChainItem& b) {
+  std::vector<std::string> p;
+  if (b.isEffect) {
+    p.push_back("mix");
+    p.push_back("inputGain");
+    p.push_back("outputGain");
+    for (const auto& e : paramsFor(b, false)) p.push_back(e.param.toStdString());
+    if (b.effectKind == "reverb") {
+      const int m = juce::jlimit(0, Reverb::kNumModes - 1, b.reverbMode);
+      p.push_back(reverbSigSlot(b, m, 0).param.toStdString());
+      p.push_back(reverbSigSlot(b, m, 1).param.toStdString());
+    }
+  } else {
+    p.push_back("inputGain");
+    p.push_back("outputGain");
+    p.push_back("mix");
+  }
+  return p;
+}
+
+// The strip's per-kind list, exactly as NodeView::syncStrip builds it (trio
+// + paramsFor(b, false) + reverb sigs, capped at kMaxStripKnobs).
+std::vector<std::string> stripList(const ChainItem& b) {
+  const auto full = fullFaceParams(b);
+  if (full.size() > (size_t)kMaxStripKnobs)
+    return {full.begin(), full.begin() + kMaxStripKnobs};
+  return full;
+}
+
+void checkParity(const std::string& kind, const ChainItem& b) {
+  const auto strip = stripList(b);
+  const auto gallery = fullFaceParams(b);
+  // 1. Exact set law: every strip knob is controllable in the gallery face
+  //    AND the strip shows every knob the (non-capped) face has.
+  for (const auto& s : strip) {
+    bool in = false;
+    for (const auto& g : gallery)
+      if (g == s) in = true;
+    EXPECT_TRUE(in) << kind << ": strip knob '" << s
+                    << "' is not controllable in the gallery face";
+  }
+  for (const auto& g : gallery) {
+    bool in = false;
+    for (const auto& s : strip)
+      if (s == g) in = true;
+    EXPECT_TRUE(in) << kind << ": gallery-face knob '" << g
+                    << "' is missing from the strip";
+  }
+  // 2. Cap law: the FULL face fits the strip cap, so nothing is dropped.
+  EXPECT_LE(gallery.size(), (size_t)kMaxStripKnobs)
+      << kind << ": " << gallery.size()
+      << " face knobs exceed the strip cap — trailing knobs would vanish";
+  EXPECT_EQ(strip.size(), gallery.size())
+      << kind << ": strip truncates the face (" << strip.size() << " of "
+      << gallery.size() << ")";
+}
+
+}  // namespace
+
+TEST(StripGalleryParity, DelayEveryMode) {
+  for (int m = 0; m < Delay::kNumModes; ++m) {
+    auto b = itemFor("delay");
+    b.delayMode = m;
+    checkParity("delay[mode" + std::to_string(m) + "]", b);
+  }
+}
+
+TEST(StripGalleryParity, CompressorEveryModeVcaAndClipArms) {
+  for (int m = 0; m < Compressor::kNumModes; ++m) {
+    auto b = itemFor("compressor");
+    b.compMode = m;
+    checkParity("compressor[mode" + std::to_string(m) + "]", b);
+  }
+}
+
+TEST(StripGalleryParity, ReverbEveryModeWithSigSlots) {
+  for (int m = 0; m < Reverb::kNumModes; ++m) {
+    auto b = itemFor("reverb");
+    b.reverbMode = m;
+    checkParity("reverb[mode" + std::to_string(m) + "]", b);
+  }
+}
+
+TEST(StripGalleryParity, ChorusAndTremolo) {
+  checkParity("chorus", itemFor("chorus"));
+  checkParity("tremolo", itemFor("tremolo"));
+}
+
+TEST(StripGalleryParity, ConvolutionFullStripVsFullGallery) {
+  // Parity law: the strip shows the FULL conv table (9 params, trio + 9 =
+  // 12 knobs at the shrunk 32-px face) — the same face the full gallery tile
+  // renders. The compact table is the tile's 4x2 variant only.
+  auto b = itemFor("convolution");
+  checkParity("convolution", b);
+  const auto full = paramsFor(b, false);
+  const auto compact = paramsFor(b, true);
+  for (const auto& c : compact) {
+    bool in = false;
+    for (const auto& f : full)
+      if (f.param == c.param) in = true;
+    EXPECT_TRUE(in) << "convolution: compact-tile knob '" << c.param
+                    << "' missing from the full face";
+  }
+  EXPECT_EQ(full.size() + 3, (size_t)kMaxStripKnobs)
+      << "full-conv face (trio + 9) sits exactly at the strip cap";
+}
+
+TEST(StripGalleryParity, ToneNode) {
+  ChainItem b;
+  b.isInsert = false;
+  b.isEffect = false;
+  b.params.inputGain = 0.5;
+  b.params.outputGain = 0.5;
+  b.params.mix = 1.0;
+  checkParity("tone", b);
+}

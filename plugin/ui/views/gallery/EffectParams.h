@@ -28,6 +28,23 @@ struct EffectParams {
 };
 
 // The knobs for this effect block (`compact` selects the 4x2 conv face).
+// NOTE: the strip (NodeView) and the full tile BOTH call paramsFor(b, false)
+// for convolution/reverb — the strip face must equal the full gallery face
+// (2026-10-17 parity law, user m01128). The reverb mode sig slots ride on
+// top via reverbSigSlots()
 std::vector<EffectParams> paramsFor(const ChainItem& b, bool compact);
+
+// Reverb mode sig slots (hoisted from EffectTile's anon namespace so the
+// gallery tile and the node strip bind the SAME per-mode pair: Plate =
+// Air/Early, Spring = Springs/Sag, Room = Early/Air, Chamber = Volley/Bass,
+// Hall = Build/Space, Digital = Density/Shape). All stored 0..1; Springs is
+// the single stepped sig (1..6); Digital slot 1 = the 5-detent Shape.
+const char* reverbSigParam(int mode, int localSlot);
+const char* reverbSigLabel(int mode, int localSlot);
+const KnobScale* reverbSigScaleForMode(int mode, int localSlot);
+help::Key reverbSigHelp(int mode, int localSlot);
+double reverbSigRaw(const ChainItem& b, int mode, int localSlot);
+// The one EffectParams row for a sig slot (strip + tile share it).
+EffectParams reverbSigSlot(const ChainItem& b, int mode, int localSlot);
 
 }  // namespace t3k::ui

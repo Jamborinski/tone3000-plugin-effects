@@ -8,6 +8,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "MenuRow.h"
@@ -20,10 +21,13 @@ class ContextMenu : public Popover {
 public:
   struct Item {
     juce::String label;
-    Icon icon;
+    std::optional<Icon> icon;
     help::Key help;
     std::function<void()> onSelect;
     bool disabled = false;
+    // Per-row hover text override; empty = the shared help::text(help).
+    // Trailing with an empty default so aggregate call sites keep compiling.
+    juce::String helpText;
   };
 
   static constexpr int kWidth = 148;

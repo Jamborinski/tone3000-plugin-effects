@@ -60,6 +60,25 @@ public:
   // The strip's current visibility (probe for the toggle drive's assertion).
   // Defined in the .cpp: NodeStrip is a nested class, incomplete here.
   bool stripShown() const;
+  // TileShot probe: force-select a block (drives the strip) and report the
+  // strip's knob labels in face order ("" ids = gallery sig slots).
+  void selectBlockForShot(const std::string& blockId);
+  // Open the strip's mode menu (TileShot --strip-menu probe path).
+  void openModeMenuForShot();
+  // Open the strip's type menu (TileShot --strip-menu --type probe path).
+  void openTypeMenuForShot();
+  juce::StringArray stripKnobLabelsForShot() const;
+  // m01453/m01481 shot probes: a cell's centre in THIS component's
+  // coordinates (testbed drives aim drags at exact slots), and the
+  // transient drag state (TileShot's mid-drag capture asserts the
+  // ghost + drop-target indicator are live).
+  juce::Point<int> cellCentreForShot(int cellIndex) const;
+  juce::String dragStateForShot() const;
+  // m01463 screenshot path: start a live grid drag from `fromCell` with the
+  // pointer held at the centre of `toCell` (drop target + cascade preview
+  // painting) — capture, then release with endDragFromShot().
+  void beginDragFromShot(int fromCell, int toCell);
+  void endDragFromShot();
   void paint(juce::Graphics& g) override;
   void resized() override;
 
@@ -101,7 +120,8 @@ private:
   void refreshModeLine(NodeStrip&, const ChainItem&);
   void openModeMenu();
   void openTypeMenu();
-  void showStripMenu(std::vector<ContextMenu::Item> items);
+  void showStripMenu(std::vector<ContextMenu::Item> items,
+                     const juce::Point<int>& anchor);
   void hideStrip();  // the strip's X (left of power) — the ONLY close path
   void pullConvPreview(NodeStrip&, const ChainItem&);
   // Convolution node: the strip's "Load IR..." button (async FileChooser,
@@ -113,7 +133,7 @@ private:
   NodeStrip* strip_ = nullptr;
   std::vector<std::unique_ptr<NodeCell>> cells_;
   Ghost* ghost_ = nullptr;
-  NodeCell* dragCell_ = nullptr;
+  mutable NodeCell* dragCell_ = nullptr;
   juce::Point<float> grabOffset_;
   std::string draggingId_;  // the lane item in flight (inserts are lane items too)
   int dragFromCell_ = -1;

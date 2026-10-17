@@ -30,6 +30,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <cstdio>
 #include <cstddef>
 #include <string_view>
 #include <vector>
@@ -525,6 +526,83 @@ TEST(ProcessorTest, ReverbParamsAreAcceptedBySetBlockParam) {
   EXPECT_TRUE(proc.setBlockParam(id, "reverbWidth", 0.5)) << "reverbWidth rejected";
 }
 
+TEST(ProcessorTest, NewReverbBlockLandsOnPlateNeutralDefaults) {
+  // A freshly added reverb block must land on the default mode's (Plate,
+  // mode 0) neutral dials — the same table the UI's enterMode applies on a
+  // mode switch (2026-10-13 model/subtype ruling: 50% dials, decay at the
+  // 2.0 s EMT 140 reference). Regression: addEffectBlock left the generic
+  // ChainBlock defaults in place (decay 1200 ms, tone 0.4, size 0.6,
+  // width 1.0), so a new Plate read the 1200 ms decay until the user
+  // touched the mode selector.
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto id = proc.addEffectBlock(EffectKind::Reverb, "left", 0);
+  ASSERT_FALSE(id.empty()) << "addEffectBlock(Reverb) was rejected";
+  const juce::var chain = proc.getChainState(-1);
+  juce::var item;
+  for (int i = 0; chain["chain"].isArray() && i < chain["chain"].size(); ++i) {
+    juce::var it = chain["chain"][i];
+    if (it.isObject() && it["blockId"].toString().toStdString() == id)
+      item = it;
+  }
+  ASSERT_TRUE(item.isObject()) << "reverb block missing from chain state";
+  const juce::var p = item["params"];
+  ASSERT_TRUE(p.isObject());
+  double d = -1.0, pre = -1.0, tone = -1.0, size = -1.0, width = -1.0;
+  Reverb::defaultDialsForMode(0, d, pre, tone, size, width);  // mode 0 = Plate
+  EXPECT_DOUBLE_EQ(static_cast<double>(p["reverbDecayMs"]), d)
+      << "new reverb block must land on the Plate decay (2.0 s reference), "
+         "not the generic 1200 ms";
+  EXPECT_DOUBLE_EQ(static_cast<double>(p["reverbPreMs"]), pre);
+  EXPECT_DOUBLE_EQ(static_cast<double>(p["reverbTone"]), tone) << "neutral 50% dials";
+  EXPECT_DOUBLE_EQ(static_cast<double>(p["reverbSize"]), size);
+  EXPECT_DOUBLE_EQ(static_cast<double>(p["reverbWidth"]), width);
+}
+
+TEST(ProcessorTest, ModeSelectsBumpTheChainRevisionImmediately) {
+  // A discrete mode/type pick (menu row, not a knob drag) must bump the
+  // chain revision SYNCHRONOUSLY — the strip's mode text reads the UI
+  // snapshot that only refreshes on a revision change, so the 400 ms
+  // gesture-settle path made the text lag the sound by ~1 s (m00156).
+  // Regression: delayMode/compMode/reverbMode/reverbTypeN were classified
+  // as continuous, so a menu pick took the deferred path.
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto dId = proc.addEffectBlock(EffectKind::Delay, "left", 0);
+  const auto cId = proc.addEffectBlock(EffectKind::Compressor, "left", 1);
+  const auto rId = proc.addEffectBlock(EffectKind::Reverb, "left", 2);
+  ASSERT_FALSE(dId.empty());
+  ASSERT_FALSE(cId.empty());
+  ASSERT_FALSE(rId.empty());
+  struct Case { const char* param; std::string id; };
+  const Case cases[] = {
+      {"delayMode", dId},
+      {"compMode", cId},
+      {"reverbMode", rId},
+      {"reverbType0", rId},
+      {"reverbType1", rId},
+      {"reverbType2", rId},
+      {"reverbType3", rId},
+      {"reverbType4", rId},
+      {"reverbType5", rId},
+  };
+  for (const auto& c : cases) {
+    const juce::uint32 before = proc.getCurrentChainRevision();
+    ASSERT_TRUE(proc.setBlockParam(c.id, c.param, 1.0))
+        << c.param << " was rejected";
+    EXPECT_GT(proc.getCurrentChainRevision(), before)
+        << c.param << " must bump the revision immediately (no gesture-settle "
+           "window), so the mode text follows the sound";
+  }
+  // Knobs stay on the deferred path (drag coalescing is intact).
+  const juce::uint32 before = proc.getCurrentChainRevision();
+  ASSERT_TRUE(proc.setBlockParam(dId, "delayFeedback", 0.5));
+  EXPECT_EQ(proc.getCurrentChainRevision(), before)
+      << "continuous knobs must keep the deferred bump (gesture coalescing)";
+}
+
 TEST(ProcessorTest, ConvolutionParamsAreAcceptedBySetBlockParam) {
   // Same regression guard as the reverb family: the five Convolution knobs
   // (Gain/Width/Start/End/Length) must each survive the known-param
@@ -985,6 +1063,130 @@ TEST(ProcessorTest, ConvIrReferenceSurvivesStateRoundTrip) {
     rms = std::sqrt(rms / (we - ws));
     EXPECT_GT(rms, 1e-5) << "restored engine produced no wet tail (IR was not re-hydrated)";
   }
+}
+
+TEST(ProcessorTest, ConvIrSurvivesPresetSaveSwitchRestore) {
+  // E-2 preset path: a loaded kernel must survive save-to-preset -> switch
+  // to another preset -> load the saved preset back. The snapshot carries the
+  // IR path, not the kernel bytes, so loadPreset must re-hydrate the engine
+  // from disk (restoreConvIrsLocked) just like the state-restore path does.
+  const juce::File irWav = makeFixedIrWav();
+  ASSERT_TRUE(irWav.existsAsFile()) << "fixture WAV could not be written";
+
+  struct TempPresetDir {
+    TempPresetDir()
+        : dir(juce::File::getSpecialLocation(juce::File::tempDirectory)
+                  .getChildFile("t3k-conv-preset-tests-" + juce::Uuid().toString())) {
+      dir.createDirectory();
+    }
+    ~TempPresetDir() { dir.deleteRecursively(); }
+    juce::File dir;
+  } tmp;
+
+  TONE3000Processor proc;
+  proc.setPresetStoreForTesting(tmp.dir);
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto id = proc.addEffectBlock(EffectKind::Convolution, "left", 0);
+  ASSERT_FALSE(id.empty());
+  juce::var resp = proc.loadConvIr(id, irWav);
+  ASSERT_TRUE(resp.getDynamicObject() == nullptr ||
+              !resp.getDynamicObject()->hasProperty("error"));
+  const auto irId = proc.savePreset("WithIR")["id"].toString();
+  ASSERT_FALSE(irId.isEmpty());
+
+  // Switch away to another (IR-free) preset and back — the user's exact
+  // repro path: save preset → change preset → come back.
+  ASSERT_TRUE(proc.removeChainBlock(id));  // clear the convolver
+  const juce::var noIr = proc.savePreset("NoIR");  // empty chain, no convolver
+  const auto noIrId = noIr["id"].toString();
+  ASSERT_FALSE(noIrId.isEmpty());
+  ASSERT_TRUE(proc.loadPreset(noIrId)) << "switching to the NoIR preset must succeed";
+  juce::MemoryBlock stateA;
+  proc.getStateInformation(stateA);
+  const std::string_view away(reinterpret_cast<const char*>(stateA.getData()),
+                              stateA.getSize());
+  EXPECT_TRUE(away.find("t3k-ir-fixture.wav") == std::string_view::npos)
+      << "switching away from the preset must clear the convolver";
+
+  EXPECT_TRUE(proc.loadPreset(irId));
+
+  // The chain state (UI + state paths) must report a loaded kernel again.
+  const juce::var chain = proc.getChainState(-1);
+  juce::var item;
+  auto findConv = [](juce::var lane) -> juce::var {
+    if (!lane.isArray())
+      return {};
+    for (int i = 0; i < lane.size(); ++i) {
+      juce::var it = lane[i];
+      if (it.isObject() && it["kind"].toString() == "effect" &&
+          it["effectKind"].toString() == "convolution")
+        return it;
+    }
+    return {};
+  };
+  item = findConv(chain["chain"]);
+  if (!item.isObject())
+    item = findConv(chain["chainRight"]);
+  ASSERT_TRUE(item.isObject()) << "restored preset lost its convolver block";
+  EXPECT_EQ(item["convIrName"].toString(), "t3k-ir-fixture.wav");
+  EXPECT_TRUE(static_cast<bool>(item["convIrLoaded"])) << "convolver must report a loaded kernel";
+
+  // Functional proof: 1.0 s of tone then silence — only a live convolver
+  // produces energy in the wet-tail window after the tone stops.
+  std::vector<float> tone;
+  const int rate = 48000;
+  const int total = 3 * rate;
+  tone.assign(static_cast<size_t>(total), 0.0f);
+  const double w = 2.0 * 3.14159265358979 * 440.0 / rate;
+  for (int i = 0; i < rate; ++i)
+    tone[i] = 0.5f * static_cast<float>(std::sin(w * i));
+  const auto out = processThrough(proc, tone, 512);
+  const int ws = (int)(1.01 * rate), we = (int)(1.08 * rate);
+  double rms = 0.0;
+  for (int i = ws; i < we; ++i)
+    rms += (double)out[i] * out[i];
+  rms = std::sqrt(rms / (we - ws));
+  EXPECT_GT(rms, 1e-5) << "presets restore must re-hydrate the conv IR (E-2)";
+}
+
+TEST(ProcessorTest, ConvIrSurvivesUndoRedoOfConvEdit) {
+  // E-2 undo/redo path: editing a conv block after its IR load pushes a
+  // snapshot; undo restores the pre-edit snapshot, which must re-hydrate the
+  // engine the same way presets/do (restoreConvIrsLocked at the restore
+  // site). Redo re-applies the edit on top of the live engine.
+  const juce::File irWav = makeFixedIrWav();
+  ASSERT_TRUE(irWav.existsAsFile());
+
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto id = proc.addEffectBlock(EffectKind::Convolution, "left", 0);
+  ASSERT_FALSE(id.empty());
+  juce::var resp = proc.loadConvIr(id, irWav);
+  ASSERT_TRUE(resp.getDynamicObject() == nullptr ||
+              !resp.getDynamicObject()->hasProperty("error"));
+
+  // A parameter edit after the load (its pushChainHistory carries the
+  // pre-edit snapshot, engine included via the convIrPath reference).
+  ASSERT_TRUE(proc.setBlockParam(id, "convToneDb", -3.0));
+  EXPECT_TRUE(proc.undoChain());
+
+  const juce::var chain = proc.getChainState(-1);
+  juce::var item;
+  for (int i = 0; chain["chain"].isArray() && i < chain["chain"].size(); ++i) {
+    juce::var it = chain["chain"][i];
+    if (it.isObject() && it["blockId"].toString().toStdString() == id)
+      item = it;
+  }
+  ASSERT_TRUE(item.isObject());
+  EXPECT_TRUE(static_cast<bool>(item["convIrLoaded"])) << "undo must keep the conv IR alive";
+  EXPECT_TRUE(proc.redoChain());
+  juce::MemoryBlock state;
+  proc.getStateInformation(state);
+  const std::string_view s(reinterpret_cast<const char*>(state.getData()),
+                           state.getSize());
+  EXPECT_TRUE(s.find("t3k-ir-fixture.wav") != std::string_view::npos);
 }
 
 TEST(ProcessorTest, ConvIrMissingFileRestoresGracefully) {

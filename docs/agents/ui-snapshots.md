@@ -51,6 +51,11 @@ explicit UTF-8 pointer: `juce::String (juce::CharPointer_UTF8 ("text \u2014"))`.
 - **`build/` vs `build-ui/` are separate CMake trees:** `TONE3000_Standalone` builds in `build/`; `TileShot` + `UiTestbed` live in `build-ui/`. A stale `TileShot` silently dumps the OLD layout — rebuild after C++ edits before `--tile`.
 - **Tool flag ownership:** `TileShot` owns `--list/--dump/--tile/--golden/--regen`; `UiTestbed` owns `--selftest`. Passing a flag to the wrong tool just HANGS — kill and retry with the right binary.
 
+## OCR-readable capture (ticket ui-ocr-capture-mode)
+- `TileShot`/`UiTestbed` accept `--capture --ocr`: applies `theme::ocrPalette()` (a pure-white background / pure-black text palette in `plugin/ui/core/Theme.h`) before shooting, resets it after. Chrome panels stay dark (separate paint path) — expected, out of scope.
+- `script/tile-ocr.sh` reads a tile's type-cycler chip back via Tesseract 5.5.0 (PSM 7/13/10 sweep, whitelist, TSV conf): `tile-ocr.sh comp --ocr` → `psm10: OPT`. No PaddleOCR — user ruling: Tesseract only, no heavy deps.
+- Golden recheck after any palette/touch: 8/8 theme-affected goldens must stay IDENTICAL; the conv-*/reverb drifts (797/6714/6350 px) are PRE-EXISTING (proved by stash+rebuild of the pre-ticket commit).
+
 ## House rules
 - Goldens live in `plugin/ui/testbed/goldens/<tile>.png` (LF, committed).
 - Regenerating the FIRST baseline: shoot all 16, eyeball each, then `--regen`

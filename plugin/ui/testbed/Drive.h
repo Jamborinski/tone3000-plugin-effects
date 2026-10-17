@@ -45,6 +45,15 @@ void clickByHelp(PluginRoot& root, const juce::String& helpPrefix, bool right = 
 // `source` receives the press AND the drag stream — its mouseDrag drives the
 // ghost (see NodeCell::mouseDrag / NodeView::cellDragMove).
 void dragTo(PluginRoot& root, juce::Component& source, juce::Component& dest);
+// The first half of dragTo WITHOUT the release (m01463): press + travel to
+// `dest`'s centre, pointer held. The grid's mid-drag indicators (clone ghost
+// + drop/cascade preview) are live while the button is down; the caller
+// screenshots, then releases by calling dragTo on the same source+dest (the
+// press is a no-op restart, the release lands the drop).
+void dragToPending(PluginRoot& root, juce::Component& source, juce::Component& dest);
+// The release half of dragToPending: mouseUp at `dest`'s centre on `source`
+// (lands the drop).
+void releaseDrag(PluginRoot& root, juce::Component& source, juce::Component& dest);
 // Type into a field (replaces its contents, fires change callbacks).
 void fill(PluginRoot& root, const juce::String& placeholder, const juce::String& text);
 // fill() then Return.

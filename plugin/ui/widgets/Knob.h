@@ -81,6 +81,7 @@ public:
   ~Knob() override;
 
   int knobSize() const { return options_.size; }
+  const juce::String& knobLabel() const { return options_.label; }
   // The knob face's bounds within this component.
   juce::Rectangle<int> faceBounds() const;
 

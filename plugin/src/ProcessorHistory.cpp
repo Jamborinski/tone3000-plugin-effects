@@ -307,6 +307,8 @@ bool TONE3000Processor::undoChain() {
     if (!chainHistory.canUndo())
       return false;
     retired = restoreChainSnapshot(chainHistory.undo(captureChainSnapshot()));
+    // E-2: re-hydrate convolution engines like any other restore site.
+    restoreConvIrsLocked();
   }
   DBG("Chain undo applied");
 
@@ -334,6 +336,8 @@ bool TONE3000Processor::redoChain() {
     if (!chainHistory.canRedo())
       return false;
     retired = restoreChainSnapshot(chainHistory.redo(captureChainSnapshot()));
+    // E-2: re-hydrate convolution engines like any other restore site.
+    restoreConvIrsLocked();
   }
   DBG("Chain redo applied");
 

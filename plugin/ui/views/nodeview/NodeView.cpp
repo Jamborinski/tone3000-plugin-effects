@@ -86,6 +86,55 @@ static int nodeReverbTypeOf(const ChainItem& b, int m) {
   }
 }
 
+// Per-row hover text for the strip's mode/type menus (m00157 item 9: the
+// bottom help line must change per entry). Short character words only —
+// the engine docs carry the detail.
+static juce::String modeBlurb(const juce::String& kind, int m) {
+  static const char* delay[6] = {
+      "clean digital field -- flat, precise, tight repeats",
+      "analog tape -- soft saturation, gentle pitch dip on long feedback",
+      "bucket brigade -- slow smear that thickens the tail",
+      "modulated -- the delay line wobbles; the trail vibrato-smears",
+      "magnetic -- wow and flutter; the smear wanders",
+      "vintage vibrato -- rate rides between chorus and vibrato"};
+  static const char* comp[5] = {
+      "solid-state VCA -- fast, transparent, precise",
+      "warm tube drive -- soft-knee saturation on transients",
+      "optical cell -- slow, musical, rides with input level",
+      "FET -- snappy, hard-knee, punch-restoring",
+      "vari-mu -- vintage transformer colour on the release"};
+  static const char* rev[6] = {
+      "dense flat-plate body -- deep low-mid sustain, bright early slap",
+      "single-can spring tank -- crisp metallic boing, long shimmer tail",
+      "small room -- fast early set, short decay",
+      "open stone chamber -- tight body, long bright tail",
+      "concert hall -- slow to build, long and wide",
+      "digital character -- the Digital engine's six subtypes"};
+  if (kind == "delay") return delay[juce::jlimit(0, 5, m)];
+  if (kind == "compressor") return comp[juce::jlimit(0, 4, m)];
+  return rev[juce::jlimit(0, 5, m)];
+}
+
+// The reverb TYPE row's blurb (mode 5's six subtypes carry their own;
+// the other modes' single self-type reuses the mode character).
+static juce::String reverbTypeBlurb(int m, int t) {
+  static const char* b[Reverb::kNumModes] = {
+      "dense flat-plate body -- deep low-mid sustain, bright early slap, huge smooth tail",
+      "single-can spring tank -- crisp metallic boing, high bite, long shimmer tail",
+      "small room -- fast early set, short decay, drier than it looks",
+      "open stone chamber -- tight body, long bright tail, LF blooming off",
+      "concert hall -- slow to build, long and wide, low end hangs"};
+  static const char* dig[6] = {
+      "clean comb field -- flat to the top, dense, even repeats (digital)",
+      "single-can spring tank -- crisp metallic boing, high bite, long shimmer tail",
+      "dense flat-plate body -- deep low-mid sustain, bright early slap, huge smooth tail",
+      "small room -- fast early set, short decay, drier than it looks",
+      "open stone chamber -- tight body, long bright tail, LF blooming off",
+      "concert hall -- slow to build, long and wide, low end hangs"};
+  if (m == 5) return juce::String(dig[juce::jlimit(0, 5, t)]);
+  return juce::String(b[juce::jlimit(0, Reverb::kNumModes - 1, m)]);
+}
+
 // The mode+type's short cycler face name (the gallery's compact type-name
 // table, mirrored here so the strip stays self-contained).
 static const char* reverbTypeName(int m, int t) {
@@ -139,6 +188,42 @@ help::Key addHelpFor(const juce::String& k) {
   return help::Key::addEffectConvolution;
 }
 
+// Reverse of Model::paletteLabel: a "+ LABEL" menu entry back to its kind.
+juce::String paletteKindForLabel(const juce::String& label) {
+  for (const auto& k : Model::paletteKinds())
+    if (label == juce::String("+ ") + Model::paletteLabel(k))
+      return k;
+  return juce::String();
+}
+
+// The cell's right-click menu (NodeCell::openMenu, tested in
+// test/src/strip_knob_tests.cpp — m00157 item 11: EVERY node kind — tone
+// AND effect — must carry Remove; inserts carry the add list).
+struct CellMenuItem {
+  juce::String label;
+  std::optional<t3k::ui::Icon> icon;
+  t3k::ui::help::Key help;
+  bool remove = false;
+};
+
+std::vector<CellMenuItem> cellMenuItems(const t3k::ui::ChainItem* b,
+                                        const CellState& state,
+                                        const std::vector<juce::String>& palette) {
+  std::vector<CellMenuItem> items;
+  if (b != nullptr && !b->isInsert) {
+    items.push_back({state.active ? "Power: off" : "Power: on", Icon::Power,
+                     help::Key::blockPower, false});
+    // m00157 item 11: tone (NAM) nodes lost Remove when the effect-only guard
+    // was written — EVERY populated node carries it.
+    items.push_back({"Remove", Icon::Trash2, help::Key::removeBlock, true});
+  } else {
+    for (const auto& kind : palette)
+      items.push_back({juce::String("+ ") + Model::paletteLabel(kind),
+                       Icon::Plus, addHelpFor(kind), false});
+  }
+  return items;
+}
+
 }  // namespace
 
 // ---------------------------------------------------------------- NodeCell
@@ -188,24 +273,21 @@ private:
     }
     const auto* b = v_.modelRef().blockAt(i_);
     std::vector<ContextMenu::Item> items;
-    if (b != nullptr && !b->isInsert) {
-      items.push_back({state_.active ? "Power: off" : "Power: on",
-                       state_.effect ? Icon::Power : Icon::Power,
-                       help::Key::blockPower,
-                       [id = b->blockId, this] { v_.togglePower(id); }, false});
-      if (b->isEffect) {
+    for (const auto& it : cellMenuItems(b, state_, v_.modelRef().paletteKinds())) {
+      if (it.remove)
         items.push_back({"Remove", Icon::Trash2, help::Key::removeBlock,
-                         [b, this] {
-                           v_.hostServices().chain.removeBlock(b->blockId);
+                         [id = b->blockId, this] {
+                           v_.hostServices().chain.removeBlock(id);
                          },
                          false});
-      }
-    } else {
-      // Empty square: add an effect into THIS position.
-      for (const auto& kind : Model::paletteKinds()) {
-        items.push_back({std::string("+ ") + Model::paletteLabel(kind),
-                         Icon::Plus, addHelpFor(kind),
+      else if (it.label.startsWith("+ ")) {
+        const juce::String kind = paletteKindForLabel(it.label);
+        items.push_back({it.label, Icon::Plus, addHelpFor(kind),
                          [idx = i_, kind, this] { v_.addIntoCell(idx, kind); },
+                         false});
+      } else {
+        items.push_back({it.label, Icon::Power, help::Key::blockPower,
+                         [id = b->blockId, this] { v_.togglePower(id); },
                          false});
       }
     }
@@ -351,8 +433,14 @@ class NodeView::Ghost : public juce::Component {
 public:
   explicit Ghost(juce::Image image) : image_(std::move(image)) {
     setSize(image_.getWidth(), image_.getHeight());
-    setInterceptsMouseClicks(false, false);
-    setAlpha(0.6f);  // semi-transparent: the grid shows through (batch-3 item 8)
+    // Must INTERCEPT: it owns the drag cursor (m01453) while it follows
+    // the pointer — a non-intercepting component's setMouseCursor is inert.
+    setInterceptsMouseClicks(true, true);
+    setMouseCursor(juce::MouseCursor::DraggingHandCursor);
+    // LIGHT transparency (m01453, Procreate-style clone): the grid shows
+    // through clearly — batch-3's 0.6 was closer to opaque than the user
+    // wanted.
+    setAlpha(0.35f);
   }
 
   void paint(juce::Graphics& g) override { g.drawImageAt(image_, 0, 0); }
@@ -394,6 +482,7 @@ public:
   KernelPlot& convPlot() { return convPlot_; }
   juce::TextButton& loadIr() { return loadIr_; }
   std::vector<Knob*>& knobs() { return knobs_; }
+  const std::vector<Knob*>& knobs() const { return knobs_; }
   // One value string per knob (the strip's persistent readout line).
   std::vector<juce::String>& values() { return values_; }
 
@@ -417,8 +506,10 @@ public:
     values_.push_back(std::move(value));
     addAndMakeVisible(*k);
   }
+  void setKnobFace(int px) { knobFace_ = px; }
+  int knobFace() const { return knobFace_ == 0 ? (int)kKnobFace : knobFace_; }
 
-  int knobHeight() const { return Knob::heightFor((int)kKnobFace); }
+  int knobHeight() const { return Knob::heightFor(knobFace()); }
 
   void paint(juce::Graphics& g) override {
     if (!v_.nodeViewActive()) return;  // docked over the view; gallery
@@ -454,6 +545,7 @@ private:
   KernelPlot convPlot_;
   std::vector<Knob*> knobs_;
   std::vector<juce::String> values_;
+  int knobFace_ = 0;  // 0 = default kKnobFace; syncStrip sets the shrunk face
 };
 
 // ----------------------------------------------------------------- NodeView
@@ -595,6 +687,9 @@ void NodeView::beginCellDrag(NodeCell& cell,
   const auto pressOverlay =
       overlay.getLocalPoint(&cell, pressLocal).toFloat() -
       cellInOverlay.getPosition().toFloat();
+  // m01453: the pointer becomes a DRAG cursor for the whole gesture (the
+  // ghost sits under it and owns the cursor while it travels — see the
+  // Ghost ctor).
   grabOffset_ = pressOverlay -
                 ghost_->getBounds().toFloat().getCentre();
   ghost_->setTopLeftPosition(pressOverlay.roundToInt());
@@ -628,17 +723,16 @@ void NodeView::cellDragMove(NodeCell& /*cell*/,
       slot = juce::jlimit(0, Row::kSlotCount - 1, slot);
       const int target = row * Row::kSlotCount + slot;
       if (target != g_dropTarget) {
-        if (g_dropTarget >= 0 && g_dropTarget < (int)cells_.size())
-          cells_[g_dropTarget]->repaint();
         g_dropTarget = target;
-        cells_[target]->repaint();
+        // The drop preview AND the displacement cascade live in
+        // NodeView::paint (m01453) — repaint the whole grid, not one cell.
+        repaint();
       }
       dragInGrid_ = true;
     } else if (dragInGrid_) {
-      if (g_dropTarget >= 0 && g_dropTarget < (int)cells_.size())
-        cells_[g_dropTarget]->repaint();
       g_dropTarget = -1;
       dragInGrid_ = false;
+      repaint();
     }
   }
 }
@@ -758,18 +852,52 @@ void NodeView::paint(juce::Graphics& g) {
                                     : rowY_ + cellSquare_ / 2.0f;
     g.drawSingleLineText("Out", rowX_ + Row::kSlotCount * cellW_ + 4, outY - 4);
   }
-  if (g_dropTarget >= 0 && g_dropTarget < (int)cells_.size()) {
+  if (g_dropTarget >= 0 && g_dropTarget < (int)cells_.size() &&
+      !draggingId_.empty()) {
     const auto c = cells_[g_dropTarget]->getBounds().toFloat();
     const auto sq = juce::Rectangle<float>(
         (c.getWidth() - (float)cellSquare_) / 2.0f, 0.0f, (float)cellSquare_,
         (float)cellSquare_);
     paint::border(g, sq.reduced(4.0f), 6.0f, theme::kHighlight, 2.0f);
     // The dragged effect's icon in the drop zone (batch-3 item 8).
-    if (!draggingId_.empty()) {
-      const auto* dragB = services_.chain.state().findBlock(draggingId_);
-      if (dragB != nullptr && dragB->isEffect)
-        Icons::draw(g, kindSvg(dragB->effectKind), sq.reduced(16.0f),
-                    theme::kHighlight.withAlpha(0.5f));
+    const auto* dragB = services_.chain.state().findBlock(draggingId_);
+    if (dragB != nullptr && dragB->isEffect)
+      Icons::draw(g, kindSvg(dragB->effectKind), sq.reduced(16.0f),
+                  theme::kHighlight.withAlpha(0.5f));
+
+    // m01453: the DISPLACEMENT preview. The drop splice (Model::orderWith)
+    // shoves every block between the source and the target one slot in the
+    // drag direction — show where each will land: a faded clone icon in
+    // the destination cell. At the chain's ends the clamped splice makes
+    // this one-directional for free (nothing wraps past the ends).
+    if (g_dropTarget != dragFromCell_) {
+      const auto preview = model_.orderWith(draggingId_, g_dropTarget);
+      if (preview.size() == lane.size() && !preview.empty()) {
+        for (size_t ni = 0; ni < preview.size(); ++ni) {
+          if (ni >= cells_.size()) continue;
+          const auto& id = preview[ni];
+          if (id == draggingId_) continue;
+          size_t oldIdx = (size_t)-1;
+          for (size_t oi = 0; oi < lane.size(); ++oi)
+            if (lane[oi].blockId == id) {
+              oldIdx = oi;
+              break;
+            }
+          if (oldIdx == (size_t)-1 || oldIdx == ni || oldIdx >= cells_.size())
+            continue;
+          const auto* dispB = services_.chain.state().findBlock(id);
+          if (dispB == nullptr) continue;
+          const auto dc = cells_[ni]->getBounds().toFloat();
+          const auto dsq = juce::Rectangle<float>(
+              (dc.getWidth() - (float)cellSquare_) / 2.0f, 0.0f,
+              (float)cellSquare_, (float)cellSquare_);
+          paint::border(g, dsq.reduced(8.0f), 5.0f,
+                        theme::kMuted.withAlpha(0.8f), 1.5f);
+          if (dispB->isEffect)
+            Icons::draw(g, kindSvg(dispB->effectKind), dsq.reduced(20.0f),
+                        theme::kMuted.withAlpha(0.7f));
+        }
+      }
     }
   }
 }
@@ -923,8 +1051,16 @@ void NodeView::syncStrip() {
         help::Key::effectInput);
     add(&scales::gainDb(), "outputGain", "Out", b->params.outputGain,
         help::Key::effectOutput);
-    auto rest = paramsFor(*b, true);
+    // Parity law (m01128): strip face == full gallery face. Full table for
+    // every kind (not compact). Reverb additionally gets its 2 per-mode sig
+    // slots (Air/Early, Springs/Sag, etc.) — the tile binds them separately.
+    auto rest = paramsFor(*b, false);
     for (auto& p : rest) list.push_back(std::move(p));
+    if (b->effectKind == "reverb") {
+      const int mode = juce::jlimit(0, Reverb::kNumModes - 1, b->reverbMode);
+      list.push_back(reverbSigSlot(*b, mode, 0));
+      list.push_back(reverbSigSlot(*b, mode, 1));
+    }
   } else {
     add(&scales::gainDb(), "inputGain", "In", b->params.inputGain,
         help::Key::effectInput);
@@ -933,7 +1069,16 @@ void NodeView::syncStrip() {
     add(&scales::percent(), "mix", "Mix", b->params.mix,
         help::Key::effectMix);
   }
-  constexpr int kMaxKnobs = 10;  // the two-row cap: 5 per row
+  constexpr int kMaxKnobs = 12;  // the cap must reach the gallery's
+                                 // full-conv face (3 trio + 9) — a tighter
+                                 // cap silently drops trailing knobs (2026-10-17:
+                                 // 10 hid reverb LoCut territory, user m00896)
+  // Dense strips shrink the face so 12 knobs fit the strip width (task #9
+  // m00157: "ok to shrink knobs/fonts to fit"); labels stay 14px until the
+  // face drops further.
+  const int face = (int)std::min(list.size(), (size_t)kMaxKnobs) > 8 ? 32
+                                                                     : (int)kKnobFace;
+  st.setKnobFace(face);
   for (int i = 0; i < (int)std::min(list.size(), (size_t)kMaxKnobs); ++i) {
     const auto* sc = list[i].scale;
     // Identity-stored knobs (mix/in/out): the stored value IS the 0..1 knob
@@ -947,7 +1092,7 @@ void NodeView::syncStrip() {
                  : (float)knobFromStored(*sc, list[i].raw);
     Knob::Options o;
     o.label = list[i].label.toStdString();
-    o.size = (int)kKnobFace;
+    o.size = face;
     o.scale = sc;
     o.labelOnTop = true;  // value slot above the face, name below
     o.defaultValue = pos;
@@ -966,17 +1111,19 @@ void NodeView::syncStrip() {
  
   updateStripChrome(*b);
   layoutStripKnobs();
-  // The strip's height depends on the knob count -- re-run the layout so
-  // a freshly selected 10-knob block grows to two rows (resized only
-  // fires on a size change, which never happens here).
+  // The strip's height depends on the knob count and face size — re-run the
+  // layout so a freshly selected 12-knob block grows/shrinks correctly
+  // (resized only fires on a size change, which never happens here).
   resized();
 }
 void NodeView::updateStripChrome(const ChainItem& b) {
   auto& st = *strip_;
   st.power().setActive(b.params.enabled);
   st.power().setFillWhenActive(false);
-  st.power().setColour(b.params.enabled ? theme::kHighlight
-                                        : theme::kMuted);
+  // Power state: ON = LIT (white), OFF = dim (kMuted). 2026-10-17: this was
+  // inverted (enabled painted kMuted, the "OFF" look) — user A/B in the
+  // node-view bug batch (m00157 item 6).
+  st.power().setColour(b.params.enabled ? theme::kWhite : theme::kMuted);
   st.power().setHelpText(help::text(help::Key::blockPower));
   st.hide().setVisible(true);  // the X is the strip's ONLY close (batch-3)
   if (b.isEffect) {
@@ -1000,9 +1147,17 @@ void NodeView::updateStripKnobValues(NodeStrip& st, const ChainItem& b) {
     setv(0, &scales::percent(), mix, true);
     setv(1, &scales::gainDb(), in, true);
     setv(2, &scales::gainDb(), out, true);
-    auto rest = paramsFor(b, true);
-    for (size_t i = 0; i < rest.size() && (3 + i) < knobs.size(); ++i)
-      setv(3 + i, rest[i].scale, rest[i].raw, false);
+    auto rest = paramsFor(b, false);
+    size_t i = 0;
+    for (auto& p : rest)
+      setv(3 + i++, p.scale, p.raw, false);
+    if (b.effectKind == "reverb") {
+      const int mode = juce::jlimit(0, Reverb::kNumModes - 1, b.reverbMode);
+      for (int s = 0; s < 2; ++s) {
+        const auto p = reverbSigSlot(b, mode, s);
+        setv(3 + i++, p.scale, p.raw, false);
+      }
+    }
   } else {
     setv(0, &scales::gainDb(), in, true);
     setv(1, &scales::gainDb(), out, true);
@@ -1037,11 +1192,15 @@ void NodeView::layoutStripKnobs() {
   // row (m01868); the strip's extra height for it is budgeted in resized().
   const bool conv = st.convPlot().isVisible();
   const int plotTop = kStripHeadH + 6;
+  const int plotH = conv ? 64 : 0;
+  // Dense strips (face < kKnobFace): tighten the vertical budget so the
+  // shrunk face doesn't leave dead space.
+  const int headPad = st.knobFace() < (int)kKnobFace ? 2 : 6;
   if (conv) {
     st.loadIr().setBounds(st.getWidth() - 250, plotTop, 120, 24);
     st.convPlot().setBounds(14, plotTop, juce::jmin(520, st.getWidth() - 280), 56);
   }
-  const int knobTop = plotTop + (conv ? 64 : 0);
+  const int knobTop = plotTop + plotH + (conv ? 0 : headPad);
   for (int i = 0; i < n; ++i)
     st.knobs()[i]->setBounds(x0 + i * cw, knobTop, cw, kh);
 }
@@ -1052,17 +1211,18 @@ void NodeView::layoutStripKnobs() {
 
 // The strip's mode/type menu shares the cell-menu lifecycle: one live
 // ContextMenu at a time, released before the next opens.
-void NodeView::showStripMenu(std::vector<ContextMenu::Item> items) {
+void NodeView::showStripMenu(std::vector<ContextMenu::Item> items,
+                             const juce::Point<int>& anchor) {
   if (auto* old = stripMenu_.release()) {
     old->close();
     juce::MessageManager::callAsync([old] { delete old; });
   }
   stripMenu_ = std::make_unique<ContextMenu>(std::move(items));
   // openAtPoint takes the CONTEXT component's LOCAL coordinates (same
-  // convention as NodeCell::openMenu).
-  stripMenu_->openAtPoint(*strip_,
-                          juce::Point<int>(strip_->getWidth() / 2,
-                                           strip_->getHeight() / 2));
+  // convention as NodeCell::openMenu). The menu top-left opens at the
+  // triggering button's top-left (m00157 item 9: the old centre-of-strip
+  // point offset the panel away from the button).
+  stripMenu_->openAtPoint(*strip_, anchor);
 }
 
 // Menu opener for the strip's mode line (m02657: menus, not click/hold
@@ -1072,33 +1232,36 @@ void NodeView::openModeMenu() {
                       ? nullptr
                       : services_.chain.state().findBlock(model_.selectedId);
   if (b == nullptr || !b->isEffect) return;
-  const std::string k = b->effectKind.toStdString();
+  const juce::String k = b->effectKind;
   const std::string id = model_.selectedId;
+  const std::string kStr = k.toStdString();
   std::vector<ContextMenu::Item> items;
   const auto push = [&](int m, const juce::String& label, bool current) {
-    items.push_back({juce::String::fromUTF8("\xe2\x80\xa2 ") + label,
-                     Icon::Check, help::Key::nodeMode,
-                     [this, id, k, m] {
-                       if (k == "delay")
+    // m00157 item 9: bare label (no bullet/checkmark dot) + a per-mode
+    // hover description.
+    items.push_back({label, std::nullopt, help::Key::nodeMode,
+                     [this, id, kStr, m] {
+                       if (kStr == "delay")
                          services_.chain.setBlockParam(id, "delayMode", (double)m);
-                       else if (k == "compressor")
+                       else if (kStr == "compressor")
                          services_.chain.setBlockParam(id, "compMode", (double)m);
                        else
                          services_.chain.setBlockParam(id, "reverbMode", (double)m);
                      },
-                     current});
+                     false,
+                     modeBlurb(k, m)});
   };
-  if (k == "delay") {
+  if (kStr == "delay") {
     for (int m = 0; m < Delay::kNumModes; ++m) push(m, Delay::modeName(m), b->delayMode == m);
-  } else if (k == "compressor") {
+  } else if (kStr == "compressor") {
     for (int m = 0; m < Compressor::kNumModes; ++m) push(m, Compressor::modeName(m), b->compMode == m);
-  } else if (k == "reverb") {
+  } else if (kStr == "reverb") {
     for (int m = 0; m < Reverb::kNumModes; ++m)
       push(m, juce::String(std::string(Reverb::modeName(m))), b->reverbMode == m);
   } else {
     return;  // chorus / tremolo / convolution have no mode axis.
   }
-  showStripMenu(std::move(items));
+  showStripMenu(std::move(items), strip_->modeB().getLocalBounds().getTopLeft());
 }
 
 // Menu opener for the strip's type line (multi-type reverb modes only).
@@ -1113,19 +1276,75 @@ void NodeView::openTypeMenu() {
   const std::string id = model_.selectedId;
   std::vector<ContextMenu::Item> items;
   for (int t = 0; t < n; ++t)
-    items.push_back(
-        {reverbTypeName(m, t), Icon::Check, help::Key::nodeMode,
-         [this, id, m, t] {
-           services_.chain.setBlockParam(
-               id, "reverbType" + juce::String(m), (double)t);
-         },
-         t == nodeReverbTypeOf(*b, m)});
-  showStripMenu(std::move(items));
+    items.push_back({juce::String(reverbTypeName(m, t)), std::nullopt,
+                     help::Key::nodeMode,
+                     [this, id, m, t] {
+                       services_.chain.setBlockParam(
+                           id, "reverbType" + juce::String(m), (double)t);
+                     },
+                     false,
+                     reverbTypeBlurb(m, t)});
+  showStripMenu(std::move(items), strip_->typeB().getLocalBounds().getTopLeft());
 }
 
 bool NodeView::stripShown() const {
   return strip_ != nullptr && strip_->isVisible();
 }
+
+// TileShot probes (m00896/m00806: strip-vs-gallery parity captures).
+void NodeView::selectBlockForShot(const std::string& blockId) {
+  model_.select(blockId);
+  syncStrip();
+  for (auto& c : cells_) c->repaint();
+}
+
+juce::StringArray NodeView::stripKnobLabelsForShot() const {
+  juce::StringArray out;
+  if (strip_ == nullptr || !strip_->isVisible()) return out;
+  for (auto* k : strip_->knobs()) out.add(k->knobLabel());
+  return out;
+}
+
+juce::Point<int> NodeView::cellCentreForShot(int cellIndex) const {
+  if (cellIndex < 0 || cellIndex >= (int)cells_.size()) return juce::Point<int>{0, 0};
+  return cells_[cellIndex]->getBounds().getCentre();
+}
+
+juce::String NodeView::dragStateForShot() const {
+  // m01463: the testbed asserts the mid-drag INDICATORS are live — the
+  // light-alpha clone (ghost_) and the computed drop target (g_dropTarget).
+  if (dragCell_ == nullptr) return "idle";
+  return juce::String("active ghost=") + juce::String(ghost_ != nullptr ? "true" : "false") +
+         " target=" + juce::String(g_dropTarget) + " from=" +
+         juce::String(dragFromCell_);
+}
+
+void NodeView::beginDragFromShot(int fromCell, int toCell) {
+  // m01463 screenshot path: drive a REAL drag (the same path a mouse
+  // gesture uses) and hold the pointer over `toCell` so the clone ghost +
+  // drop target + displacement cascade are all live for a snapshot.
+  if (fromCell < 0 || fromCell >= (int)cells_.size() || toCell < 0 ||
+      toCell >= (int)cells_.size())
+    return;
+  beginCellDrag(*cells_[fromCell], cells_[fromCell]->getLocalBounds().getCentre());
+  // cellDragMove expects VIEW-local coordinates. Cells are direct children
+  // of the view (NodeView::resized), so getBounds() IS view-local — no
+  // conversion (the real path's e.eventComponent conversion collapses to
+  // this for direct children — NodeView.cpp:237). Aim just left of the cell
+  // centre: the slot math floors via roundToInt, and the exact centre of an
+  // 84 px cell lands on the .5 boundary of the next slot.
+  const auto cb = cells_[toCell]->getBounds();
+  juce::Point<float> toView = cb.getTopLeft().toFloat() +
+                              juce::Point<float>(cb.getWidth() * 0.4f, cb.getHeight() * 0.5f);
+  cellDragMove(*cells_[fromCell], toView);
+  repaint();
+}
+
+void NodeView::openModeMenuForShot() { openModeMenu(); }
+
+void NodeView::openTypeMenuForShot() { openTypeMenu(); }
+
+void NodeView::endDragFromShot() { cancelDrag(); }
 
 void NodeView::hideStrip() {
   // The X (left of power) is the strip's ONLY close: clear the selection and

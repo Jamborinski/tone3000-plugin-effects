@@ -384,8 +384,26 @@ std::string TONE3000Processor::addEffectBlock(EffectKind kind, const juce::Strin
   // swap-mute / mix smoothers are unreset, so the block passes its input
   // through dry - the effect would be completely inaudible.
   prepareChainBlock(*block);
+  // The starting mode (fresh blocks carry the default, mode 0 = Plate) —
+  // captured before landToneBlock moves the pointer away.
+  const int startMode = block->reverbMode;
 
   landToneBlock(std::move(block), side, index);
+  // Plate (the default reverb mode) lands on the mode's neutral dials — the
+  // same table the UI's enterMode uses for a mode switch. Without this a new
+  // block carried the generic ChainBlock defaults (decay 1200 ms, tone 0.4,
+  // size 0.6, width 1.0) and only looked right after the user touched the
+  // mode selector (the 2026-10-13 model/subtype ruling: neutral 50% dials,
+  // decay at the 2.0 s reference). setBlockParam clamps + pushes the engine.
+  if (kind == EffectKind::Reverb) {
+    double d = 0.0, pre = 0.0, tone = 0.0, size = 0.0, width = 0.0;
+    Reverb::defaultDialsForMode(startMode, d, pre, tone, size, width);
+    setBlockParam(newId, "reverbDecayMs", d);
+    setBlockParam(newId, "reverbPreMs", pre);
+    setBlockParam(newId, "reverbTone", tone);
+    setBlockParam(newId, "reverbSize", size);
+    setBlockParam(newId, "reverbWidth", width);
+  }
   DBG("Added effect block " << newId << " (" << effectKindToString(kind) << " on " << side
                             << " @ " << index << ")");
   return newId;
@@ -1947,6 +1965,14 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
                              param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compType" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbDry" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbType0" || param == "reverbType1" || param == "reverbType2" || param == "reverbType3" || param == "reverbType4" || param == "reverbType5" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSharedMod" || param == "reverbWave" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace" || param == "reverbLoCut" || param == "convGain" || param == "convDry" || param == "convWidth" || param == "convStartS" || param == "convEndS" || param == "convPitch" || param == "convPreMs" || param == "convFadeIn" || param == "convFadeOut" || param == "convInCurve" || param == "convOutCurve" || param == "convToneDb";
   const bool isContinuous = param == "inputGain" || param == "outputGain" || param == "mix" ||
                             isEffectParam;
+  // Mode/type selects are one-shot menu picks, not knob drags — they resync
+  // immediately (the mode text must follow the sound, not the gesture-settle
+  // window), and each pick is its own undo step.
+  const bool isDiscreteEffect = param == "delayMode" || param == "compMode" ||
+                                param == "reverbMode" || param == "reverbType0" ||
+                                param == "reverbType1" || param == "reverbType2" ||
+                                param == "reverbType3" || param == "reverbType4" ||
+                                param == "reverbType5";
   const bool isKnown = isContinuous || param == "enabled" || param == "normalize";
   if (!isKnown) {
     DBG("setBlockParam: unknown param: " << param);
@@ -1954,8 +1980,8 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
   }
 
   // Continuous params coalesce a whole knob drag into one undo step.
-  pushChainHistory(isContinuous ? "param:" + juce::String(blockId) + ":" + param
-                                : juce::String());
+  pushChainHistory(isContinuous && !isDiscreteEffect ? "param:" + juce::String(blockId) + ":" + param
+                                                     : juce::String());
 
   if (param == "enabled") {
     block->enabled = value > 0.5;
@@ -2287,7 +2313,7 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
 
   // Continuous drags settle into one bump after the gesture ends; discrete
   // toggles resync immediately.
-  if (isContinuous)
+  if (isContinuous && !isDiscreteEffect)
     deferredRevisionBump();
   else
     bumpChainRevision();

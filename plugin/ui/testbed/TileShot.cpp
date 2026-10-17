@@ -35,6 +35,7 @@
 #include "views/gallery/EffectTile.h"
 #include "views/gallery/GalleryGeometry.h"
 #include "views/gallery/ToneTile.h"
+#include "views/nodeview/NodeView.h"
 
 namespace t3k::ui::testbed {
 
@@ -187,7 +188,7 @@ std::vector<Shot> shots() {
          return i;
        },
        noKernel, false},
-      {"reverb", gallery::kTileSize, "reverb defaults (Digital)",
+      {"reverb", gallery::kTileSize, "reverb defaults (Plate)",
        [] { return effectItem("reverb"); }, noKernel, false},
       {"reverb-shift", gallery::kTileSize, "reverb shifted (Springs mode, 2400 ms decay)",
        [] {
@@ -490,6 +491,277 @@ int runRegen(const juce::StringArray& a) {
   return 0;
 }
 
+// --strip <kind>: render the NODE VIEW's parameter strip for a one-block
+// chain of <kind> (delay|chorus|tremolo|compressor|reverb|convolution|tone)
+// and snapshot it. The parity capture pairs this with the matching gallery
+// tile (--tile) so a knob present in one and missing in the other is
+// visible side by side.
+int runStrip(const juce::StringArray& a) {
+  const auto cwd = juce::File::getCurrentWorkingDirectory();
+  juce::File out;
+  float scale = 2.0f;
+  int width = 920;
+  for (int i = 2; i < a.size(); ++i) {
+    if (a[i] == "--out" && i + 1 < a.size())
+      out = cwd.getChildFile(a[++i]);
+    else if (a[i] == "--scale" && i + 1 < a.size())
+      scale = (float)a[++i].getDoubleValue();
+    else if (a[i] == "--width" && i + 1 < a.size())
+      width = a[++i].getIntValue();
+  }
+  const juce::String kind = a[1];
+  if (out == juce::File())
+    out = cwd.getChildFile("strip-" + kind + ".png");
+
+  // One-block chain scenario (like node-knob-change's shape).
+  juce::var root, scenario;
+  const auto fixturesFile =
+      juce::File(juce::String(T3K_TESTBED_FIXTURES)).getChildFile("scenarios.json");
+  if (fixturesFile.existsAsFile()) {
+    if (const auto parsed = juce::JSON::parse(fixturesFile.loadFileAsString()); !parsed.isVoid())
+      root = parsed;
+  }
+  juce::DynamicObject empty;
+  scenario = VarOfRef(&empty);
+  if (root.isVoid())
+    root = scenario;
+
+  ShotWorld world(scenario, root);
+  // Seed a left lane with exactly one block of the requested kind, then
+  // select it so the strip builds its knobs.
+  auto putProp = [](juce::DynamicObject& o, const char* k, juce::var v) { o.setProperty(k, v); };
+  const bool tone = (kind == "tone");
+  if (tone) {
+    const juce::var state = world.backend.getChainState(0);
+    auto* blocks = state.getProperty("chain", juce::var()).getArray();
+    if (blocks != nullptr) {
+      juce::DynamicObject* o = new juce::DynamicObject();
+      putProp(*o, "blockId", juce::String("shot-tone"));
+      putProp(*o, "kind", juce::String("insert"));
+      blocks->clear();
+      blocks->add(VarOfRef(o));
+    }
+  } else {
+    const std::string id = world.backend.addEffectBlock(kind, "left", 0);
+    if (id.empty()) {
+      std::cerr << "could not add a " << kind.toStdString() << " block" << std::endl;
+      return 2;
+    }
+  }
+
+  nodeview::NodeView view(world.get());
+  view.setSize(width, 560);  // grid up top, strip docked along the bottom
+  jassert(view.nodeViewActive());
+  view.setNodeView(true);
+  // Select the single block (tone: the insert; effect: the effect).
+  const juce::var state = world.backend.getChainState(0);
+  const auto* lane = state.getProperty("chain", juce::var()).getArray();
+  juce::String sel;
+  if (lane != nullptr && lane->size() > 0)
+    sel = lane->getReference(0)["blockId"].toString();
+  view.selectBlockForShot(sel.toStdString());
+
+  juce::Component host;
+  host.addAndMakeVisible(view);
+  host.setSize(width, 560);
+  juce::MessageManager::getInstance()->runDispatchLoopUntil(600);  // async settle
+
+  // Snapshot the strip's region: the NodeView is grid + strip, so capture
+// the whole view (the parity artefact includes the mode/type head rows —
+// task #8's menu-offset bug is visible there too).
+  juce::Rectangle<int> snapB(0, 0, width, 560);
+  const auto image = host.createComponentSnapshot(snapB, true, scale);
+  out.deleteFile();
+  juce::PNGImageFormat png;
+  if (juce::FileOutputStream stream(out); !stream.openedOk()) {
+    std::cerr << "cannot write " << out.getFullPathName() << std::endl;
+    return 2;
+  } else if (!png.writeImageToStream(image, stream)) {
+    std::cerr << "PNG encode failed for " << out.getFullPathName() << std::endl;
+    return 2;
+  }
+  const auto labels = view.stripKnobLabelsForShot();
+  std::cout << kind << " strip -> " << out.getFullPathName() << " (" << image.getWidth()
+            << "x" << image.getHeight() << ")"
+            << " | knobs(" << labels.size() << "): ";
+  for (int i = 0; i < labels.size(); ++i)
+    std::cout << (i > 0 ? " " : "") << labels[i].toStdString();
+  std::cout << std::endl;
+  return 0;
+}
+
+// The ghost paints in the root's overlay layer — a minimal OverlayHost that
+// owns a full-size overlay on top of its content (SelfTests.cpp:1714 pattern).
+struct DragHost : juce::Component, t3k::ui::OverlayHost {
+  juce::Component overlay;
+  DragHost() {
+    overlay.setBounds(getLocalBounds());
+    addAndMakeVisible(overlay);
+  }
+  juce::Component& overlayLayer() override { return overlay; }
+};
+
+// --strip-drag: render the NODE VIEW with a REAL mid-drag gesture held
+// (clone ghost + drop-target highlight + displacement cascade all live) and
+// snapshot it — the m01463 visual verification of the drag previews.
+// Usage: TileShot --strip-drag --from <cell> --to <cell> [--out f.png] [--scale N] [--width W]
+// The grid is seeded with a 4-block lane: comp, chorus, delay, reverb.
+int runStripDrag(const juce::StringArray& a) {
+  const auto cwd = juce::File::getCurrentWorkingDirectory();
+  juce::File out;
+  float scale = 2.0f;
+  int width = 920;
+  int from = 0, to = 3;
+  for (int i = 1; i < a.size(); ++i) {
+    if (a[i] == "--out" && i + 1 < a.size())
+      out = cwd.getChildFile(a[++i]);
+    else if (a[i] == "--scale" && i + 1 < a.size())
+      scale = (float)a[++i].getDoubleValue();
+    else if (a[i] == "--width" && i + 1 < a.size())
+      width = a[++i].getIntValue();
+    else if (a[i] == "--from" && i + 1 < a.size())
+      from = a[++i].getIntValue();
+    else if (a[i] == "--to" && i + 1 < a.size())
+      to = a[++i].getIntValue();
+  }
+  if (out == juce::File()) out = cwd.getChildFile("strip-drag.png");
+
+  juce::DynamicObject empty;
+  const juce::var scenario = VarOfRef(&empty);
+  ShotWorld world(scenario, scenario);
+  const auto kinds = juce::StringArray{"compressor", "chorus", "delay", "reverb"};
+  int pos = 0;
+  for (const auto& k : kinds)
+    if (world.backend.addEffectBlock(k, "left", pos++).empty()) {
+      std::cerr << "could not seed the " << k.toStdString() << " block" << std::endl;
+      return 2;
+    }
+
+  DragHost host;
+  nodeview::NodeView view(world.get());
+  view.setSize(width, 560);  // grid up top, room for the overlay on top
+  host.addChildComponent(view);
+  host.addAndMakeVisible(view);
+  host.setSize(width, 560);
+  view.setNodeView(true);
+  // The ghost paints in the overlay layer — it must be the TOPMOST child and
+  // bound exactly to the view (the overlay was sized before the host had its
+  // real bounds); a drag held over cell `to` needs 1:1 coordinates.
+  host.overlay.setBounds(view.getLocalBounds());
+  host.overlay.toFront(true);
+  // Select the dragged block first: the docked strip (name/mode/power +
+  // knobs) is only visible with a selection — the mid-drag state is anchored
+  // by it (same as runStrip).
+  {
+    const juce::var state = world.backend.getChainState(0);
+    const auto* lane = state.getProperty("chain", juce::var()).getArray();
+    if (lane != nullptr && lane->size() > 0)
+      view.selectBlockForShot(lane->getReference(0)["blockId"].toString().toStdString());
+  }
+  juce::MessageManager::getInstance()->runDispatchLoopUntil(600);  // async settle
+
+  view.beginDragFromShot(from, to);
+  juce::MessageManager::getInstance()->runDispatchLoopUntil(200);  // paints land
+  std::cout << "drag state: " << view.dragStateForShot().toStdString() << std::endl;
+
+  const auto image = host.createComponentSnapshot(host.getLocalBounds(), true, scale);
+  out.deleteFile();
+  juce::PNGImageFormat png;
+  if (juce::FileOutputStream stream(out); !stream.openedOk()) {
+    std::cerr << "cannot write " << out.getFullPathName() << std::endl;
+    return 2;
+  } else if (!png.writeImageToStream(image, stream)) {
+    std::cerr << "PNG encode failed for " << out.getFullPathName() << std::endl;
+    return 2;
+  }
+  view.endDragFromShot();
+  std::cout << "strip-drag (" << from << "->" << to << ") -> " << out.getFullPathName()
+            << " (" << image.getWidth() << "x" << image.getHeight() << ")" << std::endl;
+  return 0;
+}
+
+// --strip-menu: render the NODE VIEW with the strip's MODE menu open and
+// snapshot it — the m00157 item-9 verification (menu anchored at the mode
+// button, no bullets/checkmarks, per-entry hover description).
+// Usage: TileShot --strip-menu [--kind reverb|delay|compressor] [--out f.png]
+//        [--scale N] [--width W]
+int runStripMenu(const juce::StringArray& a) {
+  const auto cwd = juce::File::getCurrentWorkingDirectory();
+  juce::File out;
+  float scale = 2.0f;
+  int width = 920;
+  juce::String kind = "reverb";
+  int mode = -1;  // --mode: seed this reverb mode (type-menu shots need 5)
+  for (int i = 1; i < a.size(); ++i) {
+    if (a[i] == "--out" && i + 1 < a.size())
+      out = cwd.getChildFile(a[++i]);
+    else if (a[i] == "--scale" && i + 1 < a.size())
+      scale = (float)a[++i].getDoubleValue();
+    else if (a[i] == "--width" && i + 1 < a.size())
+      width = a[++i].getIntValue();
+    else if (a[i] == "--kind" && i + 1 < a.size())
+      kind = a[++i];
+    else if (a[i] == "--mode" && i + 1 < a.size())
+      mode = a[++i].getIntValue();
+  }
+  if (out == juce::File()) out = cwd.getChildFile("strip-menu.png");
+
+  juce::DynamicObject empty;
+  const juce::var scenario = VarOfRef(&empty);
+  ShotWorld world(scenario, scenario);
+  if (world.backend.addEffectBlock(kind, "left", 0).empty()) {
+    std::cerr << "could not seed the " << kind.toStdString() << " block"
+              << std::endl;
+    return 2;
+  }
+
+  DragHost host;
+  nodeview::NodeView view(world.get());
+  view.setSize(width, 560);
+  host.addChildComponent(view);
+  host.addAndMakeVisible(view);
+  host.setSize(width, 560);
+  view.setNodeView(true);
+  host.overlay.setBounds(view.getLocalBounds());
+  host.overlay.toFront(true);
+  {
+    const juce::var state = world.backend.getChainState(0);
+    const auto* lane = state.getProperty("chain", juce::var()).getArray();
+    if (lane != nullptr && lane->size() > 0)
+      view.selectBlockForShot(lane->getReference(0)["blockId"].toString().toStdString());
+  }
+  if (mode >= 0) {
+    const juce::var st2 = world.backend.getChainState(0);
+    const auto* lane2 = st2.getProperty("chain", juce::var()).getArray();
+    world.backend.setBlockParam(lane2->getReference(0)["blockId"].toString().toStdString(),
+                                "reverbMode", mode);
+  }
+  juce::MessageManager::getInstance()->runDispatchLoopUntil(600);  // settle
+
+  const bool typeMenu = [&] {
+    for (int i = 1; i < a.size(); ++i)
+      if (a[i] == "--type") return true;
+    return false;
+  }();
+  if (typeMenu) view.openTypeMenuForShot(); else view.openModeMenuForShot();
+  juce::MessageManager::getInstance()->runDispatchLoopUntil(200);  // menu paints
+
+  const auto image = host.createComponentSnapshot(host.getLocalBounds(), true, scale);
+  out.deleteFile();
+  juce::PNGImageFormat png;
+  if (juce::FileOutputStream stream(out); !stream.openedOk()) {
+    std::cerr << "cannot write " << out.getFullPathName() << std::endl;
+    return 2;
+  } else if (!png.writeImageToStream(image, stream)) {
+    std::cerr << "PNG encode failed for " << out.getFullPathName() << std::endl;
+    return 2;
+  }
+  std::cout << "strip-menu (" << kind.toStdString() << ") -> "
+            << out.getFullPathName() << " (" << image.getWidth() << "x"
+            << image.getHeight() << ")" << std::endl;
+  return 0;
+}
+
 class TileShotApp : public juce::JUCEApplication {
 public:
   const juce::String getApplicationName() override { return "TileShot"; }
@@ -507,11 +779,20 @@ public:
       code = runRegen(args);
     else if (args.size() >= 2 && args[0] == "--dump")
       code = runDump(args);
+    else if (args.size() >= 2 && args[0] == "--strip")
+      code = runStrip(args);
+    else if (args.size() >= 2 && args[0] == "--strip-drag")
+      code = runStripDrag(args);
+    else if (args.size() >= 2 && args[0] == "--strip-menu")
+      code = runStripMenu(args);
     else if (args.size() == 1 && args[0] == "--list")
       code = runList();
     else
       std::cerr << "TileShot --list | --tile <name> [--size 224] [--scale 2] [--out f.png] [--ocr]\n"
                    "          --dump <name>          (child-control bounds, for layout bugs)\n"
+                   "          --strip <kind> [--out f.png] [--scale N] [--width W]   (node strip for <kind>)\n"
+                   "          --strip-drag --from N --to M [--out f.png]            (mid-drag ghost + cascade)\n"
+                   "          --strip-menu [--kind reverb|delay|compressor] [--out f.png]  (mode menu open)\n"
                    "          --golden <candidate> <reference> [--tol N] [--diff d.png]\n"
                    "          --regen <golden> --from <shot>\n"
               << std::endl;

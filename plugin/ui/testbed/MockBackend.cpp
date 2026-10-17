@@ -1,5 +1,7 @@
 #include "MockBackend.h"
 
+#include "Reverb.h"
+
 #include <cmath>
 
 namespace t3k::ui::testbed {
@@ -262,6 +264,27 @@ std::string MockBackend::addEffectBlock(const juce::String& kind,
                           {"mix", (kind == "compressor") ? 1.0 : 0.5},
                           {"inputGain", 0.5},
                           {"outputGain", 0.5}});
+  if (kind == "reverb") {
+    // Mirror the real backend (ProcessorChain serializeChain): a fresh reverb
+    // lands on mode 0 (Plate) WITH the mode-order v2 marker, so parseItem's
+    // v1->v2 remap (0->5 Digital) is a no-op. Without the marker the mock
+    // used to hand the UI a Digital reverb (2026-10-17, parity shot showed
+    // the Density/Shape pair).
+    auto* p = params.getDynamicObject();
+    p->setProperty("reverbMode", 0);
+    p->setProperty("reverbModeOrderV1", 1);
+    // The mode's neutral dials, exactly like the real addEffectBlock
+    // (ProcessorChain.cpp:defaultDialsForMode + setBlockParam x5) — without
+    // this the shot UI shows the generic ChainBlock defaults (1200 ms decay,
+    // tone 0.4, size 0.6, width 1.0), not what the user's fresh block carries.
+    double d = 0.0, pre = 0.0, tone = 0.0, size = 0.0, width = 0.0;
+    Reverb::defaultDialsForMode(0, d, pre, tone, size, width);
+    p->setProperty("reverbDecayMs", d);
+    p->setProperty("reverbPreMs", pre);
+    p->setProperty("reverbTone", tone);
+    p->setProperty("reverbSize", size);
+    p->setProperty("reverbWidth", width);
+  }
   juce::var item =
       obj({{"blockId", juce::String(id)}, {"kind", "effect"}, {"effectKind", kind},
            {"params", params}});

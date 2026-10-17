@@ -37,3 +37,6 @@ third_party/
 # Research track (docs/tickets/reverb-dry-mod-width-swing.md R4): local only
 /research/
 staging/
+build-ui-debug/
+.pi/
+SVG Style Images/

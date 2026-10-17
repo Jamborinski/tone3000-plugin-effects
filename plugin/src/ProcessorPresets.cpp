@@ -150,6 +150,11 @@ bool TONE3000Processor::loadPreset(const juce::String& presetId) {
     juce::ScopedLock lock(chainMutex);
     pushChainHistory();
     retired = restoreChainSnapshot(snapshot);  // bumps the revision
+    // E-2: re-hydrate convolution engines from their persisted IR paths
+    // (the snapshot carries the reference, not the kernel bytes) — same
+    // call the project/state restore runs; without it a preset's convolver
+    // came back empty.
+    restoreConvIrsLocked();
     activePresetId = presetId;
     activePresetName = preset.getProperty("name").toString();
   }

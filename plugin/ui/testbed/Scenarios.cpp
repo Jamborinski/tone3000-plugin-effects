@@ -70,6 +70,7 @@ int nodeLaneFindKind(MockBackend& be, const juce::String& kind) {
       return i;
   return -1;
 }
+
 // The FIRST strip knob (a Knob that is a descendant of the NodeView's
 // strip). The strip is the NodeView's last child component; scoping the
 // search to it avoids header/gallery knobs that happen to be visible.
@@ -127,6 +128,24 @@ void nodeFirstBlock(PluginRoot& root) {
   jassert(hit != nullptr);
   if (hit == nullptr) return;
   drive::click(root, *hit);
+}
+
+// The NodeView component itself (m01481: drag drives aim at exact cell
+// centres via cellCentreForShot, and the mid-drag indicator check reads
+// dragStateForShot — both shot-probe accessors on the view).
+nodeview::NodeView* findNodeView(PluginRoot& root) {
+  nodeview::NodeView* hit = nullptr;
+  std::function<void(juce::Component&)> walk = [&](juce::Component& c) {
+    if (hit) return;
+    if (auto* nv = dynamic_cast<nodeview::NodeView*>(&c)) {
+      hit = nv;
+      return;
+    }
+    for (auto* ch : c.getChildren())
+      if (ch != nullptr) walk(*ch);
+  };
+  walk(root);
+  return hit;
 }
 
 // Drive steps keyed by scenario id: what a user does from the scenario's
@@ -268,7 +287,10 @@ const std::map<juce::String, Drive>& drives() {
          jassert(tape != nullptr);
          if (tape == nullptr) return;
          click(root, *tape);
-         wait(400);
+         // The mode TEXT must follow the sound immediately (m00156: the
+         // pick used to wait ~1 s for the gesture-settle revision bump, so
+         // the button kept saying "Digital" while the engine ran Tape).
+         jassert(mode->getButtonText() == "Tape");
          jassert(std::abs(nodeLaneParam(be, 0, "mix") - 0.88) < 1e-3);
          jassert(nodeLaneParam(be, 0, "delayMode") == 1.0);
          jassert(nodeLaneParam(be, 3, "mix") == 0.5);
@@ -301,6 +323,133 @@ const std::map<juce::String, Drive>& drives() {
          jassert(nodeLaneKind(be, 0) == "chorus");
          jassert(nodeLaneKind(be, 1) == "insert");
          jassert(nodeLaneFindKind(be, "compressor") == 2);
+       }},
+
+      {"node-drag-multi",
+       [](PluginRoot& root, MockBackend& be) {
+         // m01481: drive drops to the BEGINNING, the MIDDLE, and the END of
+         // a 4-effect chain and verify each lands where the splice says. The
+         // existing node-drag-drop covers only the tail; this one covers all
+         // three regions plus the mid-drag indicators (m01463).
+         auto* nv = findNodeView(root);
+         jassert(nv != nullptr);
+         if (nv == nullptr) return;
+         auto* src = byHelpPrefix(root, "Comp");
+         jassert(src != nullptr);
+         if (src == nullptr) return;
+         auto* host = src->getParentComponent();
+         jassert(host != nullptr);
+         if (host == nullptr) return;
+         // A 1x1 invisible target at the given cell's centre (NodeView
+         // coords -> host coords).
+         auto cellTarget = [&](int cell) {
+           auto* d = new juce::Component();
+           const auto centre =
+               nv->getLocalPoint(nv, nv->cellCentreForShot(cell));
+           d->setBounds(centre.x, centre.y, 1, 1);
+           d->setVisible(false);
+           host->addAndMakeVisible(d);
+           return d;
+         };
+         // [comp, chorus, delay, reverb] (all effects — every drop has an
+         // effect to grab):
+         // (1) END: comp (slot 0) -> slot 9 (far past the 4-item lane; the
+         // clamped splice sends it to the tail): [chorus, delay, reverb, comp].
+         {
+           auto* d = cellTarget(9);
+           dragTo(root, *src, *d);
+           wait(500);
+           host->removeChildComponent(d);
+           delete d;
+         }
+         jassert(nodeLaneKind(be, 0) == "chorus");
+         jassert(nodeLaneKind(be, 2) == "reverb");
+         jassert(nodeLaneFindKind(be, "compressor") == 3);
+         // (2) BEGINNING: comp (now the tail, slot 3) -> slot 0:
+         // [comp, chorus, delay, reverb].
+         {
+           auto* comp = byHelpPrefix(root, "Comp");
+           auto* d = cellTarget(0);
+           dragTo(root, *comp, *d);
+           wait(500);
+           host->removeChildComponent(d);
+           delete d;
+         }
+         jassert(nodeLaneKind(be, 0) == "compressor");
+         jassert(nodeLaneKind(be, 1) == "chorus");
+         jassert(nodeLaneKind(be, 3) == "reverb");
+         // (3) MIDDLE: delay (slot 2) -> slot 1: erase slot 2 from
+         // [comp, chorus, delay, reverb] -> [comp, chorus, reverb], insert
+         // at 1 -> [comp, delay, chorus, reverb].
+         {
+           auto* delay = byHelpPrefix(root, "Del");
+           auto* d = cellTarget(1);
+           dragTo(root, *delay, *d);
+           wait(500);
+           host->removeChildComponent(d);
+           delete d;
+         }
+         jassert(nodeLaneKind(be, 0) == "compressor");
+         jassert(nodeLaneKind(be, 1) == "delay");
+         jassert(nodeLaneKind(be, 2) == "chorus");
+         jassert(nodeLaneKind(be, 3) == "reverb");
+         // (4) m01463: MID-DRAG indicators — press + travel to the far end
+         // WITHOUT releasing: the light clone ghost is live and a drop
+         // target is computed (the displacement cascade paints from it).
+         {
+           auto* reverb = byHelpPrefix(root, "Rev");
+           auto* d = cellTarget(9);
+           dragToPending(root, *reverb, *d);
+           wait(120);
+           const auto ds = nv->dragStateForShot();
+           jassert(ds.startsWith("active ghost=true"));
+           jassert(ds.contains("target=" + juce::String(9)));
+           releaseDrag(root, *reverb, *d);
+           wait(500);
+           host->removeChildComponent(d);
+           delete d;
+         }
+         // The release lands the tail drop for real.
+         jassert(nodeLaneFindKind(be, "reverb") == 3);
+         jassert(nv->dragStateForShot() == "idle");
+       }},
+      {"node-add-far-slot",
+       [](PluginRoot& root, MockBackend& be) {
+         // m01676 (spc-1792272846090-49785): [compressor, insert, insert] —
+         // click an empty slot WAY after the end of the chain and add a
+         // Delay there. It must land at the far position (lane tail), not
+         // at the front.
+         auto* nv = findNodeView(root);
+         jassert(nv != nullptr);
+         if (nv == nullptr) return;
+         // The FARTHEST empty cell: cells are direct NodeView children in
+         // index order; the lane items end at index 2, so the last visible
+         // empty square (index 9 on a 3-item lane) is way past the end.
+         juce::Component* farCell = nullptr;
+         for (int i = 0; i < nv->getNumChildComponents(); ++i) {
+           auto* ch = nv->getChildComponent(i);
+           if (ch == nullptr) continue;
+           if (ch->getHelpText().startsWith("Empty slot")) farCell = ch;
+         }
+         jassert(farCell != nullptr);
+         if (farCell == nullptr) return;
+         click(root, *farCell);
+         wait(300);
+         auto* row = byHelpPrefix(root, "Add Delay:");
+         jassert(row != nullptr);
+         if (row == nullptr) return;
+         click(root, *row);
+         wait(500);
+         // m01676 (spc-1792272846090-49785): clicking the FARTHEST empty
+         // cell (way past the 3-item lane) and adding a Delay must land it
+         // at the END of the chain, never at the front. addIntoCell clamps
+         // the cell index to lane.size() (3 at add-time) → index 2, i.e.
+         // after both existing items; the lane grows to 4 with a trailing
+         // pass-through. Final: [compressor, insert, delay, insert].
+         jassert(nodeLaneFindKind(be, "delay") == 2);
+         jassert(nodeLaneKind(be, 0) == "compressor");
+         jassert(nodeLaneKind(be, 1) == "insert");
+         jassert(nodeLaneKind(be, 3) == "insert");
        }},
       {"node-switch-view",
        [](PluginRoot& root, MockBackend&) {

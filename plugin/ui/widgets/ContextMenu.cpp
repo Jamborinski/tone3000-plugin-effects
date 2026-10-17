@@ -8,7 +8,8 @@ namespace t3k::ui {
 ContextMenu::ContextMenu(std::vector<Item> items) {
   for (auto& item : items) {
     auto row = std::make_unique<MenuRow>(item.label, item.icon, MenuRow::kContext);
-    row->setHelpText(help::text(item.help));
+    row->setHelpText(item.helpText.isNotEmpty() ? item.helpText
+                               : help::text(item.help));
     if (item.disabled) {
       row->setLabelColour(theme::kMuted);
       row->setDisabledLook(true);

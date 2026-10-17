@@ -126,37 +126,8 @@ help::Key delaySigHelp(int m) {
 // label/help. Plate Bright/Bloom, Spring Springs/Sag, Room Early/Air,
 // Chamber Volley/Bass, Hall Build/Space, Digital Density/Mod. All stored 0..1;
 // Springs is the single stepped (1..6) sig. (plugin/docs/reverb-modes.md.)
-static const char* reverbSigParam(int mode, int localSlot) {
-  static const char* p[Reverb::kNumModes][2] = {
-      {"reverbAir", "reverbEarly"},  {"reverbSprings", "reverbSag"},  // 2026-10-17 PLT: sig A (row 1) = Air, sig B (row 2) = Early (Bright/Bloom off the face)
-      {"reverbEarly", "reverbAir"},   {"reverbVolley", "reverbBass"},
-      {"reverbBuild", "reverbSpace"}, {"reverbDensity", "reverbWave"}};
-  return p[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
-}
-static const char* reverbSigLabel(int mode, int localSlot) {
-  static const char* n[Reverb::kNumModes][2] = {
-      {"Air", "Early"},     {"Springs", "Sag"}, {"Early", "Air"},
-      {"Volley", "Bass"}, {"Build", "Space"}, {"Density", "Shape"}};
-  return n[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
-}
-static const KnobScale* reverbSigScaleForMode(int mode, int localSlot) {
-  const int m = juce::jlimit(0, Reverb::kNumModes - 1, mode);
-  if (m == 1 && !localSlot)
-    return &scales::springs();  // the only stepped sig (Springs 1..6, mode 1)
-  if (m == 5 && localSlot)
-    return &scales::reverbWave();  // R2: Digital Sig B is now the 5-detent Shape
-  return &scales::fraction01();
-}
-static help::Key reverbSigHelp(int mode, int localSlot) {
-  static const help::Key k[Reverb::kNumModes][2] = {
-      {help::Key::reverbAir, help::Key::reverbEarly},
-      {help::Key::reverbSprings, help::Key::reverbSag},
-      {help::Key::reverbEarly, help::Key::reverbAir},
-      {help::Key::reverbVolley, help::Key::reverbBass},
-      {help::Key::reverbBuild, help::Key::reverbSpace},
-      {help::Key::reverbDensity, help::Key::reverbShape}};
-  return k[juce::jlimit(0, Reverb::kNumModes - 1, mode)][localSlot ? 1 : 0];
-}
+// The bodies now live in EffectParams.cpp (shared with the node strip —
+// EffectParams.h); EffectTile keeps using them from there.
 static juce::String compactReverbModeName(int m) {
   static const char* n[6] = {"DAT", "SPR", "RM", "CHM", "HALL", "DIG"};
   return n[juce::jlimit(0, 5, m)];
@@ -201,19 +172,6 @@ static int reverbTypeOf(const ChainItem& b, int m) {
     case 3: return b.reverbType3;
     case 4: return b.reverbType4;
     default: return b.reverbType5;
-  }
-}
-// The mode's Sig A/B raw (0..1) block-field value for the display.
-static double reverbSigRaw(const ChainItem& b, int mode, int localSlot) {
-  const int m = juce::jlimit(0, Reverb::kNumModes - 1, mode);
-  const int s = localSlot ? 1 : 0;
-  switch (m) {
-    case 0: return s ? b.reverbEarly : b.reverbAir;     break;  // 2026-10-17 PLT face: slot0 (sigKnob_, row 1) = Air, slot1 (modKnob_, row 2) = Early
-    case 1: return s ? b.reverbSag : b.reverbSprings;  break;
-    case 2: return s ? b.reverbAir : b.reverbEarly;    break;
-    case 3: return s ? b.reverbBass : b.reverbVolley;  break;
-    case 4: return s ? b.reverbSpace : b.reverbBuild;  break;
-    default: return s ? (double)b.reverbWave : b.reverbDensity; break;
   }
 }
 
