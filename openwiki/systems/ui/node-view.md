@@ -27,10 +27,12 @@ sources:
     resource: repo://test/CMakeLists.txt
   - id: openwiki-source-949fdcdad6535ec560064216
     resource: repo://test/src/node_model_tests.cpp
-generated: { by: "pi", at: "2026-10-15T17:55:00.000Z" }
+  - id: openwiki-source-a9b10161f0531edad6c09d8e
+    resource: repo://test/src/strip_knob_tests.cpp
+generated: { by: "pi", at: "2026-10-17T18:20:26.394Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-16T18:52:35.705Z
+    at: 2026-10-17T18:20:26.394Z
 ---
 
 # Node view: the signal-line grid
@@ -43,6 +45,9 @@ There is **no new DSP**: a slot's contents ARE the existing `ChainBlock`s,
 just viewed and re-ordered through `ChainStore`. The node view and the gallery
 can never disagree about the chain because every mutation goes through the same
 `ChainStore` (the node model owns no state of its own beyond the selected slot).
+Batch 3 (2026-10-17, commit `5b9bdd9`) fixed the strip-visibility and gap-persistence
+laws, switched the Mix/In/Out knobs to identity scales, made the signal line run
+continuous through empty slots, and added the 5 testbed node drives.
 
 ## The model (`NodeModel.h`)
 
@@ -73,9 +78,11 @@ can never disagree about the chain because every mutation goes through the same
     its edges) + kind-colour border at full alpha + white icon;
   - **power-off block** — NO fill (the line runs THROUGH it) + border at 0.35
     alpha + muted icon;
-  - **empty slot** — invisible, EXCEPT on mouse hover or when the whole lane
-    is empty/insert-only (`presetEmpty` in `CellState`) — then a dashed border
-    + plus glyph + "add" label so the user knows where to click.
+  - **empty slot** — invisible by default (a mid-lane gap is a TRUE gap);
+    on mouse hover it fills with an **opaque `theme::kPanelBg` panel** +
+    dashed border + plus glyph + "add" label (so the signal line does not show
+    through the gap square — batch 3), and the same dashed hint shows when the
+    whole lane is empty/insert-only (`presetEmpty` in `CellState`).
 - **NodeStrip** — the selected block's **single-row** parameter strip
   (56 px header; `kStripHeadH = 56`) docked to the **bottom** of the view
   (full width). Line 6 stadium
@@ -84,7 +91,13 @@ can never disagree about the chain because every mutation goes through the same
   `knobFromStored(*scale, raw)`, the real-unit value; each knob also gets
   `setValue(knobFromStored(...))` after construction so the face sits at the
   real value — the Knob ctor clamps to `options.min`), the knob's own name
-  label below it (`labelOnTop = true`). Stacked header: block-kind label in
+  label below it (`labelOnTop = true`). **Batch-3 knob-scale law:** the Mix
+  knob (and the In/Out gain knobs, m04302) are **identity-scaled** (raw 0..1,
+  no `toStored`): `pos = raw` for identity scales, `knobFromStored`
+  otherwise — applying `knobFromStored` to an identity-stored param slammed
+  Mix to ~0%. In/Out are pinned to the noon (0.5) readout. The strip **hide
+  button (`hide_`, Icon::X) is shown via `updateStripChrome`** (batch 3 made
+  it actually visible) and is the ONLY strip close. Stacked header: block-kind label in
   caps (`titleFont`) over the mode line — **batch 2 (2026-10-16)** replaced
   the click/hold cyclers with **context menus**: `modeB_` / `typeB_` are
   `juce::TextButton`s whose onClick call `NodeView::openModeMenu()` /
@@ -93,9 +106,11 @@ can never disagree about the chain because every mutation goes through the same
   marker; the reverb type list is shown only when `Reverb::numTypes(mode) >
   1`) and open them centred over the strip via `showStripMenu`
   (`widgets/ContextMenu`, local-coordinate `openAtPoint` — NodeStrip has no
-  desktop-coordinate conversion). Right side: **hide** (`hide_`, Icon::X — the
-  ONLY strip close; `hideStrip()` clears the selection) + remove + power
-  `IconButton`s; the strip stays open while the mouse is inside it (knob
+  desktop-coordinate conversion). Mode-menu bullets use
+  `juce::String::fromUTF8` (a raw char literal mis-decoded in the font
+  renderer, batch 3), and a mode pick now **writes the real param**
+  (`delayMode` / `compMode` / `reverbMode` via `chain.setBlockParam`) — the
+  strip used to only relabel. Right side: remove + power `IconButton`s; the strip stays open while the mouse is inside it (knob
   turns no longer rebuild-and-close it, batch-2 item 9). Panel:
   `theme::kPanelBg @ 0.55` tinted fill, 10 px radius.
   Knobs are owned `std::vector<Knob*>` (created on selection, deleted in
@@ -104,11 +119,15 @@ can never disagree about the chain because every mutation goes through the same
 - **Ghost** (component-snapshot drag ghost) — the desktop-level overlay routes
   the pointer while a drag is in flight.
 
-**Signal line** (2026-10-15, batch-2 two-row fix 2026-10-16): `NodeView::paint`
-draws, per visible row, **2 px white @ 0.45 SEGMENTS** with a gap around
-**every occupied cell** (active AND power-off): an "In" stub before the first
-node, ±5 px gaps around each node, an "Out" stub to the row's right edge —
-empty slots between nodes stay clear. The two-row transition is Line 6
+**Signal line** (2026-10-15, batch-2 two-row fix 2026-10-16, batch-3
+continuous-gap law 2026-10-17): `NodeView::paint` draws, per visible row,
+**2 px white @ 0.45 SEGMENTS** with a gap around **every REAL cell** (active
+and power-off alike): an "In" stub before the first node, ±5 px gaps around
+each node, an "Out" stub to the row's right edge. **Batch 3: empty slots
+(gaps/inserts) no longer break the line** — they are SKIPPED in the occupied-
+cell list, so the line runs CONTINUOUS through them; a gap only shows its
+dashed add square on hover, on top of the visible line (m04252 item 3).
+The two-row transition is Line 6
 stadium style (batch 2 — **no snake elbow**): row 1's line ends with a 13 px
 `Icon::ArrowRight` at the grid's right edge, row 2 starts with a 13 px
 `Icon::ArrowRight` at the grid's left edge; both rows flow left→right and row
@@ -132,15 +151,28 @@ palette add-menu); **double-click toggles the block's power**
 help text (occupied title, " (powered off)" suffix when off, `help::Key::
 nodeEmptySlot` for true gaps — batch 2 dropped the hardcoded em-dash string
 whose mojibake showed on tone nodes) which drives both the JUCE tooltip and
-the bottom hint bar via the HintBus HintTracker. Drag uses
-`componentCreateSnapshot` ghosts; the suppress-click-until timer keeps the
-drop from firing a stray select.
+the bottom hint bar via the HintBus HintTracker. Drag uses `component
+CreateSnapshot` ghosts — **batch 3: the ghost is semi-transparent
+(`setAlpha(0.6f)`, the grid shows through) and the drop-target cell paints the
+dragged effect's icon at 0.5 alpha inside the highlight** —; the
+suppress-click-until timer keeps the drop from firing a stray select.
 
 **Tone nodes** (batch 2, item 6): occupied inserts (NAM/conv) are NOT empty
 slots — `NodeCell::paint` treats `!s.has || s.insert` as the dashed+plus gap
 state only, `NodeCell::update` shows the block's own title on hover, and
 clicking a tone node **selects** it (strip shows In/Out/Mix trims) rather
 than opening the add menu.
+
+## Visibility law (batch 3)
+
+`setNodeView(false)` now hides **all cells AND the strip**
+(`for c: c->setVisible(false); strip_->setVisible(false); strip_->clearContent()`)
+— batch 1 only hid the strip, so the node overlay (cells, strip docked over
+the gallery) leaked through the gallery pill view. The `NodeView` container
+itself stays visible (the gallery is the component `ChainScreen::setView`
+flips); `setNodeView(true)` restores cells per-row in `resized()` and
+re-syncs the strip selection. **`syncStrip()` with no selected block hides the
+strip** — it is not a permanent dock.
 
 ## Toggle, persistence, wiring
 
@@ -169,12 +201,26 @@ for the whole 2026-10-15 capture hunt until this was fixed); and
 (`--selftest` does not). `--capture` auto-iterates all scenarios, so
 `node-main` gets a golden with no `Main.cpp` change.
 
-Batch 2 (2026-10-16) also extended the drives: `node-toggle-live` imitates
-the user's click sequence — toggle gallery→node, jassert the node view is
-visible, select a block, turn a strip knob, jassert the strip survives, then
-toggle back to the gallery — so the live switch is click-imitated, not
-one-shot captured. Headless knob coverage lives in `test/src/
-strip_knob_tests.cpp` (7 StripKnob tests over every `paramsFor` knob) and
+Batch 2 (2026-10-16) added `node-toggle-live` (click-imitated gallery→node
+toggle + strip-knob survival asserts); **batch 3 (2026-10-17) added five more
+driven scenarios** — `node-add-gap` (add lands in the mid-lane gap, line stays
+continuous through the slot), `node-remove`, `node-knob-change` (knob turn +
+mode menu pick), `node-drag-drop` (cell drag & drop), and
+`node-switch-view` (gallery↔node switching) — all click-imitated, all
+jassert-pass. The drives needed real plumbing: `Knob::driveEmit` (setValue is
+face-only; drives need the drag-path emit that fires onChange),
+`Drive::dragTo` (multi-point press/travel/release) for the cell drag, and
+`MockBackend` add/remove/setParam now mutate the chain so the drives'
+end-state asserts are real. Captures live in `node-main/` (`node-add-gap.png`,
+`node-knob-change.png`, `node-main.png`, `node-remove.png`,
+`node-drag-drop.png`, `node-switch-view.png`, `node-toggle-live.png`).
+
+Headless knob coverage lives in `test/src/strip_knob_tests.cpp` — **7
+StripKnob tests** (every `paramsFor` knob round-trip, finite readout, numeric
+readouts ≤4 chars) plus **8 StripKnobPosition tests** added in batch 3
+(identity-scale trio `pos == raw` including the In/Out noon-pin, and
+stored→raw round-trips through the strip's position mapping) — and
 gap/add-at-slot coverage in `test/src/add_at_slot_tests.cpp` (2 AddAtSlot
-tests over `removeChainBlock`'s fresh-INSERT gap and
-`landToneBlock`'s in-place fill).
+tests over `removeChainBlock`'s fresh-INSERT gap and `landToneBlock`'s
+in-place fill — the mid-lane test asserts the removed effect's blockId is
+gone while the gap persists).

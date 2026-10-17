@@ -43,10 +43,10 @@ sources:
     resource: repo://test/src/strip_knob_tests.cpp
   - id: openwiki-source-fde83b2ad879efba1865ca8d
     resource: repo://test/src/theme_palette_tests.cpp
-generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
+generated: { by: "pi", at: "2026-10-17T18:20:26.394Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-16T18:52:35.705Z
+    at: 2026-10-17T18:20:26.394Z
 ---
 
 
@@ -165,10 +165,23 @@ UiTestbed --bench --seconds 10 --json out.json             # CPU / memory under 
 ```
 
 The testbed is how UI changes are *proven* — a green `DspTests` run does
-NOT link `plugin/ui` (DspTests compiles only
-`plugin/ui/core/Labels.cpp` and `#include`s `core/Theme.h` inline for the
-palette tests); a UI change must be validated with the
-testbed or a GUI plugin build.
+NOT link `plugin/ui` (DspTests compiles only the small UI source set —
+see the DspTests linkage section below); a UI change must be validated with
+the testbed or a GUI plugin build.
+
+**Drive scenarios (batch 3, 2026-10-17):** the fixture-driven `MockBackend`
+now carries **node-view drives** for the strip/grid — `node-main`,
+`node-toggle-live` (batch 2) and FIVE batch-3 scenarios — `node-add-gap`,
+`node-remove`, `node-knob-change` (knob turn + mode menu), `node-drag-drop`
+(cell drag & drop), `node-switch-view` (gallery↔node switching) — all
+click-imitated, all jassert-pass. The drives needed real plumbing: `Knob::
+driveEmit` (`setValue` is face-only; drives need the drag-path emit that
+fires `onChange`), `Drive::dragTo` (multi-point press/travel/release) for the
+cell drag, and `MockBackend` add/remove/setParam now mutate the chain so the
+drives' end-state asserts are real. `--capture` auto-iterates all scenarios,
+so each gets a PNG under `node-main/` with no `Main.cpp` change. The node
+view itself is specced in
+[`/openwiki/systems/ui/node-view.md`](node-view.md).
 
 ## Reverb tile: mode + type (subtype) selectors (2026-10-16)
 
@@ -246,14 +259,20 @@ default palette round-trips through applyPalette/resetPalette, and
 ## DspTests vs. UI linkage (the load-bearing distinction)
 
 `DspTests` — the GoogleTest suite — compiles the *real* plugin DSP sources
-plus `plugin/ui/core/Labels.cpp` (the `KnobScale` readout formatter) as its
-only UI *source* file, and additionally `#include`s
-`plugin/ui/core/Theme.h` inline (via `test/src/theme_palette_tests.cpp`) to
-guard the palette contract.  It does **not** compile the rest of `plugin/ui`
-(no views, no widgets, no services, no `NativeEditor`).  A green `DspTests`
-therefore proves the DSP is correct against fixtures; it says nothing about
-whether the UI links. Verify UI changes with the testbed (`--selftest`) or a
-GUI build target before committing.
+plus exactly **four** `plugin/ui` files: `plugin/ui/core/Labels.cpp` (the
+`KnobScale` readout formatter the scale-contract tests link),
+`plugin/ui/views/nodeview/NodeModel.cpp` + `plugin/ui/model/ChainState.cpp`
+(the node grid's read-side model and its data source), and
+`plugin/ui/views/gallery/EffectParams.cpp` (the shared `paramsFor` knob
+table, added by the node-view batch 2 for the `strip_knob_tests.cpp`
+per-knob readout tests); `test/CMakeLists.txt` adds
+`plugin/ui`, `plugin/ui/core`, `plugin/ui/views/nodeview`, and
+`plugin/ui/views/gallery` to the include path. The theme palette is exercised
+by `theme_palette_tests.cpp`'s `#include` of `plugin/ui/core/Theme.h`.
+Everything else in `plugin/ui` (views, widgets, services, `NativeEditor`)
+is excluded, so a green `DspTests` run does NOT prove the UI links: UI
+changes must be verified via the testbed (`--selftest` / `--capture`) or a
+GUI plugin build target before committing.
 
 ## Cross-references
 

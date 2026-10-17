@@ -32,10 +32,10 @@ sources:
     resource: repo://test/src/reverb_quality_p1_tests.cpp
   - id: openwiki-source-a9b10161f0531edad6c09d8e
     resource: repo://test/src/strip_knob_tests.cpp
-generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
+generated: { by: "pi", at: "2026-10-17T18:20:26.394Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-16T18:52:35.705Z
+    at: 2026-10-17T18:20:26.394Z
 ---
 
 # DSP test suite (DspTests)
@@ -127,10 +127,13 @@ confirm the "Running N tests" line is non-zero before trusting the result.**
 
 ## Suite size
 
-The suite grows with features — **530 tests / 78 suites as of the 2026-10-16
-node-view batch-2 closeout** (7 StripKnob per-knob readout tests in
-`test/src/strip_knob_tests.cpp` + 2 AddAtSlot lane-gap tests in `test/src/
-add_at_slot_tests.cpp`; history: 487 after the 2026-10-15 R2 final cut; 493
+The suite grows with features — **538 tests / 79 suites as of the 2026-10-17
+node-view batch-3 closeout** (commit `5b9bdd9`: 8 new `StripKnobPosition`
+knot tests in `test/src/strip_knob_tests.cpp` — the identity-scale law
+(position == raw for identity-stored Mix/In/Out) + per-kind drive round-trips;
+530 / 78 was the 2026-10-16 node-view batch-2 closeout (7 StripKnob per-knob
+readout tests in `test/src/strip_knob_tests.cpp` + 2 AddAtSlot lane-gap tests
+in `test/src/add_at_slot_tests.cpp`; history: 487 after the 2026-10-15 R2 final cut; 493
 after the P2.1 plate density uplift; 503 after the full pass 1 + the
 `TypeScaffold` re-scope; 511 / 75 after the T-DAT-001 wave-3 closeout
 (2026-10-17, plate/probe suites + StandaloneStateAutosave stub); 512 / 75

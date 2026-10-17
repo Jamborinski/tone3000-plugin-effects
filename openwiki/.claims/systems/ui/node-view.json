@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:cbcd9d0f26362a877394cdace42a6c1eacee2a026d62fb8c4ea781c6d6633462",
+  "pageVersion": "sha256:3c8b53c1c66776cceae0e10176ce2634d08f30f0f1171a7bfe8972722f5fa34a",
   "claims": [
     {
       "id": "claim_4e8284a0f0bc4fe0b4e5fa2bda920264",
@@ -78,7 +78,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:d8131a35b04df51a2664557656bc020da9cd8153ebc96d576398e1e10fbf755b"
+          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
         }
       ]
     },
@@ -105,46 +105,12 @@
       ]
     },
     {
-      "id": "claim_e9a722676d2544a5b352026ac2bc9e12",
-      "statement": "Testbed: the node-main scenario (scenarios.json) carries a 3-block left lane (compressor selected, chorus, insert) and seeds \"localStorage\": {\"t3k.nodeView\": \"true\"} so the node view is the visible surface. TWO landmines: (1) the seed value MUST be the string \"true\" — Host::seedPrefs does prefs.set(name, value.toString()) and a JSON bool becomes \"1\", which getBool rejects (the signal line stayed invisible for the whole 2026-10-15 capture hunt until this was fixed); (2) UiTestbed --capture <outDir> <scenario> is what writes PNGs (--selftest does not), and --capture auto-iterates all scenarios, so node-main gets a golden with no Main.cpp change.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/testbed/Host.cpp",
-          "version": "repo-file-v1:sha256:12a93b1f6394f4ca0e8c103cd2ee8d7c9557084eb128fff6d25ab6798af0f7f9"
-        },
-        {
-          "resource": "repo://plugin/ui/testbed/fixtures/scenarios.json",
-          "version": "repo-file-v1:sha256:498707bc45940d29fdb0efd6a97ec4bfdeb631504f8e19c0b4425835ab8b4172"
-        }
-      ]
-    },
-    {
-      "id": "claim_b6d84ec2b5384994845051f527f01e35",
-      "statement": "Cell paint states (the Q-Cortex/Line 6 transparency law): an ACTIVE block paints an opaque theme::kSurface fill with kind-colour border at full alpha and a white icon; a POWER-OFF block paints NO fill with border at 0.35 alpha and a muted icon; an EMPTY slot is invisible EXCEPT on mouse hover or when the whole lane is empty/insert-only (CellState.presetEmpty) — then a dashed border + plus glyph + 'add' label so the user knows where to click.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:d8131a35b04df51a2664557656bc020da9cd8153ebc96d576398e1e10fbf755b"
-        }
-      ]
-    },
-    {
       "id": "claim_af372e89c38a4030906530dad361f5b6",
       "statement": "Repaint invariants (bug found in the 2026-10-15 capture hunt — the line stayed invisible for a whole debug session): setNodeView(bool) (NodeView.cpp:460) and chainChanged() (NodeView.cpp:475) both END WITH repaint(), because refresh() only updates the cell children; the body (signal line segments, In/Out labels, strip) must repaint on first-time activation, on lane row gain/loss, and on selection change or the line silently stays absent until an unrelated invalidate.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:d8131a35b04df51a2664557656bc020da9cd8153ebc96d576398e1e10fbf755b"
-        }
-      ]
-    },
-    {
-      "id": "claim_a444ad8816864fb990e9ae51f0431028",
-      "statement": "Pointer grammar on a node: a short click selects the block (params load into the strip); a 250 ms hold (kHoldMs = 250, NodeView.cpp:59) begins a lane drag; motion before the hold cancels the timer; right-click opens the block menu (power toggle, help key nodePower; remove, help key nodeRemove; plus the palette add-menu over Model::paletteKinds()); DOUBLE-CLICK toggles the block's power (NodeCell::mouseDoubleClick -> NodeView::togglePower -> setBlockParam(id,\"enabled\",0|1)). Cell hover sets a help text (occupied title, ' (powered off)' suffix when off, 'Empty slot — click to add an effect' for inserts) which drives both the JUCE tooltip and the bottom hint bar via the HintBus HintTracker. Drags use juce::Component::createComponentSnapshot ghosts at full alpha and a suppress-click-until timestamp keeps a drop from firing a stray select.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:d8131a35b04df51a2664557656bc020da9cd8153ebc96d576398e1e10fbf755b"
+          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
         }
       ]
     },
@@ -154,21 +120,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:d8131a35b04df51a2664557656bc020da9cd8153ebc96d576398e1e10fbf755b"
-        }
-      ]
-    },
-    {
-      "id": "claim_4a9971b8757840118ac3c265cf8ebcdd",
-      "statement": "The convolution node's strip carries an IR preview: pullConvPreview (NodeView.cpp:1005) pulls chain.convPreview(blockId) (envL/envR arrays + length/sampleRate + fade curves, the same pattern as the gallery EffectTile::pullConvPreview) into the strip's KernelPlot (convPlot_, a views/gallery/KernelPlot at 64 px height), and a 'Load IR…' button (loadIr_) calls startConvIrLoader (NodeView.cpp:1033) which launches an async juce::FileChooser (*.wav;*.wave;*.aiff;*.aif) and on OK calls chain.loadConvIr(blockId, file); a g_irLoaderSeq token guard drops stale chooser results (WeakReference<Component> is private in JUCE 9, so the loader is token-guarded instead).",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/services/ChainStore.h",
-          "version": "repo-file-v1:sha256:55b2742e662864d35825b359e57f19dd6f75546e3aace1a87fe518851e1df5d5"
-        },
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:d8131a35b04df51a2664557656bc020da9cd8153ebc96d576398e1e10fbf755b"
+          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
         }
       ]
     },
@@ -187,26 +139,6 @@
       ]
     },
     {
-      "id": "claim_bcc9b0bdbd584757a9dcc627f28995e1",
-      "statement": "The signal line (NodeView::paint) draws, per VISIBLE row, 2 px white.withAlpha(0.45f) SEGMENTS with a gap around EVERY occupied cell (active AND power-off): an 'In' stub before the first node, ±5 px gaps around each node, an 'Out' stub to the row's right edge; empty slots between nodes stay clear. The two-row transition is Line 6 stadium style (batch 2, user m02657 — NO snake elbow): row 1's line ends with a 13 px Icon::ArrowRight at the grid's right edge, row 2 starts with a 13 px Icon::ArrowRight at the grid's left edge, both rows flow left→right and row 2 enters its leftmost node. The line is painted before the cells and only when nodeView_ is set (which is the first line of paint — an opaque panel fill before the visibility guard used to cover the inactive gallery view, m03703).",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:d8131a35b04df51a2664557656bc020da9cd8153ebc96d576398e1e10fbf755b"
-        }
-      ]
-    },
-    {
-      "id": "claim_9c3a77540b284a9f8ab5dc3b15effee4",
-      "statement": "NodeStrip is the selected block's SINGLE-ROW parameter strip docked to the BOTTOM of the view (resized(): stripY = jmax(0, getHeight() - stripH - kStripBottomGap), kStripBottomGap = 16, NodeView.cpp:54; full width stripW = W - 16). 56 px header (kStripHeadH = 56, NodeView.cpp:55): block-kind label in caps over the mode line — batch 2 replaced the click/hold cyclers with CONTEXT MENUS: modeB_ is a juce::TextButton whose onClick calls NodeView::openModeMenu() (delay 4 modes / Compressor 5 / reverb 6, current entry disabled with a leading marker) and typeB_ calls openTypeMenu() (reverb type list, shown only when Reverb::numTypes(mode) > 1); both build a std::vector<ContextMenu::Item> and open it centered over the strip via showStripMenu (widgets/ContextMenu, local-coordinate openAtPoint — NodeStrip has no desktop-coordinate conversion). A hide button (hide_, Icon::X) sits to the LEFT of power_ and is the ONLY strip close: hideStrip() clears the selection; the strip stays open while the mouse is inside (knob turns no longer rebuild-and-close it, user m02657 item 9). Per-knob VALUE readout paints persistently above the knob face from KnobScale::format(knobFromStored(*scale, raw)) with the knob's name below (labelOnTop = true), and each knob gets knob->setValue(knobFromStored(...)) after construction so the face sits at the real value (the Knob ctor clamps to options.min — the batch-2 garbage-value fix; batch 1). Panel: theme::kPanelBg @ 0.55 tinted fill, 10 px radius. Knobs are owned std::vector<Knob*> (created on selection, deleted in clearContent()); onChange writes back through chain.setBlockParam(id, param, knobToStored(...)). Params come from the SHARED paramsFor table in views/gallery/EffectParams.h (tone nodes show only In/Out/Mix trims). Every strip knob is headless-tested by test/src/strip_knob_tests.cpp (7 StripKnob tests, round-trip + finite readout + numeric readouts ≤4 chars).",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:d8131a35b04df51a2664557656bc020da9cd8153ebc96d576398e1e10fbf755b"
-        }
-      ]
-    },
-    {
       "id": "claim_21211e4b6bdc46b78b86c61c2149d8f4",
       "statement": "Tone (NAM/conv) nodes in batch 2 behave like their kind, not like empty slots: NodeCell::paint treats `!s.has || s.insert` as the dashed+plus gap state only (hover_ || presetEmpty), so an occupied insert paints its kind-coloured border and icon; NodeCell::update sets the help text to the block's own title when s.has (falling back to help::Key::nodeEmptySlot for true gaps — the old hardcoded 'Empty slot — click to add an effect' with its em-dash mojibake is gone); Model marks insert rows with cs.insert=true and their label as 'add' only while the gap hint shows. Clicking a tone node SELECTS it (strip shows In/Out/Mix), it does not open the add menu (user m02657 item 6).",
       "evidence": [
@@ -216,13 +148,85 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:d8131a35b04df51a2664557656bc020da9cd8153ebc96d576398e1e10fbf755b"
+          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
+        }
+      ]
+    },
+    {
+      "id": "claim_a79ce04c3870479f8812b1855e69d653",
+      "statement": "Testbed scenarios for the node view (scenarios.json, as of the 2026-10-17 batch-3 closeout, commit 5b9bdd9): node-main (3-block left lane — compressor selected, chorus, insert — seeds \"localStorage\": {\"t3k.nodeView\": \"true\"}), node-toggle-live (batch 2, click-imitated gallery→node toggle + strip-knob survival), and FIVE batch-3 driven scenarios — node-add-gap (add lands in the mid-lane gap, line stays continuous), node-remove, node-knob-change (knob turn + mode menu), node-drag-drop (cell drag & drop), node-switch-view (gallery↔node switching) — all click-imitated, all jassert-pass. Two landmines: (1) the seed value MUST be the string \"true\" — Host::seedPrefs does prefs.set(name, value.toString()) and a JSON bool becomes \"1\", which UiPrefs::getBool rejects (the signal line stayed invisible for the whole 2026-10-15 capture hunt until fixed); (2) UiTestbed --capture <outDir> <scenario> writes PNGs (--selftest does not), --capture auto-iterates all scenarios. The batch-3 drives needed real plumbing: Knob::driveEmit (setValue is face-only; drives need the drag-path emit that fires onChange), Drive::dragTo (multi-point press/travel/release) for the cell drag, and MockBackend add/remove/setParam now mutate the chain so end-state asserts are real. Captures: node-main/*.png (node-add-gap, node-knob-change, node-main, node-remove, node-drag-drop, node-switch-view, node-toggle-live).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/testbed/Host.cpp",
+          "version": "repo-file-v1:sha256:12a93b1f6394f4ca0e8c103cd2ee8d7c9557084eb128fff6d25ab6798af0f7f9"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/fixtures/scenarios.json",
+          "version": "repo-file-v1:sha256:5f99d0955560c8ee42eeadeaeb1b0c91bdd66d72710f96085ac4c114b14c63c7"
+        }
+      ]
+    },
+    {
+      "id": "claim_ceb57d5bf85d499f8de4d4e73b6b6d71",
+      "statement": "Cell paint states (the Q-Cortex/Line 6 transparency law, as of batch 3 / 2026-10-17): an ACTIVE block paints an opaque theme::kSurface fill (the signal line STOPS at its edges) with kind-colour border at full alpha and a white icon; a POWER-OFF block paints NO fill (the line runs THROUGH it) with border at 0.35 alpha and a muted icon; an EMPTY slot is invisible by default — a mid-lane gap is a TRUE gap (continuous line, no square) — EXCEPT on mouse hover, where it fills with an OPAQUE theme::kPanelBg panel + dashed border + plus glyph + 'add' label (batch 3: the opaque fill keeps the signal line from showing through the gap square), or when the whole lane is empty/insert-only (CellState.presetEmpty), which shows the same dashed+plus+add hint. A selected block adds a theme::kHighlight border.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
+        }
+      ]
+    },
+    {
+      "id": "claim_1457c04b498f493fb23426150388f294",
+      "statement": "Pointer grammar on a node: a short click selects the block (params load into the strip); a 250 ms hold (kHoldMs = 250) begins a lane drag; motion before the hold cancels the timer; right-click opens the block menu (power toggle, help key nodePower; remove, help key nodeRemove; plus the palette add-menu over Model::paletteKinds()); DOUBLE-CLICK toggles the block's power (NodeCell::mouseDoubleClick -> NodeView::togglePower -> setBlockParam(id, \"enabled\", 0|1)). Cell hover sets a help text (occupied title, ' (off)' suffix when off, nodeEmptySlot key for true gaps) driving the JUCE tooltip and the bottom hint bar via the HintBus HintTracker. Drags use juce::Component::createComponentSnapshot ghosts; batch 3 (commit 5b9bdd9) changed the ghost to SEMI-TRANSPARENT — Ghost ctor setAlpha(0.6f) so the grid shows through — and the drop-target cell paints the dragged effect's icon at 0.5 alpha inside the theme::kHighlight border (NodeView.cpp g_dropTarget paint block, batch-3 item 8). A suppress-click-until timestamp keeps a drop from firing a stray select.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
+        }
+      ]
+    },
+    {
+      "id": "claim_532f664d974b4f1c8f5b23e50931073d",
+      "statement": "The convolution node's strip carries an IR preview: pullConvPreview (NodeView.cpp:1139) pulls chain.convPreview(blockId) (envL/envR arrays + length/sampleRate + fade curves, same pattern as the gallery EffectTile::pullConvPreview) into the strip's KernelPlot (convPlot_, views/gallery/KernelPlot at 64 px). Batch 3 (item 6): with NO kernel loaded (null dynamic object) the preview now setVisible(true) with a cleared envelope + the loaded block's fade curves, so the flat plot + 'Load IR…' button lay out and the strip's knobs are no longer clipped. The 'Load IR…' button (loadIr_) calls startConvIrLoader (NodeView.cpp:1169) which launches an async juce::FileChooser (*.wav;*.wave;*.aiff;*.aif) and on OK calls chain.loadConvIr(blockId, file); a g_irLoaderSeq token guard (plus a convIrChooser_ re-entry guard) drops stale chooser results (WeakReference<Component> is private in JUCE 9, so the loader is token-guarded); an 'error' property on the result is toasted.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/services/ChainStore.h",
+          "version": "repo-file-v1:sha256:55b2742e662864d35825b359e57f19dd6f75546e3aace1a87fe518851e1df5d5"
+        },
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
+        }
+      ]
+    },
+    {
+      "id": "claim_ff5d373fc05e4e09aad8f23ae953b403",
+      "statement": "The signal line (NodeView::paint) draws, per VISIBLE row, 2 px white.withAlpha(0.45f) SEGMENTS with a gap around EVERY REAL cell (active AND power-off): an 'In' stub before the first node, ±5 px gaps around each node, an 'Out' stub to the row's right edge. Batch 3 (item 3, m04252): EMPTY slots (gaps/inserts, isInsert) are SKIPPED in the per-row occupied-cell list, so the line runs CONTINUOUS through them — a gap only shows its dashed add square on hover, on top of the still-visible line (was: empty slots broke the line). Power-off blocks stay in the occupied list: their transparent square lets the line show THROUGH them. The two-row transition is Line 6 stadium style (batch 2, user m02657 — NO snake elbow): row 1's line ends with a 13 px Icon::ArrowRight at the grid's right edge, row 2 starts with a 13 px Icon::ArrowRight at the grid's left edge, both rows flow left→right and row 2 enters its leftmost node. The line is painted before the cells and only when nodeView_ is set (an opaque panel fill before the visibility guard used to cover the inactive gallery view, m03703). A g_dropTarget in range paints a theme::kHighlight border on that cell plus — batch 3 — the dragged effect's icon at 0.5 alpha.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
+        }
+      ]
+    },
+    {
+      "id": "claim_b4e66de12a0d4aebab35d4b4958a01d7",
+      "statement": "NodeStrip is the selected block's SINGLE-ROW parameter strip docked to the BOTTOM of the view (resized(): stripY = jmax(0, getHeight() - stripH - kStripBottomGap), kStripBottomGap = 16, kStripHeadH = 56; full width). 56 px header: block-kind label in caps over the mode line — context menus: modeB_ (juce::TextButton -> NodeView::openModeMenu(), delay 4 / Compressor 5 / reverb 6 modes, current entry disabled with a leading marker) and typeB_ (-> openTypeMenu(), reverb type list, shown only when Reverb::numTypes(mode) > 1); both build std::vector<ContextMenu::Item> and open centred over the strip via showStripMenu (widgets/ContextMenu, local-coordinate openAtPoint). Batch 3 (5b9bdd9): mode-menu bullets use juce::String::fromUTF8 (a raw char literal the font renderer mis-decoded, item 7) and a mode pick now WRITES the real param (delayMode/compMode/reverbMode via chain.setBlockParam at NodeView.cpp:1083-1087); In/Out knobs are pinned to the noon readout (m04302). Batch-3 knob-scale law (item 4): the Mix knob (and the In/Out gain knobs) are IDENTITY-scaled — pos = raw 0..1, knobFromStored only for non-identity scales (knobFromStored on an identity-stored param slammed Mix to ~0%); onChange is symmetric. Strip visibility (item 1+2): setNodeView(false) hides cells AND strip (strip_->setVisible(false) + clearContent(), NodeView.cpp:496-498); syncStrip() hides the strip when no block is selected (NodeView.cpp:871); the hide_ Icon::X button is shown via updateStripChrome and is the ONLY strip close (hideStrip() clears the selection); the strip stays open while the mouse is inside (knob turns no longer rebuild-and-close it, batch-2 item 9). Per-knob VALUE readout paints persistently above the knob face from KnobScale::format(knobFromStored(*scale, raw)), knob name below (labelOnTop = true); each knob gets setValue(...) after construction (Knob ctor clamps to options.min). Panel: theme::kPanelBg @ 0.55 tinted fill, 10 px radius. Knobs are owned std::vector<Knob*> (created on selection, deleted in clearContent()); onChange writes back through chain.setBlockParam(id, param, knobToStored(...)). Params come from the SHARED paramsFor table in views/gallery/EffectParams.h (tone nodes show only In/Out/Mix trims). Every strip knob is headless-tested by test/src/strip_knob_tests.cpp: 7 StripKnob tests (round-trip + finite readout + numeric readouts ≤4 chars) plus 8 batch-3 StripKnobPosition tests (identity pos==raw, In/Out noon pin, stored→raw round-trips).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
+        },
+        {
+          "resource": "repo://test/src/strip_knob_tests.cpp",
+          "version": "repo-file-v1:sha256:5322701ace78adbf861dc9bf2e3c66535906426256e8084a352d6579775cec7b"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-16T18:52:35.705Z"
+    "at": "2026-10-17T18:20:26.394Z"
   }
 }

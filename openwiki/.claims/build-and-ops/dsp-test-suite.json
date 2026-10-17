@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:968438f020b1e19675906f74ddd92165d7f49c0c767e32cb3c536a31813e6a22",
+  "pageVersion": "sha256:e63f43fe58ed1c9404132acc846545e03fcaec51e1983b4ccf9bb96627011dd1",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -159,8 +159,8 @@
       ]
     },
     {
-      "id": "claim_76cf8b4cdbf04167b3a7cc46f7fe28f0",
-      "statement": "The node-view batch-2 closeout (2026-10-16) added two registered suites — src/strip_knob_tests.cpp (7 StripKnob tests: every paramsFor knob of Delay/Chorus/Tremolo/Compressor vca+clip/Reverb (all 6 modes)/Convolution/Tone round-trips through knobFromStored/knobToStored in [0,1] and formats to a finite readout; numeric readouts are capped at 4 chars so INT64-scale garbage fails) and src/add_at_slot_tests.cpp (2 AddAtSlot tests: landToneBlock fills a mid-lane gap in place and a trailing insert at the end; the mid-lane test also asserts a removed effect's blockId is gone while the gap persists, exercising removeChainBlock's fresh-INSERT-at-erased-position behavior). test/CMakeLists.txt also compiles ../plugin/ui/views/gallery/EffectParams.cpp (the per-kind knob table the strip and EffectTile share) for the strip tests. Suite total after this pass: 530 tests from 78 suites; the count is a lower-bound snapshot — never assert a stale total on a red run.",
+      "id": "claim_af453d11b49b46e7bde849726b2f9c50",
+      "statement": "test/src/strip_knob_tests.cpp registers two suites: 7 StripKnob tests (every paramsFor knob of Delay/Chorus/Tremolo/Compressor vca+clip/Reverb (all 6 modes)/Convolution/Tone round-trips through knobFromStored/knobToStored in [0,1] and formats to a finite readout; numeric readouts are capped at 4 chars so INT64-scale garbage fails) and — added in the node-view batch-3 closeout (commit 5b9bdd9, 2026-10-17) — 8 StripKnobPosition tests (identity-scale knobs report pos == raw 0..1, including the In/Out gain knobs pinned to noon, plus stored→raw round-trips through the strip's position mapping). test/src/add_at_slot_tests.cpp registers 2 AddAtSlot tests (landToneBlock fills a mid-lane gap in place and a trailing insert at the end; the mid-lane test also asserts a removed effect's blockId is gone while the gap persists, exercising removeChainBlock's fresh-INSERT-at-erased-position behavior). test/CMakeLists.txt also compiles ../plugin/ui/views/gallery/EffectParams.cpp (the per-kind knob table the strip and EffectTile share) for the strip tests. Suite total after the 2026-10-17 pass: 538 tests from 79 suites (530/78 was the 2026-10-16 batch-2 closeout) — the count is a lower-bound snapshot; never assert a stale total on a red run.",
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
@@ -172,13 +172,13 @@
         },
         {
           "resource": "repo://test/src/strip_knob_tests.cpp",
-          "version": "repo-file-v1:sha256:a3697da383741fc698923439943bacde1ddf063beb539b895e560cd2da06778e"
+          "version": "repo-file-v1:sha256:5322701ace78adbf861dc9bf2e3c66535906426256e8084a352d6579775cec7b"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-16T18:52:35.705Z"
+    "at": "2026-10-17T18:20:26.394Z"
   }
 }
