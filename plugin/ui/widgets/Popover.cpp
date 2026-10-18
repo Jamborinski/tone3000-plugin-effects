@@ -83,6 +83,16 @@ void Popover::targetMoved() {
   auto* target = target_ != nullptr ? target_->getComponent() : nullptr;
   auto* overlay = getParentComponent();
   if (target == nullptr || overlay == nullptr) return;
+  if (!target->isVisible()) {
+    // The anchor's subtree was hidden, not scrolled (the node view going
+    // behind the gallery leaves its strip menus up otherwise — a panel in
+    // the overlay layer has no parent it can "be hidden with").
+    juce::Component::SafePointer<Popover> self(this);
+    juce::MessageManager::callAsync([self] {
+      if (self != nullptr && self->isOpen()) self->dismiss();
+    });
+    return;
+  }
   if (scrolledAway(*target, *overlay)) {
     // Not from inside the watcher's own callback: dismissing deletes it.
     juce::Component::SafePointer<Popover> self(this);
@@ -95,6 +105,14 @@ void Popover::targetMoved() {
     reposition();
   else
     placeAt(*target, point_);
+}
+
+void Popover::dismissAll(juce::Component& overlay) {
+  // Dismiss deletes, so walk a copy.
+  const auto children = overlay.getChildren();
+  for (auto* c : children) {
+    if (auto* p = dynamic_cast<Popover*>(c)) p->dismiss();
+  }
 }
 
 void Popover::watchOutsidePresses() {

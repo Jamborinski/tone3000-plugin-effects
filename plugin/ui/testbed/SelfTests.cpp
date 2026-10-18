@@ -39,6 +39,11 @@
 #include "views/browser/ToneCard.h"
 #include "views/gallery/GalleryGeometry.h"
 #include "views/gallery/GalleryTile.h"
+#include "views/block/BlockDetail.h"
+#include "views/gallery/ChainView.h"
+#include "views/nodeview/NodeView.h"
+#include "views/nodeview/NodeViewToggle.h"
+#include "widgets/BackLink.h"
 #include "widgets/Avatar.h"
 #include "widgets/ChromeTextButton.h"
 #include "widgets/Clickable.h"
@@ -1767,6 +1772,165 @@ struct PopoverFollowTests : juce::UnitTest {
     pump(50);
     expect(!panel.isOpen() && !menu.isOpen());
     expectEquals(dismissed, 1);
+
+    beginTest("a hidden anchor (its subtree toggled off, not scrolled) dismisses");
+    {
+      // Hiding an anchor's ANCESTOR never fires the anchor's own visibility
+      // watcher, so the owner must sweep the overlay layer at the toggle
+      // (ChainScreen::setView does exactly this, m00157 item 7). This test
+      // proves the sweep itself: a panel whose anchor's subtree is gone must
+      // come down with it, and not resurrect when it comes back.
+      juce::Component hiddenSubtree;
+      hiddenSubtree.setBounds(20, 20, 100, 90);
+      root.addAndMakeVisible(hiddenSubtree);
+      juce::Component anchor2;
+      anchor2.setBounds(10, 10, 80, 30);
+      hiddenSubtree.addAndMakeVisible(anchor2);
+      Panel p2;
+      int d2 = 0;
+      p2.onDismiss = [&] { ++d2; };
+      p2.open(anchor2, Popover::Align::left, 4);
+      expect(p2.isOpen());
+      expect(anchor2.isVisible());
+      hiddenSubtree.setVisible(false);
+      expect(!anchor2.isVisible());  // JUCE hides the whole subtree
+      Popover::dismissAll(root.overlay);  // the owner's sweep at the toggle
+      pump(50);
+      expect(!p2.isOpen());
+      expectEquals(d2, 1);
+      hiddenSubtree.setVisible(true);
+      expect(!p2.isOpen());  // it doesn't resurrect on re-show
+    }
+  }
+};
+
+// m00157 item 7: the gallery view must be usable after a node-view toggle —
+// no leftover mode/type menu in the overlay layer, tiles clickable, wheel
+// scroll alive. These run against the real PluginRoot window (a leftover is
+// invisible unless a live peer is involved).
+struct GalleryViewTests : juce::UnitTest {
+  GalleryViewTests() : juce::UnitTest("Gallery view after node toggle", "ui") {}
+
+  static juce::Component* first(juce::Component& parent, const std::function<bool(juce::Component&)>& pred) {
+    for (auto* c : parent.getChildren()) {
+      if (c == nullptr) continue;
+      if (pred(*c)) return c;
+      if (auto* hit = first(*c, pred)) return hit;
+    }
+    return nullptr;
+  }
+  static bool isPopover(juce::Component& c) { return dynamic_cast<Popover*>(&c) != nullptr; }
+  static nodeview::NodeView* findNode(juce::Component& root) {
+    return dynamic_cast<nodeview::NodeView*>(
+        first(root, [](juce::Component& c) { return dynamic_cast<nodeview::NodeView*>(&c) != nullptr; }));
+  }
+  static ChainView* findGallery(juce::Component& root) {
+    return dynamic_cast<ChainView*>(first(root, [](juce::Component& c) { return dynamic_cast<ChainView*>(&c) != nullptr; }));
+  }
+  // Short-click the first non-empty node cell (the node-main chain starts in
+  // node view; the cell is a direct child of the NodeView).
+  static void selectFirstNode(PluginRoot& root) {
+    auto* node = findNode(root);
+    if (node == nullptr) return;
+    for (auto* c : node->getChildren()) {
+      if (c == nullptr) continue;
+      const auto h = c->getHelpText();
+      if (h.isNotEmpty() && !h.startsWith("Empty slot")) {
+        drive::click(root, *c);
+        return;
+      }
+    }
+  }
+  // Toggle to the gallery and wait for the NodeView container to disappear.
+  // Pre-fix, setVisible(false) was never called on it and the visible empty
+  // container ate every gallery click and wheel (m00157 item 7).
+  static bool toGallery(LiveScenario& live) {
+    auto* toggle = (NodeViewToggle*)first(
+        live.root(), [](juce::Component& c) { return dynamic_cast<NodeViewToggle*>(&c) != nullptr; });
+    jassert(toggle != nullptr && toggle->getChildComponent(0) != nullptr);
+    if (toggle == nullptr || toggle->getChildComponent(0) == nullptr) return false;
+    drive::click(live.root(), *toggle->getChildComponent(0));
+    auto* node = findNode(live.root());
+    if (node == nullptr) return false;
+    return LiveScenario::until([node] { return !node->isVisible(); }, 4000);
+  }
+
+  void runTest() override {
+    {
+      beginTest("gallery tiles are selectable after a node-view cycle");
+      LiveScenario live(*this, "node-main");
+      if (!live.ok) return;
+      auto* node = findNode(live.root());
+      expect(node != nullptr);
+      if (node == nullptr) return;
+      toGallery(live);  // the node-main drive starts in node view
+      selectFirstNode(live.root());  // select a block in the node view
+      LiveScenario::pump(500);
+      expect(toGallery(live));  // and back: the toggle must work BOTH ways
+      auto* chain = findGallery(live.root());
+      expect(chain != nullptr);
+      if (chain == nullptr) return;
+      expect(chain->isVisible());
+      auto* tile = (GalleryTile*)first(
+          *chain, [](juce::Component& c) { return dynamic_cast<GalleryTile*>(&c) != nullptr; });
+      expect(tile != nullptr);
+      if (tile == nullptr) return;
+      expect(first(live.root(), [](juce::Component& c) { return dynamic_cast<BlockDetail*>(&c) != nullptr; }) == nullptr);
+      live.mouse().click(live.centre(*tile));  // the pre-fix container ate this click
+      const auto findDetail = [&live] { return first(live.root(), [](juce::Component& c) { return dynamic_cast<BlockDetail*>(&c) != nullptr; }); };
+      LiveScenario::until([findDetail] { return findDetail() != nullptr; }, 4000);
+      auto* detail = (BlockDetail*)findDetail();
+      expect(detail != nullptr);
+      if (detail == nullptr) return;
+      auto* back = (BackLink*)first(
+          *detail, [](juce::Component& c) { return dynamic_cast<BackLink*>(&c) != nullptr; });
+      expect(back != nullptr);
+      if (back == nullptr) return;
+      live.mouse().click(live.centre(*back));
+      LiveScenario::until([detail] { return detail->getParentComponent() == nullptr; }, 4000);
+      expect(first(live.root(), [](juce::Component& c) { return isPopover(c); }) == nullptr);
+      expect(chain->isVisible());
+    }
+    {
+      beginTest("an open strip mode menu does not leak over the gallery");
+      LiveScenario live(*this, "node-main");
+      if (!live.ok) return;
+      selectFirstNode(live.root());  // the mode/type buttons only show on the armed strip
+      LiveScenario::pump(300);
+      auto* modeB = (juce::TextButton*)first(
+          live.root(), [](juce::Component& c) { return c.getHelpText().startsWith("Click to open the mode menu"); });
+      expect(modeB != nullptr);
+      if (modeB == nullptr) return;
+      live.mouse().click(live.centre(*modeB));
+      const auto findMenu = [&] { return first(live.root(), [](juce::Component& c) { return isPopover(c); }); };
+      LiveScenario::until([findMenu] { return findMenu() != nullptr; }, 4000);
+      auto* menu = (Popover*)findMenu();
+      expect(menu != nullptr);  // the live proof the menu opened
+      if (menu == nullptr) return;
+      expect(toGallery(live));
+      LiveScenario::pump(300);  // the dismiss posts off the watcher callback
+      expect(!menu->isOpen());
+      expect(first(live.root(), [](juce::Component& c) { return isPopover(c); }) == nullptr);
+    }
+    {
+      beginTest("gallery wheel scroll is alive after a node-view cycle");
+      LiveScenario live(*this, "node-main");
+      if (!live.ok) return;
+      expect(toGallery(live));
+      auto* chain = findGallery(live.root());
+      expect(chain != nullptr);
+      if (chain == nullptr) return;
+      auto& scroller = chain->scroller();
+      auto* content = scroller.getViewedComponent();
+      expect(content != nullptr);
+      if (content == nullptr) return;
+      expect(content->getWidth() > scroller.getMaximumVisibleWidth());
+      if (content->getWidth() <= scroller.getMaximumVisibleWidth()) return;
+      const int before = scroller.getViewPositionX();
+      live.wheel(live.centre(*chain), 0.0f, -6.0f);  // a two-finger horizontal swipe, right
+      LiveScenario::pump(200);
+      expect(scroller.getViewPositionX() > before);
+    }
   }
 };
 
@@ -2635,6 +2799,7 @@ ScrollSurfacesTests scrollSurfacesTests;
 TouchScrollTests touchScrollTests;
 PopoverFollowTests popoverFollowTests;
 PointerTests pointerTests;
+GalleryViewTests galleryViewTests;
 GlowCornerTests glowCornerTests;
 PresetReorderTests presetReorderTests;
 ChainCrossLaneDragTests chainCrossLaneDragTests;

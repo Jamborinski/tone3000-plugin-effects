@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "widgets/Popover.h"
+
 namespace t3k::ui {
 
 ChainScreen::ChainScreen(Services& services)
@@ -65,6 +67,9 @@ void ChainScreen::closeDetail() {
   services_.prefs.session.erase(UiPrefs::kDetailBlockId);
   if (!detail_) return;
   detail_.reset();
+  // The container (not just its children) must be visible for the view the
+  // user was in — a visible empty container would swallow gallery clicks and
+  // wheel (m00157 item 7: "can't select / can't scroll in the gallery").
   gallery_.setVisible(!nodeView_);
   node_.setNodeView(nodeView_);
   resized();
@@ -74,6 +79,18 @@ void ChainScreen::setView(bool nodeView) {
   if (nodeView_ == nodeView) return;
   nodeView_ = nodeView;
   gallery_.setVisible(!nodeView);
+  // The NodeView (added AFTER the gallery, so in front) must disappear from
+  // the hit-test, not just have its children hidden: a visible empty
+  // container still eats every click and wheel event over the gallery.
+  node_.setVisible(nodeView);
+  // A strip mode/type menu is a Popover parented to the PluginRoot overlay
+  // layer; hiding the strip does not reach it (the anchor's ANCESTOR is
+  // what goes off), so a panel would ghost over the new view. Sweep the
+  // whole layer at the toggle.
+  if (!nodeView) {
+    if (auto* host = findParentComponentOfClass<OverlayHost>())
+      Popover::dismissAll(host->overlayLayer());
+  }
   node_.setNodeView(nodeView);
   resized();
 }

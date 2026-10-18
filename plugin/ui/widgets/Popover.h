@@ -70,6 +70,12 @@ public:
   static constexpr int kBorder = 1;
   juce::Rectangle<int> contentBounds() const { return getLocalBounds().reduced(kBorder); }
 
+  // Dismiss every panel on the overlay layer. Hiding an anchor's ANCESTOR
+  // never reaches the anchor's own visibility watcher, so a subtree going
+  // off behind another view (the node view behind the gallery) needs this
+  // explicit sweep at the toggle site.
+  static void dismissAll(juce::Component& overlay);
+
 protected:
   // Reposition against the anchor (call after a size change while open).
   void reposition();
@@ -93,7 +99,7 @@ private:
         : juce::ComponentMovementWatcher(&target), owner_(owner) {}
     void componentMovedOrResized(bool, bool) override { owner_.targetMoved(); }
     void componentPeerChanged() override {}
-    void componentVisibilityChanged() override {}
+    void componentVisibilityChanged() override { owner_.targetMoved(); }
 
   private:
     Popover& owner_;
