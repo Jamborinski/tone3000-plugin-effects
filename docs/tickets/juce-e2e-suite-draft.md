@@ -82,6 +82,9 @@ dedicated session once the node-view batch closes.
   every press to a full-window ancestor (the `ghost=none` first-run
   mystery; real OS events and the in-process drives were fine because
   they never re-implement routing).
+- **Stage A exe (closeout rule):** `TONE3000-win-20261018-073012` →
+  `/mnt/c/Users/jambo/Downloads/TONE3000-win-20261018-073012/TONE3000.exe`,
+  md5 `698732294619dedc3e434bfee4c9c488` (staged from `f0b06d4`).
 
 Still deferred: CI `test:e2e` job, `docs/agents/e2e-tests.md` sub-rule,
 hold-menu + gallery↔node-toggle e2e tests.
