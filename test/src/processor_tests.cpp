@@ -22,6 +22,7 @@
 // a host would (the live-toggle path is an AsyncUpdater that needs a running
 // message pump; prepareToPlay resolves the same parameters synchronously).
 #include "Processor.h"
+#include "StateSizeBlob.h"
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <functional>
 #include "test_helpers.h"
@@ -406,8 +407,7 @@ TEST(ProcessorTest, IgnoresGarbageLegacyAndNewerSchemaState) {
     future.parameters.getParameter("inputLevel")->setValueNotifyingHost(0.2f);
     future.getStateInformation(saved);
   }
-  juce::ValueTree tree = juce::ValueTree::readFromData(
-      static_cast<const char*>(saved.getData()) + 4, saved.getSize() - 4);
+  juce::ValueTree tree = parseFlagAwareStateBlob(saved);
   ASSERT_TRUE(tree.isValid());
   tree.setProperty("schemaVersion", static_cast<int>(tree.getProperty("schemaVersion")) + 1,
                    nullptr);
@@ -781,10 +781,15 @@ TEST(ProcessorTest, ConvDryMigratesOldGainOnLoad) {
   // preset, and reload into a fresh processor.
   juce::MemoryBlock saved;
   proc.getStateInformation(saved);
-  const char* const p = static_cast<const char*>(saved.getData());
-  const size_t sz = saved.getSize();
-  juce::ValueTree state = juce::ValueTree::readFromData(p + 5, sz - 5);
+  juce::ValueTree state = parseFlagAwareStateBlob(saved);
   ASSERT_TRUE(state.isValid());
+  // The state is a flag-aware blob: the re-framed copy below carries a RAW
+  // (flag-0) payload, so the header must say flag 0 — not reuse the
+  // original flag byte, which is 1 (compressed) for a Stage-2 save whose
+  // bytes were replaced by a fresh raw tree.
+  const char* const p = static_cast<const char*>(saved.getData());
+  (void)p;
+  const char header[5] = {'T', '3', 'K', 'B', 0};
   std::function<void(juce::ValueTree&)> strip;
   strip = [&](juce::ValueTree& t) {
     if (t.hasProperty("convDry"))
@@ -798,7 +803,7 @@ TEST(ProcessorTest, ConvDryMigratesOldGainOnLoad) {
   juce::MemoryOutputStream strippedOut;
   state.writeToStream(strippedOut);
   std::vector<char> blob(5 + strippedOut.getDataSize());
-  std::copy(p, p + 5, blob.begin());  // magic 'T','3','K','B' + NUL
+  std::copy(header, header + 5, blob.begin());
   std::copy(static_cast<const char*>(strippedOut.getData()),
             static_cast<const char*>(strippedOut.getData()) + strippedOut.getDataSize(),
             blob.begin() + 5);
@@ -1028,15 +1033,11 @@ TEST(ProcessorTest, ConvIrReferenceSurvivesStateRoundTrip) {
 
   juce::MemoryBlock stateBytes;
   proc1.getStateInformation(stateBytes);
-  // The state is a BINARY ValueTree stream (magic prefix + raw bytes, embedded
-  // NULs): never route it through juce::String (this JUCE's String
-  // constructor is a Unicode decoder, not a byte container). Byte-wise search
-  // of the raw buffer instead.
-  const std::string_view state1(reinterpret_cast<const char*>(stateBytes.getData()),
-                                stateBytes.getSize());
-  EXPECT_TRUE(state1.find(irWav.getFullPathName().toRawUTF8()) != std::string_view::npos)
+  // The state is a flag-aware blob (Stage 2: the payload may be compressed):
+  // search the parsed tree, not the raw bytes.
+  EXPECT_TRUE(blobTreeContains(stateBytes, irWav.getFullPathName()))
       << "state must carry the IR path (E-2 persistence)";
-  EXPECT_TRUE(state1.find("t3k-ir-fixture.wav") != std::string_view::npos)
+  EXPECT_TRUE(blobTreeContains(stateBytes, "t3k-ir-fixture.wav"))
       << "state must carry the name";
 
   TONE3000Processor proc2;
@@ -1104,9 +1105,7 @@ TEST(ProcessorTest, ConvIrSurvivesPresetSaveSwitchRestore) {
   ASSERT_TRUE(proc.loadPreset(noIrId)) << "switching to the NoIR preset must succeed";
   juce::MemoryBlock stateA;
   proc.getStateInformation(stateA);
-  const std::string_view away(reinterpret_cast<const char*>(stateA.getData()),
-                              stateA.getSize());
-  EXPECT_TRUE(away.find("t3k-ir-fixture.wav") == std::string_view::npos)
+  EXPECT_TRUE(!blobTreeContains(stateA, "t3k-ir-fixture.wav"))
       << "switching away from the preset must clear the convolver";
 
   EXPECT_TRUE(proc.loadPreset(irId));
@@ -1184,9 +1183,8 @@ TEST(ProcessorTest, ConvIrSurvivesUndoRedoOfConvEdit) {
   EXPECT_TRUE(proc.redoChain());
   juce::MemoryBlock state;
   proc.getStateInformation(state);
-  const std::string_view s(reinterpret_cast<const char*>(state.getData()),
-                           state.getSize());
-  EXPECT_TRUE(s.find("t3k-ir-fixture.wav") != std::string_view::npos);
+  EXPECT_TRUE(blobTreeContains(state, "t3k-ir-fixture.wav"))
+      << "the state must carry the conv IR reference";
 }
 
 TEST(ProcessorTest, ConvIrMissingFileRestoresGracefully) {
@@ -1221,9 +1219,7 @@ TEST(ProcessorTest, ConvIrMissingFileRestoresGracefully) {
 
   juce::MemoryBlock state2;
   proc2.getStateInformation(state2);
-  const std::string_view out2(reinterpret_cast<const char*>(state2.getData()),
-                              state2.getSize());
-  EXPECT_TRUE(out2.find(irWav.getFullPathName().toRawUTF8()) != std::string_view::npos)
+  EXPECT_TRUE(blobTreeContains(state2, irWav.getFullPathName()))
       << "the missing-file identity must persist for the IR-missing UI state";
 }
 

@@ -33,6 +33,7 @@
 #include "PitchShift.h"
 #include "PresetFile.h"
 #include "Processor.h"
+#include "StateSizeBlob.h"
 #include "test_helpers.h"
 
 #include <gtest/gtest.h>
@@ -616,8 +617,7 @@ TEST(ProcessorTest, StateFromBeforePitchShiftLandsOnItsDefaults) {
     old.parameters.getParameter("gateThreshold")->setValueNotifyingHost(0.6f);
     old.getStateInformation(saved);
   }
-  juce::ValueTree tree = juce::ValueTree::readFromData(
-      static_cast<const char*>(saved.getData()) + 4, saved.getSize() - 4);
+  juce::ValueTree tree = parseFlagAwareStateBlob(saved);
   ASSERT_TRUE(tree.isValid());
   juce::ValueTree params = tree.getChildWithName("PARAMETERS");
   ASSERT_TRUE(params.isValid());
@@ -795,8 +795,7 @@ TEST(ProcessorTest, StateFromABetaBuildRestoresThePitchShiftAndItsMidiMap) {
     ASSERT_TRUE(beta.midiMapper.setCcMapping("gateEnabled", 20));
     beta.getStateInformation(saved);
   }
-  juce::ValueTree tree = juce::ValueTree::readFromData(
-      static_cast<const char*>(saved.getData()) + 4, saved.getSize() - 4);
+  juce::ValueTree tree = parseFlagAwareStateBlob(saved);
   ASSERT_TRUE(tree.isValid());
   writeLegacyIds(tree.getChildWithName("PARAMETERS"), "id");
   writeLegacyIds(tree.getChildWithName("MidiMappings"), "targetId");
@@ -823,8 +822,7 @@ TEST(ProcessorTest, StateFromABetaBuildRestoresThePitchShiftAndItsMidiMap) {
   // The next save writes the current ids, so the migration runs once.
   juce::MemoryBlock resaved;
   proc.getStateInformation(resaved);
-  const juce::ValueTree after = juce::ValueTree::readFromData(
-      static_cast<const char*>(resaved.getData()) + 4, resaved.getSize() - 4);
+  const juce::ValueTree after = parseFlagAwareStateBlob(resaved);
   for (const auto& [current, legacy] : legacyIds()) {
     EXPECT_TRUE(after.getChildWithName("PARAMETERS").getChildWithProperty("id", current).isValid()) << current;
     EXPECT_FALSE(after.getChildWithName("PARAMETERS").getChildWithProperty("id", legacy).isValid()) << legacy;

@@ -17,6 +17,7 @@
 // Whether a given release "feels tight" is a by-ear item.
 #include "NoiseGate.h"
 #include "Processor.h"
+#include "StateSizeBlob.h"
 #include "test_helpers.h"
 
 #include <gtest/gtest.h>
@@ -236,8 +237,7 @@ TEST(ProcessorTest, StateFromBeforeTheGateDeckLandsOnItsDefaults) {
     old.parameters.getParameter("gateThreshold")->setValueNotifyingHost(0.6f);
     old.getStateInformation(saved);
   }
-  juce::ValueTree tree = juce::ValueTree::readFromData(
-      static_cast<const char*>(saved.getData()) + 4, saved.getSize() - 4);
+  juce::ValueTree tree = parseFlagAwareStateBlob(saved);
   ASSERT_TRUE(tree.isValid());
   juce::ValueTree params = tree.getChildWithName("PARAMETERS");
   ASSERT_TRUE(params.isValid());

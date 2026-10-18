@@ -21,6 +21,8 @@
 #include <functional>
 #include <vector>
 
+#include "StateSizeBlob.h"
+
 namespace {
 
 // Append one more cached model to a block tree's ModelCache child, the shape
@@ -34,13 +36,6 @@ void appendCachedModel(juce::ValueTree& block, int modelId, const char* fileName
   block.getChildWithName("ModelCache").appendChild(cached, nullptr);
 }
 
-// Decode a T3KB blob (getStateInformation's output) back into its state tree.
-juce::ValueTree parseStateBlob(const juce::MemoryBlock& data) {
-  if (data.getSize() <= 4 || std::memcmp(data.getData(), "T3KB", 4) != 0)
-    return {};
-  return juce::ValueTree::readFromData(static_cast<const char*>(data.getData()) + 4,
-                                       data.getSize() - 4);
-}
 
 // Sorted ids of the models a saved state embeds for one block.
 std::vector<int> cachedModelIds(const juce::ValueTree& state, const juce::String& blockId) {
@@ -126,7 +121,7 @@ TEST(StateCacheTest, SaveEmbedsOnlyModelsTheToneStillReferences) {
 
   juce::MemoryBlock saved;
   proc.getStateInformation(saved);
-  const juce::ValueTree state = parseStateBlob(saved);
+  const juce::ValueTree state = parseFlagAwareStateBlob(saved);
   ASSERT_TRUE(state.isValid());
   EXPECT_EQ(cachedModelIds(state, "blk-a"), (std::vector<int>{100}));
 
@@ -155,7 +150,7 @@ TEST(StateCacheTest, LocalTonePersistsItsFullModelListAndSwitchesOffline) {
 
   juce::MemoryBlock saved;
   proc.getStateInformation(saved);
-  EXPECT_EQ(cachedModelIds(parseStateBlob(saved), "blk-local"), (std::vector<int>{300, 301}));
+  EXPECT_EQ(cachedModelIds(parseFlagAwareStateBlob(saved), "blk-local"), (std::vector<int>{300, 301}));
 
   // Switching to the sibling model works offline: its bytes were seeded from
   // the state (the URL is unfetchable, so a fetch would fail loudly).
@@ -180,7 +175,7 @@ TEST(StateCacheTest, RestoreDoesNotSeedUnreferencedCacheEntries) {
   // The stale entry neither re-saves...
   juce::MemoryBlock saved;
   proc.getStateInformation(saved);
-  EXPECT_EQ(cachedModelIds(parseStateBlob(saved), "blk-b"), (std::vector<int>{200}));
+  EXPECT_EQ(cachedModelIds(parseFlagAwareStateBlob(saved), "blk-b"), (std::vector<int>{200}));
 
   // ...nor was it seeded into memory: switching to it with a dead URL must
   // fail (a seeded cache would satisfy the switch without any fetch).
@@ -207,7 +202,7 @@ TEST(StateCacheTest, ActiveModelMissingFromToneJsonLoadsFromEmbeddedCache) {
   // with the toneJson-referenced model 100.
   juce::MemoryBlock saved;
   proc.getStateInformation(saved);
-  EXPECT_EQ(cachedModelIds(parseStateBlob(saved), "blk-c"), (std::vector<int>{100, 999}));
+  EXPECT_EQ(cachedModelIds(parseFlagAwareStateBlob(saved), "blk-c"), (std::vector<int>{100, 999}));
 
   ChainTestProcessor reopened;
   reopened.setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
@@ -260,7 +255,7 @@ TEST(StateCacheTest, DelayModeSetAndPunchSurviveSaveRestore) {
 
   juce::MemoryBlock saved;
   proc.getStateInformation(saved);
-  const juce::ValueTree state = parseStateBlob(saved);
+  const juce::ValueTree state = parseFlagAwareStateBlob(saved);
   ASSERT_TRUE(state.isValid());
 
   auto find = [&](const char* id) {
@@ -321,7 +316,7 @@ TEST(StateCacheTest, ReverbTypeSetSurvivesSaveRestore) {
 
   juce::MemoryBlock saved;
   proc.getStateInformation(saved);
-  const juce::ValueTree state = parseStateBlob(saved);
+  const juce::ValueTree state = parseFlagAwareStateBlob(saved);
   ASSERT_TRUE(state.isValid());
 
   const auto blocks =

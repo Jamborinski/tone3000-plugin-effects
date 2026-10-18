@@ -1082,6 +1082,16 @@ TONE3000Processor::PreparedBlockModel TONE3000Processor::prepareBlockModelOffThr
     out.namEngine.reset();
     out.convolverMono.reset();
     out.convolverStereo.reset();
+  } catch (...) {
+    // A synthetic state payload (tests) can make the loader throw a non-
+    // std::exception from deep in the engine build; whatever it is, a model
+    // load must never let an exception off the pool thread — it lands here.
+    juce::Logger::writeToLog("[ModelLoader] Unexpected error preparing model '" +
+                             filename + "'");
+    out.success = false;
+    out.namEngine.reset();
+    out.convolverMono.reset();
+    out.convolverStereo.reset();
   }
 
   return out;

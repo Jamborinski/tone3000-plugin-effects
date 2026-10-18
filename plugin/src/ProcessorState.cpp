@@ -615,23 +615,98 @@ void TONE3000Processor::getStateInformation(juce::MemoryBlock& destData) {
     state.appendChild(captureChainSnapshot(true), nullptr);
   }
 
-  // Magic-prefixed binary ValueTree stream. I picked binary over XML so the
-  // embedded model bytes go out verbatim; the old Base64-in-XML path burned
-  // 100+ ms per host save on a heavy rig.
-  juce::MemoryOutputStream out(destData, false);
-  out.write(kStateMagic, sizeof(kStateMagic));
-  state.writeToStream(out);
+  // Magic + format-flag-prefixed binary ValueTree stream. The flag selects
+  // the payload encoding: 1 = gzip (8-byte LE original size + gzip stream),
+  // 0 = raw tree bytes. A blob whose 5th byte is neither flag is a legacy
+  // save (no flag) and is parsed from offset 4 — the original Base64-in-XML
+  // path burned 100+ ms per host save on a heavy rig, which is why the
+  // payload is binary; the gzip layer exists so a 32 MB tree doesn't cost
+  // 32 MB of project file.
+  {
+    // (MemoryBlock& overload, not the void*+size overload: &rawBlock would
+    // match (void*, size_t=0) — a 0-byte fixed buffer that swallows every
+    // write silently.)
+    juce::MemoryBlock rawBlock, gzBlock;
+    juce::MemoryOutputStream rawOut(rawBlock, false);
+    state.writeToStream(rawOut);
+
+    juce::MemoryOutputStream gzOut(gzBlock, false);
+    {
+      juce::GZIPCompressorOutputStream gz(gzOut, -1);
+      gz.write(rawOut.getData(), rawOut.getDataSize());
+    }
+
+    juce::MemoryOutputStream out(destData, false);
+    out.write(kStateMagic, sizeof(kStateMagic));
+    if (gzOut.getDataSize() < rawOut.getDataSize()) {
+      out.writeByte(1);
+      {
+        // original (uncompressed) size, little-endian — the readers parse
+        // byte 5 as the LSB; a MSB-first write made the field read back as
+        // a ~2e17-byte allocation → bad_alloc on restore.
+        for (int i = 0; i < 8; ++i)
+          out.writeByte(static_cast<uint8_t>((rawOut.getDataSize() >> (8 * i)) & 0xff));
+      }
+      out.write(gzOut.getData(), gzOut.getDataSize());
+    } else {
+      out.writeByte(0);
+      out.write(rawOut.getData(), rawOut.getDataSize());
+    }
+  }
   DBG("Plugin state saved successfully");
 }
 
 void TONE3000Processor::setStateInformation(const void* data, int sizeInBytes) {
-  juce::ValueTree state;
+  // The blob is a magic + format flag + payload (see getStateInformation);
+  // the payload is decompressed here, before the tree is parsed, so a
+  // corrupt compression stream lands on the same "Failed to parse" path as
+  // a corrupt tree.
+  juce::MemoryBlock raw;
   if (sizeInBytes > static_cast<int>(sizeof(kStateMagic)) &&
       std::memcmp(data, kStateMagic, sizeof(kStateMagic)) == 0) {
-    state = juce::ValueTree::readFromData(
-        static_cast<const char*>(data) + sizeof(kStateMagic),
-        static_cast<size_t>(sizeInBytes) - sizeof(kStateMagic));
+    const auto* p = static_cast<const uint8_t*>(data);
+    const size_t total = static_cast<size_t>(sizeInBytes);
+    switch (p[4]) {
+      case 0:  // raw tree bytes
+        raw = juce::MemoryBlock(p + 5, total - 5);
+        break;
+      case 1: {  // 8-byte LE original size + gzip stream
+        if (total < 5 + 8 + 2)  // too small for the header + a gzip header
+          break;
+        int64_t rawSize = 0;
+        for (int i = 0; i < 8; ++i)
+          rawSize |= static_cast<int64_t>(p[5 + i]) << (8 * i);
+        // rawSize is only an exact bound on an intact stream; a truncated
+        // blob decompresses short and the getSize() check below clears it.
+        juce::MemoryInputStream in(p + 13, total - 13, false);
+        // zlibFormat: GZIPCompressorOutputStream emits a zlib-wrapped
+        // deflate stream (0x78 0x9c header), not a gzip-wrapped one
+        // (0x1f 0x8b) — gzipping with gzipFormat reads 0 bytes from it.
+        juce::GZIPDecompressorInputStream gz(&in, false,
+                                            juce::GZIPDecompressorInputStream::zlibFormat,
+                                            rawSize);
+        // Size the output to the recorded original size: a nullptr-backed
+        // stream matches the (void*, size_t=0) overload — a 0-byte fixed
+        // buffer that swallows every decompressed byte, and the size check
+        // below then rejects a perfectly good save. A self-allocating stream
+        // sized to rawSize grows exactly as needed without the reallocation
+        // churn (and the bad_alloc risk) of starting at 256 bytes.
+        juce::MemoryOutputStream out(rawSize > 0 ? rawSize : 256);
+        out.writeFromInputStream(gz, -1);
+        raw = out.getMemoryBlock();
+        if (rawSize >= 0 && raw.getSize() != static_cast<size_t>(rawSize))
+          raw = juce::MemoryBlock();
+        break;
+      }
+      default:  // legacy blob: no flag, the tree starts at offset 4
+        raw = juce::MemoryBlock(p + 4, total - 4);
+        break;
+    }
   }
+
+  juce::ValueTree state;
+  if (raw.getSize() > 0)
+    state = juce::ValueTree::readFromData(static_cast<const char*>(raw.getData()), raw.getSize());
 
   if (!state.isValid()) {
     juce::Logger::writeToLog("[Restore] Failed to parse plugin state (" +
