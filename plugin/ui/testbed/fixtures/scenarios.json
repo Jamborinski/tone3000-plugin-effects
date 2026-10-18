@@ -1107,7 +1107,10 @@
       "hints": true,
       "banner": false,
       "auth": false,
-      "hasDrive": false
+      "hasDrive": false,
+      "localStorage": {
+        "t3k.nodeView": "true"
+      }
     },
     {
       "id": "node-main",
