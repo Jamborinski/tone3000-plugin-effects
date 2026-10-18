@@ -33,6 +33,7 @@ target_sources(DspTests PRIVATE
     src/room_probe_tmp.cpp
     src/chamber_probe_tmp.cpp
     src/spring_noise_burst.cpp
+    src/state_size_tests.cpp
     src/spring_conv_compare.cpp
     src/spring_ir_test.cpp
     src/effect_ui_scale_tests.cpp
