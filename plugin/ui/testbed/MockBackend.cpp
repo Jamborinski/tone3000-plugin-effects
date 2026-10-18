@@ -363,23 +363,50 @@ juce::var MockBackend::getBlockSpectrum(const std::string& blockId) {
 juce::var MockBackend::getPresetList() { return obj({{"presets", presets_}}); }
 
 juce::var MockBackend::savePreset(const juce::String& name) {
-  const juce::String id = "user-" + juce::String(juce::Time::currentTimeMillis());
+  // Millisecond clock alone is not unique: two saves in the same ms (a
+  // test, a fast double-click) would collide on the id and the second
+  // snapshot would overwrite the first.
+  static int nextId = 0;
+  const juce::String id = "user-" + juce::String(juce::Time::currentTimeMillis()) + "-" + juce::String(++nextId);
   auto preset = obj({{"id", id}, {"name", name}, {"factory", false}});
   presets_.append(preset);
+  // The processor snapshots the whole chain (conv-IR state included) into
+  // the preset; the mock keeps that snapshot so loadPreset can restore it.
+  // Deep copy: var::clone is shallow, so a later setChain that rebuilds a
+  // shared inner array would edit every snapshot taken before it.
+  {
+    juce::Array<juce::var> blocks;
+    if (auto* arr = chain_["chain"].getArray())
+      for (int i = 0; i < arr->size(); ++i) blocks.add((*arr)[i].clone());
+    auto snap = chain_.clone();
+    snap.getDynamicObject()->setProperty("chain", juce::var(blocks));
+    presetChains_[id] = snap;
+    if (auto* right = chain_["chainRight"].getArray()) {
+      juce::Array<juce::var> rblocks;
+      for (int i = 0; i < right->size(); ++i) rblocks.add((*right)[i].clone());
+      snap.getDynamicObject()->setProperty("chainRight", juce::var(rblocks));
+    }
+  }
   chain_.getDynamicObject()->setProperty("preset", obj({{"id", id}, {"name", name}}));
   bumpChain();
   return obj({{"id", id}, {"name", name}});
 }
 
+void MockBackend::setPresetChain(const juce::String& presetId, juce::var chain) {
+  presetChains_[presetId] = std::move(chain);
+}
+
 bool MockBackend::loadPreset(const juce::String& presetId) {
   for (const auto& p : *presets_.getArray()) {
     if (p["id"].toString() == presetId) {
-      chain_.getDynamicObject()->setProperty("preset", obj({{"id", p["id"]}, {"name", p["name"]}}));
+      chain_.getDynamicObject()->setProperty("preset", obj({{"id", presetId}, {"name", p["name"]}}));
+      if (const auto it = presetChains_.find(presetId); it != presetChains_.end())
+        chain_ = it->second.clone();  // the preset's stored chain snapshot
       bumpChain();
-      break;
+      return true;
     }
   }
-  return true;
+  return false;
 }
 
 bool MockBackend::movePreset(const juce::String& presetId, int delta) {

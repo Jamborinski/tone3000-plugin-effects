@@ -4,6 +4,7 @@
 // screens the plugin shows, with no audio engine behind them.
 #pragma once
 
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -84,6 +85,10 @@ public:
   juce::var getPresetList() override;
   juce::var savePreset(const juce::String& name) override;
   bool loadPreset(const juce::String& presetId) override;
+  // A preset's chain snapshot (the mock's stand-in for the processor's
+  // on-disk store: savePreset captures, loadPreset restores it — the UI
+  // layer of the E-2 conv-IR persist fix has no audio engine to hydrate).
+  void setPresetChain(const juce::String& presetId, juce::var chain);
   bool renamePreset(const juce::String&, const juce::String&) override { return true; }
   bool deletePreset(const juce::String&) override { return true; }
   // Reorders presets_ within the preset's section like the real store, and
@@ -157,6 +162,7 @@ private:
   std::vector<Move> presetMoves_;
   std::vector<ChainMove> chainMoves_;
   std::vector<juce::String> machineDefaults_;
+  std::map<juce::String, juce::var> presetChains_;
   juce::var meters_;
   juce::var tuner_;
   juce::var autoMeasure_;

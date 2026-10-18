@@ -1945,6 +1945,79 @@ struct GalleryViewTests : juce::UnitTest {
   }
 };
 
+// Conv-IR persist (E-2), UI layer: the processor-level fix (restoreConvIrs
+// at the restore sites) has unit tests in DspTests; this is the user's
+// save → switch → come-back repro through the preset path the UI drives.
+struct ConvIrPresetTests : juce::UnitTest {
+  ConvIrPresetTests() : juce::UnitTest("Conv IR preset persist", "ui") {}
+
+  static juce::var withConv(const juce::var& chain, const juce::String& irName) {
+    // var::clone is shallow: rebuild the inner chain array so the insert
+    // below can't mutate the fixture chain the NoIR preset captured.
+    // Element clones are shallow too — nothing mutates an element.
+    auto c = chain.clone();
+    juce::Array<juce::var> fresh;
+    if (auto* oldArr = c["chain"].getArray())
+      for (int i = 0; i < oldArr->size(); ++i) fresh.add((*oldArr)[i].clone());
+    c.getDynamicObject()->setProperty("chain", juce::var(fresh));
+    auto* blocks = c["chain"].getArray();
+    juce::var item(new juce::DynamicObject());
+    auto* o = item.getDynamicObject();
+    o->setProperty("blockId", "fx-conv-test");
+    o->setProperty("kind", "effect");
+    o->setProperty("effectKind", "convolution");
+    if (!irName.isEmpty()) {
+      o->setProperty("convIrName", irName);
+      o->setProperty("convIrLoaded", true);
+    }
+    blocks->insert(1, item);
+    return c;
+  }
+
+  void runTest() override {
+    beginTest("a preset remembers its convolver kernel across a switch");
+    const auto fixtures = Fixtures::load(fixturesDir().getChildFile("scenarios.json"));
+    const auto* scenario = fixtures.find("chrome-preset-save");
+    if (scenario == nullptr) {
+      expect(false, "chrome-preset-save scenario missing");
+      return;
+    }
+    MockBackend backend(scenario->data);
+    // The fixture chain itself is the plain (IR-free) preset.
+    auto plain = backend.savePreset("NoIR");
+    const auto noIrId = plain["id"].toString();
+    // Then the user's flow: add a convolver with a loaded kernel and save.
+    backend.setChain(withConv(scenario->data["chain"].clone(), "t3k-ir-fixture.wav"));
+    auto saved = backend.savePreset("WithIR");
+    const auto irId = saved["id"].toString();
+    expect(!irId.isEmpty());
+    expect(backend.loadPreset(noIrId));
+    auto away = backend.getChainState(-1);
+    bool convAway = false;
+    if (auto* arr = away["chain"].getArray())
+      for (int i = 0; i < arr->size(); ++i)
+        if ((*arr)[i]["kind"].toString() == "effect"
+            && (*arr)[i]["effectKind"].toString() == "convolution")
+          convAway = true;
+    expect(!convAway, "switching to the plain preset must clear the convolver");
+
+    // Come back: the kernel state must ride the preset's chain snapshot.
+    expect(backend.loadPreset(irId));
+    auto back = backend.getChainState(-1);
+    bool loaded = false, named = false;
+    if (auto* arr = back["chain"].getArray())
+      for (int i = 0; i < arr->size(); ++i) {
+        const auto& it = (*arr)[i];
+        if (it["kind"].toString() == "effect" && it["effectKind"].toString() == "convolution") {
+          loaded = (bool)it["convIrLoaded"];
+          named = it["convIrName"].toString() == "t3k-ir-fixture.wav";
+        }
+      }
+    expect(loaded, "restored preset must report a loaded conv kernel");
+    expect(named, "restored preset must name the kernel");
+  }
+};
+
 // Services::pointer: a desktop build follows the input, and the gallery's
 // hover-revealed chrome pins while that input is a finger.
 struct PointerTests : juce::UnitTest {
@@ -2809,6 +2882,7 @@ SettingsKeyboardTests settingsKeyboardTests;
 ScrollSurfacesTests scrollSurfacesTests;
 TouchScrollTests touchScrollTests;
 PopoverFollowTests popoverFollowTests;
+ConvIrPresetTests convIrPresetTests;
 PointerTests pointerTests;
 GalleryViewTests galleryViewTests;
 GlowCornerTests glowCornerTests;
