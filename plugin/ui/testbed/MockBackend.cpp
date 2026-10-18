@@ -212,7 +212,11 @@ bool MockBackend::removeChainBlock(const std::string& blockId) {
         const auto& block = (*blocks)[i];
         if (block["blockId"].toString().toStdString() != blockId) continue;
         if (block["kind"].toString() == "insert") continue;  // inserts are not removable
-        blocks->remove(i);
+        // In-place gap (m06828 item 4d, mirrors the real removeChainBlock):
+        // the slot the block occupied becomes a fresh INSERT placeholder —
+        // nothing to the right shifts left.
+        (*blocks).set(i, obj({{"blockId", juce::Uuid().toString()},
+                              {"kind", "insert"}}));
         bumpChain();
         return true;
       }
@@ -227,23 +231,37 @@ bool MockBackend::reorderChainBlocks(const std::vector<std::string>& orderedIds)
   // the processor's orderWith + normalizeLaneInserts).
   for (const auto* lane : {"chain", "chainRight"}) {
     auto* blocks = chain_[lane].getArray();
-    if (blocks == nullptr || blocks->size() != static_cast<int>(orderedIds.size()))
+    if (blocks == nullptr || blocks->size() > static_cast<int>(orderedIds.size()))
       continue;
+    // Every existing block must be in the list (super-set permutation;
+    // the list may carry NEW insert ids = lazy pad, m06828 item 4).
     std::vector<juce::var> byId;
     byId.reserve(blocks->size());
+    bool allPresent = true;
     for (int i = 0; i < blocks->size(); ++i) {
       const auto& b = (*blocks)[i];
-      bool inList = false;
-      for (const auto& id : orderedIds)
-        inList |= (b["blockId"].toString().toStdString() == id);
-      if (inList) byId.push_back(b);
+      const std::string id = b["blockId"].toString().toStdString();
+      if (std::find(orderedIds.begin(), orderedIds.end(), id) == orderedIds.end()) {
+        allPresent = false;
+        break;
+      }
+      byId.push_back(b);
     }
-    if (static_cast<int>(byId.size()) != static_cast<int>(orderedIds.size())) continue;
+    if (!allPresent) continue;
     blocks->clearQuick();
     for (const auto& id : orderedIds) {
-      for (int i = 0; i < static_cast<int>(byId.size()); ++i)
-        if (byId[i]["blockId"].toString().toStdString() == id)
-          blocks->add(byId[i]);
+      juce::var match;
+      bool found = false;
+      for (auto& b : byId)
+        if (b["blockId"].toString().toStdString() == id) {
+          match = b;
+          found = true;
+          break;
+        }
+      if (found)
+        blocks->add(match);
+      else
+        blocks->add(obj({{"blockId", juce::String(id)}, {"kind", "insert"}}));
     }
     if (blocks->size() != static_cast<int>(orderedIds.size())) return false;
     bumpChain();
@@ -288,8 +306,15 @@ std::string MockBackend::addEffectBlock(const juce::String& kind,
   juce::var item =
       obj({{"blockId", juce::String(id)}, {"kind", "effect"}, {"effectKind", kind},
            {"params", params}});
-  const int at = juce::jlimit(0, blocks->size(), index);
-  blocks->insert(at, item);
+  // Lazy pad + in-place replace (m06828 item 4, mirrors the real
+  // landToneBlock): a far-slot add pads the lane with inserts up to
+  // `index`, and an add ON an insert slot replaces it in place.
+  while (blocks->size() < index)
+    blocks->add(obj({{"blockId", juce::Uuid().toString()}, {"kind", "insert"}}));
+  if ((*blocks)[index]["kind"].toString() == "insert")
+    (*blocks).set(index, item);
+  else
+    blocks->insert(index, item);
   bumpChain();
   return id;
 }

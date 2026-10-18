@@ -57,9 +57,12 @@ TEST(AddAtSlot, MidLaneGapIsFilledInPlace) {
   ASSERT_FALSE(idChorus.empty());
   ASSERT_FALSE(idTremolo.empty());
   ASSERT_FALSE(idDelay.empty());
-  // Delay prepends: the lane is [delay, chorus, tremolo, INSERT, INSERT].
+  // Delay prepends: the lane is [delay, chorus, tremolo, INSERT, INSERT,
+  // INSERT] — 6 items. normalizeLaneInserts is FLOOR-ONLY (m06828 item 4):
+  // 3 effects keep all 3 inserts, it no longer trims to the 5-slot floor.
   {
     const var state = proc.getChainState(-1);
+    EXPECT_EQ(laneSize(state), 6);
     EXPECT_EQ(kindAt(state, 0), "delay");
     EXPECT_EQ(kindAt(state, 1), "chorus");
     EXPECT_EQ(kindAt(state, 2), "tremolo");
@@ -67,11 +70,11 @@ TEST(AddAtSlot, MidLaneGapIsFilledInPlace) {
 
   // Remove the MIDDLE block (chorus, index 1): item 8 keeps its slot as a
   // gap, so the gap persists at index 1 — lane
-  // [delay, INSERT, tremolo, INSERT, INSERT].
+  // [delay, INSERT, tremolo, INSERT, INSERT, INSERT].
   ASSERT_TRUE(proc.removeChainBlock(idChorus));
   {
     const var state = proc.getChainState(-1);
-    EXPECT_EQ(laneSize(state), 5);
+    EXPECT_EQ(laneSize(state), 6);
     EXPECT_EQ(kindAt(state, 0), "delay");
     EXPECT_EQ(kindAt(state, 1), "insert");  // the gap persisted in place
     EXPECT_EQ(kindAt(state, 2), "tremolo");
@@ -84,7 +87,7 @@ TEST(AddAtSlot, MidLaneGapIsFilledInPlace) {
   const auto idNew = proc.addEffectBlock(EffectKind::Delay, "left", 1);
   ASSERT_FALSE(idNew.empty());
   const var state = proc.getChainState(-1);
-  EXPECT_EQ(laneSize(state), 5);
+  EXPECT_EQ(laneSize(state), 6);  // in-place replace: size unchanged
   EXPECT_EQ(kindAt(state, 0), "delay");
   EXPECT_EQ(kindAt(state, 1), "delay");  // landed in the clicked slot
   EXPECT_EQ(kindAt(state, 2), "tremolo");

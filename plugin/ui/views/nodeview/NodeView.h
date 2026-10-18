@@ -57,6 +57,9 @@ public:
 
   void setNodeView(bool active);
   bool nodeViewActive() const { return nodeView_; }
+  // e2e: stamp the release button BEFORE a synthetic mouseUp (the JUCE
+  // source carries no usable per-button state in this tree).
+  static void setE2eReleaseButton(bool right) { g_e2eReleaseButton = right; }
   // The strip's current visibility (probe for the toggle drive's assertion).
   // Defined in the .cpp: NodeStrip is a nested class, incomplete here.
   bool stripShown() const;
@@ -151,6 +154,10 @@ private:
 
   void applyPreview();  // drag: rebuild cells from the optimistic lane
   void moveActiveTo(int target);  // drag: splice the optimistic lane
+  // Count of the preview's LEADING inserts: the grid is positional (m06828
+  // item 4) with a fixed number of COLUMNS, so a lane item's list index
+  // diverges from its grid slot exactly by this much.
+  static int countLeadingInserts(const std::vector<ChainItem>& lane);
 
   Services& services_;
   Model model_;
@@ -162,6 +169,9 @@ private:
   // the cursor — the desktop cursor is swapped for the gesture's duration.
   static juce::MouseCursor g_savedCursor;
   static bool g_dragCursorWasSet;
+  // e2e: the button of the LAST release routed to a cell (true = right);
+  // the e2e handler stamps it before the synthetic mouseUp.
+  static bool g_e2eReleaseButton;
   mutable NodeCell* dragCell_ = nullptr;
   juce::Point<float> grabOffset_;
   std::string activeId_;  // the in-flight lane item (inserts are lane items too)

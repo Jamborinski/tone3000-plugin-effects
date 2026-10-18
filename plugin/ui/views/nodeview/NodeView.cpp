@@ -200,14 +200,6 @@ help::Key addHelpFor(const juce::String& k) {
   return help::Key::addEffectConvolution;
 }
 
-// Reverse of Model::paletteLabel: a "+ LABEL" menu entry back to its kind.
-juce::String paletteKindForLabel(const juce::String& label) {
-  for (const auto& k : Model::paletteKinds())
-    if (label == juce::String("+ ") + Model::paletteLabel(k))
-      return k;
-  return juce::String();
-}
-
 // The cell's right-click menu (NodeCell::openMenu, tested in
 // test/src/strip_knob_tests.cpp — m00157 item 11: EVERY node kind — tone
 // AND effect — must carry Remove; inserts carry the add list).
@@ -216,6 +208,10 @@ struct CellMenuItem {
   std::optional<t3k::ui::Icon> icon;
   t3k::ui::help::Key help;
   bool remove = false;
+  // The add-list entry's kind (empty for power/remove). The menu labels are
+  // bare ("Delay", "Conv Rev" ...) — the + icon carries the add meaning,
+  // there is no "+ " text prefix to reverse-map (m06828 item 3).
+  juce::String addKind;
 };
 
 std::vector<CellMenuItem> cellMenuItems(const t3k::ui::ChainItem* b,
@@ -230,8 +226,8 @@ std::vector<CellMenuItem> cellMenuItems(const t3k::ui::ChainItem* b,
     items.push_back({"Remove", Icon::Trash2, help::Key::removeBlock, true});
   } else {
     for (const auto& kind : palette)
-      items.push_back({juce::String("+ ") + Model::paletteLabel(kind),
-                       Icon::Plus, addHelpFor(kind), false});
+      items.push_back({Model::paletteLabel(kind), Icon::Plus, addHelpFor(kind),
+                       false, kind});
   }
   return items;
 }
@@ -242,6 +238,7 @@ std::vector<CellMenuItem> cellMenuItems(const t3k::ui::ChainItem* b,
 // above is NOT an enclosing namespace, so the definition lives here).
 juce::MouseCursor NodeView::g_savedCursor;
 bool NodeView::g_dragCursorWasSet = false;
+bool NodeView::g_e2eReleaseButton = false;
 
 // ---------------------------------------------------------------- NodeCell
 
@@ -297,10 +294,9 @@ private:
                            v_.hostServices().chain.removeBlock(id);
                          },
                          false});
-      else if (it.label.startsWith("+ ")) {
-        const juce::String kind = paletteKindForLabel(it.label);
-        items.push_back({it.label, Icon::Plus, addHelpFor(kind),
-                         [idx = i_, kind, this] { v_.addIntoCell(idx, kind); },
+      else if (!it.addKind.isEmpty()) {
+        items.push_back({it.label, Icon::Plus, addHelpFor(it.addKind),
+                         [idx = i_, kind = it.addKind, this] { v_.addIntoCell(idx, kind); },
                          false});
       } else {
         items.push_back({it.label, Icon::Power, help::Key::blockPower,
@@ -315,16 +311,6 @@ private:
   void mouseDown(const juce::MouseEvent& e) override {
     pressAt_ = e.getPosition();
     if (e.mods.isPopupMenu() && !e.source.isTouch()) {
-      // m05916-3: a right-click WHILE a left-button drag is in flight
-      // CANCELS the drag (grid reverts, no menu). The suppress window eats
-      // this click's own mouseUp — otherwise the right release, arriving
-      // with the drag already gone, would fall through to the mouseWasClicked
-      // path and re-open the menu (empty slots) or re-select the block.
-      if (v_.isDragging()) {
-        v_.cancelDrag();
-        suppressClickUntilMs_ = juce::Time::currentTimeMillis() + kSuppressClickMs;
-        return;
-      }
       openMenu(e.getPosition());
       return;
     }
@@ -355,8 +341,17 @@ private:
 
   void mouseUp(const juce::MouseEvent& e) override {
     hold_.cancel();
+    // The LEFT release ends the lane drag (commit, or off-grid cancel). A
+    // RIGHT release — the menu press of a mid-drag context menu (m06828-2)
+    // — must NOT touch it. (mouseWasClicked() cannot decide this: it is
+    // false on ANY up event, button up by definition.)
     if (v_.isDragging()) {
-      v_.cellDragEnd(*this);
+      // A LEFT release ends the drag (commit, or off-grid cancel); a RIGHT
+      // release is the menu press of a mid-drag context menu (m06828-2).
+      // Synthetic e2e events carry no usable button state, so the e2e
+      // handler stamps the release button here (default left).
+      if (!g_e2eReleaseButton)
+        v_.cellDragEnd(*this);
       return;
     }
 
@@ -726,9 +721,10 @@ void NodeView::togglePower(const std::string& id) {
 }
 
 void NodeView::addIntoCell(int index, const juce::String& kind) {
-  const auto& lane = Model::laneOf(services_.chain.state());
-  int at = juce::jlimit(0, (int)lane.size(), index);
-  (void)services_.chain.addEffect(kind, ChainSide::left, at);
+  // Pass the raw slot through (m06828 item 4): the backend pads the lane
+  // with inserts up to `index` (landToneBlock / the mock's addEffectBlock),
+  // so an add on empty slot 19 lands AT slot 19, not clamped to the tail.
+  (void)services_.chain.addEffect(kind, ChainSide::left, index);
 }
 
 // ------------------------------------------------------------------- drag
@@ -753,6 +749,15 @@ void NodeView::applyPreview() {
   }
 }
 
+int NodeView::countLeadingInserts(const std::vector<ChainItem>& lane) {
+  int lead = 0;
+  for (const auto& it : lane) {
+    if (!it.isInsert) break;
+    ++lead;
+  }
+  return lead;
+}
+
 void NodeView::moveActiveTo(int target) {
   if (activeId_.empty()) return;
   const int n = (int)preview_.size();
@@ -762,7 +767,15 @@ void NodeView::moveActiveTo(int target) {
     if (preview_[static_cast<size_t>(i)].blockId == activeId_)
       from = i;
   if (from < 0) return;
-  const int to = juce::jlimit(0, n - 1, target);
+  // cursor is a LIST insertion point (m06828 item 4): the 20-slot grid is
+  // positional, and with leading inserts a raw list index diverges from the
+  // grid slot (a far drop landed one slot late: pointer at slot 12 landed at
+  // 13). The caller sends cellSlot + the crossed-neighbour direction; with
+  // `lead` inserts ahead of the active item, cellSlot k corresponds to list
+  // index lead+k, so the splice point is lead + cellSlot + {-1, 0, +1}.
+  const int lead =
+      NodeView::countLeadingInserts(preview_);
+  const int to = juce::jlimit(lead, (int)preview_.size(), lead + target);
   if (to == from) return;
   // Splice with `to` as the FINAL slot: erase the active item (list shrinks
   // to n-1), then insert at index `to` (clamped to n-1 = the tail). RIGHT
@@ -921,7 +934,10 @@ void NodeView::cellDragEnd(NodeCell& /*cell*/) {
     const auto& native = Model::laneOf(services_.chain.state());
     preview_ = {};
     activeId_.clear();
-    if (ids.size() == native.size()) {
+    // `>=` (not `==`): a far-slot drag pads the preview with fresh insert
+    // ids (m06828 item 4); reorderChainBlocks materialises the new ids, so
+    // a longer id list is a valid commit, not a mismatch.
+    if (ids.size() >= native.size()) {
       std::vector<std::string> nativeIds;
       nativeIds.reserve(native.size());
       for (const auto& it : native)
@@ -1126,6 +1142,12 @@ void NodeView::refreshModeLine(NodeStrip& st, const ChainItem& b) {
   } else {
     mb.setHelpText("Click to open the mode menu");
     tb.setVisible(false);
+    // Clear the conv-only strip state (waveform preview, IR name line, Load
+    // IR button) so switching from a convolution block to any other kind
+    // doesn't leak the kernel's envelope onto the new effect (m06828 item 1).
+    st.convPlot().setVisible(false);
+    st.convIr().setVisible(false);
+    st.loadIr().setVisible(false);
   }
 }
 

@@ -12,7 +12,11 @@ const path = require('path');
 const { AppConnection } = require('@focusritegroup/juce-end-to-end');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
-const APP = path.join(REPO_ROOT, 'build-ui', 'UiTestbed_artefacts', 'Release', 'UiTestbed');
+// T3K_E2E_APP overrides the app binary — build-ui's fresh-configure is
+// intermittently broken, so the e2e rig can point at the main `build/` tree's
+// UiTestbed while the UI source is identical in both.
+const APP = process.env.T3K_E2E_APP ||
+    path.join(REPO_ROOT, 'build-ui', 'UiTestbed_artefacts', 'Release', 'UiTestbed');
 const STAGE_LIB = '/home/jambo/buildkit/stage/usr/lib/x86_64-linux-gnu';
 
 async function launchApp(scenario, timeoutMs = 15000) {

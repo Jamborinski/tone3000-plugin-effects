@@ -55,7 +55,7 @@ TEST(NodeModel, kindTableHasAllSixPalettesTone) {
   EXPECT_STREQ(Model::kind("tremolo").label, "Trem");
   EXPECT_STREQ(Model::kind("compressor").label, "Comp");
   EXPECT_STREQ(Model::kind("reverb").label, "Rev");
-  EXPECT_STREQ(Model::kind("convolution").label, "IR");
+  EXPECT_STREQ(Model::kind("convolution").label, "Conv Rev");
   // Tone is the fallback (a NAM capture, not a built-in effect).
   EXPECT_STREQ(Model::kind("someToneId").label, "Tone");
   EXPECT_STREQ(Model::kind("").label, "Tone");

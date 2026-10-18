@@ -40,14 +40,12 @@ void TONE3000Processor::normalizeLaneInserts(Lane& l) {
   const int tones = total - inserts;
   const int required = std::max(kMinLaneSlots - tones, 1);
 
-  // Trim overshoot back-to-front so slots the user positioned stay put.
-  for (int i = total - 1; i >= 0 && inserts > required; --i) {
-    if (isInsertBlock(l[static_cast<size_t>(i)])) {
-      l.erase(l.begin() + i);
-      --inserts;
-    }
-  }
-
+  // FLOOR-ONLY (2026-10-18, m06828 item 4): grow the lane up to the minimum
+  // slot count, but NEVER trim surplus inserts. The node view's 20-slot grid
+  // relies on this: a drag-to-slot-19 (11 effects + 9 inserts) must survive
+  // the next structural change without being snapped back to 5 slots. The
+  // branch-overshoot trim the old loop served is handled by
+  // alignBranchLaneLengths' own trailing-insert loop (branch lane only).
   while (inserts < required) {
     l.push_back(std::make_unique<ChainBlock>(juce::Uuid().toString().toStdString(),
                                              ChainBlockType::INSERT));
@@ -338,7 +336,13 @@ std::string TONE3000Processor::landToneBlock(std::unique_ptr<ChainBlock> block,
                                              const juce::String& side, int index) {
   const std::string newId = block->id;
   Lane& target = side == "right" ? lane(ChainSide::Right) : lane(ChainSide::Left);
-  index = juce::jlimit(0, static_cast<int>(target.size()), index);
+  // Lazy pad (m06828 item 4): if the target index is past the lane's current
+  // end, fill the gap with insert placeholders so the block lands AT index,
+  // not clamped to the tail. The node view's 20-slot grid relies on this.
+  while (static_cast<int>(target.size()) < index) {
+    target.push_back(std::make_unique<ChainBlock>(juce::Uuid().toString().toStdString(),
+                                                 ChainBlockType::INSERT));
+  }
   if (index < static_cast<int>(target.size()) && isInsertBlock(target[static_cast<size_t>(index)]))
     target[static_cast<size_t>(index)] = std::move(block);  // paste fills the empty tile
   else
@@ -859,29 +863,28 @@ bool TONE3000Processor::reorderChainBlocks(const std::vector<std::string>& newOr
   juce::ScopedLock lock(chainMutex);
 
   // Both lanes render at once now, so the target chain is inferred from the
-  // ids themselves: the order must be a permutation of exactly one lane.
-  // (Block ids are globally unique across both chains.)
-  auto isPermutationOf = [](const std::vector<std::unique_ptr<ChainBlock>>& chain,
-                            const std::vector<std::string>& order) {
-    if (order.size() != chain.size())
-      return false;
-    std::vector<std::string> chainIds, orderIds = order;
-    for (const auto& block : chain)
-      chainIds.push_back(block->id);
-    std::sort(chainIds.begin(), chainIds.end());
-    std::sort(orderIds.begin(), orderIds.end());
-    return chainIds == orderIds;
+  // ids themselves. The order must contain EVERY block in one lane (a
+  // super-set permutation); it may carry EXTRA new insert ids (lazy pad,
+  // m06828 item 4) that become fresh INSERT blocks. Block ids are globally
+  // unique across both chains.
+  auto findTargetLane = [](const std::vector<std::unique_ptr<ChainBlock>>* lane,
+                           const std::vector<std::string>& order) {
+    if (order.size() < lane->size()) return false;  // reorder can't shrink
+    return std::all_of(lane->begin(), lane->end(),
+                       [&](const auto& b) {
+                         return b && std::find(order.begin(), order.end(), b->id) != order.end();
+                       });
   };
 
   std::vector<std::unique_ptr<ChainBlock>>* target = nullptr;
   for (auto& l : lanes)
-    if (isPermutationOf(l, newOrder)) {
+    if (findTargetLane(&l, newOrder)) {
       target = &l;
       break;
     }
 
   if (target == nullptr) {
-    DBG("Failed to reorder chain blocks: order is not a permutation of either chain");
+    DBG("Failed to reorder chain blocks: order is not a super-set of either chain");
     return false;
   }
   auto& chain = *target;
@@ -898,7 +901,14 @@ bool TONE3000Processor::reorderChainBlocks(const std::vector<std::string>& newOr
         [&blockId](const std::unique_ptr<ChainBlock>& block) {
           return block && block->id == blockId;
         });
-    reorderedBlocks.push_back(std::move(*it));
+    if (it != originalBlocks.end()) {
+      reorderedBlocks.push_back(std::move(*it));
+    } else {
+      // New insert id (lazy pad, m06828 item 4): materialise a fresh
+      // INSERT block so the grid shows an empty slot.
+      reorderedBlocks.push_back(
+          std::make_unique<ChainBlock>(blockId, ChainBlockType::INSERT));
+    }
   }
 
   chain = std::move(reorderedBlocks);
@@ -1802,9 +1812,34 @@ void TONE3000Processor::refreshBranchTapIndex() {
 // the trunk's end) simply stay uneven. Without an active branch this
 // restores the plain per-lane baseline. Pure bookkeeping like
 // normalizeLaneInserts: callers own history/revision/fade.
+namespace {
+
+// The inverse half of the old normalizeLaneInserts trim (split out when the
+// floor became the only behaviour, m06828 item 4): drop TAIL surplus inserts
+// back down to the kMinLaneSlots baseline. Used for the stereo BRANCH rail,
+// whose tail must end level with the trunk; the trunk keeps surplus slots.
+void trimLaneToBaseline(std::vector<std::unique_ptr<ChainBlock>>& l) {
+  const int tones = static_cast<int>(
+      std::count_if(l.begin(), l.end(),
+                    [](const auto& b) { return !isInsertBlock(b); }));
+  const int required = std::max(kMinLaneSlots - tones, 1);
+  int inserts = static_cast<int>(std::count_if(l.begin(), l.end(), isInsertBlock));
+  for (int i = static_cast<int>(l.size()) - 1; i >= 0 && inserts > required; --i) {
+    if (isInsertBlock(l[static_cast<size_t>(i)])) {
+      l.erase(l.begin() + i);
+      --inserts;
+    }
+  }
+}
+
+}  // namespace
+
 void TONE3000Processor::alignBranchLaneLengths() {
   // Baseline first (also undoes earlier alignment, so branch moves never
   // compound), then re-resolve the tap: insert churn can shift its index.
+  // normalizeLaneInserts is floor-only (m06828 item 4: a far-positioned
+  // trunk lane keeps its surplus empty slots); the BRANCH rail must still
+  // trim back to the baseline so it ends level with the trunk.
   normalizeLaneInserts(lane(ChainSide::Left));
   normalizeLaneInserts(lane(ChainSide::Right));
   refreshBranchTapIndex();
@@ -1818,6 +1853,11 @@ void TONE3000Processor::alignBranchLaneLengths() {
   // The branch lane's first tile sits `indent` slot columns into the trunk.
   const int indent = rtBranchTapIndex + 1;
   const int targetSlots = static_cast<int>(trunk.size()) - indent;
+
+  // Only the BRANCH rail trims back to baseline (its tail must end level
+  // with the trunk); the trunk is left exactly as the user positioned it
+  // (floor-only normalize, m06828 item 4).
+  trimLaneToBaseline(branchLane);
 
   int inserts =
       static_cast<int>(std::count_if(branchLane.begin(), branchLane.end(), isInsertBlock));

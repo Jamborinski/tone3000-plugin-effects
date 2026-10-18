@@ -1971,7 +1971,7 @@ struct GalleryViewTests : juce::UnitTest {
       if (node == nullptr) return;
       juce::Component* convCell = nullptr;
       for (auto* ch : node->getChildren()) {
-        if (ch != nullptr && ch->getHelpText().contains("IR")) convCell = ch;
+        if (ch != nullptr && ch->getHelpText().contains("Conv Rev")) convCell = ch;
       }
       expect(convCell != nullptr);
       if (convCell == nullptr) return;
@@ -1999,7 +1999,7 @@ struct GalleryViewTests : juce::UnitTest {
       if (node == nullptr) return;
       juce::Component* convCell = nullptr;
       for (auto* ch : node->getChildren()) {
-        if (ch != nullptr && ch->getHelpText().contains("IR")) convCell = ch;
+        if (ch != nullptr && ch->getHelpText().contains("Conv Rev")) convCell = ch;
       }
       expect(convCell != nullptr);
       if (convCell == nullptr) return;

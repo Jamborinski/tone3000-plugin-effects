@@ -1226,3 +1226,121 @@ TEST(ProcessorTest, ConvIrMissingFileRestoresGracefully) {
   EXPECT_TRUE(out2.find(irWav.getFullPathName().toRawUTF8()) != std::string_view::npos)
       << "the missing-file identity must persist for the IR-missing UI state";
 }
+
+// ---------------------------------------------------------------- position-
+// aware lane ops (m06828 item 4, node view's 20-slot grid): the grid is
+// POSITIONAL, not compact. A far-slot add/drag lands AT the slot, lazy
+// padding with insert placeholders, and a delete leaves an insert gap —
+// no left-shift, gallery state stays backwards compatible.
+
+namespace {
+std::vector<juce::var> laneItems(TONE3000Processor& proc) {
+  std::vector<juce::var> v;
+  const juce::var state = proc.getChainState(-1);
+  if (auto* a = state["chain"].getArray())
+    for (int i = 0; i < a->size(); ++i)
+      v.push_back((*a)[i]);
+  return v;  // state is the UI read path; block ids are stable across it
+}
+
+std::vector<std::string> laneIds(TONE3000Processor& proc) {
+  std::vector<std::string> ids;
+  for (const auto& it : laneItems(proc))
+    ids.push_back(it["blockId"].toString().toStdString());
+  return ids;
+}
+}  // namespace
+
+TEST(ProcessorTest, FarSlotAddLandsAtTheSlotWithLazyPadding) {
+  // addEffectBlock(kind, "left", 14) on an empty lane: the block lands AT
+  // slot 14, preceded by 14 insert placeholders (lazy pad — landToneBlock
+  // grew the lane; floor-only normalizeLaneInserts kept it there).
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto id = proc.addEffectBlock(EffectKind::Delay, "left", 14);
+  ASSERT_FALSE(id.empty());
+  const auto lane = laneIds(proc);
+  ASSERT_EQ(lane.size(), 15u) << "14 pads + the new effect";
+  EXPECT_EQ(lane[14], id) << "the effect must land AT slot 14";
+  for (int i = 0; i < 14; ++i)
+    EXPECT_EQ(laneItems(proc)[static_cast<size_t>(i)]["kind"].toString(), "insert")
+        << "slot " << i << " must be an insert placeholder";
+  // The floor invariant still holds: a subsequent structural change (a
+  // compact add) must NOT trim the lane back to kMinLaneSlots.
+  (void)proc.addEffectBlock(EffectKind::Chorus, "left", 0);
+  EXPECT_GE(laneIds(proc).size(), 15u) << "surplus empty slots survive";
+}
+
+TEST(ProcessorTest, ReorderWithPadMaterialisesInserts) {
+  // reorderChainBlocks(new ids ⊃ lane ids) materialises the NEW insert ids
+  // (the node view's far-slot drag commit): the dragged block lands at its
+  // exact final slot, nothing lost.
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto d = proc.addEffectBlock(EffectKind::Delay, "left", 0);
+  const auto c = proc.addEffectBlock(EffectKind::Chorus, "left", 1);
+  const auto t = proc.addEffectBlock(EffectKind::Tremolo, "left", 2);
+  ASSERT_FALSE(d.empty());
+  ASSERT_FALSE(c.empty());
+  ASSERT_FALSE(t.empty());
+  // The lane carries TWO trailing inserts (kMinLaneSlots floor); both must
+  // be in the super-set order or findTargetLane rejects it.
+  const auto lane = laneIds(proc);
+  ASSERT_EQ(lane.size(), 5u);
+  const std::string ins3 = lane[3];
+  const std::string ins4 = lane[4];
+  // Drag the delay (slot 0) to slot 12: the two old inserts stay, 8 fresh
+  // pads fill slots 4..11, d lands at 12.
+  std::vector<std::string> order;
+  order.push_back(t);
+  order.push_back(c);
+  order.push_back(ins3);
+  order.push_back(ins4);
+  for (int i = 0; i < 8; ++i)  // slots 4..11 = fresh insert ids
+    order.push_back(juce::Uuid().toString().toStdString());
+  order.push_back(d);
+  ASSERT_TRUE(proc.reorderChainBlocks(order));
+  const auto after = laneIds(proc);
+  ASSERT_EQ(after.size(), 13u) << "3 originals + 2 old inserts + 8 new pads";
+  EXPECT_EQ(after[12], d) << "the dragged block lands AT slot 12";
+  EXPECT_EQ(after[0], t);
+  EXPECT_EQ(after[1], c);
+  for (int i = 2; i < 12; ++i)
+    EXPECT_EQ(laneItems(proc)[static_cast<size_t>(i)]["kind"].toString(), "insert");
+}
+
+TEST(ProcessorTest, RemoveLeavesInsertGapWithoutLeftShift) {
+  // removeChainBlock is in-place (m02657): the block's slot becomes an
+  // insert; the neighbours do NOT shift (the node view renders the gap as
+  // an empty square, so the 20-slot layout stays put).
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto a = proc.addEffectBlock(EffectKind::Delay, "left", 0);
+  const auto b = proc.addEffectBlock(EffectKind::Chorus, "left", 1);
+  const auto c = proc.addEffectBlock(EffectKind::Tremolo, "left", 2);
+  ASSERT_FALSE(a.empty());
+  ASSERT_FALSE(b.empty());
+  ASSERT_FALSE(c.empty());
+  ASSERT_TRUE(proc.removeChainBlock(b));
+  const auto after = laneIds(proc);
+  ASSERT_EQ(after.size(), 5u) << "size unchanged — a gap, not a shift";
+  EXPECT_EQ(after[0], a) << "left neighbours stay put";
+  EXPECT_EQ(after[2], c) << "right neighbours stay put";
+  EXPECT_EQ(laneItems(proc)[1]["kind"].toString(), "insert")
+      << "the removed slot must be an insert placeholder";
+}
+
+TEST(ProcessorTest, RemoveRejectsInsertBlocks) {
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto d = proc.addEffectBlock(EffectKind::Delay, "left", 0);
+  ASSERT_FALSE(d.empty());
+  const auto lane = laneIds(proc);
+  ASSERT_EQ(lane.size(), 5u);
+  EXPECT_FALSE(proc.removeChainBlock(lane[3])) << "inserts are not removable";
+  EXPECT_EQ(laneIds(proc).size(), 5u);
+}

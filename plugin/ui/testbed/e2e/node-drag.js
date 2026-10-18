@@ -13,7 +13,7 @@
 //                   5. drop target must be visibly highlighted while
 //                      dragging;
 //                   6. cancellable drag — off-chain release cancels, and a
-//                      right-click while dragging cancels.
+//                      off-chain release cancels; right-press mid-drag does not.
 //
 // What makes this layer different from the in-process drive (Scenarios.cpp):
 // the pointer is delivered to the DEEPEST visible child under the cursor, so
@@ -256,12 +256,15 @@ function parseGhost(s) {
     check('off-chain: no ghost after cancel', parseGhost(g6.ghost) === null, g6.ghost);
     await screenshot(app, path.join(OUT, 'offchain-after.png'));
 
-    // m05916-3b: RIGHT-CLICK while dragging cancels. Press the first block
-    // (slot 0), drag it two tiles right (target=2, preview reflowed), then
-    // a right mouseDown mid-drag: the drag must end, the lane must be
-    // unchanged, and no context menu may re-open.
+    // m06828-2: RIGHT-CLICK while dragging does NOT cancel (the off-chain
+    // release above is the only cancel path). Press the first block (slot
+    // 0), drag two tiles right (target=2, preview reflowed), then a right
+    // mouseDown mid-drag: the drag must SURVIVE it (a context menu opens
+    // instead), and the LEFT release must COMMIT the reflow, not revert.
     const c7 = await cells(app);
     const src7 = c7[0];
+    const base7 = lane(await geometry(app));  // pre-drag compact lane
+    const dragId7 = base7[0];                 // the block this drag carries
     const dst7 = { x: Math.round(src7.x + 2 * kCellW), y: src7.y };
     await app.sendCommand({ type: 'node-drag-begin', args: { x: src7.x, y: src7.y } });
     for (let i = 1; i <= 8; ++i) {
@@ -269,19 +272,35 @@ function parseGhost(s) {
       await app.sendCommand({ type: 'node-drag-move', args: { x, y: src7.y, button: 'left' } });
     }
     const gMid7 = await geometry(app);
-    check('right-click-cancel: drag active with target=2 before the press',
+    check('right-press-mid-drag: drag active with target=2 before the press',
           /target=2\b/.test(gMid7.drag), gMid7.drag);
-    await screenshot(app, path.join(OUT, 'rightclick-cancelling.png'));
+    await screenshot(app, path.join(OUT, 'rightclick-middrag.png'));
     const gPress = await dragPress(app, { x: dst7.x, y: src7.y }, 'right');
-    check('right-click-cancel: the right mouseDown ended the drag',
-          gPress.drag === 'idle' && parseGhost(gPress.ghost) === null,
-          `${gPress.drag} / ${gPress.ghost}`);
-    // The right release (must NOT re-open the menu / re-select).
-    await app.sendCommand({ type: 'node-drag-end', args: { button: 'right' } });
+    check('right-press-mid-drag: the drag SURVIVES the right mouseDown',
+          gPress.drag.startsWith('active'), gPress.drag);
+    // (The right release happened WITHIN the press command — the e2e
+    // handler mirrors the OS sequence of a right click: down + up. The
+    // left drag must now be the only thing in flight.)
+    const gMid7b = await geometry(app);
+    check('right-press-mid-drag: left drag still active after the right release',
+          gMid7b.drag.startsWith('active'), gMid7b.drag);
+    // Left release at the same spot: COMMIT (lane reflowed, slot 0 -> 2).
+    await app.sendCommand({ type: 'node-drag-end', args: { button: 'left' } });
     const g7 = await geometry(app);
-    check('right-click-cancel: lane unchanged',
-          lane(g7).join(',') === c6Baseline, g7.lane);
-    check('right-click-cancel: drag idle after release', g7.drag === 'idle', g7.drag);
+    // The drag ended at the ghost's target slot (2 from the source) —
+    // assert the dragged block now sits AT that index of the compact lane,
+    // whatever the pre-drag layout is (the cell1->tail drag above may have
+    // left inserts in it).
+    const postLane7 = lane(g7);
+    check('right-press-mid-drag: left release COMMITTED the target-2 reflow',
+          !/target=\d/.test(g7.drag) && postLane7.length === base7.length,
+          `${g7.drag} / ${g7.lane}`);
+    check('right-press-mid-drag: dragged block now at slot 2',
+          postLane7[2] === dragId7 && postLane7[0] !== dragId7,
+          `dragged=${dragId7} lane=${g7.lane}`);
+    check('right-press-mid-drag: drag idle, no ghost',
+          g7.drag === 'idle' && parseGhost(g7.ghost) === null,
+          `${g7.drag} / ${g7.ghost}`);
     await screenshot(app, path.join(OUT, 'rightclick-after.png'));
 
     console.log(`\nnode-drag e2e: ${passed} passed, ${failed} failed (shots in ${OUT})`);

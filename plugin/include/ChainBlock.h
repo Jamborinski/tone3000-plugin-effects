@@ -77,9 +77,12 @@ constexpr double kWetFadeSeconds = 0.025;
 // filled them all there is still one trailing empty slot to add into. The
 // invariant (insertCount == max(kMinLaneSlots - toneCount, 1)) is enforced by
 // TONE3000Processor::normalizeLaneInserts after every structural change, with
-// one relaxation: while a stereo branch is active, the branch lane's surplus
-// trailing inserts are trimmed below this baseline so its indented rail ends
-// level with the trunk lane (see alignBranchLaneLengths).
+// two relaxations: (1) while a stereo branch is active, the branch lane's
+// surplus trailing inserts are trimmed below this baseline so its indented
+// rail ends level with the trunk lane (see alignBranchLaneLengths); (2) the
+// floor is FLOOR-only (m06828 item 4) — it never trims a lane that grew past
+// the baseline via a far-slot add/drag, so positional 20-slot node-view drags
+// land AT the slot instead of clamping to the chain tail.
 constexpr int kMinLaneSlots = 5;
 
 // IR convolver block size cap. juce::dsp::Convolution's zero-latency engines

@@ -14,7 +14,7 @@ const Kind kKindChorus = {juce::Colour(88, 144, 235), custom_icons::kFxChorus, "
 const Kind kKindTremolo = {juce::Colour(116, 160, 245), custom_icons::kFXTremolo, "Trem"};
 const Kind kKindCompressor = {juce::Colour(160, 160, 168), custom_icons::kFxCompressor, "Comp"};
 const Kind kKindReverb = {juce::Colour(64, 224, 208), custom_icons::kFxReverb, "Rev"};
-const Kind kKindConvolution = {juce::Colour(235, 120, 150), custom_icons::kFxConv, "IR"};
+const Kind kKindConvolution = {juce::Colour(235, 120, 150), custom_icons::kFxConv, "Conv Rev"};
 const Kind kKindTone = {juce::Colour(235, 170, 80), custom_icons::kFxTone, "Tone"};
 }  // namespace
 

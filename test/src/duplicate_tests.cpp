@@ -97,7 +97,7 @@ TEST(ChainDuplicateTest, SplicesBeforeToneBlockAndUndoesAsOneStep) {
   {
     const juce::var state = proc.getChainState(-1);
     const auto layout = laneLayout(state, "chain");
-    ASSERT_EQ(layout.size(), 5u);  // 3 tones + 2 inserts after normalization
+    ASSERT_EQ(layout.size(), 6u);  // 3 tones + 3 inserts (floor-only, m06828 item 4)
     EXPECT_EQ(layout[0].second, "blk-a");
     EXPECT_EQ(layout[1].second, juce::String(newId));
     EXPECT_EQ(layout[2].second, "blk-b");

@@ -139,9 +139,9 @@ NodeViewE2EHandler::process(const focusrite::e2e::Command& command) {
     // cancel's release — its mouseDown already cancelled, the release must
     // not re-open the menu).
     const auto btn = command.getArgumentAs<juce::String>("button");
-    auto modUp = juce::ModifierKeys::leftButtonModifier;
-    if (btn == "right")
-      modUp = juce::ModifierKeys::rightButtonModifier;
+    auto modUp = (btn == "right") ? juce::ModifierKeys::rightButtonModifier
+                                  : juce::ModifierKeys::leftButtonModifier;
+    t3k::ui::nodeview::NodeView::setE2eReleaseButton(btn == "right");
     // mouseUp goes to the drag's source component.
     auto* target = g_drag.source;
     if (target == nullptr) target = deepestAt(win, g_drag.last);
@@ -153,8 +153,8 @@ NodeViewE2EHandler::process(const focusrite::e2e::Command& command) {
   }
   if (type == "node-drag-press") {
     // m05916-3: a bare pointer PRESS while a drag is in flight — the right
-    // mouseDown of the mid-drag right-click cancel. (A mouseDrag is not a
-    // press: NodeCell::mouseDown is what takes the popup/cancel path.)
+    // mouseDown of the mid-drag context menu. (A mouseDrag is not a press:
+    // NodeCell::mouseDown is what takes the popup path.)
     const auto p = juce::Point<int>(command.getArgumentAs<int>("x"),
                                     command.getArgumentAs<int>("y"));
     if (!g_drag.down) return Response::fail("no drag in progress");
@@ -168,6 +168,15 @@ NodeViewE2EHandler::process(const focusrite::e2e::Command& command) {
                             juce::String(p.y));
     target->mouseDown(makeEvent(p, target, mods, false));
     g_drag.last = p;
+    // A right press OPENS the mid-drag context menu; the OS releases that
+    // button right after the click. Release it here so the drag's source
+    // cell gets the RIGHT mouseUp (the one that must NOT end the drag),
+    // leaving the LEFT drag in flight — exactly the real OS sequence.
+    if (btn == "right") {
+      t3k::ui::nodeview::NodeView::setE2eReleaseButton(true);
+      target->mouseUp(makeEvent(p, target, mods, false));
+      t3k::ui::nodeview::NodeView::setE2eReleaseButton(false);
+    }
     return Response::ok().withParameter("target", classNameOf(target));
   }
   if (type == "node-set-view") {
