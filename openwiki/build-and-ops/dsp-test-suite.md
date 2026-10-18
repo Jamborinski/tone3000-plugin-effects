@@ -32,10 +32,10 @@ sources:
     resource: repo://test/src/reverb_quality_p1_tests.cpp
   - id: openwiki-source-a9b10161f0531edad6c09d8e
     resource: repo://test/src/strip_knob_tests.cpp
-generated: { by: "pi", at: "2026-10-17T18:20:26.394Z" }
+generated: { by: "pi", at: "2026-10-18T06:21:15.263Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-17T18:20:26.394Z
+    at: 2026-10-18T06:21:15.263Z
 ---
 
 # DSP test suite (DspTests)
@@ -127,7 +127,12 @@ confirm the "Running N tests" line is non-zero before trusting the result.**
 
 ## Suite size
 
-The suite grows with features — **538 tests / 79 suites as of the 2026-10-17
+The suite grows with features — **548 tests / 79 suites as of the 2026-10-17
+node-view bug-batch closeout** (commits `0cb035e`–`22bbaf6`: 6
+`StripGalleryParity` tests in `test/src/strip_knob_tests.cpp` — the
+strip==gallery exact-knob-set law in both directions + the ≤12 knob cap — and
+5 `ProcessorTest.ConvIr*` preset-persistence tests;
+
 node-view batch-3 closeout** (commit `5b9bdd9`: 8 new `StripKnobPosition`
 knot tests in `test/src/strip_knob_tests.cpp` — the identity-scale law
 (position == raw for identity-stored Mix/In/Out) + per-kind drive round-trips;

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:871cf8eb2134a5cb72686c45342f550174b1205e0b75eafa3665356b2d9804ce",
+  "pageVersion": "sha256:7a2f9816b3a813e4271e73f6983a7f6d9bd91850b82955a0fdaf016b34fe1914",
   "claims": [
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
@@ -36,7 +36,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:a78d2fe7057e90722bb58261fe63cdac4ebdb241ad87e9d93bf7376966f06607"
+          "version": "repo-file-v1:sha256:14051718c6a3dabb0363b7098c44f76ccb6179c9f35f7ff104e6b3b99a300469"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
@@ -68,7 +68,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:a78d2fe7057e90722bb58261fe63cdac4ebdb241ad87e9d93bf7376966f06607"
+          "version": "repo-file-v1:sha256:14051718c6a3dabb0363b7098c44f76ccb6179c9f35f7ff104e6b3b99a300469"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
@@ -90,7 +90,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:a78d2fe7057e90722bb58261fe63cdac4ebdb241ad87e9d93bf7376966f06607"
+          "version": "repo-file-v1:sha256:14051718c6a3dabb0363b7098c44f76ccb6179c9f35f7ff104e6b3b99a300469"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
@@ -130,7 +130,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/ChainScreen.cpp",
-          "version": "repo-file-v1:sha256:967215b9e008625cc81a1c57b7facf41bba0d5d542fff6b800d0bc036121096a"
+          "version": "repo-file-v1:sha256:3ab82442f0bc73b285bedfdfcb9a2a90681ae9b08308591107d4720ffd103f5a"
         }
       ]
     },
@@ -140,7 +140,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:a78d2fe7057e90722bb58261fe63cdac4ebdb241ad87e9d93bf7376966f06607"
+          "version": "repo-file-v1:sha256:14051718c6a3dabb0363b7098c44f76ccb6179c9f35f7ff104e6b3b99a300469"
         },
         {
           "resource": "repo://test/src/add_at_slot_tests.cpp",
@@ -151,6 +151,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-16T18:52:35.705Z"
+    "at": "2026-10-18T06:21:15.263Z"
   }
 }

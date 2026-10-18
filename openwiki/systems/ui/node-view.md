@@ -23,16 +23,18 @@ sources:
     resource: repo://plugin/ui/services/ChainStore.h
   - id: openwiki-source-5ce285990005ab7ecadd0e65
     resource: repo://plugin/ui/views/ChainScreen.h
+  - id: openwiki-source-6c2abe72c3679eefdf9c9c53
+    resource: repo://plugin/ui/views/gallery/EffectParams.h
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
   - id: openwiki-source-949fdcdad6535ec560064216
     resource: repo://test/src/node_model_tests.cpp
   - id: openwiki-source-a9b10161f0531edad6c09d8e
     resource: repo://test/src/strip_knob_tests.cpp
-generated: { by: "pi", at: "2026-10-17T18:20:26.394Z" }
+generated: { by: "pi", at: "2026-10-18T06:21:15.263Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-17T18:20:26.394Z
+    at: 2026-10-18T06:21:15.263Z
 ---
 
 # Node view: the signal-line grid
@@ -47,7 +49,13 @@ can never disagree about the chain because every mutation goes through the same
 `ChainStore` (the node model owns no state of its own beyond the selected slot).
 Batch 3 (2026-10-17, commit `5b9bdd9`) fixed the strip-visibility and gap-persistence
 laws, switched the Mix/In/Out knobs to identity scales, made the signal line run
-continuous through empty slots, and added the 5 testbed node drives.
+continuous through empty slots, and added the 5 testbed node drives. The
+2026-10-17 bug batch (commits `0cb035e`–`22bbaf6`) then added the Procreate-style
+drag ghost (0.35 alpha + cascade preview + `node-drag-multi` /
+`node-add-far-slot` drives), the 12-knob auto-shrink strip with gallery-parity
+signature knobs, anchored strip mode/type menus with hover blurbs, right-click
+Remove on tone nodes, the lit-for-ON power button, and the gallery-usability
+fix (popovers dismissed + container hidden on view toggle).
 
 ## The model (`NodeModel.h`)
 
@@ -102,22 +110,56 @@ continuous through empty slots, and added the 5 testbed node drives.
   the click/hold cyclers with **context menus**: `modeB_` / `typeB_` are
   `juce::TextButton`s whose onClick call `NodeView::openModeMenu()` /
   `openTypeMenu()`, which build `std::vector<ContextMenu::Item>` lists (delay
-  4 / Compressor 5 / reverb 6 modes, current entry disabled with a leading
-  marker; the reverb type list is shown only when `Reverb::numTypes(mode) >
-  1`) and open them centred over the strip via `showStripMenu`
-  (`widgets/ContextMenu`, local-coordinate `openAtPoint` — NodeStrip has no
-  desktop-coordinate conversion). Mode-menu bullets use
-  `juce::String::fromUTF8` (a raw char literal mis-decoded in the font
-  renderer, batch 3), and a mode pick now **writes the real param**
-  (`delayMode` / `compMode` / `reverbMode` via `chain.setBlockParam`) — the
-  strip used to only relabel. Right side: remove + power `IconButton`s; the strip stays open while the mouse is inside it (knob
-  turns no longer rebuild-and-close it, batch-2 item 9). Panel:
+  4 / Compressor 5 / reverb 6 modes; the reverb type list is shown only when
+  `Reverb::numTypes(mode) > 1`). **2026-10-17 batch:** the items are bare
+  labels (no leading bullet / check marker, `std::nullopt` icon), the menu
+  anchors at the invoking button — `showStripMenu` takes a `const
+  juce::Point<int>& anchor`, `openModeMenu` passes
+  `modeB_.getLocalBounds().getTopLeft()`, `openTypeMenu` passes `typeB_`
+  (opening "centred over the strip" put the menu offset below the strip) — and
+  every item carries a trailing `juce::String helpText` override so the row
+  tooltip shows a per-mode blurb (`modeBlurb(kind, m)` one-liners for delay /
+  comp / reverb; `reverbTypeBlurb(mode, t)` for the six Digital/Plate/Spring/
+  Small/Chamber/Hall entries, mirroring `EffectTile.cpp`). A mode pick writes
+  the real param (`delayMode` / `compMode` / `reverbMode` via
+  `chain.setBlockParam`) — the strip used to only relabel — and discrete-effect
+  params bump the chain revision immediately (no 400 ms settle, see
+  param-chain-wiring). Right side: remove + power `IconButton`s; the strip
+  stays open while the mouse is inside it (knob turns no longer
+  rebuild-and-close it, batch-2 item 9). **Power button is lit-for-ON**
+  (`updateStripChrome`: `b.params.enabled ? theme::kWhite : theme::kMuted` —
+  batch 1 had it `kHighlight`-when-ON, reading as inverted-dim). Panel:
   `theme::kPanelBg @ 0.55` tinted fill, 10 px radius.
+  **Knob count law (2026-10-17 batch):** the strip shows the FULL
+  `paramsFor(b, false)` knob table plus the two reverb signature slots
+  (`EffectParams::reverbSigSlot(b, mode, slot)` — hoisted out of `EffectTile`'s
+  anon namespace so the strip and the tile pick identical knobs): reverb/conv
+  12, comp 10, delay/chorus/tremolo 8. `kMaxKnobs = 12`, and the face auto-
+  shrinks: `setKnobFace(32)` (was `kKnobFace`) when the visible knob count > 8,
+  so a 12-knob strip fits one row. `StripGalleryParity` tests in
+  `test/src/strip_knob_tests.cpp` pin the exact strip==gallery knob set.
   Knobs are owned `std::vector<Knob*>` (created on selection, deleted in
   `clearContent()`); their onChange writes back through
   `chain.setBlockParam(id, param, knobToStored(...))`.
 - **Ghost** (component-snapshot drag ghost) — the desktop-level overlay routes
-  the pointer while a drag is in flight.
+  the pointer while a drag is in flight. **2026-10-17 batch (Procreate-style
+  law):** the ghost is a light-alpha clone **under the cursor**
+  (`setAlpha(0.35f)` — batch 3's 0.6 was too opaque) with a
+  `DraggingHandCursor` (JUCE has no `Component::setMouseCursor`; the cursor
+  goes on the click-intercepting Ghost), the hover target cell paints a
+  **drop-slot preview**, and `NodeView::paint` draws the **displacement
+  cascade preview** — `model_.orderWith(draggingId_, g_dropTarget)` re-derives
+  what the lane order WOULD be, so the pushed slots visibly slide while the
+  mouse moves. Drops commit through `Model::orderWith`, which clamps far
+  targets to the lane tail (trailing end never wraps). Probe hooks for the
+  testbed (`beginDragFromShot` / `endDragFromShot` / `dragStateForShot` /
+  `cellCentreForShot` / `selectBlockForShot` / `stripKnobLabelsForShot` /
+  `openModeMenuForShot` / `openTypeMenuForShot`) are public on `NodeView`.
+  `beginDragFromShot` computes the grab point in view-local coords — the
+  cells are DIRECT children of NodeView, so `cells_[i]->getBounds()` is
+  already view-local (double-transforming through `getLocalPoint` was a ghost-
+  position bug); the x offset is 0.4·w (0.5 lands on the 84 px slot
+  boundary).
 
 **Signal line** (2026-10-15, batch-2 two-row fix 2026-10-16, batch-3
 continuous-gap law 2026-10-17): `NodeView::paint` draws, per visible row,
@@ -145,16 +187,17 @@ an unrelated invalidate.
 
 **Pointer grammar**: click selects (params load into the strip); 250 ms hold
 (`kHoldMs`) begins a drag; motion before the hold cancels; right-click opens
-the block menu (power toggle `nodePower`, remove `nodeRemove`, plus the
+the block menu (power toggle `nodePower`, remove `nodeRemove` — **2026-10-17
+batch: Remove is offered on ALL node kinds, tone nodes included** (the old
+`isEffect` guard hid it from tones) — plus the
 palette add-menu); **double-click toggles the block's power**
 (`NodeCell::mouseDoubleClick -> NodeView::togglePower`). Cell hover sets a
 help text (occupied title, " (powered off)" suffix when off, `help::Key::
 nodeEmptySlot` for true gaps — batch 2 dropped the hardcoded em-dash string
 whose mojibake showed on tone nodes) which drives both the JUCE tooltip and
 the bottom hint bar via the HintBus HintTracker. Drag uses `component
-CreateSnapshot` ghosts — **batch 3: the ghost is semi-transparent
-(`setAlpha(0.6f)`, the grid shows through) and the drop-target cell paints the
-dragged effect's icon at 0.5 alpha inside the highlight** —; the
+CreateSnapshot` ghosts — **2026-10-17 batch: 0.35 alpha under the cursor with
+the drop-slot + cascade preview (see the Ghost bullet above)** —; the
 suppress-click-until timer keeps the drop from firing a stray select.
 
 **Tone nodes** (batch 2, item 6): occupied inserts (NAM/conv) are NOT empty
@@ -172,7 +215,18 @@ the gallery) leaked through the gallery pill view. The `NodeView` container
 itself stays visible (the gallery is the component `ChainScreen::setView`
 flips); `setNodeView(true)` restores cells per-row in `resized()` and
 re-syncs the strip selection. **`syncStrip()` with no selected block hides the
-strip** — it is not a permanent dock.
+strip** — it is not a permanent dock. **2026-10-17 batch (gallery-usability
+fix):** a *visible empty* NodeView container ate every gallery click and wheel,
+and a strip mode/type menu left OPEN is a `Popover` parented to the PluginRoot
+overlay layer — hiding the anchor's ANCESTOR never fires the anchor's own
+`ComponentMovementWatcher::componentVisibilityChanged` (JUCE `isVisible()` is
+own-flag-only), so the panel ghosted over the gallery. `ChainScreen::setView(false)`
+therefore also (a) sets `node_.setVisible(nodeView)` and (b) sweeps the whole
+overlay layer via `Popover::dismissAll(host->overlayLayer())` (walk a copy of
+`overlay.getChildren()`, `dynamic_cast<Popover*>`, `dismiss()` — dismiss
+deletes). Regression tests: `PopoverFollowTests` "hidden anchor dismisses" +
+`GalleryViewTests` (live-window: tile selectable after a node-view cycle, an
+open mode menu does not leak over the gallery, gallery wheel scroll alive).
 
 ## Toggle, persistence, wiring
 
@@ -207,7 +261,12 @@ driven scenarios** — `node-add-gap` (add lands in the mid-lane gap, line stays
 continuous through the slot), `node-remove`, `node-knob-change` (knob turn +
 mode menu pick), `node-drag-drop` (cell drag & drop), and
 `node-switch-view` (gallery↔node switching) — all click-imitated, all
-jassert-pass. The drives needed real plumbing: `Knob::driveEmit` (setValue is
+jassert-pass. **2026-10-17 batch added two more** — `node-drag-multi`
+(4-effect lane, four drags including a mid-drag `dragStateForShot()`
+"active ghost=true" assert and the END-lane → cell-9 drop that `Model::
+orderWith` clamps to the lane tail) and `node-add-far-slot` (adding to an
+empty node far beyond the lane end; `addIntoCell` clamps
+`at = jlimit(0, lane.size(), index)` so the new block lands at the tail). The drives needed real plumbing: `Knob::driveEmit` (setValue is
 face-only; drives need the drag-path emit that fires onChange),
 `Drive::dragTo` (multi-point press/travel/release) for the cell drag, and
 `MockBackend` add/remove/setParam now mutate the chain so the drives'
@@ -219,7 +278,10 @@ Headless knob coverage lives in `test/src/strip_knob_tests.cpp` — **7
 StripKnob tests** (every `paramsFor` knob round-trip, finite readout, numeric
 readouts ≤4 chars) plus **8 StripKnobPosition tests** added in batch 3
 (identity-scale trio `pos == raw` including the In/Out noon-pin, and
-stored→raw round-trips through the strip's position mapping) — and
+stored→raw round-trips through the strip's position mapping) plus **6
+StripGalleryParity tests** added in the 2026-10-17 batch (the full-face law:
+strip knob set == gallery signature+full set in BOTH directions, knob count ≤
+12) — and
 gap/add-at-slot coverage in `test/src/add_at_slot_tests.cpp` (2 AddAtSlot
 tests over `removeChainBlock`'s fresh-INSERT gap and `landToneBlock`'s
 in-place fill — the mid-lane test asserts the removed effect's blockId is

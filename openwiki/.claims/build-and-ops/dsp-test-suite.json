@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:e63f43fe58ed1c9404132acc846545e03fcaec51e1983b4ccf9bb96627011dd1",
+  "pageVersion": "sha256:b40dc581c1f4334014893884a7ad5405b74e4d4c0d8fedd5b409ba66ff906a0a",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -56,7 +56,7 @@
       "evidence": [
         {
           "resource": "repo://test/src/processor_tests.cpp",
-          "version": "repo-file-v1:sha256:4e36623e51eec8c441fb32af84122bb6d111f48f043ab430ef11ff93a52a4478"
+          "version": "repo-file-v1:sha256:c70b553834b0b68f30dbaddf9a30b75e4da68074c60b40ec0927d71a3decbff8"
         }
       ]
     },
@@ -160,7 +160,7 @@
     },
     {
       "id": "claim_af453d11b49b46e7bde849726b2f9c50",
-      "statement": "test/src/strip_knob_tests.cpp registers two suites: 7 StripKnob tests (every paramsFor knob of Delay/Chorus/Tremolo/Compressor vca+clip/Reverb (all 6 modes)/Convolution/Tone round-trips through knobFromStored/knobToStored in [0,1] and formats to a finite readout; numeric readouts are capped at 4 chars so INT64-scale garbage fails) and — added in the node-view batch-3 closeout (commit 5b9bdd9, 2026-10-17) — 8 StripKnobPosition tests (identity-scale knobs report pos == raw 0..1, including the In/Out gain knobs pinned to noon, plus stored→raw round-trips through the strip's position mapping). test/src/add_at_slot_tests.cpp registers 2 AddAtSlot tests (landToneBlock fills a mid-lane gap in place and a trailing insert at the end; the mid-lane test also asserts a removed effect's blockId is gone while the gap persists, exercising removeChainBlock's fresh-INSERT-at-erased-position behavior). test/CMakeLists.txt also compiles ../plugin/ui/views/gallery/EffectParams.cpp (the per-kind knob table the strip and EffectTile share) for the strip tests. Suite total after the 2026-10-17 pass: 538 tests from 79 suites (530/78 was the 2026-10-16 batch-2 closeout) — the count is a lower-bound snapshot; never assert a stale total on a red run.",
+      "statement": "test/src/strip_knob_tests.cpp registers three suites: 7 StripKnob tests (every paramsFor knob of Delay/Chorus/Tremolo/Compressor vca+clip/Reverb (all 6 modes)/Convolution/Tone round-trips through knobFromStored/knobToStored in [0,1] and formats to a finite readout; numeric readouts are capped at 4 chars so INT64-scale garbage fails), 8 StripKnobPosition tests (identity-scale knobs report pos == raw 0..1, including the In/Out gain knobs pinned to noon, plus stored→raw round-trips through the strip's position mapping, added in the node-view batch-3 closeout commit 5b9bdd9), and — added in the 2026-10-17 bug-batch closeout (commits 0cb035e–22bbaf6) — 6 StripGalleryParity tests (the strip's visible knob set equals the gallery's signature+full knob set in BOTH directions: strip ⊆ gallery and gallery ⊆ strip for every kind/mode, plus a ≤12 knob-count cap matching kMaxKnobs). test/src/add_at_slot_tests.cpp registers 2 AddAtSlot tests (landToneBlock fills a mid-lane gap in place and a trailing insert at the end; the mid-lane test also asserts a removed effect's blockId is gone while the gap persists, exercising removeChainBlock's fresh-INSERT-at-erased-position behavior). test/CMakeLists.txt also compiles ../plugin/ui/views/gallery/EffectParams.cpp (the per-kind knob table the strip and EffectTile share) for the strip tests. Suite total after the 2026-10-17 bug-batch closeout: 548 tests from 79 suites (538/79 was the batch-3 closeout; 530/78 was the 2026-10-16 batch-2 closeout) — the count is a lower-bound snapshot; never assert a stale total on a red run.",
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
@@ -172,13 +172,13 @@
         },
         {
           "resource": "repo://test/src/strip_knob_tests.cpp",
-          "version": "repo-file-v1:sha256:5322701ace78adbf861dc9bf2e3c66535906426256e8084a352d6579775cec7b"
+          "version": "repo-file-v1:sha256:847371236f7a0a46e4c318f312b43b344de6f68807f663915f72c4f7ef1bc81d"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-17T18:20:26.394Z"
+    "at": "2026-10-18T06:21:15.263Z"
   }
 }

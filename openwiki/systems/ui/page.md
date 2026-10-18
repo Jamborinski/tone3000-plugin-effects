@@ -43,10 +43,10 @@ sources:
     resource: repo://test/src/strip_knob_tests.cpp
   - id: openwiki-source-fde83b2ad879efba1865ca8d
     resource: repo://test/src/theme_palette_tests.cpp
-generated: { by: "pi", at: "2026-10-17T18:20:26.394Z" }
+generated: { by: "pi", at: "2026-10-18T06:21:15.263Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-17T18:20:26.394Z
+    at: 2026-10-18T06:21:15.263Z
 ---
 
 
@@ -173,7 +173,11 @@ the testbed or a GUI plugin build.
 now carries **node-view drives** for the strip/grid — `node-main`,
 `node-toggle-live` (batch 2) and FIVE batch-3 scenarios — `node-add-gap`,
 `node-remove`, `node-knob-change` (knob turn + mode menu), `node-drag-drop`
-(cell drag & drop), `node-switch-view` (gallery↔node switching) — all
+(cell drag & drop), `node-switch-view` (gallery↔node switching) — plus TWO
+more from the 2026-10-17 bug batch: `node-drag-multi` (4-effect lane, four
+drags including a mid-drag ghost-state assert and a far drop that clamps to
+the lane tail) and `node-add-far-slot` (add far past the end lands at the
+tail) — all
 click-imitated, all jassert-pass. The drives needed real plumbing: `Knob::
 driveEmit` (`setValue` is face-only; drives need the drag-path emit that
 fires `onChange`), `Drive::dragTo` (multi-point press/travel/release) for the
@@ -186,7 +190,12 @@ view itself is specced in
 ## Reverb tile: mode + type (subtype) selectors (2026-10-16)
 
 The reverb tile carries TWO independent selectors, both in
-`views/gallery/EffectTile.cpp`:
+`views/gallery/EffectTile.cpp` — and since the 2026-10-17 bug batch the
+NODE-VIEW strip menu carries the same per-entry blurbs: `NodeView.cpp`
+has its own `modeBlurb(kind, m)` and `reverbTypeBlurb(mode, t)` (mirrored
+from `EffectTile.cpp`) fed to `ContextMenu::Item`'s trailing `helpText`
+so the strip's mode/type menus show hover descriptions (see
+node-view.md).
 
 - **Mode** (unchanged): full-tile `modeCombo_` (a JUCE `ComboBox`) / compact
   `modeCycle_` (a wrapping 3-char button) — the six-mode V2 order Plate /

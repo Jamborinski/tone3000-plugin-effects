@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:3c8b53c1c66776cceae0e10176ce2634d08f30f0f1171a7bfe8972722f5fa34a",
+  "pageVersion": "sha256:c19ff79caf50d6a658bac99e1f9730ae1009b726f9c40ecf3281ba44bd5d6f47",
   "claims": [
     {
       "id": "claim_4e8284a0f0bc4fe0b4e5fa2bda920264",
@@ -40,7 +40,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/ChainScreen.cpp",
-          "version": "repo-file-v1:sha256:967215b9e008625cc81a1c57b7facf41bba0d5d542fff6b800d0bc036121096a"
+          "version": "repo-file-v1:sha256:3ab82442f0bc73b285bedfdfcb9a2a90681ae9b08308591107d4720ffd103f5a"
         },
         {
           "resource": "repo://plugin/ui/views/ChainScreen.h",
@@ -78,7 +78,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
+          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
         }
       ]
     },
@@ -96,7 +96,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/ChainScreen.cpp",
-          "version": "repo-file-v1:sha256:967215b9e008625cc81a1c57b7facf41bba0d5d542fff6b800d0bc036121096a"
+          "version": "repo-file-v1:sha256:3ab82442f0bc73b285bedfdfcb9a2a90681ae9b08308591107d4720ffd103f5a"
         },
         {
           "resource": "repo://plugin/ui/views/PluginRoot.cpp",
@@ -110,7 +110,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
+          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
         }
       ]
     },
@@ -120,7 +120,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
+          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
         }
       ]
     },
@@ -148,13 +148,13 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
+          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
         }
       ]
     },
     {
       "id": "claim_a79ce04c3870479f8812b1855e69d653",
-      "statement": "Testbed scenarios for the node view (scenarios.json, as of the 2026-10-17 batch-3 closeout, commit 5b9bdd9): node-main (3-block left lane — compressor selected, chorus, insert — seeds \"localStorage\": {\"t3k.nodeView\": \"true\"}), node-toggle-live (batch 2, click-imitated gallery→node toggle + strip-knob survival), and FIVE batch-3 driven scenarios — node-add-gap (add lands in the mid-lane gap, line stays continuous), node-remove, node-knob-change (knob turn + mode menu), node-drag-drop (cell drag & drop), node-switch-view (gallery↔node switching) — all click-imitated, all jassert-pass. Two landmines: (1) the seed value MUST be the string \"true\" — Host::seedPrefs does prefs.set(name, value.toString()) and a JSON bool becomes \"1\", which UiPrefs::getBool rejects (the signal line stayed invisible for the whole 2026-10-15 capture hunt until fixed); (2) UiTestbed --capture <outDir> <scenario> writes PNGs (--selftest does not), --capture auto-iterates all scenarios. The batch-3 drives needed real plumbing: Knob::driveEmit (setValue is face-only; drives need the drag-path emit that fires onChange), Drive::dragTo (multi-point press/travel/release) for the cell drag, and MockBackend add/remove/setParam now mutate the chain so end-state asserts are real. Captures: node-main/*.png (node-add-gap, node-knob-change, node-main, node-remove, node-drag-drop, node-switch-view, node-toggle-live).",
+      "statement": "Testbed scenarios for the node view (scenarios.json, as of the 2026-10-17 bug-batch closeout, commits 0cb035e–22bbaf6): node-main (3-block left lane — compressor selected, chorus, insert — seeds \"localStorage\": {\"t3k.nodeView\": \"true\"}), node-toggle-live (batch 2, click-imitated gallery→node toggle + strip-knob survival), FIVE batch-3 driven scenarios — node-add-gap (add lands in the mid-lane gap, line stays continuous), node-remove, node-knob-change (knob turn + mode menu), node-drag-drop (cell drag & drop), node-switch-view (gallery↔node switching) — and TWO bug-batch scenarios: node-drag-multi (4-effect lane, four drags including a mid-drag dragStateForShot() \"active ghost=true\" state assert and an END-lane→cell-9 drop that Model::orderWith clamps to the lane tail) and node-add-far-slot (adding to an empty node far past the lane end; addIntoCell clamps at=jlimit(0,lane.size(),index) so the new block lands at the tail) — all click-imitated, all jassert-pass. Two landmines: (1) the seed value MUST be the string \"true\" — Host::seedPrefs does prefs.set(name, value.toString()) and a JSON bool becomes \"1\", which UiPrefs::getBool rejects (the signal line stayed invisible for the whole 2026-10-15 capture hunt until fixed); (2) UiTestbed --capture <outDir> <scenario> writes PNGs (--selftest does not), --capture auto-iterates all scenarios. The drives needed real plumbing: Knob::driveEmit (setValue is face-only; drives need the drag-path emit that fires onChange), Drive::dragTo (multi-point press/travel/release) for the cell drag, and MockBackend add/remove/setParam now mutate the chain so end-state asserts are real.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/testbed/Host.cpp",
@@ -162,7 +162,7 @@
         },
         {
           "resource": "repo://plugin/ui/testbed/fixtures/scenarios.json",
-          "version": "repo-file-v1:sha256:5f99d0955560c8ee42eeadeaeb1b0c91bdd66d72710f96085ac4c114b14c63c7"
+          "version": "repo-file-v1:sha256:da0e3ba2d752d73d9498296e0253af2a76dd8f6a41777a380b05d20fee620426"
         }
       ]
     },
@@ -172,17 +172,17 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
+          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
         }
       ]
     },
     {
       "id": "claim_1457c04b498f493fb23426150388f294",
-      "statement": "Pointer grammar on a node: a short click selects the block (params load into the strip); a 250 ms hold (kHoldMs = 250) begins a lane drag; motion before the hold cancels the timer; right-click opens the block menu (power toggle, help key nodePower; remove, help key nodeRemove; plus the palette add-menu over Model::paletteKinds()); DOUBLE-CLICK toggles the block's power (NodeCell::mouseDoubleClick -> NodeView::togglePower -> setBlockParam(id, \"enabled\", 0|1)). Cell hover sets a help text (occupied title, ' (off)' suffix when off, nodeEmptySlot key for true gaps) driving the JUCE tooltip and the bottom hint bar via the HintBus HintTracker. Drags use juce::Component::createComponentSnapshot ghosts; batch 3 (commit 5b9bdd9) changed the ghost to SEMI-TRANSPARENT — Ghost ctor setAlpha(0.6f) so the grid shows through — and the drop-target cell paints the dragged effect's icon at 0.5 alpha inside the theme::kHighlight border (NodeView.cpp g_dropTarget paint block, batch-3 item 8). A suppress-click-until timestamp keeps a drop from firing a stray select.",
+      "statement": "Pointer grammar on a node: a short click selects the block (params load into the strip); a 250 ms hold (kHoldMs = 250) begins a lane drag; motion before the hold cancels the timer; right-click opens the block menu (power toggle, help key nodePower; remove, help key nodeRemove; plus the palette add-menu over Model::paletteKinds()) — the 2026-10-17 bug batch DROPPED the old isEffect guard so Remove is now offered on ALL node kinds including tone (NAM/conv) nodes (cellMenuItems guards only !b->isInsert). DOUBLE-CLICK toggles the block's power (NodeCell::mouseDoubleClick -> NodeView::togglePower -> setBlockParam(id, \"enabled\", 0|1)). Cell hover sets a help text (occupied title, ' (off)' suffix when off, nodeEmptySlot key for true gaps) driving the JUCE tooltip and the bottom hint bar via the HintBus HintTracker. Drags use juce::Component::createComponentSnapshot ghosts; the 2026-10-17 bug batch tightened the ghost to a light-alpha Procreate-style clone: Ghost ctor setAlpha(0.35f) (batch 3's 0.6 was too opaque) + setMouseCursor(juce::MouseCursor::DraggingHandCursor) (JUCE has no Component::setMouseCursor, the cursor goes on the click-intercepting Ghost), the hover target cell paints a drop-slot preview, and NodeView::paint draws a displacement CASCADE preview via model_.orderWith(draggingId_, g_dropTarget) re-deriving the WOULD-BE lane order. A suppress-click-until timestamp keeps a drop from firing a stray select.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
+          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
         }
       ]
     },
@@ -196,7 +196,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
+          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
         }
       ]
     },
@@ -206,27 +206,31 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
+          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
         }
       ]
     },
     {
       "id": "claim_b4e66de12a0d4aebab35d4b4958a01d7",
-      "statement": "NodeStrip is the selected block's SINGLE-ROW parameter strip docked to the BOTTOM of the view (resized(): stripY = jmax(0, getHeight() - stripH - kStripBottomGap), kStripBottomGap = 16, kStripHeadH = 56; full width). 56 px header: block-kind label in caps over the mode line — context menus: modeB_ (juce::TextButton -> NodeView::openModeMenu(), delay 4 / Compressor 5 / reverb 6 modes, current entry disabled with a leading marker) and typeB_ (-> openTypeMenu(), reverb type list, shown only when Reverb::numTypes(mode) > 1); both build std::vector<ContextMenu::Item> and open centred over the strip via showStripMenu (widgets/ContextMenu, local-coordinate openAtPoint). Batch 3 (5b9bdd9): mode-menu bullets use juce::String::fromUTF8 (a raw char literal the font renderer mis-decoded, item 7) and a mode pick now WRITES the real param (delayMode/compMode/reverbMode via chain.setBlockParam at NodeView.cpp:1083-1087); In/Out knobs are pinned to the noon readout (m04302). Batch-3 knob-scale law (item 4): the Mix knob (and the In/Out gain knobs) are IDENTITY-scaled — pos = raw 0..1, knobFromStored only for non-identity scales (knobFromStored on an identity-stored param slammed Mix to ~0%); onChange is symmetric. Strip visibility (item 1+2): setNodeView(false) hides cells AND strip (strip_->setVisible(false) + clearContent(), NodeView.cpp:496-498); syncStrip() hides the strip when no block is selected (NodeView.cpp:871); the hide_ Icon::X button is shown via updateStripChrome and is the ONLY strip close (hideStrip() clears the selection); the strip stays open while the mouse is inside (knob turns no longer rebuild-and-close it, batch-2 item 9). Per-knob VALUE readout paints persistently above the knob face from KnobScale::format(knobFromStored(*scale, raw)), knob name below (labelOnTop = true); each knob gets setValue(...) after construction (Knob ctor clamps to options.min). Panel: theme::kPanelBg @ 0.55 tinted fill, 10 px radius. Knobs are owned std::vector<Knob*> (created on selection, deleted in clearContent()); onChange writes back through chain.setBlockParam(id, param, knobToStored(...)). Params come from the SHARED paramsFor table in views/gallery/EffectParams.h (tone nodes show only In/Out/Mix trims). Every strip knob is headless-tested by test/src/strip_knob_tests.cpp: 7 StripKnob tests (round-trip + finite readout + numeric readouts ≤4 chars) plus 8 batch-3 StripKnobPosition tests (identity pos==raw, In/Out noon pin, stored→raw round-trips).",
+      "statement": "NodeStrip is the selected block's SINGLE-ROW parameter strip docked to the BOTTOM of the view (resized(): stripY = jmax(0, getHeight() - stripH - kStripBottomGap), kStripBottomGap = 16, kStripHeadH = 56; full width). 56 px header: block-kind label in caps over the mode line — context menus: modeB_ (juce::TextButton -> NodeView::openModeMenu(), delay 4 / Compressor 5 / reverb 6 modes) and typeB_ (-> openTypeMenu(), reverb type list, shown only when Reverb::numTypes(mode) > 1); the 2026-10-17 bug batch rebuilt these: items are BARE labels (no leading bullet / check marker, std::nullopt icon), the menu ANCHORS at the invoking button (showStripMenu takes a const juce::Point<int>& anchor; openModeMenu passes modeB_.getLocalBounds().getTopLeft(), openTypeMenu passes typeB_ — the old 'centred over the strip' put the menu offset below), and every item carries a trailing juce::String helpText override so the row tooltip shows a per-mode blurb (static modeBlurb(kind, m) one-liners for delay/comp/reverb + reverbTypeBlurb(mode, t) for the six Digital/Plate/Spring/Small/Chamber/Hall entries, mirroring EffectTile.cpp). A mode pick writes the real param (delayMode/compMode/reverbMode via chain.setBlockParam). KNOB-COUNT LAW (2026-10-17 bug batch): the strip shows the FULL paramsFor(b, false) knob table plus the two reverb signature slots (EffectParams::reverbSigSlot(b, mode, slot), hoisted out of EffectTile's anon namespace so strip and tile pick identical knobs): reverb/conv 12, comp 10, delay/chorus/tremolo 8. kMaxKnobs = 12 and the face AUTO-SHRINKS: syncStrip sets setKnobFace(32) (was kKnobFace) when the visible knob count > 8, so a 12-knob strip fits one row; layoutStripKnobs reads a smaller headPad (2 vs 6) for the shrunk face. In/Out knobs are pinned to the noon readout (m04302) and the Mix/In/Out knobs are IDENTITY-scaled (pos = raw 0..1, knobFromStored only for non-identity scales). Strip visibility: setNodeView(false) hides cells AND strip (strip_->setVisible(false) + clearContent()); syncStrip() hides the strip when no block is selected; the hide_ Icon::X button is shown via updateStripChrome and is the ONLY strip close (hideStrip() clears the selection); the strip stays open while the mouse is inside (knob turns no longer rebuild-and-close it, batch-2 item 9). The POWER button is lit-for-ON (updateStripChrome: b.params.enabled ? theme::kWhite : theme::kMuted — batch 1 had it kHighlight-when-ON, reading as inverted-dim). Per-knob VALUE readout paints persistently above the knob face from KnobScale::format(knobFromStored(*scale, raw)), knob name below (labelOnTop = true); each knob gets setValue(...) after construction (Knob ctor clamps to options.min). Panel: theme::kPanelBg @ 0.55 tinted fill, 10 px radius. Knobs are owned std::vector<Knob*> (created on selection, deleted in clearContent()); onChange writes back through chain.setBlockParam(id, param, knobToStored(...)). Params come from the SHARED paramsFor table in views/gallery/EffectParams.h (tone nodes show only In/Out/Mix trims). Every strip knob is headless-tested by test/src/strip_knob_tests.cpp: 7 StripKnob tests (round-trip + finite readout + numeric readouts ≤4 chars), 8 batch-3 StripKnobPosition tests (identity pos==raw, In/Out noon pin, stored→raw round-trips), and 6 bug-batch StripGalleryParity tests (the strip's visible knob set equals the gallery's signature+full set in BOTH directions + a ≤12 cap).",
       "evidence": [
         {
+          "resource": "repo://plugin/ui/views/gallery/EffectParams.h",
+          "version": "repo-file-v1:sha256:bb3fa9ec2d00e97f22cb121eab4f2721d5858e83b4895dba6d4a54b8ed4f6f0b"
+        },
+        {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:6140ab7e68a00c85b10f61b0b376175e8a96f4e1ab5e544ab1f62e0808d105fc"
+          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
         },
         {
           "resource": "repo://test/src/strip_knob_tests.cpp",
-          "version": "repo-file-v1:sha256:5322701ace78adbf861dc9bf2e3c66535906426256e8084a352d6579775cec7b"
+          "version": "repo-file-v1:sha256:847371236f7a0a46e4c318f312b43b344de6f68807f663915f72c4f7ef1bc81d"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-17T18:20:26.394Z"
+    "at": "2026-10-18T06:21:15.263Z"
   }
 }
