@@ -103,9 +103,10 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   asserts; `T3K_E2E_APP` env overrides the app binary);
   it is an ADDITION to the testbed gates, not a replacement (spec
   spc-1792273651114-39383).
-- **9p mtime:** after a Windows-side edit of a WSL repo file, `touch` it before
-  building (`no work to do` otherwise); if a header edit didn't recompile,
-  `rm -f build/test/CMakeFiles/DspTests.dir/src/<t>.cpp.o` and rebuild.
+- **9p mtime + stale `.o`:** after a Windows-side edit of a WSL repo file, `touch` it before
+  building (`no work to do` otherwise); if an edit didn't recompile, `rm -f` the exact `.o` and
+  rebuild — per tree: DspTests `build/test/CMakeFiles/DspTests.dir/src/<t>.cpp.o`; UiTestbed
+  `build*/CMakeFiles/UiTestbed.dir/NodeViewE2E.cpp.o` is FLAT, `.../UiTestbed.dir/home/jambo/dev/tone3000-plugin-main/plugin/ui/views/nodeview/NodeView.cpp.o` is NESTED — always confirm the `Building CXX` line in the build output before trusting the run.
 - Windows exe (already configured): `cmake --build build-win --target
   TONE3000_Standalone` — staging/recipes/details: `docs/agents/windows-build.md`.
 

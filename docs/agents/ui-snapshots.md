@@ -68,7 +68,9 @@ explicit UTF-8 pointer: `juce::String (juce::CharPointer_UTF8 ("text \u2014"))`.
   right-press-during-drag laws via the new `node-drag-press` command +
   `NodeView::setE2eReleaseButton` stamping; shots under /tmp/t3k-e2e/).
   `T3K_E2E_APP` env overrides the app binary (point it at a working
-  UiTestbed build). It guards the node-drag ghost laws
+  UiTestbed build — build-tree fallback when `build-ui/` can't configure:
+  `ninja -C build UiTestbed`, see `linux-build-deep.md` § e2e/UiTestbed
+  build-tree fallback). It guards the node-drag ghost laws
   (full-size opaque, follows pointer, never at origin, idle after drop).
 - **Synthetic hit tests must use `Component::getComponentAt`** — a hand-rolled
   front-to-back walk routes every press to a full-window overlay ancestor

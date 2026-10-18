@@ -82,6 +82,21 @@ PATH=$STAGE/usr/bin:$PATH \
     -DX11_X11_INCLUDE_DIR=/home/jambo/x11dev/include -DX11_X11_LIB=/home/jambo/x11dev/libX11.so
 ```
 
+## e2e / UiTestbed build-tree fallback (2026-10-18)
+- `build-ui/` (the testbed tree) can end up with a broken fresh-configure
+  (hostbin/cc vs stage gcc-16 sysroot mismatch, juceaide fontconfig, X11
+  re-detect). When it does, build UiTestbed in the WORKING `build/` tree
+  instead: `ninja -C build UiTestbed` (same buildkit `PATH` +
+  `LD_LIBRARY_PATH` export as every other build step).
+- Point the e2e runner at it with the `T3K_E2E_APP` env override
+  (`T3K_E2E_APP=build/plugin/ui/testbed/UiTestbed_artefacts/Release/UiTestbed
+  xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`); keep `e2e.js`'s
+  default APP on `build-ui` and revert it before committing.
+- Stale-`.o` exact paths (rm the right one, confirm `Building CXX`): `build*/
+CMakeFiles/UiTestbed.dir/NodeViewE2E.cpp.o` is FLAT; `NodeView.cpp.o` is
+  NESTED under `.../UiTestbed.dir/home/jambo/dev/tone3000-plugin-main/plugin/
+  ui/views/nodeview/`.
+
 ## VST3 helper (`TONE3000_vst3_helper`) — two persistent fixes (2026-10-03, keep)
 It is a **separate CMake sub-project** (`build/vst3_helpers/TONE3000/`) that
 does NOT inherit the main build's `CMAKE_CXX_FLAGS`:
