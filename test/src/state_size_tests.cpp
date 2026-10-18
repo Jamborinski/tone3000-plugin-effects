@@ -1,12 +1,14 @@
-// DAW-host state footprint baseline (optimization-findings ticket, Stage 0).
+// DAW-host state footprint (optimization-findings ticket, Stages 0 + 1).
 //
-// Pins the pre-dedup / pre-gzip numbers for the host state path
-// (getStateInformation): a dual-mono rig (2 blocks per lane) where all four
-// blocks carry the same synthetic ~8 MB model in their ModelCache — the
-// shape a cloned/dual-mono rig produces (cloneBlock and the clipboard copy
-// modelCache wholesale). Stage 1 (cross-block dedup) and Stage 2 (gzip) gate
-// their savings against these baselines; the tests here measure, they do not
-// optimise.
+// A dual-mono rig (2 blocks per lane) where all four blocks carry the same
+// synthetic ~8 MB model in their ModelCache — the shape a cloned/dual-mono
+// rig produces (cloneBlock and the clipboard copy modelCache wholesale).
+//
+// Stage 0 pinned the pre-dedup baseline: the save embedded the payload once
+// PER BLOCK (4 copies, ~32 MB blob). Stage 1 dedups it: the payload now
+// lives once in a root-level ModelLibrary node and block entries carry a
+// model ref. These tests assert the deduped shape, the ~3× size drop, an
+// intact round-trip, and that a v1 (per-block embedded) state still loads.
 
 #include "Processor.h"
 #include "chain_test_helpers.h"
@@ -21,9 +23,9 @@ namespace {
 // ~8 MB, the size of a heavy NAM rig's model payload (the ticket's figure).
 constexpr int kSyntheticModelBytes = 8 * 1024 * 1024;
 
-// deterministic pseudo-random payload: not uniform (gzip's ratio behaviour
-// on the saved state should track real model bytes, not a single repeated
-// byte pattern).
+// deterministic pseudo-random payload: not uniform (Stage 2's gzip ratio on
+// the saved state should track real model bytes, not a single repeated byte
+// pattern).
 juce::MemoryBlock syntheticModelBytes() {
   juce::MemoryBlock bytes(static_cast<size_t>(kSyntheticModelBytes));
   uint32_t seed = 0x9e3779b9u;
@@ -65,8 +67,8 @@ juce::ValueTree makeNamBlockTreeWithModel(const juce::String& blockId, int toneI
   return block;
 }
 
-// Decode a T3KB blob into its state tree (the same shape state_cache_tests
-// uses; the blob's magic prefix is part of the pinned baseline).
+// Decode a T3KB blob into its state tree (the blob's magic prefix is part of
+// the pinned state format).
 juce::ValueTree parseStateBlob(const juce::MemoryBlock& data) {
   if (data.getSize() <= 4 || std::memcmp(data.getData(), "T3KB", 4) != 0)
     return {};
@@ -92,58 +94,50 @@ std::vector<juce::ValueTree> savedBlocks(const juce::ValueTree& state) {
   return blocks;
 }
 
-int countCachedModelPayloads(const juce::ValueTree& state) {
-  int count = 0;
-  for (const auto& block : savedBlocks(state))
-    count += block.getChildWithName("ModelCache").getNumChildren();
-  return count;
+// The root-level ModelLibrary the save dedups model payloads into (empty on
+// a v1 tree, which embeds per block instead).
+juce::ValueTree modelLibrary(const juce::ValueTree& state) {
+  return state.getChildWithName("ChainSnapshot").getChildWithName("ModelLibrary");
 }
 
-// (modelId, byte size) of every embedded payload, for round-trip equality.
-std::vector<std::pair<int, int>> payloadInventory(const juce::ValueTree& state) {
-  std::vector<std::pair<int, int>> inventory;
-  for (const auto& block : savedBlocks(state)) {
-    const juce::ValueTree cache = block.getChildWithName("ModelCache");
-    for (int j = 0; j < cache.getNumChildren(); ++j) {
-      const juce::var dataVar = cache.getChild(j).getProperty("data");
-      if (const auto* raw = dataVar.getBinaryData())
-        inventory.push_back({cache.getChild(j).getProperty("modelId"),
-                             static_cast<int>(raw->getSize())});
-    }
-  }
-  return inventory;
-}
-
-// Build the baseline rig in place: 2 × 2 dual-mono blocks, all four caches
-// holding the same synthetic ~8 MB model. Restore goes through the real
-// state path (T3KB framing + setStateInformation).
-void buildBaselineRig(ChainTestProcessor& proc) {
-  const juce::MemoryBlock model = syntheticModelBytes();
-  const int modelId = 100;
-
-  juce::ValueTree state("ChainSnapshot");
-  state.setProperty("stereoEnabled", true, nullptr);
+// Build the rig in place with the given per-model payloads. The V1 tree
+// (payloads embedded per block, no ModelLibrary) is fed to the reader via
+// restoreFromTree, which wraps it in a TONE3000State and runs the real T3KB
+// + setStateInformation path. `assignments` is 4 (blockId, modelId, model)
+// entries, L0 L1 R0 R1 order.
+void buildRigFromV1Tree(ChainTestProcessor& proc,
+                        const std::vector<std::tuple<const char*, int, juce::MemoryBlock>>& entries) {
+  juce::ValueTree snapshot("ChainSnapshot");
+  snapshot.setProperty("stereoEnabled", true, nullptr);
   juce::ValueTree left("ChainBlocks");
-  left.appendChild(makeNamBlockTreeWithModel("size-a", 1, modelId, model), nullptr);
-  left.appendChild(makeNamBlockTreeWithModel("size-b", 2, modelId, model), nullptr);
   juce::ValueTree right("RightChainBlocks");
-  right.appendChild(makeNamBlockTreeWithModel("size-c", 3, modelId, model), nullptr);
-  right.appendChild(makeNamBlockTreeWithModel("size-d", 4, modelId, model), nullptr);
-  state.appendChild(left, nullptr);
-  state.appendChild(right, nullptr);
+  for (size_t i = 0; i != 4; ++i) {
+    const auto& [id, modelId, model] = entries[i];
+    const juce::ValueTree block = makeNamBlockTreeWithModel(id, static_cast<int>(i) + 1, modelId, model);
+    (i < 2 ? left : right).appendChild(block, nullptr);
+  }
+  snapshot.appendChild(left, nullptr);
+  snapshot.appendChild(right, nullptr);
+  proc.restoreFromTree(snapshot, "dual");
+}
 
-  proc.restoreFromTree(state, "dual");
+// The ticket's dual-mono rig in pure synthetic form: all four blocks share
+// one model.
+void buildRigFromV1Tree(ChainTestProcessor& proc) {
+  const juce::MemoryBlock model = syntheticModelBytes();
+  buildRigFromV1Tree(proc, {{"size-a", 100, model}, {"size-b", 100, model},
+                            {"size-c", 100, model}, {"size-d", 100, model}});
 }
 
 }  // namespace
 
-// Baseline: the saved state embeds the payload once PER BLOCK (4 copies of
-// the ~8 MB model ≈ 32 MB in the blob), and the save is deterministic.
-// Stage 1 asserts against these sizes (dedup must drop the 3 redundant
-// copies); nothing here may start optimising.
-TEST(StateSizeBaseline, DualMonoRigStateSizeAndPayloadCount) {
+// The v2 save DEDUPs: 4 blocks sharing one model produce exactly ONE
+// ModelPayload (in the root ModelLibrary) and four block entries that carry
+// a `ref` and no embedded bytes. The blob is ~1× the payload (not 4×), i.e.
+// the Stage 0 32 MB baseline drops ~3×. The save stays deterministic.
+TEST(StateSize, DualMonoRigSavesDedupedToOnePayload) {
   ChainTestProcessor proc;
-  buildBaselineRig(proc);
+  buildRigFromV1Tree(proc);
 
   juce::MemoryBlock saved;
   const int64_t saveStartMs = juce::Time::getMillisecondCounter();
@@ -151,30 +145,45 @@ TEST(StateSizeBaseline, DualMonoRigStateSizeAndPayloadCount) {
   const int64_t saveMs = juce::Time::getMillisecondCounter() - saveStartMs;
 
   const juce::ValueTree state = parseStateBlob(saved);
-  ASSERT_TRUE(state.isValid()) << "baseline state must parse (T3KB magic + binary tree)";
+  ASSERT_TRUE(state.isValid()) << "v2 state must parse (T3KB magic + binary tree)";
   ASSERT_EQ(savedBlocks(state).size(), 4u) << "the rig must be 2 blocks per lane";
 
-  // 4 blocks × 1 embedded payload each — the duplication Stage 1 removes.
-  const int payloads = countCachedModelPayloads(state);
-  EXPECT_EQ(payloads, 4) << "baseline embeds the model per block (Stage 1 dedups)";
+  // The payload is stored exactly once, in the root ModelLibrary.
+  const juce::ValueTree library = modelLibrary(state);
+  ASSERT_TRUE(library.isValid()) << "v2 saves carry a root-level ModelLibrary";
+  ASSERT_EQ(library.getNumChildren(), 1)
+      << "4 blocks sharing one model must dedup to a single ModelPayload";
+  const juce::var payloadData = library.getChild(0).getProperty("data");
+  ASSERT_TRUE(payloadData.getBinaryData() != nullptr);
+  EXPECT_EQ(static_cast<int>(payloadData.getBinaryData()->getSize()), kSyntheticModelBytes);
 
-  // The blob must actually contain the ~32 MB of model bytes: payload
-  // count × synthetic size must be a lower bound well under the total, and
-  // the total must be far above a no-model save of the same rig shape.
-  const size_t expectedPayloadBytes =
-      static_cast<size_t>(payloads) * kSyntheticModelBytes;
-  EXPECT_EQ(expectedPayloadBytes, 32u * 1024u * 1024u);
-  EXPECT_GT(saved.getSize(), expectedPayloadBytes)
-      << "the blob must exceed the raw payload sum (tree overhead)";
+  // Every block entry is a ref and carries no embedded bytes.
+  for (const auto& block : savedBlocks(state)) {
+    const juce::ValueTree cache = block.getChildWithName("ModelCache");
+    ASSERT_EQ(cache.getNumChildren(), 1);
+    const juce::ValueTree entry = cache.getChild(0);
+    EXPECT_TRUE(entry.hasProperty("ref")) << "block entry must be a model ref";
+    EXPECT_FALSE(entry.hasProperty("data")) << "block entry must not embed the payload";
+  }
+
+  // The ~3× drop: the blob is ~1× the payload (tree overhead aside), not
+  // the Stage 0 4×. Assert the blob stays well under 3× the payload — the
+  // saved size is at least as small as one payload + a generous overhead
+  // margin, and far below the deduped-baseline's 4×.
+  const size_t payload = static_cast<size_t>(kSyntheticModelBytes);
+  EXPECT_LT(saved.getSize(), 3u * payload)
+      << "dedup must bring the blob from ~4× the payload to <3×";
+  EXPECT_GT(saved.getSize(), payload)
+      << "the blob must exceed the raw payload (tree overhead)";
 
   // Wall-time reference for the Stage 2 gzip revert rule (>10× on a heavy
   // rig = revert). Printed, not asserted: absolute timings are machine
   // dependent, the ratio Stage 2 compares against this is what matters.
-  std::cout << "[StateSizeBaseline] save wall-time: " << saveMs << " ms ("
+  std::cout << "[StateSize] save wall-time (deduped): " << saveMs << " ms ("
             << saved.getSize() << " bytes)\n";
 
   // Determinism: a second save of the same rig is byte-identical (the
-  // round-trip below and Stage 1/2's size comparisons rely on it).
+  // round-trip below and Stage 2's size comparisons rely on it).
   juce::MemoryBlock saved2;
   proc.getStateInformation(saved2);
   EXPECT_EQ(saved.getSize(), saved2.getSize());
@@ -182,25 +191,131 @@ TEST(StateSizeBaseline, DualMonoRigStateSizeAndPayloadCount) {
     EXPECT_EQ(std::memcmp(saved.getData(), saved2.getData(), saved.getSize()), 0);
 }
 
-// Baseline: a save of the rig restores to an equal payload inventory
-// (modelId + byte size per block) — the round-trip equality Stage 1 must
-// keep passing while changing the tree shape (refs instead of 4 copies).
-TEST(StateSizeBaseline, RoundTripKeepsPayloadInventory) {
+// A v2 save restores and re-saves to the SAME deduped shape: one payload in
+// the ModelLibrary, four refs, payload byte-size unchanged. This is the
+// round-trip equality Stage 1 must keep (refs resolve back to identical
+// bytes, so the re-save dedups to the same single payload).
+TEST(StateSize, RoundTripKeepsDedupedShape) {
   ChainTestProcessor proc;
-  buildBaselineRig(proc);
+  buildRigFromV1Tree(proc);
 
   juce::MemoryBlock saved;
   proc.getStateInformation(saved);
-  const auto before = payloadInventory(parseStateBlob(saved));
-  ASSERT_EQ(before.size(), 4u);
 
   ChainTestProcessor reopened;
   reopened.setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
   juce::MemoryBlock resaved;
   reopened.getStateInformation(resaved);
 
-  const auto after = payloadInventory(parseStateBlob(resaved));
-  EXPECT_EQ(after, before)
-      << "re-save after restore must embed the same payloads (same models, "
-         "same byte sizes)";
+  const juce::ValueTree after = parseStateBlob(resaved);
+  const juce::ValueTree library = modelLibrary(after);
+  ASSERT_TRUE(library.isValid());
+  ASSERT_EQ(library.getNumChildren(), 1)
+      << "a re-saved v2 state must keep the single deduped payload";
+  EXPECT_EQ(static_cast<int>(library.getChild(0).getProperty("data")
+                                 .getBinaryData()
+                                 ->getSize()),
+            kSyntheticModelBytes)
+      << "the resolved payload must be byte-for-byte the original model";
+  for (const auto& block : savedBlocks(after)) {
+    const juce::ValueTree cache = block.getChildWithName("ModelCache");
+    ASSERT_EQ(cache.getNumChildren(), 1);
+    EXPECT_TRUE(cache.getChild(0).hasProperty("ref"));
+    EXPECT_FALSE(cache.getChild(0).hasProperty("data"));
+  }
+}
+
+// A v1 state (payloads embedded per block, no ModelLibrary) still loads
+// through the v2 reader: resolveModelRefs is a no-op for it, so the
+// per-block bytes survive restoration and re-serialize intact. The distinct
+// v1 risk is a reader that (a) requires a ModelLibrary node to be present,
+// or (b) drops a block entry that has `data` but no `ref`. We pin both: feed
+// a pure v1 tree in, restore, re-save, and confirm the payload came through
+// (now deduped into the ModelLibrary) with the original bytes. We assert at
+// the data-structure level rather than on `loaded`, because the synthetic
+// payload is not a decodable NAM model — `loaded` would depend on a decode
+// the compat path doesn't exercise.
+TEST(StateSize, V1StateWithPerBlockPayloadsStillLoads) {
+  ChainTestProcessor proc;
+  buildRigFromV1Tree(proc);  // v1 tree (per-block data, no ModelLibrary) through the v2 reader
+
+  juce::MemoryBlock resaved;
+  proc.getStateInformation(resaved);
+  const juce::ValueTree after = parseStateBlob(resaved);
+
+  // All four v1 blocks survived the v2 reader (none were dropped for lacking a
+  // `ref`), and their per-block bytes re-deduped into a single ModelLibrary
+  // payload, byte-for-byte the original model. A reader that clobbered the
+  // per-block `data` (treating the absent ModelLibrary as "drop the payload")
+  // would re-save zero payloads here.
+  ASSERT_EQ(savedBlocks(after).size(), 4u) << "v1 blocks must survive the v2 reader";
+  const juce::ValueTree library = modelLibrary(after);
+  ASSERT_TRUE(library.isValid());
+  ASSERT_EQ(library.getNumChildren(), 1)
+      << "the per-block v1 payloads must re-dedup to one ModelLibrary payload";
+  EXPECT_EQ(static_cast<int>(library.getChild(0).getProperty("data")
+                                 .getBinaryData()
+                                 ->getSize()),
+            kSyntheticModelBytes)
+      << "the v1 per-block payload must be byte-for-byte the original model";
+  for (const auto& block : savedBlocks(after)) {
+    const juce::ValueTree cache = block.getChildWithName("ModelCache");
+    ASSERT_EQ(cache.getNumChildren(), 1);
+    EXPECT_TRUE(cache.getChild(0).hasProperty("ref"))
+        << "a re-saved v1-origin block must now be a ref";
+    EXPECT_FALSE(cache.getChild(0).hasProperty("data"));
+  }
+}
+
+// Real-capture variant of the dedup: a dual rig with TWO distinct models
+// (two blocks on capture A, two on capture B) must dedup to exactly TWO
+// ModelLibrary payloads, each byte-for-byte the capture bytes. Catches the
+// ref-keying bug class that the single-model test can't: a dedup keyed on
+// block id / tone id (not model id) would store 4 payloads; one keyed on the
+// payload content with a collision bug would store 1.
+TEST(StateSize, DualRigWithTwoDistinctRealModelsDedupsToTwoPayloads) {
+  juce::MemoryBlock capA, capB;
+  ASSERT_TRUE(testFile("syn20-amp-c1.nam").loadFileAsData(capA));
+  ASSERT_TRUE(testFile("syn20-amp-c2.nam").loadFileAsData(capB));
+
+  ChainTestProcessor proc;
+  buildRigFromV1Tree(proc, {{"real-a", 200, capA}, {"real-b", 200, capA},
+                            {"real-c", 201, capB}, {"real-d", 201, capB}});
+
+  juce::MemoryBlock saved;
+  proc.getStateInformation(saved);
+  const juce::ValueTree state = parseStateBlob(saved);
+  const juce::ValueTree library = modelLibrary(state);
+  ASSERT_TRUE(library.isValid());
+  ASSERT_EQ(library.getNumChildren(), 2)
+      << "2 distinct models across 4 blocks must dedup to exactly 2 payloads";
+
+  // Each payload is one of the two captures, byte-for-byte.
+  std::vector<int> sizes;
+  for (int i = 0; i < library.getNumChildren(); ++i)
+    sizes.push_back(static_cast<int>(library.getChild(i).getProperty("data").getBinaryData()->getSize()));
+  std::sort(sizes.begin(), sizes.end());
+  const std::vector<int> expected = {static_cast<int>(capA.getSize()),
+                                     static_cast<int>(capB.getSize())};
+  EXPECT_EQ(sizes, expected) << "the two payloads must be the two captures (by size)";
+
+  // Every block is a ref with no embedded bytes, and the payload count drop
+  // is exactly the dedup: 4 blocks → 2 payloads, blob ≈ capA + capB.
+  for (const auto& block : savedBlocks(state)) {
+    const juce::ValueTree cache = block.getChildWithName("ModelCache");
+    ASSERT_EQ(cache.getNumChildren(), 1);
+    EXPECT_TRUE(cache.getChild(0).hasProperty("ref"));
+    EXPECT_FALSE(cache.getChild(0).hasProperty("data"));
+  }
+  const size_t oneCopy = capA.getSize() + capB.getSize();  // 2 payloads
+  EXPECT_LT(saved.getSize(), 3u * oneCopy)
+      << "the blob must not re-embed a capture more than once each";
+
+  // Round-trip: restore the saved blob into a fresh proc; both models must
+  // resolve and load from the deduped payloads (they are real, decodable
+  // NAM captures — the loaded-state check is meaningful here).
+  ChainTestProcessor reopened;
+  reopened.setStateInformation(saved.getData(), static_cast<int>(saved.getSize()));
+  ASSERT_TRUE(waitForChainLoaded(reopened))
+      << "both real models must load from the deduped v2 state";
 }

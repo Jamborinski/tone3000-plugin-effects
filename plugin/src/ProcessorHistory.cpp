@@ -22,12 +22,22 @@ juce::ValueTree TONE3000Processor::captureChainSnapshot(bool includeModelData) c
                        branchSourceSide == ChainSide::Right ? "right" : "left", nullptr);
   snapshot.setProperty("branchAfterBlockId", juce::String(branchAfterBlockId), nullptr);
 
+  // v2 dedup: one ModelLibrary per snapshot root; both lanes' model payloads
+  // land there once and the block entries carry refs (resolveModelRefs
+  // turns those back into bytes at restore time). Settings-only captures
+  // (undo) skip it: includeModelData false means no payloads at all.
+  juce::ValueTree library;
+  if (includeModelData) {
+    library = juce::ValueTree("ModelLibrary");
+    snapshot.appendChild(library, nullptr);
+  }
+
   juce::ValueTree left("ChainBlocks");
-  serializeChainToTree(lane(ChainSide::Left), left, includeModelData);
+  serializeChainToTree(lane(ChainSide::Left), left, includeModelData, &library);
   snapshot.appendChild(left, nullptr);
 
   juce::ValueTree right("RightChainBlocks");
-  serializeChainToTree(lane(ChainSide::Right), right, includeModelData);
+  serializeChainToTree(lane(ChainSide::Right), right, includeModelData, &library);
   snapshot.appendChild(right, nullptr);
 
   return snapshot;
@@ -229,10 +239,57 @@ void TONE3000Processor::reconcileChainFromTree(const juce::ValueTree& chainState
     retired.push_back(std::move(b));
 }
 
-TONE3000Processor::Lane TONE3000Processor::restoreChainSnapshot(const juce::ValueTree& snapshot) {
+// v2 dedup (optimization-findings Stage 1): blocks' ModelCache entries carry
+// a model REF, and the payload bytes live once in the snapshot root's
+// ModelLibrary (sibling of the lane nodes, built by captureChainSnapshot).
+// This resolves the refs back into embedded `data` properties at the restore
+// funnel (restoreChainSnapshot); v1 trees — payloads embedded per block, no
+// `ref` — resolve to a no-op, so older states/presets load unchanged. A ref
+// the library can't satisfy leaves the entry byte-less and the seeder's
+// existing "will refetch" path picks it up.
+void TONE3000Processor::resolveModelRefs(juce::ValueTree& snapshot) {
+  const juce::ValueTree library = snapshot.getChildWithName("ModelLibrary");
+  if (!library.isValid())
+    return;  // v1 tree: every entry already carries its bytes
+
+  for (const auto* laneName : {"ChainBlocks", "RightChainBlocks"}) {
+    juce::ValueTree lane = snapshot.getChildWithName(laneName);
+    for (int i = 0; i < lane.getNumChildren(); ++i) {
+      juce::ValueTree blockState = lane.getChild(i);
+      const juce::ValueTree cache = blockState.getChildWithName("ModelCache");
+      for (int j = 0; j < cache.getNumChildren(); ++j) {
+        juce::ValueTree entry = cache.getChild(j);
+        if (!entry.hasProperty("ref"))
+          continue;  // embedded bytes (v1 shape): nothing to resolve
+
+        const int modelId = static_cast<int>(entry.getProperty("ref", 0));
+        const juce::ValueTree payload = library.getChildWithProperty("modelId", modelId);
+        const juce::var dataVar = payload.isValid() ? payload.getProperty("data") : juce::var();
+        if (const auto* raw = dataVar.getBinaryData()) {
+          // Materialize the bytes where reconcileChainFromTree expects them.
+          entry.setProperty("data", juce::var(*raw), nullptr);
+        } else {
+          // A ref the library can't satisfy (corrupt/partial state): the
+          // seeding below falls into its existing "will refetch" path.
+          juce::Logger::writeToLog("[Restore] Model ref " + juce::String(modelId) +
+                                   " has no payload in the ModelLibrary (block " +
+                                   blockState.getProperty("id").toString() + ")");
+        }
+      }
+    }
+  }
+}
+
+TONE3000Processor::Lane TONE3000Processor::restoreChainSnapshot(juce::ValueTree snapshot) {
   Lane retired;
   if (!snapshot.isValid())
     return retired;
+
+  // Refs → embedded bytes before reconciliation (see resolveModelRefs); a
+  // no-op for v1 trees. The snapshot is this restore's own copy (host state,
+  // the loaded preset tree, an undo snapshot), so the in-place mutation is
+  // safe.
+  resolveModelRefs(snapshot);
 
   reconcileChainFromTree(snapshot.getChildWithName("ChainBlocks"), lane(ChainSide::Left), retired);
   reconcileChainFromTree(snapshot.getChildWithName("RightChainBlocks"), lane(ChainSide::Right),

@@ -36,7 +36,13 @@ constexpr char kStateMagic[] = {'T', '3', 'K', 'B'};
 
 // Bump when the TONE3000State tree changes shape. Readers ignore state from a
 // newer schema rather than guessing at it.
-constexpr int kStateSchemaVersion = 1;
+// v2 (2026-10-20, optimization-findings Stage 1): model payloads moved out of
+// the per-block ModelCache into a root-level ModelLibrary node; block cache
+// entries carry a model ref instead of a duplicated copy (the host state used
+// to embed ~8 MB per block, ×4 on a dual-mono rig). v1 trees (payloads
+// embedded per block) still load: resolveModelRefs passes bare `data` entries
+// through untouched.
+constexpr int kStateSchemaVersion = 2;
 
 juce::PropertiesFile::Options userSettingsOptions() {
   juce::PropertiesFile::Options options;
@@ -523,7 +529,15 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
 
 void TONE3000Processor::serializeChainToTree(
     const std::vector<std::unique_ptr<ChainBlock>>& blocks, juce::ValueTree& chainState,
-    bool includeModelData) {
+    bool includeModelData, juce::ValueTree* modelLibrary) {
+  // v2 dedup: model payloads are stored once in the ModelLibrary node
+  // (a sibling of the lane nodes in the snapshot root; see
+  // restoreChainSnapshot's resolveModelRefs) and referenced from the
+  // blocks. `modelLibrary` is null only on settings-only paths where
+  // includeModelData is false — a non-null library is guaranteed by
+  // captureChainSnapshot.
+  juce::ValueTree library = modelLibrary != nullptr ? *modelLibrary : juce::ValueTree();
+
   for (const auto& block : blocks) {
     juce::ValueTree blockState = serializeBlockSettings(*block);
 
@@ -544,11 +558,28 @@ void TONE3000Processor::serializeChainToTree(
         juce::ValueTree cachedModel("CachedModel");
         cachedModel.setProperty("modelId", modelId, nullptr);
 
-        // Raw bytes in a binary var. The ValueTree binary stream writes these
-        // verbatim, which matters because this can run with chainMutex held
-        // (~8 MB per heavy rig).
-        cachedModel.setProperty(
-            "data", juce::var(juce::MemoryBlock(modelData.data(), modelData.size())), nullptr);
+        if (includeModelData && library.isValid()) {
+          // Write the payload into the library once; every block entry is a
+          // ref. The save used to embed one copy per block (clone/clipboard
+          // rigs duplicate modelCache wholesale) — a 4-block dual-mono rig
+          // of a ~8 MB model wrote ~32 MB of identical bytes.
+          juce::ValueTree payload =
+              library.getChildWithProperty("modelId", modelId);
+          if (!payload.isValid()) {
+            payload = juce::ValueTree("ModelPayload");
+            payload.setProperty("modelId", modelId, nullptr);
+            payload.setProperty(
+                "data", juce::var(juce::MemoryBlock(modelData.data(), modelData.size())),
+                nullptr);
+            library.appendChild(payload, nullptr);
+          }
+          cachedModel.setProperty("ref", modelId, nullptr);
+        } else {
+          // No library node (settings-only tree): keep the legacy embedded
+          // form so any reader of this tree shape gets the bytes.
+          cachedModel.setProperty(
+              "data", juce::var(juce::MemoryBlock(modelData.data(), modelData.size())), nullptr);
+        }
 
         cacheState.appendChild(cachedModel, nullptr);
       }

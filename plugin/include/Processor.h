@@ -834,7 +834,8 @@ private:
   // waste.
   static juce::var makeToneSummary(const juce::var& toneVar);
   static void serializeChainToTree(const std::vector<std::unique_ptr<ChainBlock>>& blocks,
-                                   juce::ValueTree& chainState, bool includeModelData);
+                                   juce::ValueTree& chainState, bool includeModelData,
+                                   juce::ValueTree* modelLibrary = nullptr);
 
   // Undo/redo internals (ProcessorHistory.cpp).
   // Snapshot both chains + stereo mode as a ValueTree. History snapshots stay
@@ -850,8 +851,13 @@ private:
   // never reloads a model); everything else is rebuilt and queued for a
   // background load. Caller must hold chainMutex, and must destroy the
   // returned retired blocks *after* releasing it (engine teardown is heavy).
-  [[nodiscard]] Lane restoreChainSnapshot(const juce::ValueTree& snapshot);
+  [[nodiscard]] Lane restoreChainSnapshot(juce::ValueTree snapshot);
   void reconcileChainFromTree(const juce::ValueTree& chainState, Lane& target, Lane& retired);
+  // v2 dedup: turn the snapshot's model refs back into embedded bytes;
+  // a no-op for v1 trees (payloads already embedded). Mutates the snapshot
+  // in place — callers pass their own copy (host state, the loaded preset
+  // tree, an undo snapshot).
+  void resolveModelRefs(juce::ValueTree& snapshot);
   // Queue a background download+prepare of `block`'s active model, resolving
   // url/name from its tone JSON. Used by undo/redo when a restored block's
   // model isn't cached in memory anymore. When the model can't even be
