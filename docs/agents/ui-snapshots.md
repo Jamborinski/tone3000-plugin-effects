@@ -56,6 +56,22 @@ explicit UTF-8 pointer: `juce::String (juce::CharPointer_UTF8 ("text \u2014"))`.
 - `script/tile-ocr.sh` reads a tile's type-cycler chip back via Tesseract 5.5.0 (PSM 7/13/10 sweep, whitelist, TSV conf): `tile-ocr.sh comp --ocr` → `psm10: OPT`. No PaddleOCR — user ruling: Tesseract only, no heavy deps.
 - Golden recheck after any palette/touch: 8/8 theme-affected goldens must stay IDENTICAL; the conv-*/reverb drifts (797/6714/6350 px) are PRE-EXISTING (proved by stash+rebuild of the pre-ticket commit).
 
+## juce-end-to-end supplement (2026-10-18, f0b06d4)
+- `UiTestbed` links the in-tree `libs/focusrite-e2e/` C++ transport; inert
+  unless launched with `--e2e-test-port=N`. `NodeViewE2E.cpp` registers the
+  command handler (`node-drag-begin/move/end`, `node-set-view`, `node-cells`,
+  `node-geometry`, `node-tree`, `node-screenshot`).
+- Run the regression: `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`
+  (13 checks; shots under /tmp/t3k-e2e/). It guards the node-drag ghost laws
+  (full-size opaque, follows pointer, never at origin, idle after drop).
+- **Synthetic hit tests must use `Component::getComponentAt`** — a hand-rolled
+  front-to-back walk routes every press to a full-window overlay ancestor
+  (the `ghost=none` first-run mystery). Drags keep sending events to the
+  `mouseDown` source (JUCE keeps the drag there, not under the pointer).
+- **Supplement, not replacement** (user m02886 / spec
+  spc-1792273651114-39383): drives + selftest + goldens stay the primary
+  gates; e2e adds the real-pointer path.
+
 ## House rules
 - Goldens live in `plugin/ui/testbed/goldens/<tile>.png` (LF, committed).
 - Regenerating the FIRST baseline: shoot all 16, eyeball each, then `--regen`

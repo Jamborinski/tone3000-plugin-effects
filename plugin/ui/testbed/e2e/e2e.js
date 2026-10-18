@@ -32,20 +32,33 @@ async function launchApp(scenario, timeoutMs = 15000) {
 
 // One real pointer drag: a press at the source cell centre, `steps` moves (so
 // the drag stream is seen, like a user's hand), and a release at the final
-// point. Returns every intermediate geometry probe, for the assertions and
+// point. `button` ("left"/"right") picks the modifier carried by the move
+// events and the release — "right" is the mid-drag right-click cancel (the
+// cancel fires on the right mouseDown; the right mouseUp must not open the
+// menu). Returns every intermediate geometry probe, for the assertions and
 // the screenshots taken between steps.
-async function pointerDrag(app, from, to, steps = 10) {
+async function pointerDrag(app, from, to, steps = 10, button = "left") {
   const log = [];
   await app.sendCommand({ type: 'node-drag-begin', args: { x: from.x, y: from.y } });
   for (let i = 1; i <= steps; ++i) {
     const x = Math.round(from.x + ((to.x - from.x) * i) / steps);
     const y = Math.round(from.y + ((to.y - from.y) * i) / steps);
-    await app.sendCommand({ type: 'node-drag-move', args: { x, y } });
+    await app.sendCommand({ type: 'node-drag-move', args: { x, y, button } });
     const g = await app.sendCommand({ type: 'node-geometry', args: {} });
-    log.push({ step: i, x, y, ghost: g.ghost, drag: g.drag });
+    log.push({ step: i, x, y, ghost: g.ghost, drag: g.drag, lane: g.lane });
   }
-  await app.sendCommand({ type: 'node-drag-end', args: {} });
-  return log;
+  await app.sendCommand({ type: 'node-drag-end', args: { button } });
+  const after = await app.sendCommand({ type: 'node-geometry', args: {} });
+  return { log, after };
+}
+
+// A bare pointer PRESS while a drag is in flight (no travel between the last
+// move and this press) — the right mouseDown of the mid-drag right-click
+// cancel (the cancel lives in NodeCell::mouseDown, so a drag-MOVE with a
+// right modifier would not trigger it). Returns the geometry after the press.
+async function dragPress(app, pt, button = "right") {
+  await app.sendCommand({ type: 'node-drag-press', args: { x: pt.x, y: pt.y, button } });
+  return app.sendCommand({ type: 'node-geometry', args: {} });
 }
 
 async function geometry(app) {
@@ -70,4 +83,4 @@ async function screenshot(app, out) {
   return app.sendCommand({ type: 'node-screenshot', args: { out } });
 }
 
-module.exports = { launchApp, pointerDrag, geometry, cells, setView, screenshot, APP };
+module.exports = { launchApp, pointerDrag, dragPress, geometry, cells, setView, screenshot, APP };

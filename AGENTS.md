@@ -98,6 +98,10 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   X display via xvfb-run, so the focus-policy tests exercise real keyboard
   focus WITHOUT stealing your input on the live display) before committing.
   (See [`openwiki/build-and-ops/dsp-test-suite.md`](openwiki/build-and-ops/dsp-test-suite.md).)
+  A **juce-end-to-end** supplement (2026-10-18, `f0b06d4`) adds real-pointer
+  drags: `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js` (13 checks);
+  it is an ADDITION to the testbed gates, not a replacement (spec
+  spc-1792273651114-39383).
 - **9p mtime:** after a Windows-side edit of a WSL repo file, `touch` it before
   building (`no work to do` otherwise); if a header edit didn't recompile,
   `rm -f build/test/CMakeFiles/DspTests.dir/src/<t>.cpp.o` and rebuild.

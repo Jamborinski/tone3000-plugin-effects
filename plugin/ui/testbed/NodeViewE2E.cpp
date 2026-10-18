@@ -107,6 +107,12 @@ NodeViewE2EHandler::process(const focusrite::e2e::Command& command) {
   if (type == "node-drag-move") {
     const auto p = juce::Point<int>(command.getArgumentAs<int>("x"),
                                     command.getArgumentAs<int>("y"));
+    // m05916-3: `button` selects the modifier (default left; "right" for the
+    // mid-drag right-click cancel path — JUCE routes the right button to the
+    // drag's source component, exactly like a real OS pointer does).
+    const auto btn = command.getArgumentAs<juce::String>("button");
+    const auto mods = (btn == "right") ? juce::ModifierKeys::rightButtonModifier
+                                       : juce::ModifierKeys::leftButtonModifier;
     g_drag.last = p;
     // JUCE delivers a drag to the component that received the mouseDown —
     // NOT the component currently under the pointer (that is hover). A real
@@ -121,22 +127,48 @@ NodeViewE2EHandler::process(const focusrite::e2e::Command& command) {
                               juce::String(p.y));
     }
     if (g_drag.down)
-      target->mouseDrag(makeEvent(p, target, juce::ModifierKeys::leftButtonModifier, true));
+      target->mouseDrag(makeEvent(p, target, mods, true));
     else
-      target->mouseMove(makeEvent(p, target, juce::ModifierKeys(), false));
+      target->mouseMove(makeEvent(p, target, mods == juce::ModifierKeys::leftButtonModifier ? juce::ModifierKeys() : mods, false));
     return Response::ok().withParameter("target", classNameOf(target));
   }
   if (type == "node-drag-end") {
     if (!g_drag.down) return Response::fail("no drag in progress");
-    // mouseUp also goes to the drag's source component.
+    // mouseUp also goes to the drag's source component. `button` selects the
+    // release button (default left; "right" = the mid-drag right-click
+    // cancel's release — its mouseDown already cancelled, the release must
+    // not re-open the menu).
+    const auto btn = command.getArgumentAs<juce::String>("button");
+    auto modUp = juce::ModifierKeys::leftButtonModifier;
+    if (btn == "right")
+      modUp = juce::ModifierKeys::rightButtonModifier;
+    // mouseUp goes to the drag's source component.
     auto* target = g_drag.source;
     if (target == nullptr) target = deepestAt(win, g_drag.last);
     if (target != nullptr)
-      target->mouseUp(makeEvent(g_drag.last, target,
-                                juce::ModifierKeys::leftButtonModifier, true));
+      target->mouseUp(makeEvent(g_drag.last, target, modUp, true));
     g_drag.down = false;
     g_drag.source = nullptr;
     return Response::ok();
+  }
+  if (type == "node-drag-press") {
+    // m05916-3: a bare pointer PRESS while a drag is in flight — the right
+    // mouseDown of the mid-drag right-click cancel. (A mouseDrag is not a
+    // press: NodeCell::mouseDown is what takes the popup/cancel path.)
+    const auto p = juce::Point<int>(command.getArgumentAs<int>("x"),
+                                    command.getArgumentAs<int>("y"));
+    if (!g_drag.down) return Response::fail("no drag in progress");
+    const auto btn = command.getArgumentAs<juce::String>("button");
+    const auto mods = (btn == "right") ? juce::ModifierKeys::rightButtonModifier
+                                       : juce::ModifierKeys::leftButtonModifier;
+    juce::Component* target = g_drag.source;
+    if (target == nullptr) target = deepestAt(win, p);
+    if (target == nullptr)
+      return Response::fail("no component under " + juce::String(p.x) + "," +
+                            juce::String(p.y));
+    target->mouseDown(makeEvent(p, target, mods, false));
+    g_drag.last = p;
+    return Response::ok().withParameter("target", classNameOf(target));
   }
   if (type == "node-set-view") {
     const bool nodeView = command.getArgumentAs<bool>("nodeView");
@@ -172,10 +204,19 @@ NodeViewE2EHandler::process(const focusrite::e2e::Command& command) {
   if (type == "node-geometry") {
     auto* nv = findNodeView(win);
     if (nv == nullptr) return Response::fail("no node view under root");
+    // The committed left-lane kinds ("comp,chorus,delay,reverb") — the e2e
+    // swap/cancel asserts verify the ACTUAL order, not just the drag state.
+    const auto& lane = nv->laneForShot();
+    juce::String laneKinds;
+    for (const auto& it : lane) {
+      if (laneKinds.isNotEmpty()) laneKinds << ",";
+      laneKinds << (it.isInsert ? "insert" : juce::String(it.effectKind));
+    }
     return Response::ok()
         .withParameter("ghost", nv->ghostStateForShot())
         .withParameter("grid", nv->gridForE2E())
-        .withParameter("drag", nv->dragStateForShot());
+        .withParameter("drag", nv->dragStateForShot())
+        .withParameter("lane", laneKinds);
   }
   if (type == "node-tree") {
     // Debug only: full tree dump. vis = isVisible() (own flag).

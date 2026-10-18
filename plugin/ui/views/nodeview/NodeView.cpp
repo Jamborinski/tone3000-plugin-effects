@@ -315,6 +315,16 @@ private:
   void mouseDown(const juce::MouseEvent& e) override {
     pressAt_ = e.getPosition();
     if (e.mods.isPopupMenu() && !e.source.isTouch()) {
+      // m05916-3: a right-click WHILE a left-button drag is in flight
+      // CANCELS the drag (grid reverts, no menu). The suppress window eats
+      // this click's own mouseUp — otherwise the right release, arriving
+      // with the drag already gone, would fall through to the mouseWasClicked
+      // path and re-open the menu (empty slots) or re-select the block.
+      if (v_.isDragging()) {
+        v_.cancelDrag();
+        suppressClickUntilMs_ = juce::Time::currentTimeMillis() + kSuppressClickMs;
+        return;
+      }
       openMenu(e.getPosition());
       return;
     }
@@ -442,6 +452,35 @@ private:
           juce::Justification::centred);
     }
   }
+};
+
+// --------------------------------------------------------------- DropGlow
+// The drag's target-cell glow (m06356): a SOFT radial wash in the DRAGGED
+// effect's own border colour, so same-icon drags stay distinguishable (the
+// reflowed grid is the location preview; the ghost shows the dragged block;
+// this shows WHICH block is moving, in ITS colour). It is an overlay-layer
+// child, like the Ghost — NodeView's own paint sits UNDER its children, so
+// a paint-side glow over an occupied cell would be covered by it.
+class NodeView::DropGlow : public juce::Component {
+public:
+  void setGlowColour(juce::Colour c) {
+    colour_ = c;
+    repaint();
+  }
+
+  void paint(juce::Graphics& g) override {
+    if (colour_.isTransparent()) return;
+    const auto ring = getLocalBounds().toFloat().reduced(3.0f);
+    // Soft wash in the dragged block's own border colour (m06356):
+    // 40% fill + 2px border — a gentle halo, not a hard ring.
+    g.setColour(colour_.withAlpha(0.30f));
+    g.fillRoundedRectangle(ring, 7.0f);
+    g.setColour(colour_.withAlpha(0.70f));
+    g.drawRoundedRectangle(ring, 7.0f, 1.5f);
+  }
+
+private:
+  juce::Colour colour_;
 };
 
 // ------------------------------------------------------------------- Ghost
@@ -654,8 +693,9 @@ void NodeView::fillCellsFrom(const std::vector<ChainItem>& lane) {
 }
 
 void NodeView::refresh() {
-  // A revision is usually OUR gesture (a knob turn in the strip below, or
-  // the drag's OWN finishSort — preview_ is empty by then). Preserve the
+  // A revision is usually OUR gesture (a knob turn in the strip below —
+  // the drag now commits directly from cellDragEnd; preview_ is empty by
+  // then). Preserve the
   // selection across the rebuild, or the strip closes the very moment the
   // user touches a knob. clearSelection below still drops a block that
   // genuinely left the chain. While a drag is in flight the cells render the
@@ -722,30 +762,22 @@ void NodeView::moveActiveTo(int target) {
     if (preview_[static_cast<size_t>(i)].blockId == activeId_)
       from = i;
   if (from < 0) return;
-  int to = juce::jlimit(0, n - 1, target);
+  const int to = juce::jlimit(0, n - 1, target);
   if (to == from) return;
-  // jlimit already keeps `to` in [0, n-1]: move the active item out,
-  // then re-insert it at `to` (a std::vector splice, JUCE-array-style).
+  // Splice with `to` as the FINAL slot: erase the active item (list shrinks
+  // to n-1), then insert at index `to` (clamped to n-1 = the tail). RIGHT
+  // moves land AFTER every neighbour the pointer crossed (a drop at slot 9
+  // lands at the tail of the compact list); LEFT moves land one slot left
+  // of the crossed neighbours. The original `if (to < from) ++to;` offset a
+  // 0-based index so every LEFT move spliced straight back to its own slot
+  // (m05916: "left movement is too lazy"); an intermediate clamp to n-2
+  // instead put every RIGHT drop one index early (comp -> slot 9 landed at
+  // index 2). Both are gone: insert at `to`.
   ChainItem active = preview_[static_cast<size_t>(from)];
   preview_.erase(preview_.begin() + from);
-  if (to < from) ++to;  // erase shifted the insert point left
-  preview_.insert(preview_.begin() + to, std::move(active));
+  const int insertAt = juce::jlimit(0, n - 1, to);
+  preview_.insert(preview_.begin() + insertAt, std::move(active));
   applyPreview();
-}
-
-void NodeView::finishSort() {
-  const std::string id = activeId_;
-  preview_ = {};
-  activeId_.clear();
-  if (id.empty()) return;
-  const auto& native = Model::laneOf(services_.chain.state());
-  std::vector<std::string> ids;
-  ids.reserve(native.size());
-  for (const auto& it : native)
-    ids.push_back(it.blockId);
-  const auto order = model_.orderWith(id, g_dropTarget);
-  if (order.size() == ids.size() && ids != order)
-    (void)services_.chain.reorderBlocks(order);  // chainChanged -> refresh
 }
 
 void NodeView::beginCellDrag(NodeCell& cell,
@@ -786,6 +818,14 @@ void NodeView::beginCellDrag(NodeCell& cell,
   grabOffset_ = pressOverlay;
   ghost_->setTopLeftPosition(cellInOverlay.getPosition());
   overlay.addAndMakeVisible(*ghost_);
+  // The target-cell glow (m06356): the DRAGGED block's own border colour, so
+  // same-icon drags stay readable. Overlay child -> paints above the cells.
+  dropGlow_ = new DropGlow();
+  const auto* dragB = services_.chain.state().findBlock(activeId_);
+  juce::String glowKind = dragB != nullptr ? dragB->effectKind : juce::String{};
+  dropGlow_->setGlowColour(Model::kind(glowKind).colour);
+  dropGlow_->setVisible(false);
+  overlay.addAndMakeVisible(*dropGlow_);
   // The pointer cursor: the gallery's ghost is non-intercepting too and it
   // never swaps the desktop cursor (JUCE 9's juce::Desktop has no
   // setMouseCursor here), so we match the gallery exactly — the OS cursor
@@ -820,13 +860,40 @@ void NodeView::cellDragMove(NodeCell& /*cell*/,
         y >= gridTop - 4.0f && y <= gridBottom - 4.0f;
     int target = -1;
     if (inGrid) {
-      int slot = (int)juce::roundToInt((x - rowX_) / std::max(1.0f, (float)cellW_));
+      // SYMMETRIC swap law (m05916-1): target = the slot whose INTERIOR the
+      // ghost centre is in — floor(v) with no half-tile offset. Both
+      // neighbours therefore flip at EXACTLY a half-tile of travel from the
+      // own centre (v = k + 1.0 / v = k + 0.0), and hovering one's own slot
+      // (v = k + 0.5) targets one's OWN slot. The old roundToInt(v) ≡
+      // floor(v + 0.5) evaluated k + 0.5 — a slot's own centre — and rounded
+      // UP: hovering one's own slot already targeted the right neighbour
+      // (the "instant right swap") while the left swap needed 1.5 tiles
+      // (the "lazy left") — exactly the asymmetry the user reported.
+      // (Scenarios dragTo aims at cell CENTRES and lands identically: v =
+      // k + 0.5 floors to k.)
+      int slot = (int)std::floor((x - rowX_) / std::max(1.0f, (float)cellW_));
       slot = juce::jlimit(0, Row::kSlotCount - 1, slot);
       target = row * Row::kSlotCount + slot;
     }
     if (target != g_dropTarget) {
       g_dropTarget = target;
-      repaint();  // the drop-zone border (NodeView::paint)
+      if (dropGlow_ != nullptr) {
+        if (target >= 0 && target < (int)cells_.size()) {
+          const auto& t = *cells_[target];
+          const auto area = ghost_->getParentComponent()->getLocalArea(
+              &t, t.getLocalBounds());
+          // The glow is a SQUARE around the cell's visible square (m06686),
+          // not the full 83x72 slot — the square sits centred in the slot,
+          // so inset x by (slotW - sq)/2 and match sq in both axes.
+          const int sq = (int)cellSquare_;
+          const int inset = (area.getWidth() - sq) / 2;
+          dropGlow_->setVisible(true);
+          dropGlow_->setBounds(area.getX() + inset, area.getY(), sq, sq);
+        } else {
+          dropGlow_->setVisible(false);
+        }
+      }
+      repaint();
     }
     dragInGrid_ = inGrid;
     if (target >= 0)
@@ -836,10 +903,17 @@ void NodeView::cellDragMove(NodeCell& /*cell*/,
 
 void NodeView::cellDragEnd(NodeCell& /*cell*/) {
   // Dropping outside any grid position cancels: the node goes back to where
-  // it was (m02010) — preview_ simply discards. Inside, commit the FINAL
-  // preview order (it is already where the pointer left it — no snap-back).
-  if (!dragInGrid_) finishSort();  // native lane, no commit
-  else {
+  // it was (m02010, reaffirmed m05916-3 — off-chain release cancels). Inside,
+  // commit the FINAL preview order (it is already where the pointer left it —
+  // no snap-back).
+  if (!dragInGrid_) {
+    // CANCEL — do NOT finishSort(): off-grid g_dropTarget is -1 and
+    // orderWith clamps -1 to 0, which would MOVE the block to the FRONT of
+    // the lane instead of leaving it where it started (the stale m02010
+    // comment claimed cancel, the code did the opposite). The preview is
+    // simply discarded by cancelDrag below.
+    activeId_.clear();
+  } else {
     std::vector<std::string> ids;
     ids.reserve(preview_.size());
     for (const auto& it : preview_)
@@ -864,6 +938,11 @@ void NodeView::cancelDrag() {
     ghost_->setVisible(false);
     delete ghost_;
     ghost_ = nullptr;
+  }
+  if (dropGlow_ != nullptr) {
+    dropGlow_->setVisible(false);
+    delete dropGlow_;
+    dropGlow_ = nullptr;
   }
   if (g_dragCursorWasSet)
     (void)juce::Desktop::getInstance();  // no cursor API in JUCE 9 here
@@ -962,21 +1041,6 @@ void NodeView::paint(juce::Graphics& g) {
     const float outY = (nRows == 2) ? rowY_ + (kRowH + kRowGap) + cellSquare_ / 2.0f
                                     : rowY_ + cellSquare_ / 2.0f;
     g.drawSingleLineText("Out", rowX_ + Row::kSlotCount * cellW_ + 4, outY - 4);
-  }
-  if (dragging && g_dropTarget >= 0 && g_dropTarget < (int)cells_.size() &&
-      !activeId_.empty() && g_dropTarget != dragFromCell_) {
-    // The drop-zone ring (gallery: the lane has already parted to make room
-    // — the ring just marks where the pointer is aiming). The old cascade of
-    // faded displaced-clone icons is gone: the grid IS the preview now.
-    const auto c = cells_[g_dropTarget]->getBounds().toFloat();
-    const auto sq = juce::Rectangle<float>(
-        (c.getWidth() - (float)cellSquare_) / 2.0f, 0.0f, (float)cellSquare_,
-        (float)cellSquare_);
-    paint::border(g, sq.reduced(4.0f), 6.0f, theme::kHighlight, 2.0f);
-    const auto* dragB = services_.chain.state().findBlock(activeId_);
-    if (dragB != nullptr && dragB->isEffect)
-      Icons::draw(g, kindSvg(dragB->effectKind), sq.reduced(16.0f),
-                  theme::kHighlight.withAlpha(0.5f));
   }
 }
 
@@ -1442,14 +1506,25 @@ const std::vector<ChainItem>& NodeView::laneForShot() const {
 }
 
 juce::String NodeView::gridForE2E() const {
+  // The view's centre in WINDOW coords so the script can recover the
+  // grid's frame origin (it reports rowX_/rowY_/cellW_ view-local).
+  const auto wc = getTopLevelComponent()->getLocalBounds().getCentre() -
+                  getLocalBounds().getCentre();
   return juce::String("rowX=") + juce::String(rowX_) + " rowY=" + juce::String(rowY_) +
          " cellW=" + juce::String(cellW_) + " viewH=" + juce::String(getHeight()) +
-         " viewW=" + juce::String(getWidth());
+         " viewW=" + juce::String(getWidth()) + " cx=" + juce::String((int)(wc.x)) +
+         " cy=" + juce::String((int)(wc.y));
 }
 
 std::vector<juce::Point<int>> NodeView::cellCentresForE2E(juce::Component* frame) const {
   std::vector<juce::Point<int>> out;
   if (frame == nullptr) return out;
+  // ALL visible cells, grid-slot order (fillCellsFrom maps lane[i] onto
+  // cells_[i] occupied-first): c[i] is the centre of grid SLOT i, invariant
+  // to which block sits there — so the e2e script can both read a block's
+  // live position (c[0] = slot 0) AND target an EMPTY slot (c[5]/c[9] are
+  // pressable: deepestAt hit-tests the real component under the cursor,
+  // independent of this list). Empty slots render as dashed +/ghost cells.
   for (const auto& c : cells_) {
     if (c == nullptr || !c->isVisible()) continue;
     // getLocalArea(frame, cell, cellBounds): cell-local -> frame-local,
@@ -1485,6 +1560,9 @@ void NodeView::openModeMenuForShot() { openModeMenu(); }
 void NodeView::openTypeMenuForShot() { openTypeMenu(); }
 
 void NodeView::endDragFromShot() { cancelDrag(); }
+// m05916-3 shot probe: the right-click-during-drag cancel path (same one
+// NodeCell::mouseDown takes for a real popup press).
+void NodeView::cancelDragFromShot() { cancelDrag(); }
 
 void NodeView::hideStrip() {
   // The X (left of power) is the strip's ONLY close: clear the selection and

@@ -91,6 +91,9 @@ public:
   // painting) — capture, then release with endDragFromShot().
   void beginDragFromShot(int fromCell, int toCell);
   void endDragFromShot();
+  // m05916-3 shot probe: the right-click-during-drag cancel path (the same
+  // one NodeCell::mouseDown takes for a real popup press).
+  void cancelDragFromShot();
   // e2e: every cell's centre in window (frame) coordinates, lane order.
   std::vector<juce::Point<int>> cellCentresForE2E(juce::Component* frame) const;
   juce::String gridForE2E() const;  // e2e debug only
@@ -103,6 +106,7 @@ private:
   class NodeCell;   // one square on the signal line
   class NodeStrip;  // the selected block's name + knobs
   class Ghost;      // the snapshot that trails the pointer during a drag
+  class DropGlow;   // the target cell's soft glow (overlay child, m06356)
 
   void chainChanged(const ChainState& state) override;
   void refresh();  // rebuild cell states + strip from the live chain
@@ -147,13 +151,13 @@ private:
 
   void applyPreview();  // drag: rebuild cells from the optimistic lane
   void moveActiveTo(int target);  // drag: splice the optimistic lane
-  void finishSort();  // drag end: commit the final order to the chain
 
   Services& services_;
   Model model_;
   NodeStrip* strip_ = nullptr;
   std::vector<std::unique_ptr<NodeCell>> cells_;
   Ghost* ghost_ = nullptr;
+  DropGlow* dropGlow_ = nullptr;  // the in-flight drag's target-cell glow
   // The drag cursor (m01453): the ghost is non-intercepting so it cannot own
   // the cursor — the desktop cursor is swapped for the gesture's duration.
   static juce::MouseCursor g_savedCursor;
