@@ -99,6 +99,7 @@ ChainItem convItem(bool loaded, double seconds, const char* name = kFixtureIr) {
   if (loaded) {
     item.convIrLoaded = true;
     item.convSeconds = seconds;
+    item.convIrChannels = 2;  // the name line's " Stereo" readout
   }
   return item;
 }

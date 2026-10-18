@@ -1926,6 +1926,149 @@ struct GalleryViewTests : juce::UnitTest {
       expect(survivors == 0);
     }
     {
+      beginTest("the conv strip shows the IR filename line (not just an invisible label)");
+      // m04356: the gallery tile reads "NAME · N.N s Stereo"; the conv strip's
+      // filename line above the waveform was created hidden and
+      // pullConvPreview set its text but never revealed it. Inject a loaded
+      // IR into the node-knob-change conv block and pin BOTH the text and
+      // the visibility.
+      LiveScenario live(*this, "node-knob-change");
+      if (!live.ok) return;
+      // getChainState caches: pass the live revision to get the FULL chain
+      // (a matching revision returns {revision, unchanged} with no "chain"
+      // key — setChain on that would crash bumpChain). Rebuild the inner
+      // array (withConv pattern): the top-level clone is shallow, so the
+      // element DynamicObjects are shared with the fixture.
+      auto c = live.backend->getChainState(-1);
+      juce::Array<juce::var> fresh;
+      if (auto* oldArr = c["chain"].getArray()) {
+        for (int i = 0; i < oldArr->size(); ++i) {
+          auto el = (*oldArr)[i].clone();
+          if (el["effectKind"].toString() == "convolution"
+              && el.getDynamicObject() != nullptr) {
+            auto* o = el.getDynamicObject();
+            // ChainState reads the IR identity at the BLOCK top level but
+            // convIrChannels from params — set both, creating params if the
+            // fixture block carries none.
+            o->setProperty("convIrName", "t3k-ir-fixture.wav");
+            o->setProperty("convIrLoaded", true);
+            o->setProperty("convSeconds", 1.8);
+            juce::var pv = o->getProperty("params");
+            if (pv.getDynamicObject() == nullptr) {
+              pv = juce::var(new juce::DynamicObject());
+              o->setProperty("params", pv);
+            }
+            pv.getDynamicObject()->setProperty("convIrChannels", 2);
+          }
+          fresh.add(el);
+        }
+      }
+      c.getDynamicObject()->setProperty("chain", juce::var(fresh));
+      live.backend->setChain(c);
+      LiveScenario::pump(300);
+      auto* node = findNode(live.root());
+      expect(node != nullptr);
+      if (node == nullptr) return;
+      juce::Component* convCell = nullptr;
+      for (auto* ch : node->getChildren()) {
+        if (ch != nullptr && ch->getHelpText().contains("IR")) convCell = ch;
+      }
+      expect(convCell != nullptr);
+      if (convCell == nullptr) return;
+      drive::click(live.root(), *convCell);
+      LiveScenario::until([node] { return node->stripShown(); }, 4000);
+      const auto label = node->convIrLabelForShot();
+      expect(label.startsWith("visible|"), "the filename line must be VISIBLE (was hidden: " + label + ")");
+      expect(label.contains("t3k-ir-fixture.wav"), "the loaded kernel's name must render: " + label);
+      expect(label.contains("1.80 s"), "the engine seconds must render: " + label);
+      expect(label.contains("Stereo"), "the mono/stereo type must render: " + label);
+    }
+    {
+      beginTest("the drag ghost starts at the source cell and the drop aims from its centre");
+      // m04329: the ghost's top-left was the cell-LOCAL press point placed in
+      // overlay coordinates, so it landed at the overlay's top-left for every
+      // cell but the first (whose cell-local ~ overlay position coincides),
+      // and the drop slot tracked the raw pointer (carrying the grab offset)
+      // instead of the ghost centre. Pin both: the ghost sits on the source
+      // cell in overlay space, and an off-centre press still lands the node
+      // on the aimed slot.
+      LiveScenario live(*this, "node-knob-change");
+      if (!live.ok) return;
+      auto* node = findNode(live.root());
+      expect(node != nullptr);
+      if (node == nullptr) return;
+      juce::Component* convCell = nullptr;
+      for (auto* ch : node->getChildren()) {
+        if (ch != nullptr && ch->getHelpText().contains("IR")) convCell = ch;
+      }
+      expect(convCell != nullptr);
+      if (convCell == nullptr) return;
+      // [fx-delay, fx-chorus, tone, fx-conv]: the conv cell is index 3.
+      const auto hostPos = node->getLocalPoint(node, convCell->getBounds().getTopLeft());
+      drive::dragToPending(live.root(), *convCell, *convCell);  // press at the cell centre, no travel
+      LiveScenario::pump(120);
+      const auto gs = node->ghostStateForShot();  // "x=A y=B w=W h=H grab=(GX,GY)"
+      jassert(gs.isNotEmpty() && !gs.startsWith("none"));
+      if (gs.startsWith("none")) return;
+      // Parse "x=A y=B w=W h=H grab=(GX,GY)": fields start at `start`;
+      // the value ends at the next space / paren.
+      auto fieldAt = [&gs](int start, const juce::String& key) -> int {
+        const auto tail = gs.substring(start);
+        const int rel = tail.indexOf(key);
+        if (rel < 0) return -99999;
+        const int a = start + rel;
+        const int b = a + key.length();
+        int e = gs.length();
+        for (char c : {' ', ')', ','}) { // terminate at a field separator
+          const int p = gs.indexOfChar(b, c);
+          if (p >= 0 && p < e) e = p;
+        }
+        return e > b ? gs.substring(b, e).getIntValue() : gs.substring(b).getIntValue();
+      };
+      const int grabAt = gs.indexOf("grab=(");
+      // The ghost sits at the source cell's overlay position (the pre-fix
+      // value was the cell-local press, ~ (w/2, h/2), i.e. the overlay
+      // top-left for every cell but the first).
+      expect(fieldAt(0, "x=") == hostPos.x && fieldAt(0, " y=") == hostPos.y,
+             "the ghost must start at the source cell: " + gs);
+      expect(fieldAt(grabAt, "grab=(") == convCell->getWidth() / 2
+           && fieldAt(grabAt + 7, "y=") == convCell->getHeight() / 2,  // grab == cell centre (the press point)
+             "the grab offset must be the press point relative to the cell: " + gs);
+      // The full cell snapshot (not a clipped quarter — the pre-fix ghost
+      // inherited the cell-local press as its overlay top-left and the
+      // visible region was a sliver).
+      expect(fieldAt(0, " w=") == convCell->getWidth() && fieldAt(0, " h=") == convCell->getHeight(),
+             "the ghost must carry the full cell snapshot: " + gs);
+      // Aim the ghost centre at the FOURTH slot (cell 3) without releasing:
+      // the slot math floors from the ghost centre, so an off-centre press
+      // must not land a slot early.
+      // Finish the travel to slot 1's centre WITHOUT releasing: pressing at
+      // the source's centre means the pointer is a half-cell LEFT of the
+      // ghost centre, so the pre-fix raw-pointer aim landed the node at
+      // slot 0 (a cell early); the ghost-centre aim lands exactly on 1.
+      auto dest = new juce::Component();
+      const auto centre = node->cellCentreForShot(1);
+      dest->setBounds(centre.x, centre.y, 1, 1);
+      dest->setVisible(false);
+      live.root().addAndMakeVisible(dest);
+      drive::dragToPending(live.root(), *convCell, *dest);
+      LiveScenario::pump(120);
+      const auto ds = node->dragStateForShot();
+      expect(ds.contains("target=1"), "the drop target must track the ghost centre (slot 1), got: " + ds);
+      drive::releaseDrag(live.root(), *convCell, *dest);
+      LiveScenario::pump(300);
+      live.root().removeChildComponent(dest);
+      delete dest;
+      // The conv block lands at slot 1 (between delay and chorus): the
+      // pre-fix raw-pointer aim landed it at slot 0.
+      const auto lane = node->laneForShot();
+      expectEquals(static_cast<int>(lane.size()), 4);
+      juce::StringArray laneKinds;
+      for (const auto& it : lane) laneKinds.add(it.effectKind);
+      expect(lane.size() > 1 && lane[1].effectKind == "convolution",
+             "the conv block must land at the aimed slot 1, lane=" + laneKinds.joinIntoString(","));
+    }
+    {
       beginTest("gallery wheel scroll is alive after a node-view cycle");
       LiveScenario live(*this, "node-main");
       if (!live.ok) return;

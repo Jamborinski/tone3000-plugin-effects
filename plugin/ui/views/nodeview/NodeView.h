@@ -74,6 +74,18 @@ public:
   // ghost + drop-target indicator are live).
   juce::Point<int> cellCentreForShot(int cellIndex) const;
   juce::String dragStateForShot() const;
+  // The IR filename line above the conv waveform (m04356): "visible|<text>"
+  // so a test can pin that pullConvPreview both sets the text AND reveals
+  // the label (it is created hidden).
+  juce::String convIrLabelForShot() const;
+  // Ghost geometry for the drag regression (m04329): "none" or
+  // "x=.. y=.. w=.. h=.. grab=(..,..)" in overlay coordinates — the ghost
+  // must start at the source cell's overlay position, not the cell-local
+  // press point (which lands at the overlay top-left).
+  juce::String ghostStateForShot() const;
+  // The live lane (node drives assert the committed order; scoping
+  // exception for the testbed, same as the private-model drives above).
+  const std::vector<ChainItem>& laneForShot() const;
   // m01463 screenshot path: start a live grid drag from `fromCell` with the
   // pointer held at the centre of `toCell` (drop target + cascade preview
   // painting) — capture, then release with endDragFromShot().

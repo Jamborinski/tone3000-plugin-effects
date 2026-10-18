@@ -770,14 +770,16 @@ void NodeView::beginCellDrag(NodeCell& cell,
   snapshot_ = cell.createComponentSnapshot(cell.getBounds());
   ghost_ = new Ghost(snapshot_);
   const auto cellInOverlay = overlay.getLocalArea(&cell, cell.getBounds());
-  // Centre the ghost on the press point (in the overlay): the move handler
-  // re-positions it as `pointer - grabOffset_` from there, the same pattern
-  // as the gallery's tile drag.
+  // The ghost starts at the cell's ACTUAL overlay position (gallery pattern:
+  // ghost topLeft = tile topLeft in overlay). The grab offset is the press
+  // point relative to the cell top-left — the pixel under the pointer at
+  // press time. The move handler repositions as pointer − grabOffset so
+  // that pixel stays under the cursor.
   const auto pressOverlay =
       overlay.getLocalPoint(&cell, pressLocal).toFloat() -
       cellInOverlay.getPosition().toFloat();
-  grabOffset_ = pressOverlay - ghost_->getBounds().toFloat().getCentre();
-  ghost_->setTopLeftPosition(pressOverlay.roundToInt());
+  grabOffset_ = pressOverlay;
+  ghost_->setTopLeftPosition(cellInOverlay.getPosition());
   overlay.addAndMakeVisible(*ghost_);
   // The pointer cursor: the gallery's ghost is non-intercepting too and it
   // never swaps the desktop cursor (JUCE 9's juce::Desktop has no
@@ -797,9 +799,15 @@ void NodeView::cellDragMove(NodeCell& /*cell*/,
   ghost_->setTopLeftPosition(pos.roundToInt());
 
   if (rowY_ > 0) {
-    const int row = (centreInView.y >= rowY_ + kRowH + kRowGap) ? 1 : 0;
-    const float x = centreInView.x;
-    const float y = centreInView.y;
+    // The target slot tracks the GHOST CENTRE (gallery law: the tile's
+    // centre is what aims at a slot — the raw pointer carries the grab
+    // offset, so aiming from it lands a cell early when pressing off-centre).
+    const auto centreInView2 =
+        this->getLocalPoint(ghost_->getParentComponent(),
+                            ghost_->getBounds().getCentre());
+    const float x = centreInView2.x;
+    const float y = centreInView2.y;
+    const int row = (y >= rowY_ + kRowH + kRowGap) ? 1 : 0;
     const float gridTop = rowY_;
     const float gridBottom = rowY_ + 2 * kRowH + kRowGap;
     const bool inGrid =
@@ -1409,6 +1417,25 @@ juce::String NodeView::dragStateForShot() const {
          juce::String(dragFromCell_);
 }
 
+juce::String NodeView::convIrLabelForShot() const {
+  if (strip_ == nullptr || !strip_->isVisible()) return "";
+  auto& c = strip_->convIr();
+  return juce::String(c.isVisible() ? "visible" : "hidden") + "|" + c.getText();
+}
+
+juce::String NodeView::ghostStateForShot() const {
+  if (ghost_ == nullptr) return "none";
+  const auto b = ghost_->getBounds();
+  return juce::String("x=") + juce::String(b.getX()) + " y=" + juce::String(b.getY()) +
+         " w=" + juce::String(b.getWidth()) + " h=" + juce::String(b.getHeight()) +
+         " grab=(" + juce::String((int)grabOffset_.x) + "," +
+         juce::String((int)grabOffset_.y) + ")";
+}
+
+const std::vector<ChainItem>& NodeView::laneForShot() const {
+  return Model::laneOf(services_.chain.state());
+}
+
 void NodeView::beginDragFromShot(int fromCell, int toCell) {
   // m01463 screenshot path: drive a REAL drag (the same path a mouse
   // gesture uses) and hold the pointer over `toCell` so the clone ghost +
@@ -1468,6 +1495,11 @@ void NodeView::pullConvPreview(NodeStrip& st, const ChainItem& b) {
                         juce::dontSendNotification);
   else
     st.convIr().setText(juce::String(), juce::dontSendNotification);
+  // The filename line sits above the waveform — convIr_ starts hidden at
+  // construction and pullConvPreview is the only place that reveals it
+  // (m04356: the gallery tile shows "NAME · 4.98 s Stereo"; the strip must
+  // match, not just set the text on an invisible label).
+  st.convIr().setVisible(true);
   const auto v = services_.chain.convPreview(b.blockId);
   const auto* obj = v.getDynamicObject();
   if (obj == nullptr) {
