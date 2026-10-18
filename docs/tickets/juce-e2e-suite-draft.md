@@ -1,6 +1,8 @@
-# T-E2E-001 — juce-end-to-end test suite (decision spec, no implementation)
+# T-E2E-001 — juce-end-to-end test suite (decision spec → first slice shipped)
 
-**Status:** decision item, deferred (user m04938: "we dont have to add it now")
+**Status:** FIRST SLICE SHIPPED (f0b06d4, 2026-10-18) — transport + drag
+regression live; remaining checklist items (CI wiring, agents sub-rule,
+hold-menu / toggle tests) still deferred.
 **Created:** 2026-10-18
 **Origin:** user request m04873 during the node-view batch.
 
@@ -56,3 +58,30 @@ message loops, real pointer trajectories, cross-process state).
 
 Adopt as a **supplement** (user m04875). Implementation deferred to a
 dedicated session once the node-view batch closes.
+
+## Shipped — first slice (f0b06d4, 2026-10-18)
+
+- **Transport/integration** (checklist item 1, resolved): C++ client lives
+  IN-TREE at `libs/focusrite-e2e/` (CMake `add_subdirectory` from
+  `plugin/ui/testbed/CMakeLists.txt`) — no submodule/FetchContent; the npm
+  side is `plugin/ui/testbed/e2e/` (`package.json` for the
+  `@focusritegroup/juce-end-to-end` JS client + `node_modules/` gitignored).
+  TCP port works under `xvfb-run` (items 2, 3 resolved by practice).
+- **Host:** `UiTestbed` (as recommended) — `NodeViewE2EHandler`
+  (`plugin/ui/testbed/NodeViewE2E.h/.cpp`) registers on
+  `--e2e-test-port=`; commands: `node-drag-begin/move/end`, `node-set-view`,
+  `node-cells`, `node-geometry`, `node-tree` (debug), `node-screenshot`.
+- **First candidate test (item 4a) DONE:** `e2e/node-drag.js` — 13 checks,
+  `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`. It caught and
+  guarded the m04679/m04723 bug class with a REAL pointer trajectory:
+  quarter-ghost-for-first-cell / no-ghost-for-others (parent-space
+  `getBounds()` vs local `getLocalBounds()` in `beginCellDrag`) and the
+  top-left box (ghost pinned at origin).
+- **Load-bearing lesson:** synthetic hit tests MUST use JUCE's own
+  `Component::getComponentAt` — a hand-rolled front-to-back walk routed
+  every press to a full-window ancestor (the `ghost=none` first-run
+  mystery; real OS events and the in-process drives were fine because
+  they never re-implement routing).
+
+Still deferred: CI `test:e2e` job, `docs/agents/e2e-tests.md` sub-rule,
+hold-menu + gallery↔node-toggle e2e tests.
