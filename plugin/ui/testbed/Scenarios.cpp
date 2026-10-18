@@ -290,7 +290,7 @@ const std::map<juce::String, Drive>& drives() {
          // The mode TEXT must follow the sound immediately (m00156: the
          // pick used to wait ~1 s for the gesture-settle revision bump, so
          // the button kept saying "Digital" while the engine ran Tape).
-         jassert(mode->getButtonText() == "Tape");
+         jassert(dynamic_cast<juce::TextButton*>(mode)->getButtonText() == "Tape");
          jassert(std::abs(nodeLaneParam(be, 0, "mix") - 0.88) < 1e-3);
          jassert(nodeLaneParam(be, 0, "delayMode") == 1.0);
          jassert(nodeLaneParam(be, 3, "mix") == 0.5);

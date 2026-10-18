@@ -92,6 +92,8 @@ private:
   void chainChanged(const ChainState& state) override;
   void refresh();  // rebuild cell states + strip from the live chain
   void syncStrip();
+  void rebuildStripKnobs(NodeStrip& st, const ChainItem& b);  // comp sig-slot rebind (m03659)
+  void fillCellsFrom(const std::vector<ChainItem>& lane);  // cells from ANY lane
 
   // Cell actions.
   void selectCell(const std::string& blockId);
@@ -128,16 +130,28 @@ private:
   // mirrors EffectTile's convIrChooser_ flow).
   void startConvIrLoader(const std::string& blockId);
 
+  void applyPreview();  // drag: rebuild cells from the optimistic lane
+  void moveActiveTo(int target);  // drag: splice the optimistic lane
+  void finishSort();  // drag end: commit the final order to the chain
+
   Services& services_;
   Model model_;
   NodeStrip* strip_ = nullptr;
   std::vector<std::unique_ptr<NodeCell>> cells_;
   Ghost* ghost_ = nullptr;
+  // The drag cursor (m01453): the ghost is non-intercepting so it cannot own
+  // the cursor — the desktop cursor is swapped for the gesture's duration.
+  static juce::MouseCursor g_savedCursor;
+  static bool g_dragCursorWasSet;
   mutable NodeCell* dragCell_ = nullptr;
   juce::Point<float> grabOffset_;
-  std::string draggingId_;  // the lane item in flight (inserts are lane items too)
+  std::string activeId_;  // the in-flight lane item (inserts are lane items too)
   int dragFromCell_ = -1;
   bool dragInGrid_ = false;
+  // The drag's OPTIMISTIC lane (m03710, gallery imitation): empty when idle;
+  // during a hold it mirrors Model::laneOf and moveActiveTo splices it, so
+  // the grid reflows LIVE under the pointer exactly like the gallery.
+  std::vector<ChainItem> preview_;
   std::unique_ptr<juce::FileChooser> convIrChooser_;  // strip "Load IR..."
   std::unique_ptr<ContextMenu> stripMenu_;  // the strip's mode/type menus
   bool nodeView_ = true;

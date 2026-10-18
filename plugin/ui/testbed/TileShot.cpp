@@ -733,8 +733,8 @@ int runStripMenu(const juce::StringArray& a) {
   if (mode >= 0) {
     const juce::var st2 = world.backend.getChainState(0);
     const auto* lane2 = st2.getProperty("chain", juce::var()).getArray();
-    world.backend.setBlockParam(lane2->getReference(0)["blockId"].toString().toStdString(),
-                                "reverbMode", mode);
+    const juce::String mid = lane2->getReference(0)["blockId"].toString().toStdString();
+    world.backend.setBlockParam(mid.toStdString(), kind == "compressor" ? "compMode" : "reverbMode", mode);
   }
   juce::MessageManager::getInstance()->runDispatchLoopUntil(600);  // settle
 

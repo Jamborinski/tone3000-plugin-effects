@@ -18,6 +18,14 @@ ChainScreen::ChainScreen(Services& services)
   addAndMakeVisible(gallery_);
   addAndMakeVisible(node_);
   node_.setNodeView(false);
+  // Cold start in the GALLERY view never calls setView (nodeView_ is already
+  // false), so the NodeView container — a full-bounds sibling added AFTER the
+  // gallery, thus on top — must be hidden explicitly. setNodeView(false) only
+  // hides its children; a visible empty container still eats every click and
+  // wheel over the gallery, so the restart-in-gallery app looked like the node
+  // view was overlaying it (user m03562). setView(true) will setVisible(true)
+  // when the pref is on.
+  node_.setVisible(false);
 
   // The view mode is a UiPref (the ticket's views layer: not a block param,
   // no four-state-place work).

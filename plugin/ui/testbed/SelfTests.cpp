@@ -1916,8 +1916,14 @@ struct GalleryViewTests : juce::UnitTest {
       if (menu == nullptr) return;
       expect(toGallery(live));
       LiveScenario::pump(300);  // the dismiss posts off the watcher callback
-      expect(!menu->isOpen());
-      expect(first(live.root(), [](juce::Component& c) { return isPopover(c); }) == nullptr);
+      // Do NOT read `menu` past the toggle: dismiss() removes the popover
+      // from the overlay layer AND deletes it — the pointer dangles (UAF
+      // turned this expect into a flaky failure under Release optimisation).
+      // The survival proof is the absence of any popover in the layer.
+      int survivors = 0;
+      for (auto* ch : live.root().overlayLayer().getChildren())
+        if (isPopover(*ch)) ++survivors;
+      expect(survivors == 0);
     }
     {
       beginTest("gallery wheel scroll is alive after a node-view cycle");

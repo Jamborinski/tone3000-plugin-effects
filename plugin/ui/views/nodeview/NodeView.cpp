@@ -67,6 +67,10 @@ int g_dropTarget = -1;
 // The strip's block id, so a chain refresh while a knob is being turned
 // refreshes values IN PLACE (no knob rebuild, no drag interruption).
 std::string g_lastStripBlockId;
+// A mode change swapped the comp's signature slot (KNEE↔CLIP) — the next
+// syncStrip rebuilds the knob row (the values loop reads the stale param).
+bool g_stripDirty = false;
+int g_stripCompMode = 0;
 int g_irLoaderSeq = 0;  // the active Load-IR launch (stale-token guard)
 
 juce::Font labelFont() { return Fonts::sans(11.0f); }
@@ -168,6 +172,14 @@ struct CellState {
   bool presetEmpty = false;  // the whole lane is empty/insert slots
 };
 
+// A lane is "preset empty" when it carries no real block (inserts only) —
+// the grid then shows the hover "add" squares in every slot.
+bool presetEmpty(const std::vector<ChainItem>& lane) {
+  for (const auto& it : lane)
+    if (!it.isInsert) return false;
+  return true;
+}
+
 const char* kindSvg(const juce::String& k) {
   if (k == "delay") return custom_icons::kFxDelay;
   if (k == "chorus") return custom_icons::kFxChorus;
@@ -225,6 +237,11 @@ std::vector<CellMenuItem> cellMenuItems(const t3k::ui::ChainItem* b,
 }
 
 }  // namespace
+
+// Static drag-cursor state (declared on NodeView; the anonymous namespace
+// above is NOT an enclosing namespace, so the definition lives here).
+juce::MouseCursor NodeView::g_savedCursor;
+bool NodeView::g_dragCursorWasSet = false;
 
 // ---------------------------------------------------------------- NodeCell
 
@@ -433,14 +450,12 @@ class NodeView::Ghost : public juce::Component {
 public:
   explicit Ghost(juce::Image image) : image_(std::move(image)) {
     setSize(image_.getWidth(), image_.getHeight());
-    // Must INTERCEPT: it owns the drag cursor (m01453) while it follows
-    // the pointer — a non-intercepting component's setMouseCursor is inert.
-    setInterceptsMouseClicks(true, true);
-    setMouseCursor(juce::MouseCursor::DraggingHandCursor);
-    // LIGHT transparency (m01453, Procreate-style clone): the grid shows
-    // through clearly — batch-3's 0.6 was closer to opaque than the user
-    // wanted.
-    setAlpha(0.35f);
+    setInterceptsMouseClicks(false, false);
+    // m03710: the gallery's drag is the reference — the tile travels OPAQUE
+    // (the gallery's own kDragGhostOpacity ghost is 0.75 because the faded
+    // original stays under it; here the source slot VACATES via
+    // fillCellsFrom, so the ghost carries the full opacity).
+    setAlpha(1.0f);
   }
 
   void paint(juce::Graphics& g) override { g.drawImageAt(image_, 0, 0); }
@@ -465,6 +480,8 @@ public:
     addAndMakeVisible(hide_);
     addAndMakeVisible(convPlot_);
     convPlot_.setVisible(false);
+    addAndMakeVisible(convIr_);
+    convIr_.setVisible(false);
     loadIr_.onClick = [this] { v_.startConvIrLoader(g_lastStripBlockId); };
     loadIr_.setVisible(false);
     addAndMakeVisible(loadIr_);
@@ -480,16 +497,21 @@ public:
   IconButton& remove() { return remove_; }
   IconButton& hide() { return hide_; }
   KernelPlot& convPlot() { return convPlot_; }
+  juce::Label& convIr() { return convIr_; }
   juce::TextButton& loadIr() { return loadIr_; }
   std::vector<Knob*>& knobs() { return knobs_; }
   const std::vector<Knob*>& knobs() const { return knobs_; }
   // One value string per knob (the strip's persistent readout line).
   std::vector<juce::String>& values() { return values_; }
 
-  void clearContent() {
+  void clearKnobs() {
     for (auto* k : knobs_) delete k;
     knobs_.clear();
     values_.clear();
+    repaint();
+  }
+  void clearContent() {
+    clearKnobs();
     name_.setVisible(false);
     modeB_.setVisible(false);
     typeB_.setVisible(false);
@@ -497,6 +519,7 @@ public:
     remove_.setVisible(false);
     hide_.setVisible(false);
     convPlot_.setVisible(false);
+    convIr_.setVisible(false);
     loadIr_.setVisible(false);
     repaint();
   }
@@ -543,6 +566,10 @@ private:
   IconButton hide_{Icon::X, 20};  // the strip's ONLY close (left of power)
   juce::TextButton loadIr_;
   KernelPlot convPlot_;
+  // Loaded IR's identity line above the waveform (name + real seconds +
+  // mono/stereo) — the conv strip lacked it while the gallery tile carried
+  // it (user m03587).
+  juce::Label convIr_;
   std::vector<Knob*> knobs_;
   std::vector<juce::String> values_;
   int knobFace_ = 0;  // 0 = default kKnobFace; syncStrip sets the shrunk face
@@ -588,6 +615,7 @@ void NodeView::setNodeView(bool active) {
     for (auto& c : cells_) c->setVisible(false);
     strip_->setVisible(false);
     strip_->clearContent();
+    g_stripDirty = true;  // the next syncStrip is a fresh build (full rebuild)
   }
   refresh();
   // refresh() updates the cells (their own children) but never repaints the
@@ -603,39 +631,41 @@ void NodeView::chainChanged(const ChainState&) {
   repaint();
 }
 
-void NodeView::refresh() {
-  // A revision is usually OUR gesture (a knob turn in the strip below).
-  // Preserve the selection across the rebuild, or the strip closes the very
-  // moment the user touches a knob. clearSelection below still drops a block
-  // that genuinely left the chain.
-  const std::string selected = model_.selectedId;
-  model_ = Model(services_.chain.state());
-  if (!selected.empty()) model_.select(selected);
-  const auto& lane = Model::laneOf(services_.chain.state());
-  bool presetEmpty = true;
-  for (const auto& it : lane)
-    if (!it.isInsert) {
-      presetEmpty = false;
-      break;
-    }
+void NodeView::fillCellsFrom(const std::vector<ChainItem>& lane) {
+  // Rebuild the cell visuals from ANY lane (the native one on refresh, the
+  // optimistic preview_ mid-drag). The dragged item's slot shows no square —
+  // its opaque ghost is on the overlay (the gallery's placeholder: the slot
+  // simply vacates, nothing fades).
   for (int i = 0; i < (int)cells_.size(); ++i) {
     CellState cs;
-    cs.presetEmpty = presetEmpty;
-    const auto* b = model_.blockAt(i);
-    if (b != nullptr && !b->isInsert) {
+    cs.presetEmpty = presetEmpty(lane);
+    if (i < (int)lane.size()) {
+      const auto& it = lane[static_cast<size_t>(i)];
       cs.has = true;
-      cs.insert = false;
-      cs.effect = b->isEffect;
-      cs.kind = b->effectKind;
-      cs.active = b->params.enabled;
-      cs.title = b->isEffect ? Model::kind(b->effectKind).label : b->tone.title;
-    } else if (b != nullptr) {
-      cs.has = true;
-      cs.insert = true;
-      cs.title = "add";
+      cs.insert = it.isInsert;
+      cs.effect = it.isEffect;
+      cs.kind = it.effectKind;
+      cs.active = it.params.enabled;
+      cs.title = it.isEffect ? Model::kind(it.effectKind).label
+                             : it.tone.title;
     }
     cells_[i]->update(cs);
   }
+}
+
+void NodeView::refresh() {
+  // A revision is usually OUR gesture (a knob turn in the strip below, or
+  // the drag's OWN finishSort — preview_ is empty by then). Preserve the
+  // selection across the rebuild, or the strip closes the very moment the
+  // user touches a knob. clearSelection below still drops a block that
+  // genuinely left the chain. While a drag is in flight the cells render the
+  // OPTIMISTIC preview_ instead of the native lane (gallery law: a drag only
+  // ever reflows its own lane, so nothing external can land mid-drag).
+  const std::string selected = model_.selectedId;
+  model_ = Model(services_.chain.state());
+  if (!selected.empty()) model_.select(selected);
+  if (dragCell_ == nullptr)
+    fillCellsFrom(Model::laneOf(services_.chain.state()));
   if (!model_.selectedId.empty() &&
       services_.chain.state().findBlock(model_.selectedId) == nullptr)
     model_.clearSelection(model_.selectedId);
@@ -662,6 +692,61 @@ void NodeView::addIntoCell(int index, const juce::String& kind) {
 }
 
 // ------------------------------------------------------------------- drag
+//
+// Gallery imitation (m03710): the lane the cells render IS the drag preview.
+// beginCellDrag snapshots the native lane into preview_; every pointer move
+// splices that vector (moveActiveTo) and the grid reflows LIVE under the
+// opaque ghost — the reflow IS the preview, no separate cascade clones. The
+// original implementation did the opposite (a 0.35 Procreate ghost + a
+// computed drop-target border + faded displaced clones) and the user called
+// it "just wrong": "the thing you are dragging turns opaque and follows your
+// cursor and whatever you drag to rearranges to preview it".
+
+void NodeView::applyPreview() {
+  fillCellsFrom(preview_);
+  // A splice can grow/shrink the lane across the row cap — re-run the row
+  // visibility (resized() does this for the native lane on refresh).
+  if (rowY_ > 0) {
+    const int nRows = (int)preview_.size() > Row::kSlotCount ? 2 : 1;
+    for (int i = 0; i < (int)cells_.size(); ++i)
+      cells_[i]->setVisible(i < nRows * Row::kSlotCount);
+  }
+}
+
+void NodeView::moveActiveTo(int target) {
+  if (activeId_.empty()) return;
+  const int n = (int)preview_.size();
+  if (n == 0) return;
+  int from = -1;
+  for (int i = 0; i < n && from < 0; ++i)
+    if (preview_[static_cast<size_t>(i)].blockId == activeId_)
+      from = i;
+  if (from < 0) return;
+  int to = juce::jlimit(0, n - 1, target);
+  if (to == from) return;
+  // jlimit already keeps `to` in [0, n-1]: move the active item out,
+  // then re-insert it at `to` (a std::vector splice, JUCE-array-style).
+  ChainItem active = preview_[static_cast<size_t>(from)];
+  preview_.erase(preview_.begin() + from);
+  if (to < from) ++to;  // erase shifted the insert point left
+  preview_.insert(preview_.begin() + to, std::move(active));
+  applyPreview();
+}
+
+void NodeView::finishSort() {
+  const std::string id = activeId_;
+  preview_ = {};
+  activeId_.clear();
+  if (id.empty()) return;
+  const auto& native = Model::laneOf(services_.chain.state());
+  std::vector<std::string> ids;
+  ids.reserve(native.size());
+  for (const auto& it : native)
+    ids.push_back(it.blockId);
+  const auto order = model_.orderWith(id, g_dropTarget);
+  if (order.size() == ids.size() && ids != order)
+    (void)services_.chain.reorderBlocks(order);  // chainChanged -> refresh
+}
 
 void NodeView::beginCellDrag(NodeCell& cell,
                              const juce::Point<int>& pressLocal) {
@@ -672,10 +757,14 @@ void NodeView::beginCellDrag(NodeCell& cell,
 
   dragCell_ = &cell;
   dragFromCell_ = cell.index();
-  draggingId_.clear();
+  activeId_.clear();
   const auto& lane = Model::laneOf(services_.chain.state());
   if (dragFromCell_ >= 0 && dragFromCell_ < (int)lane.size())
-    draggingId_ = lane[dragFromCell_].blockId;
+    activeId_ = lane[static_cast<size_t>(dragFromCell_)].blockId;
+  // The optimistic lane starts as the native one — from here the cells are
+  // driven by preview_ until finishSort/cancelDrag.
+  preview_ = lane;
+  applyPreview();
 
   cell.repaint();
   snapshot_ = cell.createComponentSnapshot(cell.getBounds());
@@ -687,13 +776,14 @@ void NodeView::beginCellDrag(NodeCell& cell,
   const auto pressOverlay =
       overlay.getLocalPoint(&cell, pressLocal).toFloat() -
       cellInOverlay.getPosition().toFloat();
-  // m01453: the pointer becomes a DRAG cursor for the whole gesture (the
-  // ghost sits under it and owns the cursor while it travels — see the
-  // Ghost ctor).
-  grabOffset_ = pressOverlay -
-                ghost_->getBounds().toFloat().getCentre();
+  grabOffset_ = pressOverlay - ghost_->getBounds().toFloat().getCentre();
   ghost_->setTopLeftPosition(pressOverlay.roundToInt());
   overlay.addAndMakeVisible(*ghost_);
+  // The pointer cursor: the gallery's ghost is non-intercepting too and it
+  // never swaps the desktop cursor (JUCE 9's juce::Desktop has no
+  // setMouseCursor here), so we match the gallery exactly — the OS cursor
+  // stays as-is while the opaque ghost follows it.
+  g_dragCursorWasSet = false;
 }
 
 void NodeView::cellDragMove(NodeCell& /*cell*/,
@@ -706,9 +796,6 @@ void NodeView::cellDragMove(NodeCell& /*cell*/,
       grabOffset_;
   ghost_->setTopLeftPosition(pos.roundToInt());
 
-  // The transparent drop preview follows the pointer: inside a grid slot it
-  // highlights that slot; outside the grid it disappears (dropping there
-  // cancels the move — the node goes back to where it was).
   if (rowY_ > 0) {
     const int row = (centreInView.y >= rowY_ + kRowH + kRowGap) ? 1 : 0;
     const float x = centreInView.x;
@@ -718,42 +805,43 @@ void NodeView::cellDragMove(NodeCell& /*cell*/,
     const bool inGrid =
         x >= rowX_ - 4.0f && x <= rowX_ + Row::kSlotCount * cellW_ + 4.0f &&
         y >= gridTop - 4.0f && y <= gridBottom - 4.0f;
+    int target = -1;
     if (inGrid) {
       int slot = (int)juce::roundToInt((x - rowX_) / std::max(1.0f, (float)cellW_));
       slot = juce::jlimit(0, Row::kSlotCount - 1, slot);
-      const int target = row * Row::kSlotCount + slot;
-      if (target != g_dropTarget) {
-        g_dropTarget = target;
-        // The drop preview AND the displacement cascade live in
-        // NodeView::paint (m01453) — repaint the whole grid, not one cell.
-        repaint();
-      }
-      dragInGrid_ = true;
-    } else if (dragInGrid_) {
-      g_dropTarget = -1;
-      dragInGrid_ = false;
-      repaint();
+      target = row * Row::kSlotCount + slot;
     }
+    if (target != g_dropTarget) {
+      g_dropTarget = target;
+      repaint();  // the drop-zone border (NodeView::paint)
+    }
+    dragInGrid_ = inGrid;
+    if (target >= 0)
+      moveActiveTo(target);  // the grid reflows LIVE (gallery law)
   }
 }
 
 void NodeView::cellDragEnd(NodeCell& /*cell*/) {
-  const int target = g_dropTarget;
-  if (target >= 0 && target < (int)cells_.size())
-    cells_[target]->repaint();  // drop the highlight
-  g_dropTarget = -1;
   // Dropping outside any grid position cancels: the node goes back to where
-  // it was (m02010). Inside, the orderWith splice shoves the neighbours in
-  // the direction the node was dragged FROM.
-  dragInGrid_ = false;
-  if (target < 0) {
-    cancelDrag();
-    return;
-  }
-  if (!draggingId_.empty() && target != dragFromCell_ &&
-      dragFromCell_ >= 0) {
-    const auto order = model_.orderWith(draggingId_, target);
-    if (!order.empty()) services_.chain.reorderBlocks(order);
+  // it was (m02010) — preview_ simply discards. Inside, commit the FINAL
+  // preview order (it is already where the pointer left it — no snap-back).
+  if (!dragInGrid_) finishSort();  // native lane, no commit
+  else {
+    std::vector<std::string> ids;
+    ids.reserve(preview_.size());
+    for (const auto& it : preview_)
+      ids.push_back(it.blockId);
+    const auto& native = Model::laneOf(services_.chain.state());
+    preview_ = {};
+    activeId_.clear();
+    if (ids.size() == native.size()) {
+      std::vector<std::string> nativeIds;
+      nativeIds.reserve(native.size());
+      for (const auto& it : native)
+        nativeIds.push_back(it.blockId);
+      if (nativeIds != ids)
+        (void)services_.chain.reorderBlocks(ids);  // chainChanged -> refresh
+    }
   }
   cancelDrag();
 }
@@ -764,17 +852,22 @@ void NodeView::cancelDrag() {
     delete ghost_;
     ghost_ = nullptr;
   }
+  if (g_dragCursorWasSet)
+    (void)juce::Desktop::getInstance();  // no cursor API in JUCE 9 here
+  g_dragCursorWasSet = false;
   snapshot_ = {};
   dragCell_ = nullptr;
-  draggingId_.clear();
+  activeId_.clear();
   dragFromCell_ = -1;
   dragInGrid_ = false;
+  preview_ = {};
+  fillCellsFrom(Model::laneOf(services_.chain.state()));
   if (g_dropTarget >= 0 && g_dropTarget < (int)cells_.size()) {
     cells_[g_dropTarget]->repaint();
   }
   g_dropTarget = -1;
+  repaint();
 }
-
 // ------------------------------------------------------------------ paint
 
 void NodeView::paint(juce::Graphics& g) {
@@ -790,7 +883,12 @@ void NodeView::paint(juce::Graphics& g) {
   // nodes stay visibly connected (m01834/35). Segments jump from one
   // occupied slot's right edge to the next occupied slot's left edge, so
   // empty slots in between stay clear.
-  const auto& lane = Model::laneOf(services_.chain.state());
+  // The lane being drawn: the OPTIMISTIC preview_ while a drag is in flight
+  // (the grid reflows live, m03710), the native lane otherwise — the signal
+  // line follows the reflow, the way the gallery's ghost rail does.
+  const bool dragging = dragCell_ != nullptr;
+  const std::vector<ChainItem>& lane =
+      dragging ? preview_ : Model::laneOf(services_.chain.state());
   const int nRows = (int)lane.size() > Row::kSlotCount ? 2 : 1;
   g.setColour(juce::Colours::white.withAlpha(0.45f));
   for (int r = 0; r < nRows; ++r) {
@@ -852,53 +950,20 @@ void NodeView::paint(juce::Graphics& g) {
                                     : rowY_ + cellSquare_ / 2.0f;
     g.drawSingleLineText("Out", rowX_ + Row::kSlotCount * cellW_ + 4, outY - 4);
   }
-  if (g_dropTarget >= 0 && g_dropTarget < (int)cells_.size() &&
-      !draggingId_.empty()) {
+  if (dragging && g_dropTarget >= 0 && g_dropTarget < (int)cells_.size() &&
+      !activeId_.empty() && g_dropTarget != dragFromCell_) {
+    // The drop-zone ring (gallery: the lane has already parted to make room
+    // — the ring just marks where the pointer is aiming). The old cascade of
+    // faded displaced-clone icons is gone: the grid IS the preview now.
     const auto c = cells_[g_dropTarget]->getBounds().toFloat();
     const auto sq = juce::Rectangle<float>(
         (c.getWidth() - (float)cellSquare_) / 2.0f, 0.0f, (float)cellSquare_,
         (float)cellSquare_);
     paint::border(g, sq.reduced(4.0f), 6.0f, theme::kHighlight, 2.0f);
-    // The dragged effect's icon in the drop zone (batch-3 item 8).
-    const auto* dragB = services_.chain.state().findBlock(draggingId_);
+    const auto* dragB = services_.chain.state().findBlock(activeId_);
     if (dragB != nullptr && dragB->isEffect)
       Icons::draw(g, kindSvg(dragB->effectKind), sq.reduced(16.0f),
                   theme::kHighlight.withAlpha(0.5f));
-
-    // m01453: the DISPLACEMENT preview. The drop splice (Model::orderWith)
-    // shoves every block between the source and the target one slot in the
-    // drag direction — show where each will land: a faded clone icon in
-    // the destination cell. At the chain's ends the clamped splice makes
-    // this one-directional for free (nothing wraps past the ends).
-    if (g_dropTarget != dragFromCell_) {
-      const auto preview = model_.orderWith(draggingId_, g_dropTarget);
-      if (preview.size() == lane.size() && !preview.empty()) {
-        for (size_t ni = 0; ni < preview.size(); ++ni) {
-          if (ni >= cells_.size()) continue;
-          const auto& id = preview[ni];
-          if (id == draggingId_) continue;
-          size_t oldIdx = (size_t)-1;
-          for (size_t oi = 0; oi < lane.size(); ++oi)
-            if (lane[oi].blockId == id) {
-              oldIdx = oi;
-              break;
-            }
-          if (oldIdx == (size_t)-1 || oldIdx == ni || oldIdx >= cells_.size())
-            continue;
-          const auto* dispB = services_.chain.state().findBlock(id);
-          if (dispB == nullptr) continue;
-          const auto dc = cells_[ni]->getBounds().toFloat();
-          const auto dsq = juce::Rectangle<float>(
-              (dc.getWidth() - (float)cellSquare_) / 2.0f, 0.0f,
-              (float)cellSquare_, (float)cellSquare_);
-          paint::border(g, dsq.reduced(8.0f), 5.0f,
-                        theme::kMuted.withAlpha(0.8f), 1.5f);
-          if (dispB->isEffect)
-            Icons::draw(g, kindSvg(dispB->effectKind), dsq.reduced(20.0f),
-                        theme::kMuted.withAlpha(0.7f));
-        }
-      }
-    }
   }
 }
 
@@ -930,7 +995,7 @@ void NodeView::resized() {
   const bool convStrip =
       selB != nullptr && selB->isEffect && selB->effectKind == "convolution"
       && strip_->isVisible();
-  const int stripH = kStripHeadH + 6 + (convStrip ? 64 : 0) + kh + 20;
+  const int stripH = kStripHeadH + 6 + (convStrip ? 78 : 0) + kh + 20;
   // Docked to the BOTTOM of the view (m01857): the grid sits up top, the
   // strip fills the full width along the bottom edge, gap kStripBottomGap.
   const int stripY = juce::jmax(0, getHeight() - stripH - kStripBottomGap);
@@ -1006,11 +1071,12 @@ void NodeView::syncStrip() {
     updateStripChrome(*b);
     updateStripKnobValues(st, *b);
     refreshModeLine(st, *b);  // a mode pick must be visible immediately
+    if (g_stripDirty) rebuildStripKnobs(st, *b);
     layoutStripKnobs();
     return;
   }
 
-  st.clearContent();
+  st.clearKnobs();  // fresh pick: no knobs yet; keep the header components
   g_lastStripBlockId = id;
 
   // Stacked header (Q-Cortex style): block name (bold white) over the
@@ -1035,82 +1101,15 @@ void NodeView::syncStrip() {
   refreshModeLine(st, *b);
   st.hide().setVisible(true);  // the X is the strip's ONLY close (batch-3)
 
-  // Knobs: one row across the full strip width (Line 6 style). The knob
-  // draws its own name label below the face; the persistent value readout
-  // ABOVE the face is painted by NodeStrip::paint (values_).
-  std::vector<EffectParams> list;
-  auto add = [&](const KnobScale* scale, const char* param, const char* label,
-                 double raw, help::Key hk) {
-    EffectParams p{scale, param, label, raw, hk};
-    list.push_back(std::move(p));
-  };
-  if (b->isEffect) {
-    add(&scales::percent(), "mix", "Mix", b->params.mix,
-        help::Key::effectMix);
-    add(&scales::gainDb(), "inputGain", "In", b->params.inputGain,
-        help::Key::effectInput);
-    add(&scales::gainDb(), "outputGain", "Out", b->params.outputGain,
-        help::Key::effectOutput);
-    // Parity law (m01128): strip face == full gallery face. Full table for
-    // every kind (not compact). Reverb additionally gets its 2 per-mode sig
-    // slots (Air/Early, Springs/Sag, etc.) — the tile binds them separately.
-    auto rest = paramsFor(*b, false);
-    for (auto& p : rest) list.push_back(std::move(p));
-    if (b->effectKind == "reverb") {
-      const int mode = juce::jlimit(0, Reverb::kNumModes - 1, b->reverbMode);
-      list.push_back(reverbSigSlot(*b, mode, 0));
-      list.push_back(reverbSigSlot(*b, mode, 1));
-    }
-  } else {
-    add(&scales::gainDb(), "inputGain", "In", b->params.inputGain,
-        help::Key::effectInput);
-    add(&scales::gainDb(), "outputGain", "Out", b->params.outputGain,
-        help::Key::effectOutput);
-    add(&scales::percent(), "mix", "Mix", b->params.mix,
-        help::Key::effectMix);
-  }
-  constexpr int kMaxKnobs = 12;  // the cap must reach the gallery's
-                                 // full-conv face (3 trio + 9) — a tighter
-                                 // cap silently drops trailing knobs (2026-10-17:
-                                 // 10 hid reverb LoCut territory, user m00896)
-  // Dense strips shrink the face so 12 knobs fit the strip width (task #9
-  // m00157: "ok to shrink knobs/fonts to fit"); labels stay 14px until the
-  // face drops further.
-  const int face = (int)std::min(list.size(), (size_t)kMaxKnobs) > 8 ? 32
-                                                                     : (int)kKnobFace;
-  st.setKnobFace(face);
-  for (int i = 0; i < (int)std::min(list.size(), (size_t)kMaxKnobs); ++i) {
-    const auto* sc = list[i].scale;
-    // Identity-stored knobs (mix/in/out): the stored value IS the 0..1 knob
-    // position. Display-stored (paramsFor): convert through the scale.
-    // The gallery does mix_.setValue(raw) / knob->setValue(knobFromStored) —
-    // the strip must match (batch-3 m04252 item 4/9, m04302).
-    const bool identity =
-        (sc == &scales::percent() || sc == &scales::gainDb());
-    const float pos =
-        identity ? (float)list[i].raw
-                 : (float)knobFromStored(*sc, list[i].raw);
-    Knob::Options o;
-    o.label = list[i].label.toStdString();
-    o.size = face;
-    o.scale = sc;
-    o.labelOnTop = true;  // value slot above the face, name below
-    o.defaultValue = pos;
-    o.help = list[i].help;
-    Knob* knob = new Knob(o);
-    knob->setValue(pos);
-    knob->onChange = [this, id, sc, identity,
-                         param = list[i].param.toStdString()](float v) {
-      services_.chain.setBlockParam(
-          id, param, identity ? (double)v : knobToStored(*sc, (double)v));
-    };
-    st.addKnob(knob, sc->format(pos));
-  }
-
-
- 
   updateStripChrome(*b);
+  rebuildStripKnobs(st, *b);
+  // layoutStripKnobs positions the header (name/mode/type buttons) — the
+  // old fresh-pick called it here directly; rebuildStripKnobs must carry
+  // that responsibility (without it modeB_ stays 0x0 and its menu never opens).
   layoutStripKnobs();
+  // A fresh pick starts clean: the comp-mode watch arms on this block's mode.
+  g_stripCompMode = b->compMode;
+  st.repaint();
   // The strip's height depends on the knob count and face size — re-run the
   // layout so a freshly selected 12-knob block grows/shrinks correctly
   // (resized only fires on a size change, which never happens here).
@@ -1130,6 +1129,85 @@ void NodeView::updateStripChrome(const ChainItem& b) {
     st.remove().setColour(std::nullopt);
     st.remove().setHelpText(help::text(help::Key::removeBlock));
   }
+}
+
+// Builds (or rebuilds) the strip knob row for b. Fresh selection: the full
+// list. Same-block rebuild (g_stripDirty): the comp SIGNATURE slot changed
+// under us (KNEE on VCA / CLIP on the other four) — the gallery's
+// syncCompSig rebinds the knob on every mode change; the strip used to
+// rebind only reverb sig slots, so a mode switch mid-session left a stale
+// KNEE/CLIP param showing the wrong value (user m03659: Vari-Mu CLIP 0 %
+// in the strip vs 100 % on the gallery tile). Count/order are stable across
+// comp modes (one sig slot, 8 engine params), so the in-place rebuild keeps
+// every other knob and the selection; a reverb sig swap (Air/Early…) is the
+// same one-slot shape. The drag survives the rebuild the same way it does
+// in updateStripKnobValues.
+void NodeView::rebuildStripKnobs(NodeStrip& st, const ChainItem& b) {
+  const juce::String id = b.blockId;
+  // The cap must reach the gallery's full-conv face (3 trio + 9) — a tighter
+  // cap silently drops trailing knobs (2026-10-17: 10 hid reverb LoCut
+  // territory, user m00896). Dense strips shrink the face so 12 fit (task #9).
+  constexpr int kMaxKnobs = 12;
+  std::vector<EffectParams> list;
+  auto add = [&](const KnobScale* scale, const char* param, const char* label,
+                 double raw, help::Key hk) {
+    list.push_back(EffectParams{scale, param, label, raw, hk});
+  };
+  if (b.isEffect) {
+    // Parity law (m01128): strip face == full gallery face. The trio is
+    // NOT part of paramsFor — the baseline inline loop added it first.
+    add(&scales::percent(), "mix", "Mix", b.params.mix, help::Key::effectMix);
+    add(&scales::gainDb(), "inputGain", "In", b.params.inputGain,
+        help::Key::effectInput);
+    add(&scales::gainDb(), "outputGain", "Out", b.params.outputGain,
+        help::Key::effectOutput);
+    auto rest = paramsFor(b, false);
+    for (auto& p : rest) list.push_back(p);
+  } else {
+    add(&scales::gainDb(), "inputGain", "In", b.params.inputGain,
+        help::Key::effectInput);
+    add(&scales::gainDb(), "outputGain", "Out", b.params.outputGain,
+        help::Key::effectOutput);
+    add(&scales::percent(), "mix", "Mix", b.params.mix, help::Key::effectMix);
+  }
+  if (b.effectKind == "reverb") {
+    const int mode = juce::jlimit(0, Reverb::kNumModes - 1, b.reverbMode);
+    list.push_back(reverbSigSlot(b, mode, 0));
+    list.push_back(reverbSigSlot(b, mode, 1));
+  }
+  const int face = (int)std::min(list.size(), (size_t)kMaxKnobs) > 8 ? 32
+                                                                     : (int)kKnobFace;
+  st.setKnobFace(face);
+  st.clearKnobs();  // knobs only — clearContent hides the header (modeB_)
+  g_stripDirty = false;
+  auto addOne = [&](int i, const EffectParams& p) {
+    const auto* sc = p.scale;
+    // Identity-stored knobs (mix/in/out): the stored value IS the 0..1 knob
+    // position. Display-stored (paramsFor): convert through the scale.
+    // The gallery does mix_.setValue(raw) / knob->setValue(knobFromStored) —
+    // the strip must match (batch-3 m04252 item 4/9, m04302).
+    const bool identity =
+        (sc == &scales::percent() || sc == &scales::gainDb());
+    const float pos =
+        identity ? (float)p.raw : (float)knobFromStored(*sc, p.raw);
+    Knob::Options o;
+    o.label = p.label.toStdString();
+    o.size = face;
+    o.scale = sc;
+    o.labelOnTop = true;  // value slot above the face, name below
+    o.defaultValue = pos;
+    o.help = p.help;
+    auto* knob = new Knob(o);
+    knob->setValue(pos);
+    knob->onChange = [this, id = id.toStdString(), sc, identity,
+                         param = p.param.toStdString()](float v) {
+      services_.chain.setBlockParam(
+          id, param, identity ? (double)v : knobToStored(*sc, (double)v));
+    };
+    st.addKnob(knob, sc->format(pos));
+  };
+  for (int i = 0; i < (int)std::min(list.size(), (size_t)kMaxKnobs); ++i)
+    addOne(i, list[i]);
 }
 
 void NodeView::updateStripKnobValues(NodeStrip& st, const ChainItem& b) {
@@ -1157,6 +1235,14 @@ void NodeView::updateStripKnobValues(NodeStrip& st, const ChainItem& b) {
         const auto p = reverbSigSlot(b, mode, s);
         setv(3 + i++, p.scale, p.raw, false);
       }
+    }
+    // The compressor's mode-dependent signature slot (KNEE↔CLIP, the LAST
+    // entry of paramsFor) rebinds on a mode change — same-block, so the
+    // values loop above just read the OLD param into the new knob. Flag a
+    // full knob rebuild; syncStrip runs it right after this call.
+    if (b.effectKind == "compressor" && g_stripCompMode != b.compMode) {
+      g_stripCompMode = b.compMode;
+      g_stripDirty = true;
     }
   } else {
     setv(0, &scales::gainDb(), in, true);
@@ -1191,7 +1277,7 @@ void NodeView::layoutStripKnobs() {
   // Conv node: the IR waveform plot + Load-IR button sit above the knob
   // row (m01868); the strip's extra height for it is budgeted in resized().
   const bool conv = st.convPlot().isVisible();
-  const int plotTop = kStripHeadH + 6;
+  const int plotTop = kStripHeadH + 6 + (conv ? 18 : 0);  // convIr_ line
   const int plotH = conv ? 64 : 0;
   // Dense strips (face < kKnobFace): tighten the vertical budget so the
   // shrunk face doesn't leave dead space.
@@ -1199,6 +1285,9 @@ void NodeView::layoutStripKnobs() {
   if (conv) {
     st.loadIr().setBounds(st.getWidth() - 250, plotTop, 120, 24);
     st.convPlot().setBounds(14, plotTop, juce::jmin(520, st.getWidth() - 280), 56);
+    st.convIr().setFont(labelFont());
+    st.convIr().setColour(juce::Label::textColourId, theme::kWhite);
+    st.convIr().setBounds(14, kStripHeadH + 3, juce::jmin(520, st.getWidth() - 280), 14);
   }
   const int knobTop = plotTop + plotH + (conv ? 0 : headPad);
   for (int i = 0; i < n; ++i)
@@ -1228,6 +1317,7 @@ void NodeView::showStripMenu(std::vector<ContextMenu::Item> items,
 // Menu opener for the strip's mode line (m02657: menus, not click/hold
 // cyclers). A row per mode of the block's engine; the current one is marked.
 void NodeView::openModeMenu() {
+
   const auto* b = model_.selectedId.empty()
                       ? nullptr
                       : services_.chain.state().findBlock(model_.selectedId);
@@ -1356,6 +1446,28 @@ void NodeView::hideStrip() {
 }
 
 void NodeView::pullConvPreview(NodeStrip& st, const ChainItem& b) {
+  // IR identity line above the waveform: the gallery tile's readout format
+  // (name; real engine seconds + mono/stereo; file-missing warning). The
+  // file's own name is not the truth for length, so the engine seconds win.
+  const juce::String secondsText = (b.convSeconds > 0.0005)
+      ? juce::String(b.convSeconds, 2) + juce::String(" s")
+      : juce::String();
+  const juce::String irTypeText =
+      (b.convIrChannels == 1)
+          ? juce::String(" Mono")
+      : (b.convIrChannels == 2)
+          ? juce::String(" Stereo")
+          : juce::String();
+  if (b.convIrLoaded && b.convIrName.isNotEmpty())
+    st.convIr().setText(b.convIrName + juce::String(juce::CharPointer_UTF8 (" \u00B7 ")) +
+                            secondsText + irTypeText,
+                        juce::dontSendNotification);
+  else if (b.convIrName.isNotEmpty())
+    st.convIr().setText(juce::String(juce::CharPointer_UTF8 ("IR FILE MISSING \u2014 ")) +
+                            b.convIrName,
+                        juce::dontSendNotification);
+  else
+    st.convIr().setText(juce::String(), juce::dontSendNotification);
   const auto v = services_.chain.convPreview(b.blockId);
   const auto* obj = v.getDynamicObject();
   if (obj == nullptr) {
