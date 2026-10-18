@@ -18,8 +18,10 @@
 #include "MockBackend.h"
 #include "MockSession.h"
 #include "Scenarios.h"
+#include "NodeViewE2E.h"
 #include "SelfTests.h"
 #include "core/Design.h"
+#include <focusrite/e2e/TestCentre.h>
 #include "core/Theme.h"
 #include "views/PluginRoot.h"
 
@@ -42,6 +44,9 @@ public:
     centreWithSize(host.getWidth(), host.getHeight());
     setVisible(true);
   }
+  // e2e handler root (the handler lives in Main.cpp's app, not the window class header).
+  PluginRoot& pluginRoot() { return host.pluginRoot(); }
+
   void closeButtonPressed() override { juce::JUCEApplication::getInstance()->systemRequestedQuit(); }
 
 private:
@@ -198,16 +203,39 @@ public:
       return;
     }
     window = std::make_unique<TestbedWindow>(*scenario, fixtures.root, args.contains("--live"));
+
+    // e2e (m04873/m04938): the node-view command layer. Inert unless the app
+    // was launched with --e2e-test-port=N (TestCentre::create reads it from
+    // the command line itself). The JS client connects immediately after
+    // launchApp resolves and drives node-drag-*/node-geometry/node-screenshot.
+    for (const auto& arg : args)
+      if (arg.startsWith("--e2e-test-port=")) {
+        e2e = focusrite::e2e::TestCentre::create(focusrite::e2e::TestCentre::LogLevel::silent);
+        e2eHandler = std::make_unique<NodeViewE2EHandler>(window->pluginRoot());
+        e2e->addCommandHandler(*e2eHandler);
+        break;
+      }
   }
 
   void shutdown() override {
     bench.reset();
+    if (e2e != nullptr) {
+      if (e2eHandler != nullptr) e2e->removeCommandHandler(*e2eHandler);
+      e2eHandler.reset();
+      e2e.reset();
+    }
     window.reset();
   }
 
 private:
   std::unique_ptr<TestbedWindow> window;
   std::unique_ptr<Bench> bench;
+  // The juce-end-to-end layer (m04873/m04938): only alive when the app is
+  // launched with --e2e-test-port=N (the TestCentre is inert otherwise), and
+  // only for the node-view diagnosis — it exposes node-drag-begin/move/end,
+  // node-geometry and node-screenshot.
+  std::unique_ptr<focusrite::e2e::TestCentre> e2e;
+  std::unique_ptr<NodeViewE2EHandler> e2eHandler;
 };
 
 }  // namespace t3k::ui::testbed

@@ -91,6 +91,9 @@ public:
   // painting) — capture, then release with endDragFromShot().
   void beginDragFromShot(int fromCell, int toCell);
   void endDragFromShot();
+  // e2e: every cell's centre in window (frame) coordinates, lane order.
+  std::vector<juce::Point<int>> cellCentresForE2E(juce::Component* frame) const;
+  juce::String gridForE2E() const;  // e2e debug only
   void paint(juce::Graphics& g) override;
   void resized() override;
 

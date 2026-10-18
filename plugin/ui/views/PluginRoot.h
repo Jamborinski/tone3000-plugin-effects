@@ -72,6 +72,7 @@ public:
   int designHeight() const { return getHeight(); }
 
   Services& services() { return services_; }
+  void setNodeViewE2E(bool nodeView);
   juce::Component& overlayLayer() override { return overlay_; }
   // Everything under the overlay layer, for the modals' blurred scrims.
   juce::Image snapshotBeneathOverlay(float scale);

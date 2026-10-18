@@ -44,6 +44,8 @@ target_sources(UiTestbed PRIVATE
     Scenarios.cpp
     SelfTests.h
     SelfTests.cpp
+    NodeViewE2E.h
+    NodeViewE2E.cpp
 )
 
 target_compile_definitions(UiTestbed PRIVATE
@@ -63,6 +65,8 @@ target_link_libraries(UiTestbed PRIVATE
     juce::juce_audio_utils
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags
+    # The e2e command layer (inert unless launched with --e2e-test-port=N).
+    focusrite-e2e::focusrite-e2e
 )
 
 # TileShot (docs/agents/ui-snapshots.md): render ONE gallery tile with a
@@ -104,6 +108,14 @@ target_link_libraries(TileShot PRIVATE
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags
 )
+
+# juce-end-to-end (m04873/m04938): a command-socket test layer for the
+# testbed. It is a SUPPLEMENT to DspTests / the selftest / the TileShot
+# goldens, never a replacement. UiTestbed links it; the shipped plugin does
+# not. The JS side (plugin/ui/testbed/e2e) drives node-drag-*/node-geometry/
+# node-screenshot against a VISIBLE testbed window on X.
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/focusrite-e2e"
+                focusrite-e2e)
 
 # Pure-logic unit tests (parsers, wrapping, OAuth, token refresh, the
 # connection gate's state machine, tuner math). Captures are not registered:

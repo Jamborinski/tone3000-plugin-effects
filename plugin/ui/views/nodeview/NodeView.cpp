@@ -767,9 +767,14 @@ void NodeView::beginCellDrag(NodeCell& cell,
   applyPreview();
 
   cell.repaint();
-  snapshot_ = cell.createComponentSnapshot(cell.getBounds());
+  // getLocalBounds() (not getBounds()): createComponentSnapshot clips the
+  // area against the component's OWN bounds — getBounds() is in the PARENT's
+  // space, so for any cell past the first the intersection is empty and the
+  // snapshot is 0×0 (no ghost). cell0 at x=36 < w=83 survives by luck (the
+  // "quarter ghost only for the first node" bug, user m04679).
+  snapshot_ = cell.createComponentSnapshot(cell.getLocalBounds());
   ghost_ = new Ghost(snapshot_);
-  const auto cellInOverlay = overlay.getLocalArea(&cell, cell.getBounds());
+  const auto cellInOverlay = overlay.getLocalArea(&cell, cell.getLocalBounds());
   // The ghost starts at the cell's ACTUAL overlay position (gallery pattern:
   // ghost topLeft = tile topLeft in overlay). The grab offset is the press
   // point relative to the cell top-left — the pixel under the pointer at
@@ -1434,6 +1439,24 @@ juce::String NodeView::ghostStateForShot() const {
 
 const std::vector<ChainItem>& NodeView::laneForShot() const {
   return Model::laneOf(services_.chain.state());
+}
+
+juce::String NodeView::gridForE2E() const {
+  return juce::String("rowX=") + juce::String(rowX_) + " rowY=" + juce::String(rowY_) +
+         " cellW=" + juce::String(cellW_) + " viewH=" + juce::String(getHeight()) +
+         " viewW=" + juce::String(getWidth());
+}
+
+std::vector<juce::Point<int>> NodeView::cellCentresForE2E(juce::Component* frame) const {
+  std::vector<juce::Point<int>> out;
+  if (frame == nullptr) return out;
+  for (const auto& c : cells_) {
+    if (c == nullptr || !c->isVisible()) continue;
+    // getLocalArea(frame, cell, cellBounds): cell-local -> frame-local,
+    // depth-proof (the cell's immediate parent is an inner lane container).
+    out.push_back(frame->getLocalArea(c.get(), c->getLocalBounds()).getCentre());
+  }
+  return out;
 }
 
 void NodeView::beginDragFromShot(int fromCell, int toCell) {

@@ -40,3 +40,4 @@ staging/
 build-ui-debug/
 .pi/
 SVG Style Images/
+node_modules/

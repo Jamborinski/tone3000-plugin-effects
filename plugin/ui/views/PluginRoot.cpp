@@ -355,6 +355,11 @@ void PluginRoot::handleBannerAction(BannerAction action) {
 }
 
 // Takeovers
+void PluginRoot::setNodeViewE2E(bool nodeView) {
+  services_.prefs.setBool(UiPrefs::kNodeView, nodeView);
+  main_.chainScreen().setView(nodeView);
+}
+
 void PluginRoot::setTunerShown(bool shown) {
   if (shown == tunerShown()) return;
   if (shown) {
