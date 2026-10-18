@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:7a2f9816b3a813e4271e73f6983a7f6d9bd91850b82955a0fdaf016b34fe1914",
+  "pageVersion": "sha256:82483ee46c1007530315dd0e4cafe356ca9c323c9e2f86992be30d5d7ee48cd7",
   "claims": [
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
@@ -130,7 +130,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/ChainScreen.cpp",
-          "version": "repo-file-v1:sha256:3ab82442f0bc73b285bedfdfcb9a2a90681ae9b08308591107d4720ffd103f5a"
+          "version": "repo-file-v1:sha256:968cc2cdc2a6b1bf5f7d62a917dd4eaef770decb7cd66ff66592dd1f222ae9c5"
         }
       ]
     },
@@ -147,10 +147,20 @@
           "version": "repo-file-v1:sha256:7bd93c2831b06ae76d46f1241363ccb5195b957423fd1c1b56ce157a22a4f996"
         }
       ]
+    },
+    {
+      "id": "claim_ca6dfb5bf979419db011bc35885c902d",
+      "statement": "ChainScreen::setView(false) sweeps the PluginRoot overlay layer with Popover::dismissAll: a strip mode/type menu is a Popover parented to the overlay, and hiding the strip only removes the ANCESTOR — the panel would ghost over the gallery (ComponentMovementWatcher fires only on the anchor's own visible-flag toggle, never on an ancestor's).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/ChainScreen.cpp",
+          "version": "repo-file-v1:sha256:968cc2cdc2a6b1bf5f7d62a917dd4eaef770decb7cd66ff66592dd1f222ae9c5"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T06:21:15.263Z"
+    "at": "2026-10-18T14:31:43.894Z"
   }
 }

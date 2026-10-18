@@ -55,7 +55,7 @@ sources:
 generated: { by: "pi", at: "2026-10-14T21:12:00.922Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-16T18:52:35.705Z
+    at: 2026-10-18T14:31:43.894Z
 ---
 
 # TONE3000
@@ -202,7 +202,11 @@ cmake --build build-ui -j
 ```
 
 See the working guide in `plugin/ui/README.md` and the design record in
-`plugin/docs/native-ui.md`.
+`plugin/docs/native-ui.md`. Since 2026-10-18 (`f0b06d4`) the testbed also
+hosts a supplemental **juce-end-to-end** layer (`--e2e-test-port=N` +
+`e2e/node-drag.js`) — an addition, not a replacement, for the testbed gates
+(see `/openwiki/systems/ui/page.md` and
+`/openwiki/systems/ui/node-view.md`).
 
 ## Windows (MinGW cross-compile)
 

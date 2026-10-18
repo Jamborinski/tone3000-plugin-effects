@@ -31,10 +31,10 @@ sources:
     resource: repo://test/src/node_model_tests.cpp
   - id: openwiki-source-a9b10161f0531edad6c09d8e
     resource: repo://test/src/strip_knob_tests.cpp
-generated: { by: "pi", at: "2026-10-18T06:21:15.263Z" }
+generated: { by: "pi", at: "2026-10-18T14:31:43.894Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-18T06:21:15.263Z
+    at: 2026-10-18T14:31:43.894Z
 ---
 
 # Node view: the signal-line grid
@@ -50,12 +50,16 @@ can never disagree about the chain because every mutation goes through the same
 Batch 3 (2026-10-17, commit `5b9bdd9`) fixed the strip-visibility and gap-persistence
 laws, switched the Mix/In/Out knobs to identity scales, made the signal line run
 continuous through empty slots, and added the 5 testbed node drives. The
-2026-10-17 bug batch (commits `0cb035e`–`22bbaf6`) then added the Procreate-style
-drag ghost (0.35 alpha + cascade preview + `node-drag-multi` /
-`node-add-far-slot` drives), the 12-knob auto-shrink strip with gallery-parity
-signature knobs, anchored strip mode/type menus with hover blurbs, right-click
-Remove on tone nodes, the lit-for-ON power button, and the gallery-usability
-fix (popovers dismissed + container hidden on view toggle).
+2026-10-17 bug batch (commits `0cb035e`–`22bbaf6`) then added the drag
+ghost + `node-drag-multi` / `node-add-far-slot` drives, the 12-knob
+auto-shrink strip with gallery-parity signature knobs, anchored strip
+mode/type menus with hover blurbs, right-click Remove on tone nodes, the
+lit-for-ON power button, and the gallery-usability fix (popovers dismissed +
+container hidden on view toggle). The **2026-10-18 fix commit `f0b06d4`**
+reran the drag ghost as full-size **opaque** (gallery-faithful, live
+reflow) and fixed the parent-space `getBounds()` bug that produced the
+quarter-ghost / no-ghost symptoms (user m04679/m04723), and added the
+juce-end-to-end drag regression (supplement to the testbed gates).
 
 ## The model (`NodeModel.h`)
 
@@ -142,24 +146,42 @@ fix (popovers dismissed + container hidden on view toggle).
   `clearContent()`); their onChange writes back through
   `chain.setBlockParam(id, param, knobToStored(...))`.
 - **Ghost** (component-snapshot drag ghost) — the desktop-level overlay routes
-  the pointer while a drag is in flight. **2026-10-17 batch (Procreate-style
-  law):** the ghost is a light-alpha clone **under the cursor**
-  (`setAlpha(0.35f)` — batch 3's 0.6 was too opaque) with a
-  `DraggingHandCursor` (JUCE has no `Component::setMouseCursor`; the cursor
-  goes on the click-intercepting Ghost), the hover target cell paints a
-  **drop-slot preview**, and `NodeView::paint` draws the **displacement
-  cascade preview** — `model_.orderWith(draggingId_, g_dropTarget)` re-derives
-  what the lane order WOULD be, so the pushed slots visibly slide while the
-  mouse moves. Drops commit through `Model::orderWith`, which clamps far
-  targets to the lane tail (trailing end never wraps). Probe hooks for the
+  the pointer while a drag is in flight. **2026-10-18 gallery-faithful law
+  (commit `f0b06d4`, superseding the 2026-10-17 Procreate 0.35-alpha +
+  cascade-preview law — user m03710: "the gallery drag and drop does it
+  exactly right… the thing you are dragging turns opaque and follows your
+  cursor and whatever you drag to rearranges to preview it"):** the ghost is
+  a **full-size opaque clone** (`setAlpha(1.0f)`) at the cell's actual
+  overlay position; the **live reflow of the other cells IS the drop
+  preview** (optimistic `preview_` lane, no separate cascade clones) and the
+  OS cursor is never swapped. **`getLocalBounds` law (the m04679/m04723
+  quarter-ghost / no-ghost fix):** `beginCellDrag` must use the cell's
+  **own** space — `cell.createComponentSnapshot(cell.getLocalBounds())` and
+  `overlay.getLocalArea(&cell, cell.getLocalBounds())` for the grab offset.
+  `getBounds()` is in the PARENT's space and `createComponentSnapshot` clips
+  the area against the cell's OWN bounds, so for cell N the intersection is
+  empty (0×0 image = no ghost) except cell 0, which survives by luck as the
+  "quarter ghost only for the first node". Probe hooks for the
   testbed (`beginDragFromShot` / `endDragFromShot` / `dragStateForShot` /
-  `cellCentreForShot` / `selectBlockForShot` / `stripKnobLabelsForShot` /
-  `openModeMenuForShot` / `openTypeMenuForShot`) are public on `NodeView`.
-  `beginDragFromShot` computes the grab point in view-local coords — the
-  cells are DIRECT children of NodeView, so `cells_[i]->getBounds()` is
-  already view-local (double-transforming through `getLocalPoint` was a ghost-
-  position bug); the x offset is 0.4·w (0.5 lands on the 84 px slot
-  boundary).
+  `ghostStateForShot` / `laneForShot` / `cellCentreForShot` /
+  `selectBlockForShot` / `stripKnobLabelsForShot` / `openModeMenuForShot` /
+  `openTypeMenuForShot`) are public on `NodeView`; `beginDragFromShot`
+  presses at `cells_[fromCell]->getLocalBounds().getCentre()` (an earlier
+  0.4·w x-offset heuristic is gone). **E2E** (2026-10-18, `f0b06d4`):
+  `plugin/ui/testbed/NodeViewE2E.h/.cpp` registers a
+  `focusrite::e2e::CommandHandler` on UiTestbed (`--e2e-test-port=`) with
+  real-pointer drags (`node-drag-begin/move/end`, events routed to the
+  `mouseDown` source cell — JUCE keeps the drag there), `node-set-view` /
+  `node-cells` / `node-geometry` / `node-tree` / `node-screenshot`; the JS
+  regression `plugin/ui/testbed/e2e/node-drag.js` (13 checks, run
+  `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`) guards the
+  opaque-ghost / full-size / follows-pointer / no-origin-box / post-drag-idle
+  laws. Its hit test is JUCE's own `Component::getComponentAt` — a
+  hand-rolled front-to-back walk routed every press to a full-window
+  ancestor (the `ghost=none` first-run mystery). `PluginRoot::setNodeViewE2E`
+  exposes the pref+setView pair for `node-set-view`. The e2e layer is a
+  **supplement** (spec spc-1792273651114-39383) — testbed stays primary;
+  C++ client in-tree at `libs/focusrite-e2e/`, `node_modules/` gitignored.
 
 **Signal line** (2026-10-15, batch-2 two-row fix 2026-10-16, batch-3
 continuous-gap law 2026-10-17): `NodeView::paint` draws, per visible row,
@@ -196,8 +218,9 @@ help text (occupied title, " (powered off)" suffix when off, `help::Key::
 nodeEmptySlot` for true gaps — batch 2 dropped the hardcoded em-dash string
 whose mojibake showed on tone nodes) which drives both the JUCE tooltip and
 the bottom hint bar via the HintBus HintTracker. Drag uses `component
-CreateSnapshot` ghosts — **2026-10-17 batch: 0.35 alpha under the cursor with
-the drop-slot + cascade preview (see the Ghost bullet above)** —; the
+CreateSnapshot` ghosts — **2026-10-18: full-size opaque gallery-faithful
+ghost + live reflow preview via `getLocalBounds` (see the Ghost bullet
+above)** —; the
 suppress-click-until timer keeps the drop from firing a stray select.
 
 **Tone nodes** (batch 2, item 6): occupied inserts (NAM/conv) are NOT empty

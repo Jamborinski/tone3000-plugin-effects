@@ -23,8 +23,12 @@ sources:
     resource: repo://plugin/ui/services/Services.h
   - id: openwiki-source-3f6e8a6ed2edd60ef99f8565
     resource: repo://plugin/ui/testbed/CMakeLists.txt
+  - id: openwiki-source-face5087f131b3d99de9f7e7
+    resource: repo://plugin/ui/testbed/e2e/node-drag.js
   - id: openwiki-source-b68d5a6792d458694c05da8b
     resource: repo://plugin/ui/testbed/Main.cpp
+  - id: openwiki-source-5ce252cfdcd91a240c635a5e
+    resource: repo://plugin/ui/testbed/NodeViewE2E.cpp
   - id: openwiki-source-ddbfab857e6d7cadc2cf06f7
     resource: repo://plugin/ui/testbed/TileShot.cpp
   - id: openwiki-source-adf8cc0014ed2fd3ed9fe7d4
@@ -43,10 +47,10 @@ sources:
     resource: repo://test/src/strip_knob_tests.cpp
   - id: openwiki-source-fde83b2ad879efba1865ca8d
     resource: repo://test/src/theme_palette_tests.cpp
-generated: { by: "pi", at: "2026-10-18T06:21:15.263Z" }
+generated: { by: "pi", at: "2026-10-18T14:31:43.894Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-18T06:21:15.263Z
+    at: 2026-10-18T14:31:43.894Z
 ---
 
 
@@ -186,6 +190,19 @@ drives' end-state asserts are real. `--capture` auto-iterates all scenarios,
 so each gets a PNG under `node-main/` with no `Main.cpp` change. The node
 view itself is specced in
 [`/openwiki/systems/ui/node-view.md`](node-view.md).
+
+**juce-end-to-end supplement (2026-10-18, `f0b06d4`):** the testbed also hosts a
+supplemental e2e layer — `--e2e-test-port=N` starts the in-tree
+`focusrite-e2e` C++ transport (inert otherwise) and
+`plugin/ui/testbed/NodeViewE2E.cpp` registers a
+`focusrite::e2e::CommandHandler` with real-pointer drag commands
+(`node-drag-begin/move/end`) plus `node-cells` / `node-geometry` /
+`node-tree` / `node-screenshot` probes. The JS regression
+`plugin/ui/testbed/e2e/node-drag.js` (13 checks; run
+`xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`) drives real pointer
+drags through the transport and guards the opaque full-size ghost laws. It is
+a **supplement** to the drive/selftest gates, not a replacement (user
+m02886: "we can use it as an additional layer").
 
 ## Reverb tile: mode + type (subtype) selectors (2026-10-16)
 

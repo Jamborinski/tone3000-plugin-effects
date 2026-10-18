@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:b40dc581c1f4334014893884a7ad5405b74e4d4c0d8fedd5b409ba66ff906a0a",
+  "pageVersion": "sha256:7c7a3e5f081413caec04a196748c542b52e70d70a5270766fe94e320d0319cbe",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -175,10 +175,28 @@
           "version": "repo-file-v1:sha256:847371236f7a0a46e4c318f312b43b344de6f68807f663915f72c4f7ef1bc81d"
         }
       ]
+    },
+    {
+      "id": "claim_866f7c29830442b38f34d7cc14f2785e",
+      "statement": "A juce-end-to-end layer was added as a SUPPLEMENT (2026-10-18, commit f0b06d4; spec spc-1792273651114-39383: supplement only, never a replacement): plugin/ui/testbed/CMakeLists.txt does add_subdirectory(libs/focusrite-e2e) and links focusrite-e2e::focusrite-e2e into UiTestbed; the JS client lives in plugin/ui/testbed/e2e/ (npm package.json, node_modules/ gitignored) and node-drag.js (13 checks) runs under `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`. DspTests, the testbed selftest, and TileShot goldens remain the primary gates.",
+      "evidence": [
+        {
+          "resource": "repo://docs/tickets/juce-e2e-suite-draft.md",
+          "version": "repo-file-v1:sha256:f9bafe5be4b8918241e73d32b888cfcccc08d179137b50c5af73ab5fab9ee227"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:cadfb63c5c14f32929ecafb3b6c49931e1084e58fda3c5e9264df00bd05eda48"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/e2e/node-drag.js",
+          "version": "repo-file-v1:sha256:9ddae9c1f03d9960b62c772dbfcfd686d5b1e5728e588f66619ff4ae6bc7daae"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T06:21:15.263Z"
+    "at": "2026-10-18T14:31:43.894Z"
   }
 }

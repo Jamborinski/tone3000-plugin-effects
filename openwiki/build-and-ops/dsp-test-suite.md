@@ -6,8 +6,14 @@ tags: [testing, dsp-tests, googletest, fixtures, script]
 sources:
   - id: openwiki-source-55524a0481117f837a7bb064
     resource: repo://docs/tickets/complete/reverb-budget-quality-uplift.md
+  - id: openwiki-source-6c72f2be6bf89ccc6f2c645f
+    resource: repo://docs/tickets/juce-e2e-suite-draft.md
   - id: openwiki-source-c80500302f4c953f647993ed
     resource: repo://docs/tickets/plate-dat-rebuild-draft.md
+  - id: openwiki-source-3f6e8a6ed2edd60ef99f8565
+    resource: repo://plugin/ui/testbed/CMakeLists.txt
+  - id: openwiki-source-face5087f131b3d99de9f7e7
+    resource: repo://plugin/ui/testbed/e2e/node-drag.js
   - id: openwiki-source-fbe20d668cd183c9fb53adb2
     resource: repo://script/test-dsp.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
@@ -32,10 +38,10 @@ sources:
     resource: repo://test/src/reverb_quality_p1_tests.cpp
   - id: openwiki-source-a9b10161f0531edad6c09d8e
     resource: repo://test/src/strip_knob_tests.cpp
-generated: { by: "pi", at: "2026-10-18T06:21:15.263Z" }
+generated: { by: "pi", at: "2026-10-18T14:31:43.894Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-18T06:21:15.263Z
+    at: 2026-10-18T14:31:43.894Z
 ---
 
 # DSP test suite (DspTests)
@@ -147,3 +153,18 @@ node-view closeout (9 NodeModel tests + `views/gallery/EffectParams.cpp`
 pulled into the compile)). On a failure or count mismatch, **never assert a
 stale total** — check the build RC and that the test names you expect
 actually ran.
+
+## juce-end-to-end supplement (2026-10-18, `f0b06d4`)
+
+A juce-end-to-end layer is an **additional UI test layer, not a
+replacement** (spec spc-1792273651114-39383 — DspTests, the testbed
+selftest, and TileShot goldens stay primary). The C++ client lives
+in-tree at `libs/focusrite-e2e/` (wired via
+`plugin/ui/testbed/CMakeLists.txt` `add_subdirectory` +
+`focusrite-e2e::focusrite-e2e` link into UiTestbed); the JS client is
+`plugin/ui/testbed/e2e/` (npm `package.json`, `node_modules/`
+gitignored). First regression: `node-drag.js` (13 checks, catches the
+quarter-ghost / no-ghost / top-left-box drag-ghost bugs) runs with
+`xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`. The shipped
+plugin binary is untouched — only UiTestbed hosts the e2e port
+(`--e2e-test-port=`).

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:d73b4c549bbe23394fa7dca14aadf2db45b7713853c2966e4da9166b8038bd05",
+  "pageVersion": "sha256:bf6c31c3222d2c2fce150f5f2e801cb2bfbb42ea0790be83a94f7fd59b2cc0eb",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -44,7 +44,7 @@
         },
         {
           "resource": "repo://plugin/ui/testbed/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:8702ae1e38f7bdcabb4d1f5cefcbc5ded24212c562163f14e5d26a5f3099f210"
+          "version": "repo-file-v1:sha256:cadfb63c5c14f32929ecafb3b6c49931e1084e58fda3c5e9264df00bd05eda48"
         }
       ]
     },
@@ -58,7 +58,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/PluginRoot.h",
-          "version": "repo-file-v1:sha256:230e2799e8c3f0599ddcf4feff8d6465b9452dfb091a2807583427d7d67a6da7"
+          "version": "repo-file-v1:sha256:99a40d54d739d98e91539737ae44571f7f5f8222134cf4b9a889d1f8ef0b1506"
         },
         {
           "resource": "repo://plugin/ui/views/block/BlockCard.h",
@@ -142,11 +142,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/testbed/Main.cpp",
-          "version": "repo-file-v1:sha256:d695fc524369be13ea55e62e7ad83e250dc0f7016011ff709dfafff8f2e2849a"
+          "version": "repo-file-v1:sha256:f23c7fca6d988a957c1500b0e0c44a5db9411ee23f7df21e273f3e87ec15cfca"
         },
         {
           "resource": "repo://plugin/ui/testbed/TileShot.cpp",
-          "version": "repo-file-v1:sha256:7f710e265b4bd6c0841b4f4450369ccd047dd058aca63a10a0d47a290de7c126"
+          "version": "repo-file-v1:sha256:ec6b20cdbfdc79cb5709fa6ebfc8c5673c6b3793fb4bdd9df435f6db68444fb6"
         },
         {
           "resource": "repo://script/tile-ocr.sh",
@@ -177,10 +177,28 @@
           "version": "repo-file-v1:sha256:847371236f7a0a46e4c318f312b43b344de6f68807f663915f72c4f7ef1bc81d"
         }
       ]
+    },
+    {
+      "id": "claim_223c1b2b12a54ff7a8e571f8773f2995",
+      "statement": "juce-end-to-end supplement (2026-10-18, commit f0b06d4): UiTestbed links the in-tree focusrite-e2e C++ transport (libs/focusrite-e2e, node_modules/ gitignored) and is inert unless launched with --e2e-test-port=N; NodeViewE2E.cpp registers a focusrite::e2e::CommandHandler driven from PluginRoot (PluginRoot::setNodeViewE2E exposes the pref+setView pair for node-set-view) with real-pointer drag commands (node-drag-begin/move/end, events routed to the mouseDown source cell per JUCE's drag semantics) plus node-cells/node-geometry/node-tree/node-screenshot probes. The JS regression plugin/ui/testbed/e2e/node-drag.js (13 checks; run xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js) guards the opaque full-size ghost laws. This is a SUPPLEMENT to the testbed gates, not a replacement (spec spc-1792273651114-39383, user m02886).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/testbed/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:cadfb63c5c14f32929ecafb3b6c49931e1084e58fda3c5e9264df00bd05eda48"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/NodeViewE2E.cpp",
+          "version": "repo-file-v1:sha256:5536444f8de87421fdfaa34dcf735c4a3e2bdb28c9b719faa8d005628b34703a"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/e2e/node-drag.js",
+          "version": "repo-file-v1:sha256:9ddae9c1f03d9960b62c772dbfcfd686d5b1e5728e588f66619ff4ae6bc7daae"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T06:21:15.263Z"
+    "at": "2026-10-18T14:31:43.894Z"
   }
 }

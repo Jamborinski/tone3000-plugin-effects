@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:c19ff79caf50d6a658bac99e1f9730ae1009b726f9c40ecf3281ba44bd5d6f47",
+  "pageVersion": "sha256:12738b9ede047d9998bd96850981c9c6abac07bd09bc2c5a92c16405a11ec4c9",
   "claims": [
     {
       "id": "claim_4e8284a0f0bc4fe0b4e5fa2bda920264",
@@ -30,7 +30,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/PluginRoot.cpp",
-          "version": "repo-file-v1:sha256:b6ce6c30fbda66d6995a26b792aaad4bf00e6eb1c17574e655258fb293fa285c"
+          "version": "repo-file-v1:sha256:f98eaf23ac3974e7300bd667d81a12f0f4ccd7da6fa75a99f4b83a34bb68a256"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/ChainScreen.cpp",
-          "version": "repo-file-v1:sha256:3ab82442f0bc73b285bedfdfcb9a2a90681ae9b08308591107d4720ffd103f5a"
+          "version": "repo-file-v1:sha256:968cc2cdc2a6b1bf5f7d62a917dd4eaef770decb7cd66ff66592dd1f222ae9c5"
         },
         {
           "resource": "repo://plugin/ui/views/ChainScreen.h",
@@ -78,7 +78,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
+          "version": "repo-file-v1:sha256:c0cf5c23f298919647daa193dda7428ce8442f41f013d2d178d13b2434a4d220"
         }
       ]
     },
@@ -96,11 +96,11 @@
         },
         {
           "resource": "repo://plugin/ui/views/ChainScreen.cpp",
-          "version": "repo-file-v1:sha256:3ab82442f0bc73b285bedfdfcb9a2a90681ae9b08308591107d4720ffd103f5a"
+          "version": "repo-file-v1:sha256:968cc2cdc2a6b1bf5f7d62a917dd4eaef770decb7cd66ff66592dd1f222ae9c5"
         },
         {
           "resource": "repo://plugin/ui/views/PluginRoot.cpp",
-          "version": "repo-file-v1:sha256:b6ce6c30fbda66d6995a26b792aaad4bf00e6eb1c17574e655258fb293fa285c"
+          "version": "repo-file-v1:sha256:f98eaf23ac3974e7300bd667d81a12f0f4ccd7da6fa75a99f4b83a34bb68a256"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
+          "version": "repo-file-v1:sha256:c0cf5c23f298919647daa193dda7428ce8442f41f013d2d178d13b2434a4d220"
         }
       ]
     },
@@ -120,7 +120,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
+          "version": "repo-file-v1:sha256:c0cf5c23f298919647daa193dda7428ce8442f41f013d2d178d13b2434a4d220"
         }
       ]
     },
@@ -148,7 +148,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
+          "version": "repo-file-v1:sha256:c0cf5c23f298919647daa193dda7428ce8442f41f013d2d178d13b2434a4d220"
         }
       ]
     },
@@ -172,7 +172,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
+          "version": "repo-file-v1:sha256:c0cf5c23f298919647daa193dda7428ce8442f41f013d2d178d13b2434a4d220"
         }
       ]
     },
@@ -182,7 +182,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
+          "version": "repo-file-v1:sha256:c0cf5c23f298919647daa193dda7428ce8442f41f013d2d178d13b2434a4d220"
         }
       ]
     },
@@ -196,7 +196,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
+          "version": "repo-file-v1:sha256:c0cf5c23f298919647daa193dda7428ce8442f41f013d2d178d13b2434a4d220"
         }
       ]
     },
@@ -206,7 +206,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
+          "version": "repo-file-v1:sha256:c0cf5c23f298919647daa193dda7428ce8442f41f013d2d178d13b2434a4d220"
         }
       ]
     },
@@ -220,17 +220,37 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:80742d101a4d725c7c9f23675ae85128c377b8714d9b87fce5de6fdcf8c590cd"
+          "version": "repo-file-v1:sha256:c0cf5c23f298919647daa193dda7428ce8442f41f013d2d178d13b2434a4d220"
         },
         {
           "resource": "repo://test/src/strip_knob_tests.cpp",
           "version": "repo-file-v1:sha256:847371236f7a0a46e4c318f312b43b344de6f68807f663915f72c4f7ef1bc81d"
         }
       ]
+    },
+    {
+      "id": "claim_275d727843bf43a9b98b5fb0a4fb2f9f",
+      "statement": "Grid drag-and-drop (gallery-faithful, 2026-10-18 commit f0b06d4): cellDragMove tracks a dragInGrid_ flag from the pointer position vs the grid bounds (rowX_±4, row/row-range ±4) and a g_dropTarget slot; while the pointer is over a cell the other cells LIVE-REFLOW through the optimistic preview_ lane (NodeModel::orderWith re-derived per move) — the reflow IS the drop preview, and NodeView::paint draws only a theme::kHighlight ring on the target cell (the old cascade of faded displaced-clone icons is gone: \"the grid IS the preview now\"). cellDragEnd: if the drop lands OUTSIDE the grid (g_dropTarget < 0) finishSort() reverts to the native lane (no commit); otherwise the full-lane id list from NodeModel::orderWith(blockId, target) — an erase+insert-at-target splice whose direction is determined by the target slot, clamping far targets to the lane tail — is committed through chain.reorderBlocks. Drops commit through the store; a drop back on the origin slot is a no-op permutation.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:c0cf5c23f298919647daa193dda7428ce8442f41f013d2d178d13b2434a4d220"
+        }
+      ]
+    },
+    {
+      "id": "claim_57d61facdbca4d5ea1ab52284ffaf04e",
+      "statement": "Pointer grammar on a node: a short click selects the block (params load into the strip); a 250 ms hold (kHoldMs = 250) begins a lane drag; motion before the hold cancels the timer; right-click opens the block menu (power toggle, help key nodePower; remove, help key nodeRemove; plus the palette add-menu over Model::paletteKinds()) — since the 2026-10-17 bug batch Remove is offered on ALL node kinds including tone (NAM/conv) nodes (cellMenuItems guards only !b->isInsert). DOUBLE-CLICK toggles the block's power (NodeCell::mouseDoubleClick -> NodeView::togglePower -> setBlockParam(id, \"enabled\", 0|1)). Cell hover sets a help text (occupied title, ' (off)' suffix when off, nodeEmptySlot key for true gaps) driving the JUCE tooltip and the bottom hint bar via the HintBus HintTracker. Drags use juce::Component::createComponentSnapshot ghosts; since 2026-10-18 (f0b06d4, user m03710) the ghost is a FULL-SIZE OPAQUE clone (setAlpha(1.0f)) at the cell's actual overlay position, created with cell.getLocalBounds() — getBounds() is parent-space and the snapshot clip made it 0×0 for every cell past the first (the m04679/m04723 quarter-ghost/no-ghost bugs) — the OS cursor is NEVER swapped (the gallery's ghost is non-intercepting and never swaps the desktop cursor), and the live reflow of the other cells is the drop preview (no cascade clones). A suppress-click-until timestamp keeps a drop from firing a stray select.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:c0cf5c23f298919647daa193dda7428ce8442f41f013d2d178d13b2434a4d220"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T06:21:15.263Z"
+    "at": "2026-10-18T14:31:43.894Z"
   }
 }
