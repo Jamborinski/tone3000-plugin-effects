@@ -38,10 +38,10 @@ sources:
     resource: repo://test/src/reverb_quality_p1_tests.cpp
   - id: openwiki-source-a9b10161f0531edad6c09d8e
     resource: repo://test/src/strip_knob_tests.cpp
-generated: { by: "pi", at: "2026-10-18T14:31:43.894Z" }
+generated: { by: "pi", at: "2026-10-18T19:36:10.014Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-18T17:41:53.695Z
+    at: 2026-10-18T19:36:10.014Z
 ---
 
 # DSP test suite (DspTests)
@@ -163,8 +163,11 @@ in-tree at `libs/focusrite-e2e/` (wired via
 `plugin/ui/testbed/CMakeLists.txt` `add_subdirectory` +
 `focusrite-e2e::focusrite-e2e` link into UiTestbed); the JS client is
 `plugin/ui/testbed/e2e/` (npm `package.json`, `node_modules/`
-gitignored). First regression: `node-drag.js` (13 checks, catches the
-quarter-ghost / no-ghost / top-left-box drag-ghost bugs) runs with
-`xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`. The shipped
+gitignored). First regression: `node-drag.js` (35 check() asserts as of the
+m06828 batch, grown from the initial 13 — it catches the quarter-ghost /
+no-ghost / top-left-box drag-ghost bugs plus the symmetric-swap, drop-glow,
+right-press-survives-drag, and positional far-slot drop laws) runs with
+`xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js` (`T3K_E2E_APP` env
+overrides the app binary). The shipped
 plugin binary is untouched — only UiTestbed hosts the e2e port
 (`--e2e-test-port=`).

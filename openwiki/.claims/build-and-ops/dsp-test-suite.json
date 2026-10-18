@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:9e1772a2dab5e532de39fec4db5a67c92b8bba5fe4ce0fafcf3f030e0c06d7de",
+  "pageVersion": "sha256:eb31649fea37808cf1f95cc4d70312b158a6e4cc2421554a212c7c9061df34ee",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -52,11 +52,11 @@
     },
     {
       "id": "claim_49ddcff1eeae4a768036ec3c85952a43",
-      "statement": "The R1 reverb Dry anchor test TEST(ProcessorTest, ReverbDryScalesOnlyTheDryPathAllModes) (test/src/processor_tests.cpp, ~822, added alongside the convolver analogue) loops all 6 reverb modes; at mix=0 it asserts a -6 dB Dry setting scales the dry term by exactly gain(-6 dB); at mix=1 it asserts the wet (reverb tail) output is invariant under the Dry knob. It runs in ~460 ms and passes.",
+      "statement": "The R1 reverb Dry anchor test TEST(ProcessorTest, ReverbDryScalesOnlyTheDryPathAllModes) (test/src/processor_tests.cpp) loops all 6 reverb modes; at mix=0 it asserts a -6 dB Dry setting scales the dry term by exactly gain(-6 dB); at mix=1 it asserts the wet (reverb tail) output is invariant under the Dry knob. It runs in ~460 ms and passes. The positional m06828 tests added below sit further down the same file (line numbers shifted).",
       "evidence": [
         {
           "resource": "repo://test/src/processor_tests.cpp",
-          "version": "repo-file-v1:sha256:c70b553834b0b68f30dbaddf9a30b75e4da68074c60b40ec0927d71a3decbff8"
+          "version": "repo-file-v1:sha256:20a1491aa429e7fa329dbcbdb5df1c725d13a09f8997e53562675cc0f233733b"
         }
       ]
     },
@@ -146,7 +146,7 @@
     },
     {
       "id": "claim_b93e1f70f63e44658da686909cdb9d82",
-      "statement": "The node-view closeout (2026-10-18, commit 9201777) added src/node_model_tests.cpp — 9 NodeModel tests covering the kind table, paletteKinds, blockAt/indexOf, and the orderWith erase+insert splice used by grid drag-and-drop (permutation invariance, exact-slot move, same-slot no-op, unknown-id untouched, target clamping, empty-square move) — bringing the suite to 521 tests. The count is a lower-bound snapshot; never assert a stale total on a red run.",
+      "statement": "The node-view closeout (2026-10-18, commit 9201777) added src/node_model_tests.cpp — 9 NodeModel tests covering the kind table, paletteKinds, blockAt/indexOf, and the orderWith erase+insert splice used by grid drag-and-drop (permutation invariance, exact-slot move, same-slot no-op, unknown-id untouched, target clamping, empty-square move). The label test (node_model_tests.cpp:58) now expects Model::kind(\"convolution\").label == \"Conv Rev\" (m06828 item 3 rename). The count is a lower-bound snapshot; never assert a stale total on a red run.",
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
@@ -154,13 +154,13 @@
         },
         {
           "resource": "repo://test/src/node_model_tests.cpp",
-          "version": "repo-file-v1:sha256:9b5c4f1890d0df5cfedddbec7b8b346f8ff5da1db446d5cd7e5bbf31be15180e"
+          "version": "repo-file-v1:sha256:2433ca24917da969946bd8f13232a319c11fed30bbbc21e460d34f16bdddbc5c"
         }
       ]
     },
     {
       "id": "claim_af453d11b49b46e7bde849726b2f9c50",
-      "statement": "test/src/strip_knob_tests.cpp registers three suites: 7 StripKnob tests (every paramsFor knob of Delay/Chorus/Tremolo/Compressor vca+clip/Reverb (all 6 modes)/Convolution/Tone round-trips through knobFromStored/knobToStored in [0,1] and formats to a finite readout; numeric readouts are capped at 4 chars so INT64-scale garbage fails), 8 StripKnobPosition tests (identity-scale knobs report pos == raw 0..1, including the In/Out gain knobs pinned to noon, plus stored→raw round-trips through the strip's position mapping, added in the node-view batch-3 closeout commit 5b9bdd9), and — added in the 2026-10-17 bug-batch closeout (commits 0cb035e–22bbaf6) — 6 StripGalleryParity tests (the strip's visible knob set equals the gallery's signature+full knob set in BOTH directions: strip ⊆ gallery and gallery ⊆ strip for every kind/mode, plus a ≤12 knob-count cap matching kMaxKnobs). test/src/add_at_slot_tests.cpp registers 2 AddAtSlot tests (landToneBlock fills a mid-lane gap in place and a trailing insert at the end; the mid-lane test also asserts a removed effect's blockId is gone while the gap persists, exercising removeChainBlock's fresh-INSERT-at-erased-position behavior). test/CMakeLists.txt also compiles ../plugin/ui/views/gallery/EffectParams.cpp (the per-kind knob table the strip and EffectTile share) for the strip tests. Suite total after the 2026-10-17 bug-batch closeout: 548 tests from 79 suites (538/79 was the batch-3 closeout; 530/78 was the 2026-10-16 batch-2 closeout) — the count is a lower-bound snapshot; never assert a stale total on a red run.",
+      "statement": "test/src/strip_knob_tests.cpp registers three suites: 7 StripKnob tests (every paramsFor knob of Delay/Chorus/Tremolo/Compressor vca+clip/Reverb (all 6 modes)/Convolution/Tone round-trips through knobFromStored/knobToStored in [0,1] and formats to a finite readout; numeric readouts capped at 4 chars so INT64-scale garbage fails), 8 StripKnobPosition tests (identity-scale knobs report pos == raw 0..1, including In/Out gain knobs pinned to noon, commit 5b9bdd9), and 6 StripGalleryParity tests (strip ⊆ gallery and gallery ⊆ strip both directions for every kind/mode, plus the ≤12 knob-count cap, commits 0cb035e–22bbaf6). test/src/add_at_slot_tests.cpp registers 2 AddAtSlot tests (mid-lane gap filled in place + trailing insert; the mid-lane test asserts the removed blockId is gone while the gap persists); after the m06828 batch (commit 72f48ea) their trimmed-tail expectations were updated to the FLOOR-only baseline law — 6 slots, not 5 — with m06828 comments. test/CMakeLists.txt also compiles ../plugin/ui/views/gallery/EffectParams.cpp for the strip tests. Suite total after the m06828 batch: 552 tests (548 + 4 new ProcessorTest positional-grid tests in processor_tests.cpp: FarSlotAddLandsAtTheSlotWithLazyPadding, ReorderWithPadMaterialisesInserts, RemoveLeavesInsertGapWithoutLeftShift, RemoveRejectsInsertBlocks) — the count is a lower-bound snapshot; never assert a stale total on a red run.",
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
@@ -168,7 +168,7 @@
         },
         {
           "resource": "repo://test/src/add_at_slot_tests.cpp",
-          "version": "repo-file-v1:sha256:7bd93c2831b06ae76d46f1241363ccb5195b957423fd1c1b56ce157a22a4f996"
+          "version": "repo-file-v1:sha256:2350e9e23f98f1bb14af3d74e518863aa8af623f8c0e1af7d98da6d2d0bbb567"
         },
         {
           "resource": "repo://test/src/strip_knob_tests.cpp",
@@ -178,11 +178,11 @@
     },
     {
       "id": "claim_866f7c29830442b38f34d7cc14f2785e",
-      "statement": "A juce-end-to-end layer was added as a SUPPLEMENT (2026-10-18, commit f0b06d4; spec spc-1792273651114-39383: supplement only, never a replacement): plugin/ui/testbed/CMakeLists.txt does add_subdirectory(libs/focusrite-e2e) and links focusrite-e2e::focusrite-e2e into UiTestbed; the JS client lives in plugin/ui/testbed/e2e/ (npm package.json, node_modules/ gitignored) and node-drag.js (34 check() asserts across the opaque-ghost / follows-pointer / no-origin-box / post-drag-idle / symmetric-swap / drop-glow / right-press-cancel laws, grown from the initial 13 by the 2026-10-18 drag-UX closeout commit 6df21a2) runs under `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`. DspTests, the testbed selftest, and TileShot goldens remain the primary gates.",
+      "statement": "A juce-end-to-end layer is a SUPPLEMENT (2026-10-18, commit f0b06d4; spec spc-1792273651114-39383: supplement only, never a replacement): plugin/ui/testbed/CMakeLists.txt does add_subdirectory(libs/focusrite-e2e) and links focusrite-e2e::focusrite-e2e into UiTestbed; the JS client lives in plugin/ui/testbed/e2e/ (npm package.json, node_modules/ gitignored). node-drag.js carries 35 check() asserts (opaque-ghost / follows-pointer / no-origin-box / post-drag-idle / symmetric 1-tile swap / drop-glow / off-chain cancel / right-press-SURVIVES-drag / positional far-slot drop laws) and runs under `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`; e2e.js APP honors a T3K_E2E_APP env override (commit 72f48ea) so the rig can point at an alternate UiTestbed build tree without editing the file. DspTests, the testbed selftest, and TileShot goldens remain the primary gates.",
       "evidence": [
         {
           "resource": "repo://docs/tickets/juce-e2e-suite-draft.md",
-          "version": "repo-file-v1:sha256:c32dd0fc320c0692b9403f693bd634a64c2e71bcc861b0e617f8cfd17d8e1349"
+          "version": "repo-file-v1:sha256:fc4d861522b36ff6b47149a5c0eed7435ba997344ca719cd9b6b290135a62e2b"
         },
         {
           "resource": "repo://plugin/ui/testbed/CMakeLists.txt",
@@ -190,13 +190,13 @@
         },
         {
           "resource": "repo://plugin/ui/testbed/e2e/node-drag.js",
-          "version": "repo-file-v1:sha256:d4398b70cec4d1bc493ada1e775b8d3c583ab09403d90960c4cf9c5f28b1cc99"
+          "version": "repo-file-v1:sha256:2555061010bc1e2345cfb44aca1ed2c6ba60b6b969fd3d9acaa30b5d8f50002c"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T17:41:53.695Z"
+    "at": "2026-10-18T19:36:10.014Z"
   }
 }

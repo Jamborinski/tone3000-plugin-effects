@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:ae58d75ab2d8e429f4c6cfab9753e99755f85d088201b49cb1d9cfdc90ab2704",
+  "pageVersion": "sha256:993b3ad4c07908bd23f9cb216424080fe6eaa448a70c09d6f50148f362d0adf2",
   "claims": [
     {
       "id": "claim_4e8284a0f0bc4fe0b4e5fa2bda920264",
@@ -78,7 +78,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:47bec3dfd0380116b141646d520951949b416cce0b8fd7caaf764674f35414b2"
+          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
         }
       ]
     },
@@ -106,27 +106,27 @@
     },
     {
       "id": "claim_af372e89c38a4030906530dad361f5b6",
-      "statement": "Repaint invariants (bug found in the 2026-10-15 capture hunt — the line stayed invisible for a whole debug session): setNodeView(bool) (NodeView.cpp:634) and chainChanged() (NodeView.cpp:666) both END WITH repaint(), because refresh() only updates the cell children; the body (signal line segments, In/Out labels, strip) must repaint on first-time activation, on lane row gain/loss, and on selection change or the line silently stays absent until an unrelated invalidate.",
+      "statement": "Repaint invariants (bug found in the 2026-10-15 capture hunt — the line stayed invisible for a whole debug session): setNodeView(bool) (NodeView.cpp:629) and chainChanged() (NodeView.cpp:661) both END WITH repaint(), because refresh() only updates the cell children; the body (signal line segments, In/Out labels, strip) must repaint on first-time activation, on lane row gain/loss, and on selection change or the line silently stays absent until an unrelated invalidate. Line numbers are as of the m06828 batch (commit 72f48ea); the law is unchanged.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:47bec3dfd0380116b141646d520951949b416cce0b8fd7caaf764674f35414b2"
+          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
         }
       ]
     },
     {
       "id": "claim_12d20b84d71648b6a98f1151f17b6741",
-      "statement": "Grid drag-and-drop (2026-10-18 drag-UX closeout, commit 6df21a2, superseding the f0b06d4 version): cellDragMove computes the target slot with `slot = floor((x - rowX_) / cellW_)` — FLOOR, no half-tile offset — so the swap thresholds are SYMMETRIC: crossing ~1 tile left or right targets the neighbour (the old roundToInt(v)=floor(v+0.5) evaluated a slot's own centre k+0.5 and rounded UP: instant right swap while a left swap needed 1.5 tiles, m05941). While the pointer is in the grid the other cells LIVE-REFLOW through the optimistic preview_ lane (moveActiveTo's erase + insert-at-target splice, `insertAt = jlimit(0, n-1, to)` — an earlier `if (to < from) ++to;` offset spliced a left-adjacent target back onto its own slot, cancelling every left move) and a NodeView::DropGlow overlay child (separate from the Ghost, because NodeView's own paint sits UNDER its children) paints a soft halo — rounded-rect wash at 30% alpha + 1.5 px border at 70% in the DRAGGED BLOCK'S OWN border colour (Model::kind colour), centred on the target cell's visible square — so the user can see where the effect lands, especially with same-icon effects (m06356/m06359). cellDragEnd: if the drop lands OUTSIDE the grid (g_dropTarget < 0) the drag CANCELS — cancelDrag() restores the native lane, no commit (m05916-3); otherwise the full-lane id list from NodeModel::orderWith(blockId, target) is committed through chain.reorderBlocks; a drop back on the origin slot is a no-op permutation.",
+      "statement": "Grid drag-and-drop (m06828 batch, commit 72f48ea, superseding the 6df21a2 drag-UX closeout): cellDragMove computes the target slot from the GHOST CENTRE (not the raw pointer, which carries the grab offset) with `slot = floor((x - rowX_) / cellW_)` — FLOOR, no half-tile offset — so swap thresholds are SYMMETRIC: crossing ~1 tile left or right targets the neighbour, hovering one's own slot targets it (the old roundToInt(v)=floor(v+0.5) evaluated a slot's own centre k+0.5 and rounded UP: instant right swap while a left swap needed 1.5 tiles, m05941). While the pointer is in the grid the other cells LIVE-REFLOW through the optimistic preview_ lane and a NodeView::DropGlow overlay child (separate from the Ghost, because NodeView's own paint sits UNDER its children) paints a soft halo — rounded-rect wash at 30% alpha + 1.5 px border at 70% in the DRAGGED BLOCK'S OWN border colour (Model::kind colour), centred on the target cell's visible square (m06686: inset x by (slotW - sq)/2) — so the user can see where the effect lands, especially with same-icon effects (m06356/m06359). POSITIONAL LAW (m06828 item 4): a far target beyond the compact lane tail no longer clamps — moveActiveTo splices at `to = jlimit(lead, n, lead + target)` where lead = countLeadingInserts(preview_) (raw list index diverges from grid slot by leading inserts; without this a far drop landed one slot off), and pads preview_ with fresh insert ChainItems (juce::Uuid ids) up to the target first, so dragging to slot 19 with 11 effects lands AT 19. cellDragEnd: an off-grid drop (dragInGrid_ false) CANCELS — cancelDrag() discards the preview, no commit (the ONLY cancel path; a right-click mid-drag no longer cancels, see the pointer-grammar claim, m06828-2); an in-grid drop commits the full-lane id list from preview_ through chain.reorderBlocks with a `>=` size gate (padded id lists are valid commits — reorderChainBlocks materialises the new insert ids), and a drop back on the origin slot is a no-op permutation.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:47bec3dfd0380116b141646d520951949b416cce0b8fd7caaf764674f35414b2"
+          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
         }
       ]
     },
     {
       "id": "claim_7da533871b0f4a26b8f30d097c38f1ed",
-      "statement": "The node grid's read-side model (plugin/ui/views/nodeview/NodeModel.{h,cpp} — a const view over ChainState: kind table with kind colours, paletteKinds, blockAt/indexOf, and orderWith splice) is exercised headlessly by test/src/node_model_tests.cpp (9 tests: kind table, palette, blockAt/indexOf, orderWith permutation invariance, exact-slot move, same-slot no-op, unknown-id untouched, target clamping, empty-square move). DspTests compiles the real plugin/ui/views/nodeview/NodeModel.cpp + plugin/ui/model/ChainState.cpp (with plugin/ui and plugin/ui/views/nodeview on the include path) so these tests run the real model, not a copy; the full UI remains unlinked by the suite.",
+      "statement": "The node grid's read-side model (plugin/ui/views/nodeview/NodeModel.{h,cpp} — a const view over ChainState: kind table with kind colours, paletteKinds, blockAt/indexOf, and orderWith splice) is exercised headlessly by test/src/node_model_tests.cpp (9 tests: kind table, palette, blockAt/indexOf, orderWith permutation invariance, exact-slot move, same-slot no-op, unknown-id untouched, target clamping, empty-square move). Since the m06828 batch (commit 72f48ea) the kind-table test pins the convolution display label \"Conv Rev\" (was \"IR\" — the picker menu and right-click menu call it Conv Rev, user m06828 item 1b/3). DspTests compiles the real plugin/ui/views/nodeview/NodeModel.cpp + plugin/ui/model/ChainState.cpp (with plugin/ui and plugin/ui/views/nodeview on the include path) so these tests run the real model, not a copy; the full UI remains unlinked by the suite.",
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
@@ -134,7 +134,7 @@
         },
         {
           "resource": "repo://test/src/node_model_tests.cpp",
-          "version": "repo-file-v1:sha256:9b5c4f1890d0df5cfedddbec7b8b346f8ff5da1db446d5cd7e5bbf31be15180e"
+          "version": "repo-file-v1:sha256:2433ca24917da969946bd8f13232a319c11fed30bbbc21e460d34f16bdddbc5c"
         }
       ]
     },
@@ -144,11 +144,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeModel.cpp",
-          "version": "repo-file-v1:sha256:67ff69a068f731d9b8c4a99d07c2e5b815dc6254b6a754285c8888faa1a4b334"
+          "version": "repo-file-v1:sha256:f110b4b7d32e09288bcb5ab0cc49d76a49131383b2f7515eaa91f8fa27a8c41d"
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:47bec3dfd0380116b141646d520951949b416cce0b8fd7caaf764674f35414b2"
+          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
         }
       ]
     },
@@ -172,23 +172,23 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:47bec3dfd0380116b141646d520951949b416cce0b8fd7caaf764674f35414b2"
+          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
         }
       ]
     },
     {
       "id": "claim_1457c04b498f493fb23426150388f294",
-      "statement": "Pointer grammar on a node: a short click selects the block (params load into the strip); a 250 ms hold (kHoldMs = 250) begins a lane drag; motion before the hold cancels the timer; right-click opens the block menu (power toggle, help key nodePower; remove, help key nodeRemove; plus the palette add-menu over Model::paletteKinds()) — since the 2026-10-17 bug batch Remove is offered on ALL node kinds including tone (NAM/conv) nodes (cellMenuItems guards only !b->isInsert). NEW (2026-10-18, m05916-3/user m05928): a right-click WHILE a left-button drag is in flight CANCELS the drag instead of opening a menu (NodeCell::mouseDown popup branch -> NodeView::cancelDrag) — cancelDrag() deletes the ghost + DropGlow and restores the native lane — and a suppress-click window swallows this click's own mouseUp so the right release does not re-open the menu (empty slots) or re-select the block. Release off the signal chain also cancels (see the drag claim). DOUBLE-CLICK toggles the block's power (NodeCell::mouseDoubleClick -> NodeView::togglePower -> setBlockParam(id, \"enabled\", 0|1)). Cell hover sets a help text (occupied title, ' (powered off)' suffix when off, nodeEmptySlot key for true gaps) driving the JUCE tooltip and the bottom hint bar via the HintBus HintTracker. Drags use juce::Component::createComponentSnapshot ghosts; since 2026-10-18 (f0b06d4, user m03710) the ghost is a FULL-SIZE OPAQUE clone (setAlpha(1.0f)) at the cell's actual overlay position, created with cell.getLocalBounds() — getBounds() is parent-space and the snapshot clip made it 0×0 for every cell past the first (the m04679/m04723 quarter-ghost/no-ghost bugs) — the OS cursor is NEVER swapped, and the live reflow of the other cells is the drop preview (no cascade clones). A suppress-click-until timestamp keeps a drop from firing a stray select.",
+      "statement": "Pointer grammar on a node: a short click selects the block (params load into the strip); a 250 ms hold (kHoldMs = 250) begins a lane drag; motion before the hold cancels the timer; right-click opens the block menu (power toggle, help key nodePower; remove, help key nodeRemove; plus the palette add-menu over Model::paletteKinds()) — since the 2026-10-17 bug batch Remove is offered on ALL node kinds including tone (NAM/conv) nodes (cellMenuItems guards only !b->isInsert); since the m06828 batch (commit 72f48ea) the palette add entries are BARE labels (\"Delay\", \"Chorus\", \"Trem\", \"Comp\", \"Rev\", \"Conv Rev\") routed by a CellMenuItem::addKind field (the old \"+ \"-prefixed label string + paletteKindForLabel reverse-lookup is deleted — the double-plus in the menu), and Model's convolution label is \"Conv Rev\", not \"IR\". CANCEL LAW (m06828-2, superseding m05916-3): a right-click WHILE a left-button drag is in flight OPENS THE MENU AND THE DRAG SURVIVES — the mouseDown popup branch no longer cancels; NodeCell::mouseUp ends the drag only on a LEFT release (`if (v_.isDragging()) { if (!g_e2eReleaseButton) v_.cellDragEnd(*this); return; }` — mouseWasClicked(int) does not exist in JUCE 9 and is false on any up, so the e2e handler stamps NodeView::setE2eReleaseButton around the synthetic right mouseUp; real input never sets it). Release off the signal chain is the ONLY cancel (the off-grid preview is discarded by cancelDrag). DOUBLE-CLICK toggles the block's power (NodeCell::mouseDoubleClick -> NodeView::togglePower -> setBlockParam(id, \"enabled\", 0|1)). Cell hover sets a help text (occupied title, ' (powered off)' suffix when off, nodeEmptySlot key for true gaps) driving the JUCE tooltip and the bottom hint bar via the HintBus HintTracker. Drags use juce::Component::createComponentSnapshot ghosts; since 2026-10-18 (f0b06d4, user m03710) the ghost is a FULL-SIZE OPAQUE clone (setAlpha(1.0f)) at the cell's actual overlay position, created with cell.getLocalBounds() — getBounds() is parent-space and the snapshot clip made it 0×0 for every cell past the first (the m04679/m04723 quarter-ghost/no-ghost bugs) — the OS cursor is NEVER swapped, and the live reflow of the other cells is the drop preview (no cascade clones). A suppress-click-until timestamp keeps a drop from firing a stray select.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:47bec3dfd0380116b141646d520951949b416cce0b8fd7caaf764674f35414b2"
+          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
         }
       ]
     },
     {
       "id": "claim_532f664d974b4f1c8f5b23e50931073d",
-      "statement": "The convolution node's strip carries an IR preview: pullConvPreview (NodeView.cpp:1139) pulls chain.convPreview(blockId) (envL/envR arrays + length/sampleRate + fade curves, same pattern as the gallery EffectTile::pullConvPreview) into the strip's KernelPlot (convPlot_, views/gallery/KernelPlot at 64 px). Batch 3 (item 6): with NO kernel loaded (null dynamic object) the preview now setVisible(true) with a cleared envelope + the loaded block's fade curves, so the flat plot + 'Load IR…' button lay out and the strip's knobs are no longer clipped. The 'Load IR…' button (loadIr_) calls startConvIrLoader (NodeView.cpp:1169) which launches an async juce::FileChooser (*.wav;*.wave;*.aiff;*.aif) and on OK calls chain.loadConvIr(blockId, file); a g_irLoaderSeq token guard (plus a convIrChooser_ re-entry guard) drops stale chooser results (WeakReference<Component> is private in JUCE 9, so the loader is token-guarded); an 'error' property on the result is toasted.",
+      "statement": "The convolution node's strip carries an IR preview: pullConvPreview (NodeView.cpp:1598) pulls chain.convPreview(blockId) (envL/envR arrays + length/sampleRate + fade curves, same pattern as the gallery EffectTile::pullConvPreview) into the strip's KernelPlot (convPlot_, views/gallery/KernelPlot at 64 px). Batch 3 (item 6): with NO kernel loaded (null dynamic object) the preview now setVisible(true) with a cleared envelope + the loaded block's fade curves, so the flat plot + 'Load IR…' button lay out and the strip's knobs are no longer clipped. The 'Load IR…' button (loadIr_) calls startConvIrLoader (NodeView.cpp:1655) which launches an async juce::FileChooser (*.wav;*.wave;*.aiff;*.aif) and on OK calls chain.loadConvIr(blockId, file); a g_irLoaderSeq token guard (plus a convIrChooser_ re-entry guard) drops stale chooser results (WeakReference<Component> is private in JUCE 9, so the loader is token-guarded); an 'error' property on the result is toasted. CLEAR LAW (m06828 item 1, commit 72f48ea): refreshModeLine's non-conv/non-reverb branch now ALSO hides convPlot_/convIr_/loadIr_, so selecting any other kind after a convolution block no longer leaks the kernel's waveform + 'Load IR…' button + IR name/time line onto the new effect's strip (the old code only hid typeB_).",
       "evidence": [
         {
           "resource": "repo://plugin/ui/services/ChainStore.h",
@@ -196,7 +196,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:47bec3dfd0380116b141646d520951949b416cce0b8fd7caaf764674f35414b2"
+          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
         }
       ]
     },
@@ -206,7 +206,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:47bec3dfd0380116b141646d520951949b416cce0b8fd7caaf764674f35414b2"
+          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
         }
       ]
     },
@@ -220,7 +220,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:47bec3dfd0380116b141646d520951949b416cce0b8fd7caaf764674f35414b2"
+          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
         },
         {
           "resource": "repo://test/src/strip_knob_tests.cpp",
@@ -230,11 +230,11 @@
     },
     {
       "id": "claim_275d727843bf43a9b98b5fb0a4fb2f9f",
-      "statement": "Grid drag-and-drop (gallery-faithful, 2026-10-18 commit 6df21a2 drag-UX closeout, superseding f0b06d4): cellDragMove tracks a dragInGrid_ flag from the pointer position vs the grid bounds (rowX_±4, row/row-range ±4) and a g_dropTarget slot computed with floor(), not round() — symmetric 1-tile swap thresholds in both directions (m05916-1, m05941). While the pointer is over a cell the other cells LIVE-REFLOW through the optimistic preview_ lane: moveActiveTo erases the active id at `from` and inserts at `insertAt = jlimit(0, n-1, to)` — a 0-based splice where to==from-1 (left neighbour) moves LEFT (the old `if (to < from) ++to;` offset cancelled every left move) and to==n-1 lands at the tail. The reflow IS the location preview; the NodeView::DropGlow overlay child (rounded-rect wash 30% + 1.5 px border 70% in the dragged block's own kind colour, centred on the target's visible square — user m06686: emanate from the centre with equal padding) marks WHICH block is moving and where it will land (m06356/m06359; a paint-side ring was dropped because NodeView paints UNDER its children, m06341). cellDragEnd: if the drop lands OUTSIDE the grid (g_dropTarget < 0) the drag CANCELS — cancelDrag() restores the native lane, no commit; a right-click during the drag also cancels (m05916-3); otherwise the full-lane id list from NodeModel::orderWith(blockId, target) — the same erase+insert-at-target splice, clamping far targets to the lane tail — is committed through chain.reorderBlocks. Drops commit through the store; a drop back on the origin slot is a no-op permutation.",
+      "statement": "Grid drag-and-drop (gallery-faithful, as of the m06828 batch, commit 72f48ea — superseding 6df21a2): cellDragMove tracks a dragInGrid_ flag from the ghost centre vs the grid bounds (rowX_±4, row/row-range ±4) and a g_dropTarget slot computed with floor(), not round() — symmetric 1-tile swap thresholds in both directions (m05916-1, m05941). While the pointer is over the grid the other cells LIVE-REFLOW through the optimistic preview_ lane: moveActiveTo erases the active id at `from` and inserts at `insertAt = jlimit(0, n-1, to)` where `to = jlimit(lead, n, lead + target)` (lead = countLeadingInserts(preview_) — with leading inserts a raw list index diverges from the grid slot, the root cause of the one-slot-late far drops); before splicing it lazy-pads preview_ with fresh insert ChainItems (juce::Uuid) up to the target, so a drag to a far slot PADS the lane instead of clamping to the tail (m06828 item 4). The reflow IS the location preview; the NodeView::DropGlow overlay child (rounded-rect wash 30% + 1.5 px border 70% in the dragged block's own kind colour, centred on the target's visible square — m06686) marks WHERE the block will land (m06356/m06359; a paint-side ring was dropped because NodeView paints UNDER its children, m06341). cellDragEnd: an off-grid drop CANCELS — cancelDrag() restores the native lane, no commit (off-chain release is the ONLY cancel, m05916-3 reaffirmed; the former right-click-during-drag cancel was REMOVED in m06828-2 — a right press mid-drag opens the context menu and the drag survives it); an in-grid drop commits the full-lane id list from preview_ through chain.reorderBlocks — the `if (ids.size() >= native.size())` gate (was ==) makes padded id lists legal, and reorderChainBlocks materialises the fresh insert ids. Drops commit through the store; a drop back on the origin slot is a no-op permutation.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:47bec3dfd0380116b141646d520951949b416cce0b8fd7caaf764674f35414b2"
+          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
         }
       ]
     },
@@ -244,13 +244,13 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:47bec3dfd0380116b141646d520951949b416cce0b8fd7caaf764674f35414b2"
+          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T17:41:53.695Z"
+    "at": "2026-10-18T19:36:10.014Z"
   }
 }

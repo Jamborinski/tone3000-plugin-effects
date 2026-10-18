@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:7c815acf25232b098df5aa2100485e76c86643f567aba1af07a0909ec3318d2b",
+  "pageVersion": "sha256:7278fea37c1509d5e03e8432bacd8ef4c48b60998bf86847eb4ca83b49afbac1",
   "claims": [
     {
       "id": "claim_63767cf697ac4d45bfd45cb93f9a268b",
@@ -18,7 +18,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:f565ebe0c69c7717e5cae3393bfe5f96a62c9d828b754ed96d906e786f22748b"
+          "version": "repo-file-v1:sha256:f7120aac7135a75dd946b451c5dfd050d30f8ae939aea964c93b385e6cc0e048"
         },
         {
           "resource": "repo://plugin/include/ChainDomain.h",
@@ -42,7 +42,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:f565ebe0c69c7717e5cae3393bfe5f96a62c9d828b754ed96d906e786f22748b"
+          "version": "repo-file-v1:sha256:f7120aac7135a75dd946b451c5dfd050d30f8ae939aea964c93b385e6cc0e048"
         },
         {
           "resource": "repo://plugin/include/effects/conv/BudgetConvolver.h",
@@ -67,6 +67,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T14:31:43.894Z"
+    "at": "2026-10-18T19:36:10.014Z"
   }
 }

@@ -99,8 +99,8 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   focus WITHOUT stealing your input on the live display) before committing.
   (See [`openwiki/build-and-ops/dsp-test-suite.md`](openwiki/build-and-ops/dsp-test-suite.md).)
   A **juce-end-to-end** supplement (2026-10-18, `f0b06d4`) adds real-pointer
-  drags: `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js` (34 check()
-  asserts);
+  drags: `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js` (35 check()
+  asserts; `T3K_E2E_APP` env overrides the app binary);
   it is an ADDITION to the testbed gates, not a replacement (spec
   spc-1792273651114-39383).
 - **9p mtime:** after a Windows-side edit of a WSL repo file, `touch` it before

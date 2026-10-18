@@ -31,10 +31,10 @@ sources:
     resource: repo://test/src/node_model_tests.cpp
   - id: openwiki-source-a9b10161f0531edad6c09d8e
     resource: repo://test/src/strip_knob_tests.cpp
-generated: { by: "pi", at: "2026-10-18T17:41:53.695Z" }
+generated: { by: "pi", at: "2026-10-18T19:36:10.014Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-18T17:41:53.695Z
+    at: 2026-10-18T19:36:10.014Z
 ---
 
 # Node view: the signal-line grid
@@ -173,10 +173,13 @@ juce-end-to-end drag regression (supplement to the testbed gates).
   real-pointer drags (`node-drag-begin/move/end`, events routed to the
   `mouseDown` source cell — JUCE keeps the drag there), `node-set-view` /
   `node-cells` / `node-geometry` / `node-tree` / `node-screenshot`; the JS
-  regression `plugin/ui/testbed/e2e/node-drag.js` (34 check() asserts — grown
+  regression `plugin/ui/testbed/e2e/node-drag.js` (35 check() asserts — grown
   from the initial 13 by the 2026-10-18 drag-UX closeout, which added the
-  symmetric-swap / drop-glow / right-press-cancel laws — run
-  `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`) guards the
+  symmetric-swap / drop-glow / right-press-cancel laws, and by the m06828
+  batch (72f48ea), which pinned the positional far-drop and
+  right-press-during-drag laws — run `xvfb-run -a node
+  plugin/ui/testbed/e2e/node-drag.js`, `T3K_E2E_APP` overrides the app
+  binary) guards the
   opaque-ghost / full-size / follows-pointer / no-origin-box / post-drag-idle /
   symmetric-swap / drop-glow / drag-cancel laws. `pointerDrag` in `e2e.js`
   gains a `button` parameter and a `dragPress(app, pt, button)` helper drives

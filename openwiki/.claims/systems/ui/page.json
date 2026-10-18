@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:e25ee8298ba3b01bbd29b94c6dd23ed191517833767aa29935ace8195c68926d",
+  "pageVersion": "sha256:dc002d6c52b11c09101a8284aea212a57cc5b61ed5148460ff383bac1515d999",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -180,7 +180,7 @@
     },
     {
       "id": "claim_223c1b2b12a54ff7a8e571f8773f2995",
-      "statement": "juce-end-to-end supplement (2026-10-18, commit f0b06d4; drag-UX closeout 6df21a2): UiTestbed links the in-tree focusrite-e2e C++ transport (libs/focusrite-e2e, node_modules/ gitignored) and is inert unless launched with --e2e-test-port=N; NodeViewE2E.cpp registers a focusrite::e2e::CommandHandler driven from PluginRoot (PluginRoot::setNodeViewE2E exposes the pref+setView pair for node-set-view) with real-pointer drag commands (node-drag-begin/move/end, events routed to the mouseDown source cell per JUCE's drag semantics) plus node-cells/node-geometry/node-tree/node-screenshot probes. The JS regression plugin/ui/testbed/e2e/node-drag.js (34 check() asserts — grown from the initial 13 by the 2026-10-18 drag-UX closeout, which added the symmetric-swap / drop-glow / right-press-cancel laws; run xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js) guards the opaque full-size ghost + drag-UX laws. This is a SUPPLEMENT to the testbed gates, not a replacement (spec spc-1792273651114-39383, user m02886).",
+      "statement": "juce-end-to-end supplement (2026-10-18, commit f0b06d4; drag-UX closeout 6df21a2; m06828 batch 72f48ea): UiTestbed links the in-tree focusrite-e2e C++ transport (libs/focusrite-e2e, node_modules/ gitignored) and is inert unless launched with --e2e-test-port=N; NodeViewE2E.cpp registers a focusrite::e2e::CommandHandler driven from PluginRoot (PluginRoot::setNodeViewViewE2E exposes the pref+setView pair for node-set-view) with real-pointer drag commands (node-drag-begin/move/end, events routed to the mouseDown source cell per JUCE's drag semantics; since 72f48ea a node-drag-press command stamps NodeView::setE2eReleaseButton around a synthetic release — mouseWasClicked(int) does not exist in JUCE 9, so the handler tells the view which button just went up) plus node-cells/node-geometry/node-tree/node-screenshot probes. The JS regression plugin/ui/testbed/e2e/node-drag.js (35 check() asserts — grown from the initial 13 by the 2026-10-18 drag-UX closeout and the m06828 additions that pinned the positional far-drop and right-press-during-drag laws; run `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`, with T3K_E2E_APP env override to point at a working UiTestbed build) guards the opaque full-size ghost + drag-UX laws. This is a SUPPLEMENT to the testbed gates, not a replacement (spec spc-1792273651114-39383, user m02886).",
       "evidence": [
         {
           "resource": "repo://plugin/ui/testbed/CMakeLists.txt",
@@ -188,17 +188,17 @@
         },
         {
           "resource": "repo://plugin/ui/testbed/NodeViewE2E.cpp",
-          "version": "repo-file-v1:sha256:d03c529dcff6bb580d95e276fa52055593d2a65d6a5265ee5c517f8821c9eba0"
+          "version": "repo-file-v1:sha256:ff4e943b89f569952d04aed949a882e8ecf2abf10702e0bfc25c8f97fb084356"
         },
         {
           "resource": "repo://plugin/ui/testbed/e2e/node-drag.js",
-          "version": "repo-file-v1:sha256:d4398b70cec4d1bc493ada1e775b8d3c583ab09403d90960c4cf9c5f28b1cc99"
+          "version": "repo-file-v1:sha256:2555061010bc1e2345cfb44aca1ed2c6ba60b6b969fd3d9acaa30b5d8f50002c"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T17:41:53.695Z"
+    "at": "2026-10-18T19:36:10.014Z"
   }
 }

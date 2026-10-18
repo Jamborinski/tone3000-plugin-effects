@@ -86,5 +86,23 @@ dedicated session once the node-view batch closes.
   `/mnt/c/Users/jambo/Downloads/TONE3000-win-20261018-073012/TONE3000.exe`,
   md5 `698732294619dedc3e434bfee4c9c488` (staged from `f0b06d4`).
 
+## Shipped — second slice: m06828 batch (72f48ea, 2026-10-18)
+
+- `e2e/node-drag.js` grew to **35 checks** — adds the positional 20-slot
+  grid regression (drag-to-far-slot lands AT the slot, add-to-far-slot lazy
+  pads inserts), right-press-mid-drag **survives** the drag (m06828-2;
+  `node-drag-press` mirrors the OS right-click down+up, and
+  `NodeView::setE2eReleaseButton` stamps the release button onto the
+  synthetic mouseUp so `NodeCell::mouseUp` commits only on left), and the
+  drop-glow centred-square law (m06686).
+- `e2e.js` `APP` now reads `T3K_E2E_APP` env override (build-tree switch
+  without editing the file).
+- **Stage A exe:** `TONE3000-win-20261018-123301` →
+  `/mnt/c/Users/jambo/Downloads/TONE3000-win-20261018-123301/TONE3000.exe`,
+  md5 `16d95a7f3a8026d4083b20f6922d14a0` (staged from `72f48ea`).
+  Re-staged on request (user m07429): `TONE3000-win-20261018-123713` →
+  `/mnt/c/Users/jambo/Downloads/TONE3000-win-20261018-123713/TONE3000.exe`,
+  byte-identical (same md5).
+
 Still deferred: CI `test:e2e` job, `docs/agents/e2e-tests.md` sub-rule,
 hold-menu + gallery↔node-toggle e2e tests.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:82483ee46c1007530315dd0e4cafe356ca9c323c9e2f86992be30d5d7ee48cd7",
+  "pageVersion": "sha256:c98fae0a845000f40b903c914870b42ca3169ac38d19558353e94e8091074d1a",
   "claims": [
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
@@ -36,7 +36,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:14051718c6a3dabb0363b7098c44f76ccb6179c9f35f7ff104e6b3b99a300469"
+          "version": "repo-file-v1:sha256:ee4e2a7466cc53f03d99e47553984d09ad7453104d03172fe6e7d3144c692ef7"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
@@ -64,11 +64,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:f565ebe0c69c7717e5cae3393bfe5f96a62c9d828b754ed96d906e786f22748b"
+          "version": "repo-file-v1:sha256:f7120aac7135a75dd946b451c5dfd050d30f8ae939aea964c93b385e6cc0e048"
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:14051718c6a3dabb0363b7098c44f76ccb6179c9f35f7ff104e6b3b99a300469"
+          "version": "repo-file-v1:sha256:ee4e2a7466cc53f03d99e47553984d09ad7453104d03172fe6e7d3144c692ef7"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
@@ -86,11 +86,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:f565ebe0c69c7717e5cae3393bfe5f96a62c9d828b754ed96d906e786f22748b"
+          "version": "repo-file-v1:sha256:f7120aac7135a75dd946b451c5dfd050d30f8ae939aea964c93b385e6cc0e048"
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:14051718c6a3dabb0363b7098c44f76ccb6179c9f35f7ff104e6b3b99a300469"
+          "version": "repo-file-v1:sha256:ee4e2a7466cc53f03d99e47553984d09ad7453104d03172fe6e7d3144c692ef7"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
@@ -136,15 +136,15 @@
     },
     {
       "id": "claim_25df709ee60b4e88b38898718b8a0563",
-      "statement": "removeChainBlock persists intermediate empty slots (node-view batch 2, 2026-10-16): after pushing history it moves the block out and inserts a FRESH ChainBlock of type INSERT at the erased position (`it = chain.erase(it); chain.insert(it, std::make_unique<ChainBlock>(juce::Uuid()…, ChainBlockType::INSERT));`), so a mid-lane removal leaves the lane length unchanged with the gap in place; a subsequent addEffectBlock/landToneBlock into that index fills the gap in place instead of prepending. Inserts themselves are still not removable (the insert branch returns false). Covered by AddAtSlot.MidLaneGapIsFilledInPlace in test/src/add_at_slot_tests.cpp, which also re-baselined ChainBranchTest.AlignsBranchLaneEndWithTrunk (trunk stays at kMinLaneSlots=5 after removal; branch end 4→3).",
+      "statement": "removeChainBlock is IN-PLACE (node-view batch 2 law, reaffirmed in the m06828 batch, commit 72f48ea): after pushing history it erases the block and inserts a FRESH ChainBlock of type INSERT at the erased position, so a mid-lane removal leaves lane size unchanged with the gap in place (no left-shift of neighbours); a subsequent addEffectBlock/landToneBlock into that index fills the gap in place. Inserts themselves are not removable (the insert branch returns false). Covered by AddAtSlot.MidLaneGapIsFilledInPlace / TrailingInsertIsFilledAtTheEnd (test/src/add_at_slot_tests.cpp — re-baselined to the floor-only 6-slot tail by 72f48ea) and the new m06828 DspTests ProcessorTest.RemoveLeavesInsertGapWithoutLeftShift + ProcessorTest.RemoveRejectsInsertBlocks (test/src/processor_tests.cpp).",
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:14051718c6a3dabb0363b7098c44f76ccb6179c9f35f7ff104e6b3b99a300469"
+          "version": "repo-file-v1:sha256:ee4e2a7466cc53f03d99e47553984d09ad7453104d03172fe6e7d3144c692ef7"
         },
         {
           "resource": "repo://test/src/add_at_slot_tests.cpp",
-          "version": "repo-file-v1:sha256:7bd93c2831b06ae76d46f1241363ccb5195b957423fd1c1b56ce157a22a4f996"
+          "version": "repo-file-v1:sha256:2350e9e23f98f1bb14af3d74e518863aa8af623f8c0e1af7d98da6d2d0bbb567"
         }
       ]
     },
@@ -161,6 +161,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T14:31:43.894Z"
+    "at": "2026-10-18T19:36:10.014Z"
   }
 }
