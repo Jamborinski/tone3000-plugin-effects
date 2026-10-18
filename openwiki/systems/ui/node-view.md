@@ -31,10 +31,10 @@ sources:
     resource: repo://test/src/node_model_tests.cpp
   - id: openwiki-source-a9b10161f0531edad6c09d8e
     resource: repo://test/src/strip_knob_tests.cpp
-generated: { by: "pi", at: "2026-10-18T14:31:43.894Z" }
+generated: { by: "pi", at: "2026-10-18T17:41:53.695Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-18T14:31:43.894Z
+    at: 2026-10-18T17:41:53.695Z
 ---
 
 # Node view: the signal-line grid
@@ -173,10 +173,15 @@ juce-end-to-end drag regression (supplement to the testbed gates).
   real-pointer drags (`node-drag-begin/move/end`, events routed to the
   `mouseDown` source cell — JUCE keeps the drag there), `node-set-view` /
   `node-cells` / `node-geometry` / `node-tree` / `node-screenshot`; the JS
-  regression `plugin/ui/testbed/e2e/node-drag.js` (13 checks, run
+  regression `plugin/ui/testbed/e2e/node-drag.js` (34 check() asserts — grown
+  from the initial 13 by the 2026-10-18 drag-UX closeout, which added the
+  symmetric-swap / drop-glow / right-press-cancel laws — run
   `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`) guards the
-  opaque-ghost / full-size / follows-pointer / no-origin-box / post-drag-idle
-  laws. Its hit test is JUCE's own `Component::getComponentAt` — a
+  opaque-ghost / full-size / follows-pointer / no-origin-box / post-drag-idle /
+  symmetric-swap / drop-glow / drag-cancel laws. `pointerDrag` in `e2e.js`
+  gains a `button` parameter and a `dragPress(app, pt, button)` helper drives
+  the right-press cancel (`node-drag-press` command). Its hit test is JUCE's
+  own `Component::getComponentAt` — a
   hand-rolled front-to-back walk routed every press to a full-window
   ancestor (the `ghost=none` first-run mystery). `PluginRoot::setNodeViewE2E`
   exposes the pref+setView pair for `node-set-view`. The e2e layer is a
@@ -220,8 +225,23 @@ whose mojibake showed on tone nodes) which drives both the JUCE tooltip and
 the bottom hint bar via the HintBus HintTracker. Drag uses `component
 CreateSnapshot` ghosts — **2026-10-18: full-size opaque gallery-faithful
 ghost + live reflow preview via `getLocalBounds` (see the Ghost bullet
-above)** —; the
-suppress-click-until timer keeps the drop from firing a stray select.
+above)** —; the suppress-click-until timer keeps the drop from firing a stray
+select. **2026-10-18 drag-UX closeout (commit `6df21a2`):** the drop target is
+computed with **floor, not round** (`slot = floor((x − rowX_)/cellW_)`) so the
+swap thresholds are **symmetric** — ~1 tile left OR right targets the
+neighbour (the old `roundToInt` rounded a slot's own centre UP: instant right
+swap, 1.5-tile left swap); `moveActiveTo` splices with
+`insertAt = jlimit(0, n−1, to)` 0-based (the old `if (to < from) ++to;` offset
+cancelled every left move); the drop-target marker is the **`NodeView::
+DropGlow` overlay child** — a rounded-rect wash at 30 % + 1.5 px border at 70 %
+in the dragged block's OWN kind colour, centred on the target's visible square
+(NodeView paints UNDER its children, so a paint-side ring over an occupied
+cell was invisible — user m06341; a paint-side `kHighlight`/gold ring was tried
+and dropped: m06356/m06359/m06686) — and the drag **cancels** two ways:
+releasing off the signal chain (g_dropTarget < 0 → `cancelDrag()` restores the
+native lane, no commit) and **right-click while dragging** (the NodeCell
+popup-branch routes to `cancelDrag()` with a suppress window so the right
+release can't re-open a menu — user m05916/m05928).
 
 **Tone nodes** (batch 2, item 6): occupied inserts (NAM/conv) are NOT empty
 slots — `NodeCell::paint` treats `!s.has || s.insert` as the dashed+plus gap

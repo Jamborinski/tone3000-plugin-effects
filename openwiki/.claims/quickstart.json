@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:7eee286263c40bd7c93f0be9caec13f6bc64ab8fd9177690fee6febc77c88a30",
+  "pageVersion": "sha256:d97e94d743ae815764333e07903c8c1c951f78bf39d5ebadcd02eb98dd6b33c9",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -60,7 +60,7 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:c8840f84356e8d2930401838ac9d12ed3da224694ff94846f0ff32d205fef308"
+          "version": "repo-file-v1:sha256:f4acf77ae9a9cf1f4a64af754586281b4edce31ab83902dccea7fb6f679d982a"
         },
         {
           "resource": "repo://docs/agents/audio-testing.md",
@@ -100,7 +100,7 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:c8840f84356e8d2930401838ac9d12ed3da224694ff94846f0ff32d205fef308"
+          "version": "repo-file-v1:sha256:f4acf77ae9a9cf1f4a64af754586281b4edce31ab83902dccea7fb6f679d982a"
         },
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
@@ -175,6 +175,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T14:31:43.894Z"
+    "at": "2026-10-18T17:41:53.695Z"
   }
 }

@@ -62,7 +62,9 @@ explicit UTF-8 pointer: `juce::String (juce::CharPointer_UTF8 ("text \u2014"))`.
   command handler (`node-drag-begin/move/end`, `node-set-view`, `node-cells`,
   `node-geometry`, `node-tree`, `node-screenshot`).
 - Run the regression: `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`
-  (13 checks; shots under /tmp/t3k-e2e/). It guards the node-drag ghost laws
+  (34 check() asserts — grown from the initial 13 by the 2026-10-18 drag-UX
+  closeout: symmetric-swap / drop-glow / right-press-cancel laws; shots under
+  /tmp/t3k-e2e/). It guards the node-drag ghost laws
   (full-size opaque, follows pointer, never at origin, idle after drop).
 - **Synthetic hit tests must use `Component::getComponentAt`** — a hand-rolled
   front-to-back walk routes every press to a full-window overlay ancestor
