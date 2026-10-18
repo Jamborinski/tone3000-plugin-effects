@@ -46,16 +46,14 @@ sources:
     resource: repo://script/win-standalone.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
-  - id: openwiki-source-22db8812ec3771683e6a7ddc
-    resource: repo://test/src/dat_probe_tests.cpp
-  - id: openwiki-source-949fdcdad6535ec560064216
-    resource: repo://test/src/node_model_tests.cpp
-  - id: openwiki-source-fde83b2ad879efba1865ca8d
-    resource: repo://test/src/theme_palette_tests.cpp
+  - id: openwiki-source-95d19d59abc2626104f1ad90
+    resource: repo://test/src/state_size_tests.cpp
+  - id: openwiki-source-65fd7457c62ac09a742dd567
+    resource: repo://test/src/StateSizeBlob.h
 generated: { by: "pi", at: "2026-10-14T21:12:00.922Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-18T19:36:10.014Z
+    at: 2026-10-18T23:18:48.824Z
 ---
 
 # TONE3000

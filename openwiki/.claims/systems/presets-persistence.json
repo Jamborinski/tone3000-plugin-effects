@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:ddfbcb6ea226163962b0e81c27e88cb527a8d5d173bb0fa055955f82acb565c0",
+  "pageVersion": "sha256:2d7ffc7c54ac22d1bb181c4ad01f08bf6e6ffa6f700a27c751b32ec9eac2ff7b",
   "claims": [
     {
       "id": "claim_2e79f0d644c648b78ca40190d3145e2a",
@@ -33,10 +33,20 @@
           "version": "repo-file-v1:sha256:d8510ec1692fb9f72c6594184be1f5524284616d03cbe1f87ba0494c736bca51"
         }
       ]
+    },
+    {
+      "id": "claim_d63f15a117854b5d8862acbfb7b15ee2",
+      "statement": "The DAW-host state blob (getStateInformation/setStateInformation, plugin/src/ProcessorState.cpp:640-712) is `T3KB` magic (kStateMagic, :35) + one format-flag byte + payload: flag 1 = gzip (8-byte LITTLE-ENDIAN original size + a zlib-wrapped stream from juce::GZIPCompressorOutputStream at level -1), flag 0 = raw binary ValueTree bytes; a 5th byte that is neither flag is a legacy no-flag save parsed from offset 4 (kStateSchemaVersion is 2, :45; the tree itself carries schemaVersion, bumped 1→2 by the optimization-findings Stage 1 commit 353bac9, and setStateInformation at :717 rejects blobs whose embedded version exceeds kStateSchemaVersion). The gzip layer is chosen only when it is strictly smaller — incompressible payloads (the LCG test rig) save flag 0; real 360 KB-class NAM captures save flag 1 (StateSize* tests in test/src/state_size_tests.cpp pin both). The payload is binary, not the original Base64-in-XML: that path burned 100+ ms per host save on a heavy rig. This is the DAW-host state path ONLY — the T3KB/T3KH preset FILE format (PresetManager 3-tier + factory presets) is a separate compat surface and is untouched by these stages.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/src/ProcessorState.cpp",
+          "version": "repo-file-v1:sha256:a2a6191e41e0dc0cea7667b886d9b2a4aeb514228799f11bf80036aff54548d0"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T19:36:10.014Z"
+    "at": "2026-10-18T23:18:48.824Z"
   }
 }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:7278fea37c1509d5e03e8432bacd8ef4c48b60998bf86847eb4ca83b49afbac1",
+  "pageVersion": "sha256:727c1f007df71edda8cc50622e4d36c6f11fac585adeb71e518b9a31c0d42f27",
   "claims": [
     {
       "id": "claim_63767cf697ac4d45bfd45cb93f9a268b",
@@ -8,7 +8,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorModelLoader.cpp",
-          "version": "repo-file-v1:sha256:b818e3cbfe5845609465a7512437a936841be85117ad97bce0d80054df2e2967"
+          "version": "repo-file-v1:sha256:493ee59848fc923fce0dc33bc493af6f24f35327cb1eacbbbe5f9ad5a3fefbb1"
         }
       ]
     },
@@ -32,7 +32,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/effects/conv/BudgetConvolver.h",
-          "version": "repo-file-v1:sha256:78415f5b4fc4f1608239bb7bcecf2edf5ef6b9943891f49188bf6a96c2b4c9e9"
+          "version": "repo-file-v1:sha256:a4b3e8dc19affea91054a2dffcdeff28d8edfc7c783981617bb9d095d0b33889"
         }
       ]
     },
@@ -46,27 +46,27 @@
         },
         {
           "resource": "repo://plugin/include/effects/conv/BudgetConvolver.h",
-          "version": "repo-file-v1:sha256:78415f5b4fc4f1608239bb7bcecf2edf5ef6b9943891f49188bf6a96c2b4c9e9"
+          "version": "repo-file-v1:sha256:a4b3e8dc19affea91054a2dffcdeff28d8edfc7c783981617bb9d095d0b33889"
         }
       ]
     },
     {
       "id": "claim_24754ba80a974ab29304c7c7267ca0f3",
-      "statement": "ConvolutionReverb (IR-driven plate reverb; now plugin/include/effects/conv/ConvolutionReverb.h) shares this engine: a ~150 ms install-fade warmup (JUCE's dry crossfade elapses off the live path via primeSilence at install, not at first wet), and the JUCE non-uniform OLA replaced by the BudgetConvolver tail. Reverb-specific: user time-stretch (JUCE re-samples the edited IR to engine rate), 4.0 quad→stereo downmix folded BEFORE JUCE sees it (L=(c0+c2)/√2, R=(c1+c3)/√2 — JUCE reads only ch 0/1 and would drop the rear pair), and JUCE Normalise on the load path.",
+      "statement": "ConvolutionReverb (IR-driven plate reverb; now plugin/include/effects/conv/ConvolutionReverb.h) shares this engine: a ~150 ms install-fade warmup (JUCE's dry crossfade elapses off the live path by feeding the fresh tail one silence frame at rebuild — ConvolutionReverb.cpp ~325-327, `cold.clear()` then `tail->process(cold)` — not at first wet; the dedicated message-thread `primeSilence` warm-up was removed in the 2026-10-20 optimization-findings Stage 5 as a zero-caller), and the JUCE non-uniform OLA replaced by the BudgetConvolver tail. Reverb-specific: user time-stretch (JUCE re-samples the edited IR to engine rate), 4.0 quad→stereo downmix folded BEFORE JUCE sees it (L=(c0+c2)/√2, R=(c1+c3)/√2 — JUCE reads only ch 0/1 and would drop the rear pair), and JUCE Normalise on the load path.",
       "evidence": [
-        {
-          "resource": "repo://plugin/include/effects/conv/BudgetConvolver.h",
-          "version": "repo-file-v1:sha256:78415f5b4fc4f1608239bb7bcecf2edf5ef6b9943891f49188bf6a96c2b4c9e9"
-        },
         {
           "resource": "repo://plugin/include/effects/conv/ConvolutionReverb.h",
           "version": "repo-file-v1:sha256:6c10f5af885783ebdec6a7487ea57762af1a942515d07e168578432e76899e20"
+        },
+        {
+          "resource": "repo://plugin/src/effects/conv/ConvolutionReverb.cpp",
+          "version": "repo-file-v1:sha256:fb9a985d0afe3e7eff7dacab04255c6d702d762805455da55dd7b06ba4ce19c1"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T19:36:10.014Z"
+    "at": "2026-10-18T23:18:48.824Z"
   }
 }

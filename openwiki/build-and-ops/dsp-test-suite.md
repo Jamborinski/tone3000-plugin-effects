@@ -36,12 +36,14 @@ sources:
     resource: repo://test/src/reverb_ceiling_p0_tests.cpp
   - id: openwiki-source-cbee6d7a85a49f4ea2d7a315
     resource: repo://test/src/reverb_quality_p1_tests.cpp
+  - id: openwiki-source-95d19d59abc2626104f1ad90
+    resource: repo://test/src/state_size_tests.cpp
   - id: openwiki-source-a9b10161f0531edad6c09d8e
     resource: repo://test/src/strip_knob_tests.cpp
-generated: { by: "pi", at: "2026-10-18T19:36:10.014Z" }
+generated: { by: "pi", at: "2026-10-18T23:18:48.824Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-18T19:36:10.014Z
+    at: 2026-10-18T23:18:48.824Z
 ---
 
 # DSP test suite (DspTests)
@@ -133,18 +135,23 @@ confirm the "Running N tests" line is non-zero before trusting the result.**
 
 ## Suite size
 
-The suite grows with features — **548 tests / 79 suites as of the 2026-10-17
-node-view bug-batch closeout** (commits `0cb035e`–`22bbaf6`: 6
-`StripGalleryParity` tests in `test/src/strip_knob_tests.cpp` — the
-strip==gallery exact-knob-set law in both directions + the ≤12 knob cap — and
-5 `ProcessorTest.ConvIr*` preset-persistence tests;
-
-node-view batch-3 closeout** (commit `5b9bdd9`: 8 new `StripKnobPosition`
-knot tests in `test/src/strip_knob_tests.cpp` — the identity-scale law
-(position == raw for identity-stored Mix/In/Out) + per-kind drive round-trips;
-530 / 78 was the 2026-10-16 node-view batch-2 closeout (7 StripKnob per-knob
+The suite grows with features — **560 tests as of the 2026-10-20
+optimization-findings state-size closeout** (commits `728e144` + `9f34a3f`:
+8 `StateSize*` tests in `test/src/state_size_tests.cpp` — the DAW-host state
+footprint baseline, the ModelLibrary dedup shape, the gzip flag layer, and
+the v1-forward-compat restore — plus the shared `test/src/StateSizeBlob.h`
+flag-aware blob parser now used by the state/processor/pitch/gate tests). 552
+was the 2026-10-18 node-view bug-batch closeout (commit `72f48ea`: 4
+`ProcessorTest` positional-grid tests); 548 / 79 was the 2026-10-17 node-view
+bug-batch closeout (commits `0cb035e`–`22bbaf6`: 6 `StripGalleryParity` tests
+in `test/src/strip_knob_tests.cpp` — the strip==gallery exact-knob-set law in
+both directions + the ≤12 knob cap — and 5 `ProcessorTest.ConvIr*`
+preset-persistence tests); 530 / 78 was the 2026-10-16 node-view batch-3
+closeout (commit `5b9bdd9`: 8 `StripKnobPosition` tests in
+`test/src/strip_knob_tests.cpp` — the identity-scale law, position == raw for
+identity-stored Mix/In/Out, + per-kind drive round-trips); 530 / 78 was the 2026-10-16 node-view batch-2 closeout (7 StripKnob per-knob
 readout tests in `test/src/strip_knob_tests.cpp` + 2 AddAtSlot lane-gap tests
-in `test/src/add_at_slot_tests.cpp`; history: 487 after the 2026-10-15 R2 final cut; 493
+in `test/src/add_at_slot_tests.cpp`); history: 487 after the 2026-10-15 R2 final cut; 493
 after the P2.1 plate density uplift; 503 after the full pass 1 + the
 `TypeScaffold` re-scope; 511 / 75 after the T-DAT-001 wave-3 closeout
 (2026-10-17, plate/probe suites + StandaloneStateAutosave stub); 512 / 75

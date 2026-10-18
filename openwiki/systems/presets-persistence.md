@@ -8,16 +8,18 @@ sources:
     resource: repo://plugin/include/PresetFile.h
   - id: openwiki-source-9b427132a1d345ae7e7734ef
     resource: repo://plugin/src/PresetFile.cpp
+  - id: openwiki-source-906b35776f47040ec6806bce
+    resource: repo://plugin/src/ProcessorState.cpp
   - id: openwiki-source-e7bf1d2f34f6dff9ef218ca0
     resource: repo://plugin/ui/services/UiPrefs.cpp
   - id: openwiki-source-1ab80eacb9347c8b1c174e6c
     resource: repo://plugin/ui/services/UiPrefs.h
   - id: openwiki-source-78c1e0c44679b66507a1889c
     resource: repo://plugin/ui/views/PluginHeader.cpp
-generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
+generated: { by: "pi", at: "2026-10-18T23:18:48.824Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-18T19:36:10.014Z
+    at: 2026-10-18T23:18:48.824Z
 ---
 
 # Presets and runtime persistence
@@ -121,6 +123,37 @@ files) survive. `StandaloneStateAutosave::install()` registers a
 background-notification observer so backgrounding is the save
 trigger — covers force-quit and OS eviction alike. `install()` is
 idempotent and a no-op off iOS or outside the standalone app.
+
+## DAW-host state blob (`getStateInformation` / `setStateInformation`)
+
+The **host project** save path is separate from the `.t3kpreset` file
+format above — a single `MemoryBlock` blob, `T3KB` magic + one format-flag
+byte + payload (plugin/src/ProcessorState.cpp:640-712):
+
+- **flag 1 = gzip** — an 8-byte LITTLE-ENDIAN original size followed by a
+  zlib-wrapped stream (`juce::GZIPCompressorOutputStream`, level -1),
+  chosen only when strictly smaller than the raw tree;
+- **flag 0 = raw** — binary `ValueTree` bytes (the pre-gzip v2 form);
+- **a 5th byte that is neither flag = legacy v1** — parsed from offset 4;
+  `kStateSchemaVersion` is 2 (bumped 1→2 by the optimization-findings
+  Stage 1, commit `353bac9`), and `setStateInformation` refuses a blob
+  whose embedded version exceeds it.
+
+The payload is **binary, not the original Base64-in-XML** — that path
+burned 100+ ms per host save on a heavy rig. The tree itself carries the
+chain as the same `ChainSnapshot` the undo/preset paths use, with model
+bytes **deduplicated**: since Stage 1 a `ModelLibrary` child (sibling of
+`ChainBlocks` / `RightChainBlocks`) holds each referenced model's payload
+once, keyed by `modelId`, and the per-block `ModelCache` entries carry a
+`ref` string; `TONE3000Processor::resolveModelRefs` (plugin/src/ProcessorHistory.cpp:250)
+rematerializes `data` from the library at the top of
+`restoreChainSnapshot`. Unknown refs log a `"will refetch"`-style notice
+and fall through to the normal re-seed path. **v1 forward-compat:** bare
+`data` entries (no `ref`) pass `resolveModelRefs` untouched, so pre-dedup
+states load unchanged. Test rig: 4 blocks sharing one 8 MB model went
+33.6 MB → 8.4 MB (~4×, the dedup; gzip adds ~25–30 KB per real 360 KB-class
+NAM capture on top). Pinned by `test/src/state_size_tests.cpp` (the shared
+flag-aware blob parser lives in `test/src/StateSizeBlob.h`).
 
 ## Trace: a user-visible save
 

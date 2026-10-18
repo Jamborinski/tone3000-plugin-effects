@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:eb31649fea37808cf1f95cc4d70312b158a6e4cc2421554a212c7c9061df34ee",
+  "pageVersion": "sha256:e38e15c8f3109908276257697af541321d3d547406e0e647e9f3ee39c25c2436",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -18,7 +18,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
         }
       ]
     },
@@ -28,7 +28,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
         }
       ]
     },
@@ -38,7 +38,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
@@ -56,7 +56,7 @@
       "evidence": [
         {
           "resource": "repo://test/src/processor_tests.cpp",
-          "version": "repo-file-v1:sha256:20a1491aa429e7fa329dbcbdb5df1c725d13a09f8997e53562675cc0f233733b"
+          "version": "repo-file-v1:sha256:d99c7ba9d580b98f3590d462e127e0c58044c59f108a37a840d6ff8ac4f25639"
         }
       ]
     },
@@ -70,7 +70,7 @@
         },
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
         }
       ]
     },
@@ -80,7 +80,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
         },
         {
           "resource": "repo://test/src/dat_probe_tests.cpp",
@@ -98,7 +98,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
         }
       ]
     },
@@ -130,7 +130,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
         }
       ]
     },
@@ -140,7 +140,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
         }
       ]
     },
@@ -150,7 +150,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
         },
         {
           "resource": "repo://test/src/node_model_tests.cpp",
@@ -164,7 +164,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
         },
         {
           "resource": "repo://test/src/add_at_slot_tests.cpp",
@@ -182,7 +182,7 @@
       "evidence": [
         {
           "resource": "repo://docs/tickets/juce-e2e-suite-draft.md",
-          "version": "repo-file-v1:sha256:fc4d861522b36ff6b47149a5c0eed7435ba997344ca719cd9b6b290135a62e2b"
+          "version": "repo-file-v1:sha256:4b70d4e0be146604a5c7b6f884f4ab180517deb79d54c97548bb2f9c019e36b0"
         },
         {
           "resource": "repo://plugin/ui/testbed/CMakeLists.txt",
@@ -193,10 +193,24 @@
           "version": "repo-file-v1:sha256:2555061010bc1e2345cfb44aca1ed2c6ba60b6b969fd3d9acaa30b5d8f50002c"
         }
       ]
+    },
+    {
+      "id": "claim_b77f695bc4c44231a0b33476d5350a09",
+      "statement": "The optimization-findings state-size work added src/state_size_tests.cpp (line 36 of test/CMakeLists.txt): 8 tests pinning the DAW-host state footprint — a 2+2 dual-mono NAM rig with 4 blocks sharing one ~8 MB synthetic LCG payload, v1 raw-blob baseline (33.6 MB, ~5 ms save), the v2 ModelLibrary dedup shape (one payload + ref strings), the gzip flag layer (incompressible LCG payload saves flag 0 raw; real 360 KB-class SYN20 captures syn20-amp-c1.nam/syn20-amp-c2.nam save flag 1 with saved < rawSize+5), byte-identical re-saves, v1-forward-compat restore, and a corrupt-header fuzz case. The test-side blob parser lives in shared header test/src/StateSizeBlob.h (parseFlagAwareStateBlob / blobTreeContains), consumed by state_cache, processor, pitch_shift and gate tests because the state header gained the format flag. Full-suite snapshot after this pass: 560 tests (lower-bound; never assert stale totals).",
+      "evidence": [
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+        },
+        {
+          "resource": "repo://test/src/state_size_tests.cpp",
+          "version": "repo-file-v1:sha256:62163390e75c0bd10d830593ccf0a5900e3282b0578ed5868222c7a7ea973b76"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T19:36:10.014Z"
+    "at": "2026-10-18T23:18:48.824Z"
   }
 }

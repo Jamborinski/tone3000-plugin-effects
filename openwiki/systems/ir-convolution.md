@@ -11,12 +11,14 @@ sources:
     resource: repo://plugin/include/effects/conv/BudgetConvolver.h
   - id: openwiki-source-98413be46f92c72f6215e812
     resource: repo://plugin/include/effects/conv/ConvolutionReverb.h
+  - id: openwiki-source-d8041e84a03828e0d221b0ce
+    resource: repo://plugin/src/effects/conv/ConvolutionReverb.cpp
   - id: openwiki-source-8a517d0ba4e262c409b9866c
     resource: repo://plugin/src/ProcessorModelLoader.cpp
-generated: { by: "pi", at: "2026-10-14T16:54:40.219Z" }
+generated: { by: "pi", at: "2026-10-18T23:18:48.824Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-18T19:36:10.014Z
+    at: 2026-10-18T23:18:48.824Z
 ---
 
 
@@ -65,7 +67,6 @@ holds.
 
 ```cpp
 BudgetConvolver(tailL, tailR, channels, tailSamples)  // tail = full kernel minus head; energy-normalised
-primeSilence(n)                                        // message-thread install-fade warm-up; audio-safe
 process(wet)  // adds wet (tail conv) into buffer; wet.getNumSamples() <= kMaxCall
 ```
 
@@ -101,7 +102,10 @@ Its own additions:
   — house CPU law, same as the amp-IR path.
 - **Load sequence:** load → prepare (drains JUCE's engine build) → **~150 ms
   install-fade warmup** (JUCE's internal dry crossfade elapses off the
-  live path, not at first wet — the `primeSilence` call).
+  live path, not at first wet — the fresh tail is fed one silence frame at
+  rebuild, `ConvolutionReverb.cpp:325-327`; the dedicated message-thread
+  `primeSilence` warm-up was removed in the 2026-10-20 optimization-findings
+  Stage 5 as a zero-caller).
 - **Explicit Start/End trim window** in **seconds** of the raw IR
   (JUCE's built-in Trim is silence-stripping only — the user can cut to a
   chosen time window).

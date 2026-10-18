@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:c98fae0a845000f40b903c914870b42ca3169ac38d19558353e94e8091074d1a",
+  "pageVersion": "sha256:4b07fb6f7340fdc1401b0c6316a11a06f01f1cb375299ae81b485c5d8eaf8f48",
   "claims": [
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
@@ -60,7 +60,7 @@
     },
     {
       "id": "claim_049ac154b25041fe8fa0bf8414e0fdcf",
-      "statement": "T-DAT-001 added a THIRD family member to the four-state-place rule: engine param reverbLoCut (0..1 clamped, default 0 = bit-pass). Its four places (line numbers as of the compressor reorg, commit 3ffb35b): (1) ChainBlock.h:409 field `double reverbLoCut = 0.0;` + the reverbParams() aggregate ending `reverbSharedMod, reverbWave, reverbLoCut` (reverbParams() at :423, aggregate end :433; matches Reverb::Params struct order) + ProcessorChain.cpp BlockRow init (:1204), row mirror (:1322), and params->setProperty(\"reverbLoCut\", …) in serializeChain (:1500); (2) ChainState.cpp parseItem :230 `item.reverbLoCut = num(v[\"params\"], \"reverbLoCut\", 0.0)`; (3) ProcessorChain.cpp isEffectParam list (:1939) + updateBlockParam branch (:2230-2231, jlimit 0..1 + block->reverb.setParams(block->reverbParams())); (4) ProcessorState.cpp blockState.setProperty (:283) + jlimit restore (:474).",
+      "statement": "T-DAT-001 added a THIRD family member to the four-state-place rule: engine param reverbLoCut (0..1 clamped, default 0 = bit-pass). Its four places (line numbers as of the 2026-10-20 state-dedup pass, which inserted resolveModelRefs into ProcessorState.cpp, shifting its later lines +6; the compressor reorg was commit 3ffb35b): (1) ChainBlock.h:409 field `double reverbLoCut = 0.0;` + the reverbParams() aggregate ending `reverbSharedMod, reverbWave, reverbLoCut` (reverbParams() at :423, aggregate end :433; matches Reverb::Params struct order) + ProcessorChain.cpp BlockRow init (:1204), row mirror (:1322), and params->setProperty(\"reverbLoCut\", …) in serializeChain (:1500); (2) ChainState.cpp parseItem :230 `item.reverbLoCut = num(v[\"params\"], \"reverbLoCut\", 0.0)`; (3) ProcessorChain.cpp isEffectParam list (:1939) + updateBlockParam branch (:2230-2231, jlimit 0..1 + block->reverb.setParams(block->reverbParams())); (4) ProcessorState.cpp blockState.setProperty (:289) + jlimit restore (:480).",
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
@@ -72,7 +72,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
-          "version": "repo-file-v1:sha256:565b90ee1f75127b37af186406ab07259497abd4b2cad507ed88cb7543025b39"
+          "version": "repo-file-v1:sha256:a2a6191e41e0dc0cea7667b886d9b2a4aeb514228799f11bf80036aff54548d0"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
@@ -82,7 +82,7 @@
     },
     {
       "id": "claim_5b55b75567f348e0bd7babb60b817954",
-      "statement": "The compressor TYPE axis added a fourth family member to the four-state-place rule: compType (int; per-mode sub-model within the compressor mode; 0 = the mode's own engine, the only type today — Compressor::numTypes(mode) returns 1 for every mode). Its four places: (1) ChainBlock.h:362 field `int compType = 0;` (immediately after compMode :361) + ProcessorChain.cpp BlockRow init (:1190), copyLane mirror row.compType = block->compType (:1291), and params->setProperty(\"compType\", row.compType) in serializeChain (:1464); (2) ChainState.h:160 `int compType = 0;` on ChainItem + ChainState.cpp parseItem :190 `item.compType = num(v[\"params\"], \"compType\", 0)`; (3) ProcessorChain.cpp param == \"compType\" in the isEffectParam list (:1939) + the else-if branch (:2123-2124) which stores the value VERBATIM (`block->compType = static_cast<int>(value)`) — no clamp here, the engine clamps via setParams (jlimit 0..numTypes-1) — and appends block->compType to the compressor setParams call site (:2128); (4) ProcessorState.cpp blockState.setProperty :232 + getProperty restore :384 (cast to int, verbatim). compType is the 11th and last field of the Compressor::Params aggregate, so every block->compressor.setParams({...}) call site (8 in ProcessorChain.cpp :2085-2146, 1 in ProcessorState.cpp :515) passes block->compType last.",
+      "statement": "The compressor TYPE axis added a fourth family member to the four-state-place rule: compType (int; per-mode sub-model within the compressor mode; 0 = the mode's own engine, the only type today — Compressor::numTypes(mode) returns 1 for every mode). Its four places (ProcessorState.cpp line numbers as of the 2026-10-20 state-dedup pass, +6 shift from resolveModelRefs): (1) ChainBlock.h:362 field `int compType = 0;` (immediately after compMode :361) + ProcessorChain.cpp BlockRow init (:1190), copyLane mirror row.compType = block->compType (:1291), and params->setProperty(\"compType\", row.compType) in serializeChain (:1464); (2) ChainState.h:160 `int compType = 0;` on ChainItem + ChainState.cpp parseItem :190 `item.compType = num(v[\"params\"], \"compType\", 0)`; (3) ProcessorChain.cpp param == \"compType\" in the isEffectParam list (:1939) + the else-if branch (:2123-2124) which stores the value VERBATIM (`block->compType = static_cast<int>(value)`) — no clamp here, the engine clamps via setParams (jlimit 0..numTypes-1) — and appends block->compType to the compressor setParams call site (:2128); (4) ProcessorState.cpp blockState.setProperty :238 + getProperty restore :390 (cast to int, verbatim). compType is the 11th and last field of the Compressor::Params aggregate, so every block->compressor.setParams({...}) call site (8 in ProcessorChain.cpp :2085-2146, 1 in ProcessorState.cpp :521) passes block->compType last.",
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
@@ -94,7 +94,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
-          "version": "repo-file-v1:sha256:565b90ee1f75127b37af186406ab07259497abd4b2cad507ed88cb7543025b39"
+          "version": "repo-file-v1:sha256:a2a6191e41e0dc0cea7667b886d9b2a4aeb514228799f11bf80036aff54548d0"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
@@ -161,6 +161,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T19:36:10.014Z"
+    "at": "2026-10-18T23:18:48.824Z"
   }
 }

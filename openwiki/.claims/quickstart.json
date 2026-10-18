@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:f8a7ab3a2da7e0bb53da5411611eb137fc78a7800fb5db0dac0535becb3ed6af",
+  "pageVersion": "sha256:6af48472e73b1ea564ca0413af4e22efdba4dc59c351f6dcfee31079d5a3aee6",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -60,7 +60,7 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:f4acf77ae9a9cf1f4a64af754586281b4edce31ab83902dccea7fb6f679d982a"
+          "version": "repo-file-v1:sha256:797b6e43f40dab7f34fc5df98b242e32a14edd58e564c99992693b2489a58d78"
         },
         {
           "resource": "repo://docs/agents/audio-testing.md",
@@ -100,7 +100,7 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:f4acf77ae9a9cf1f4a64af754586281b4edce31ab83902dccea7fb6f679d982a"
+          "version": "repo-file-v1:sha256:797b6e43f40dab7f34fc5df98b242e32a14edd58e564c99992693b2489a58d78"
         },
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
@@ -122,7 +122,7 @@
     },
     {
       "id": "claim_ad90c01370384e9084325df87c35b51d",
-      "statement": "The chain is a left/right lane of blocks (ChainBlock: Nam, IR, Insert, Effect, each with a ChainSide), processed at a fixed 48 kHz base rate (plugin/include/ChainDomain.h, kChainBaseSampleRate = 48000.0) with the host rate re-sampled at the chain's boundary (Lanczos-12). Zero-latency (PDC) is a hard invariant; the NAM engine and the reverb/convolver run inside the chain (convDry and, since the 2026-10-13 R1 pass, reverbDry are chain-layer dry-gain fields on the Convolution and Reverb effect blocks respectively). After the repo-organization reorg the effect engines live per-effect under plugin/include/effects/, each a HOST class header that pulls in its per-mode engine bodies via #include at the file end, plus thin mode/subtype wrappers: delay/Delay.h, chorus/Chorus.h, tremolo/Tremolo.h (single-engine), the reverb host at effects/reverb/Reverb.h with one engine header per mode family - digital/comb_engine.h (the Digital comb base + widthTapScaleFor), digital/Reverb_Plate.h (legacy comb-plate arm), plate/plate_engine.h (the DAT Dattorro tank + datApf), spring/Reverb_Spring.h, room/Reverb_Room.h, chamber/Reverb_Chamber.h, hall/Reverb_Hall.h, shared/Reverb_SharedMod.h - plus thin type wrappers at digital/types/Reverb_DIG.h and plate/types/Reverb_DAT.h; the compressor host at effects/compressor/Compressor.h with one engine header per mode family - vca/Compressor_Vca.h, tube/Compressor_Tube.h, opto/Compressor_Opto.h, fet/Compressor_Fet.h, varimu/Compressor_VariMu.h - plus thin type wrappers at <mode>/types/Compressor_<Mode>.h (commit 3ffb35b, mirroring the reverb engine/wrapper split; the per-block compType field selects the mode's sub-type, 1 per mode today); and the convolver at effects/conv/ConvolutionReverb.h. The UI build (NativeUi.cmake) adds these per-effect dirs to its include path so ChainBlock.h's bare engine includes resolve. LANE-LENGTH NOTE (m06828 batch, commit 72f48ea): the baseline-lane-length comment at ChainBlock.h:76-88 is now FLOOR-ONLY — alignBranchLaneLengths pads short lanes up to the baseline (insertCount == max(kMinLaneSlots - toneCount, 1)) but never trims a lane that grew past it (the node view's lazy insert padding can legally grow a lane to the full 20-slot grid size; a branch lane is the only lane still trimmed, ProcessorChain.cpp trimLaneToBaseline), and removeChainBlock leaves an insert gap in place rather than left-shifting.",
+      "statement": "The chain is a left/right lane of blocks (ChainBlock: Nam, IR, Insert, Effect, each with a ChainSide), processed at a fixed 48 kHz base rate (plugin/include/ChainDomain.h, kChainBaseSampleRate = 48000.0) with the host rate re-sampled at the chain's boundary (Lanczos-12). Zero-latency (PDC) is a hard invariant; the NAM engine and the reverb/convolver run inside the chain (convDry and, since the 2026-10-13 R1 pass, reverbDry are chain-layer dry-gain fields on the Convolution and Reverb effect blocks respectively). After the repo-organization reorg the effect engines live per-effect under plugin/include/effects/, each a HOST class header that pulls in its per-mode engine bodies via #include at the file end, plus thin mode/subtype wrappers: delay/Delay.h, chorus/Chorus.h, tremolo/Tremolo.h (single-engine), the reverb host at effects/reverb/Reverb.h with one engine header per mode family - digital/comb_engine.h (the Digital comb base + widthTapScaleFor), digital/Reverb_Plate.h (legacy comb-plate arm), plate/plate_engine.h (the DAT Dattorro tank + datApf), spring/Reverb_Spring.h, room/Reverb_Room.h, chamber/Reverb_Chamber.h, hall/Reverb_Hall.h, shared/Reverb_SharedMod.h - plus thin type wrappers at digital/types/Reverb_DIG.h and plate/types/Reverb_DAT.h; the compressor host at effects/compressor/Compressor.h with one engine header per mode family - vca/Compressor_Vca.h, tube/Compressor_Tube.h, opto/Compressor_Opto.h, fet/Compressor_Fet.h, varimu/Compressor_VariMu.h - plus thin type wrappers at <mode>/types/Compressor_<Mode>.h (commit 3ffb35b, mirroring the reverb engine/wrapper split; the per-block compType field selects the mode's sub-type, 1 per mode today); and the convolver at effects/conv/ConvolutionReverb.h. The UI build (NativeUi.cmake) adds these per-effect dirs to its include path so ChainBlock.h's bare engine includes resolve. LANE-LENGTH NOTE (m06828 batch, commit 72f48ea): the baseline-lane-length comment at ChainBlock.h:76-88 is now FLOOR-ONLY — alignBranchLaneLengths pads short lanes up to the baseline (insertCount == max(kMinLaneSlots - toneCount, 1)) but never trims a lane that grew past it (the node view's lazy insert padding can legally grow a lane to the full 20-slot grid size; a branch lane is the only lane still trimmed, ProcessorChain.cpp trimLaneToBaseline), and removeChainBlock leaves an insert gap in place rather than left-shifting. PER-CALLBACK RENDER NOTE (optimization-findings Stage 5, commit 8f6d868): the three per-callback full-lane scans in processChainOnBuffer (the lastNamIndex sweep, the multi-core laneHasWork check, the setSpreadLane lane-stamp sweep) are now memoised in Processor.h's LaneScheduleCache / lastSpreadLane, invalidated by the single chainRevision funnel (bumpChainRevision), so chain-unchanged callbacks pay no scan cost; BudgetConvolver's zero-caller message-thread primeSilence warm-up was deleted in the same pass.",
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
@@ -130,7 +130,7 @@
         },
         {
           "resource": "repo://plugin/include/Processor.h",
-          "version": "repo-file-v1:sha256:485eae03699ec5059bd0c6b59c483cd62759677e452036359d400c5a62d50cb9"
+          "version": "repo-file-v1:sha256:cff72535b91c0655dc4758acdd605814901bf71bc26fc91cb4b606effb13a1dd"
         },
         {
           "resource": "repo://plugin/include/effects/compressor/Compressor.h",
@@ -148,7 +148,7 @@
     },
     {
       "id": "claim_31f0ef541ff94a4585e702c670f14435",
-      "statement": "The DSP test loop is ./script/test-dsp.sh [gtest-filter]: configure-if-needed -> cmake --build build --target DspTests -> running build/test/DspTests_artefacts/.../DspTests. The suite compiles the REAL plugin sources (not copies) against the fixtures in test/files/ (NAM A2 captures a2-amp-test.nam / a2-amp-cab-test.nam / a2-am-test-2.nam, cab-ir-test(-2).wav, reverb-ir-mono/stereo-test.wav, em240-gold-plate-5s.wav); from plugin/ui it pulls in core/Labels.cpp (KnobScale readout formatter), views/nodeview/NodeModel.cpp + model/ChainState.cpp (the node grid's read-side model, added by the 2026-10-18 node-view closeout), views/gallery/EffectParams.cpp (the shared paramsFor knob table, added by the node-view batch 2 for the per-knob strip readout tests), plus the theme tokens compiled inline by test/src/theme_palette_tests.cpp, so a green DspTests does NOT prove the UI links (verify with the GUI target, e.g. TONE3000_Standalone, or the testbed). The suite grows with features — a count is a LOWER-BOUND snapshot, never assert a stale total on a red run: 469 after the plate '140' final pass, 487 after the R2 thirteenth cut (2026-10-15), 503 / 73 suites after the 2026-10-16 reverb-budget-quality-uplift pass, 511 / 75 after the T-DAT-001 wave-3 closeout (2026-10-17), 512 / 75 after the 2026-10-14 swappable-theme palette test, 521 after the 2026-10-18 node-view closeout (9 new NodeModel tests), 530 / 78 after the node-view batch-2 closeout (7 StripKnob + 2 AddAtSlot tests), and 552 / 80 after the m06828 batch (4 new ProcessorTest remove-in-place/AddAtSlot floor-only tests + the Conv Rev label pin, commit 72f48ea). Also: the gtest silent-0 trap — a ',' filter list can run 0 tests with exit 0; always confirm the 'Running N tests' line.",
+      "statement": "The DSP test loop is ./script/test-dsp.sh [gtest-filter]: configure-if-needed -> cmake --build build --target DspTests -> running build/test/DspTests_artefacts/.../DspTests. The suite compiles the REAL plugin sources (not copies) against the fixtures in test/files/ (NAM A2 captures a2-amp-test.nam / a2-amp-cab-test.nam / a2-am-test-2.nam, cab-ir-test(-2).wav, reverb-ir-mono/stereo-test.wav, em240-gold-plate-5s.wav, syn20-amp-c1/c2.nam); from plugin/ui it pulls in core/Labels.cpp (KnobScale readout formatter), views/nodeview/NodeModel.cpp + model/ChainState.cpp (the node grid's read-side model, added by the 2026-10-18 node-view closeout), views/gallery/EffectParams.cpp (the shared paramsFor knob table, added by the node-view batch 2 for the per-knob strip readout tests), plus the theme tokens compiled inline by test/src/theme_palette_tests.cpp, so a green DspTests does NOT prove the UI links (verify with the GUI target, e.g. TONE3000_Standalone, or the testbed). The suite grows with features — a count is a LOWER-BOUND snapshot, never assert a stale total on a red run: 469 after the plate '140' final pass, 487 after the R2 thirteenth cut (2026-10-15), 503 / 73 suites after the 2026-10-16 reverb-budget-quality-uplift pass, 511 / 75 after the T-DAT-001 wave-3 closeout (2026-10-17), 512 / 75 after the 2026-10-14 swappable-theme palette test, 521 after the 2026-10-18 node-view closeout (9 new NodeModel tests), 530 / 78 after the node-view batch-2 closeout (7 StripKnob + 2 AddAtSlot tests), 552 / 80 after the m06828 batch (4 new ProcessorTest remove-in-place/AddAtSlot floor-only tests + the Conv Rev label pin, commit 72f48ea), and 560 after the 2026-10-20 optimization-findings state-size pass (8 new StateSize tests in test/src/state_size_tests.cpp + the shared flag-aware blob parser test/src/StateSizeBlob.h, commits 728e144 + 9f34a3f). Also: the gtest silent-0 trap — a ',' filter list can run 0 tests with exit 0; always confirm the 'Running N tests' line.",
       "evidence": [
         {
           "resource": "repo://script/test-dsp.sh",
@@ -156,25 +156,21 @@
         },
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
         },
         {
-          "resource": "repo://test/src/dat_probe_tests.cpp",
-          "version": "repo-file-v1:sha256:d25de9e0ad214a7757b0064448c64558324eabeb1deae1b2a6e09c0695222ef4"
+          "resource": "repo://test/src/StateSizeBlob.h",
+          "version": "repo-file-v1:sha256:7f5c710ec9324b8a85fa30614992bb770d9965624ec39aa7098cdca54909dbd1"
         },
         {
-          "resource": "repo://test/src/node_model_tests.cpp",
-          "version": "repo-file-v1:sha256:2433ca24917da969946bd8f13232a319c11fed30bbbc21e460d34f16bdddbc5c"
-        },
-        {
-          "resource": "repo://test/src/theme_palette_tests.cpp",
-          "version": "repo-file-v1:sha256:a4b2c7e546782ded3ed6111eaa5ec87899a54c3e64e765a738637710d46f18c8"
+          "resource": "repo://test/src/state_size_tests.cpp",
+          "version": "repo-file-v1:sha256:62163390e75c0bd10d830593ccf0a5900e3282b0578ed5868222c7a7ea973b76"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T19:36:10.014Z"
+    "at": "2026-10-18T23:18:48.824Z"
   }
 }

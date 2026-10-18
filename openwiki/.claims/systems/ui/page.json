@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:dc002d6c52b11c09101a8284aea212a57cc5b61ed5148460ff383bac1515d999",
+  "pageVersion": "sha256:2dc9fa9417e4a68014627ec9bf275d06bbb05e8175c757ac0846f633f77441fa",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -96,7 +96,7 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/ui-snapshots.md",
-          "version": "repo-file-v1:sha256:3330d54ccfd0392bcb4256895dbdfa9970dd249f150477fff1db76ca6e600cb8"
+          "version": "repo-file-v1:sha256:7117bd43776247e1fe1ce6e30b8fb1a02d2ef83f27d9b2726de605be777600ae"
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
@@ -170,7 +170,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:252c3af7060f257d54f82c3f58ae7c8d44709ee0fddac69873f79e8fddc4708d"
+          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
         },
         {
           "resource": "repo://test/src/strip_knob_tests.cpp",
@@ -199,6 +199,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T19:36:10.014Z"
+    "at": "2026-10-18T23:18:48.824Z"
   }
 }
