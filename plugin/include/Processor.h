@@ -1096,15 +1096,27 @@ private:
   void audioWorkgroupContextChanged(const juce::AudioWorkgroup& workgroup) override {
     rtWorkerPool.setAudioWorkgroup(workgroup);
   }
-  // Does the lane do any audible processing from `beginIdx` on? Gates the
-  // fork: dispatching an idle lane costs more than running its (empty) loop
-  // inline. A block still gliding through its wet fade counts as work.
-  static bool laneHasWork(const Lane& l, int beginIdx = 0) {
-    for (size_t i = static_cast<size_t>(juce::jmax(0, beginIdx)); i < l.size(); ++i)
-      if (l[i]->type != ChainBlockType::INSERT && l[i]->loaded)
-        return true;
-    return false;
-  }
+  // Multi-core scheduling caches (Stage 5 of optimization-findings): the
+  // last-NAM index and the suffix-work table each used to be re-scanned over
+  // the full lane on every callback (the last-NAM scan three times via
+  // processChainOnBuffer, the work scans in the multi-core decision). They
+  // are now derived once per chain revision: bumpChainRevision() (the single
+  // funnel every chain mutation goes through — prepare/reorder/swap/param/
+  // load) invalidates them, and the audio thread rebuilds lazily on the next
+  // callback, under chainMutex. Audio-thread-only fields (no atomics).
+  struct LaneScheduleCache {
+    juce::uint32 revision = 0;  // 0 = never built
+    size_t laneSize = 0;
+    int lastNamIndex = -1;  // highest enabled+loaded NAM over the whole lane
+    std::vector<bool> workFrom;  // workFrom[i] = "any non-insert loaded block from i"
+  } laneScheduleCache[2];
+  int lastNamIndexOf(std::vector<std::unique_ptr<ChainBlock>>& blocks);  // audio-thread memo state: mutates the lane cache
+  bool laneHasWorkCached(const Lane& l, int beginIdx = 0);
+  // Lane stamp for setSpreadLane (Stage 5): the sweep used to run over both
+  // lanes every callback; it now fires only when the lane value changes.
+  // -1 = unstamped. Audio-thread-only.
+  int lastSpreadLane[2] = {-1, -1};
+  void stampSpreadLane(ChainSide side, int lane);
 
   // TONE3000 OAuth access token (Bearer). Read by `fetchModelFromUrl` from any
   // thread; written by the UI thread via `setAccessToken`.

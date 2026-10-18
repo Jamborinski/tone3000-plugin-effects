@@ -1198,13 +1198,10 @@ void TONE3000Processor::processChainOnBuffer(std::vector<std::unique_ptr<ChainBl
   // mono, and NAM blocks *before* this index hand off at calibrated output level (see the
   // post-model gain stage below) while the last one keeps loudness normalization.
   // Computed over the whole lane even for a partial range: a branched trunk
-  // is still one chain split around the tap, not two chains.
-  int lastNamIndex = -1;
-  for (int i = 0; i < static_cast<int>(blocks.size()); ++i) {
-    const auto& b = blocks[i];
-    if (b->type == ChainBlockType::NAM && b->loaded && b->enabled)
-      lastNamIndex = i;
-  }
+  // is still one chain split around the tap, not two chains. Stage 5: served
+  // from the per-lane revision cache (three full-lane scans per callback
+  // collapsed to a rebuild on chain revision change only).
+  const int lastNamIndex = lastNamIndexOf(blocks);
 
   for (int idx = beginIdx; idx < endIdx; ++idx) {
     const auto& block = blocks[idx];
@@ -1622,6 +1619,60 @@ void TONE3000Processor::processOversampledChainStage(float** inputs, float** out
 // stereo mode) over the given channel pointers. Invoked at the chain rate
 // (48 kHz × oversampling factor) via processOversampledChainStage. Called
 // with chainMutex held (processBlock takes it).
+// Stage 5 (optimization-findings): the per-lane scheduling caches. Both the
+// last-NAM scan (processChainOnBuffer) and the laneHasWork suffix table
+// (multi-core decision) were recomputed over the full lane on every callback.
+// The rebuild now happens only when the chain revision moves — every
+// mutation (prepare/reorder/swap/param/load) funnels through
+// bumpChainRevision — so a steady callback reads a cached int/bool. The
+// fields are audio-thread-only (these run under chainMutex; no atomics).
+int TONE3000Processor::lastNamIndexOf(std::vector<std::unique_ptr<ChainBlock>>& blocks) {
+  const int sideIdx = &blocks == &lanes[0] ? 0 : 1;
+  LaneScheduleCache& c = laneScheduleCache[static_cast<size_t>(sideIdx)];
+  const juce::uint32 rev = chainRevision.load(std::memory_order_relaxed);
+  if (c.revision != rev || c.laneSize != blocks.size()) {
+    c.revision = rev;
+    c.laneSize = blocks.size();
+    c.lastNamIndex = -1;
+    c.workFrom.assign(blocks.size() + 1, false);
+    for (size_t i = 0; i < blocks.size(); ++i) {
+      const bool work = blocks[i]->type != ChainBlockType::INSERT && blocks[i]->loaded;
+      if (blocks[i]->type == ChainBlockType::NAM && blocks[i]->loaded && blocks[i]->enabled)
+        c.lastNamIndex = static_cast<int>(i);
+      if (work)
+        c.workFrom[i] = true;
+    }
+    for (int i = static_cast<int>(blocks.size()) - 1; i >= 0; --i) {
+      const bool any = c.workFrom[static_cast<size_t>(i)] ||
+                       c.workFrom[static_cast<size_t>(i) + 1];
+      c.workFrom[static_cast<size_t>(i)] = any;
+    }
+  }
+  return c.lastNamIndex;
+}
+
+bool TONE3000Processor::laneHasWorkCached(const Lane& l, int beginIdx) {
+  const int sideIdx = &l == &lanes[0] ? 0 : 1;
+  const LaneScheduleCache& c = laneScheduleCache[static_cast<size_t>(sideIdx)];
+  const juce::uint32 rev = chainRevision.load(std::memory_order_relaxed);
+  if (c.revision != rev || c.laneSize != l.size())
+    // Can't rebuild from a const lane (workFrom is built alongside the
+    // last-NAM scan); let the caller's processChainOnBuffer rebuild it.
+    return false;
+  const int b = juce::jlimit(0, static_cast<int>(c.workFrom.size()) - 1, beginIdx);
+  return c.workFrom[static_cast<size_t>(b)];
+}
+
+void TONE3000Processor::stampSpreadLane(ChainSide side, int lane) {
+  const int sideIdx = laneIndex(side);
+  if (lastSpreadLane[static_cast<size_t>(sideIdx)] == lane)
+    return;  // unchanged: the block's stamp already matches
+  lastSpreadLane[static_cast<size_t>(sideIdx)] = lane;
+  for (auto& bb : TONE3000Processor::lane(side))
+    if (bb)
+      bb->setSpreadLane(lane);
+}
+
 void TONE3000Processor::processChainStage(float** inputs, float** outputs, int numFrames) {
   // The boundary hands us distinct input/output buffers; the chain processes
   // in place, so move the audio to the output side first. On the direct path
@@ -1653,8 +1704,8 @@ void TONE3000Processor::processChainStage(float** inputs, float** outputs, int n
       // The prefix must complete before the tap copy, so it always runs
       // serially here; after the copy the trunk remainder and the branch
       // lane are independent and can fork (branch to the worker).
-  for (auto& bb : trunk) if (bb) bb->setSpreadLane(laneIndex(branchSourceSide));
-  for (auto& bb : lane(branchSide)) if (bb) bb->setSpreadLane(laneIndex(branchSide));
+  stampSpreadLane(branchSourceSide, laneIndex(branchSourceSide));
+  stampSpreadLane(branchSide, laneIndex(branchSide));
       processChainOnBuffer(trunk, trunkBuf, trunkScratch, 0, rtBranchTapIndex + 1);
       std::memcpy(outputs[branchCh], outputs[trunkCh],
                   sizeof(float) * static_cast<size_t>(numFrames));
@@ -1668,14 +1719,14 @@ void TONE3000Processor::processChainStage(float** inputs, float** outputs, int n
       float* right[] = {outputs[1]};
       juce::AudioBuffer<float> bufferL(left, 1, numFrames);
       juce::AudioBuffer<float> bufferR(right, 1, numFrames);
-  for (auto& bb : lane(ChainSide::Left)) if (bb) bb->setSpreadLane(0);
-  for (auto& bb : lane(ChainSide::Right)) if (bb) bb->setSpreadLane(1);
+  stampSpreadLane(ChainSide::Left, 0);
+  stampSpreadLane(ChainSide::Right, 1);
       processLanePair(lane(ChainSide::Right), bufferR, laneDryScratch[1], 0,
                       lane(ChainSide::Left), bufferL, laneDryScratch[0], 0);
     }
   } else {
     juce::AudioBuffer<float> chainBuffer(outputs, rtChainChannels, numFrames);
-  for (auto& bb : lane(ChainSide::Left)) if (bb) bb->setSpreadLane(0);
+  stampSpreadLane(ChainSide::Left, 0);
     processChainOnBuffer(lane(ChainSide::Left), chainBuffer, laneDryScratch[0]);
   }
 }
@@ -2000,11 +2051,12 @@ void TONE3000Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mid
       if (rtBranchTapIndex >= 0) {
         const ChainSide branchSide =
             branchSourceSide == ChainSide::Right ? ChainSide::Left : ChainSide::Right;
-        rtParallelLanes = laneHasWork(lane(branchSourceSide), rtBranchTapIndex + 1) &&
-                          laneHasWork(lane(branchSide));
-      } else {
         rtParallelLanes =
-            laneHasWork(lane(ChainSide::Left)) && laneHasWork(lane(ChainSide::Right));
+            laneHasWorkCached(lane(branchSourceSide), rtBranchTapIndex + 1) &&
+            laneHasWorkCached(lane(branchSide));
+      } else {
+        rtParallelLanes = laneHasWorkCached(lane(ChainSide::Left)) &&
+                          laneHasWorkCached(lane(ChainSide::Right));
       }
     }
 

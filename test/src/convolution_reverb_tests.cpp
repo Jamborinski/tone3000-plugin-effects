@@ -768,7 +768,13 @@ TEST(BudgetConvolver, BitCompatVsJuceNonUniform) {
       head.process(juce::dsp::ProcessContextReplacing<float>(blk));
   }
   BudgetConvolver tail(irL.data() + headN, irR.data() + headN, 2, tailN);
-  tail.primeSilence(256 * 30);   // ~154 ms (matches JUCE's install-fade)
+  {  // ~154 ms of silence (matches JUCE's install-fade) via the public path
+    juce::AudioBuffer<float> cold(2, 256);
+    for (int i = 0; i < 30; ++i) {
+      cold.clear();
+      tail.process(cold);
+    }
+  }
 
   juce::AudioBuffer<float> wetMine(2, feedN);
   wetMine.clear();
@@ -894,8 +900,14 @@ TEST(BudgetConvolver, SingleTapProbe) {
       head.process(juce::dsp::ProcessContextReplacing<float>(blk));
   }
   BudgetConvolver tail(irL.data() + headN, irR.data() + headN, 2, tailN);
-  // Warm-up (prime silence, 150 ms of silence).
-  tail.primeSilence(7168);
+  // Warm-up (150 ms of silence) via the public path.
+  {
+    juce::AudioBuffer<float> cold(2, 256);
+    for (int i = 0; i < 28; ++i) {
+      cold.clear();
+      tail.process(cold);
+    }
+  }
 
   // Feed.
   juce::AudioBuffer<float> wetMine(2, 2 * tailN);
@@ -984,7 +996,13 @@ TEST(BudgetConvolver, MinimalSingleTapHeadOnly) {
 
   // MY BudgetConvolver (full-IR = just head, M=1).
   BudgetConvolver mine(irL.data(), irR.data(), 2, headN);
-  mine.primeSilence(256 * 30);
+  {
+    juce::AudioBuffer<float> cold(2, 256);
+    for (int i = 0; i < 30; ++i) {
+      cold.clear();
+      mine.process(cold);
+    }
+  }
   juce::AudioBuffer<float> wetMine(2, feedN);
   {
     juce::AudioBuffer<float> feed(2, 256);

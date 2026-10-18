@@ -130,7 +130,11 @@ TEST(BudgetConvolverCost, FlatPerBlockCostLongKernel) {
   BudgetConvolver tail(L.data() + BudgetConvolver::kFrame,
                        R.data() + BudgetConvolver::kFrame, 2,
                        irLen - BudgetConvolver::kFrame);
-  tail.primeSilence(BudgetConvolver::kFrame);  // elapse the install-fade
+  {  // elapse the install-fade: one silence frame through the public path
+    juce::AudioBuffer<float> cold(2, 256);
+    cold.clear();
+    tail.process(cold);
+  }
 
   std::cerr << "[cost] tailSegs=" << tail.segments()
             << "  K_=" << tail.pairsPerCall()

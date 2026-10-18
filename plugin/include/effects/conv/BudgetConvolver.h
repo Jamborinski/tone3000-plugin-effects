@@ -74,12 +74,6 @@ class BudgetConvolver {
                   int tailSamples);
   ~BudgetConvolver();
 
-  // Message thread (install-fade warm-up): push `n` samples of silence
-  // through so the first live block starts on the same schedule as steady
-  // state. Pure state advancement; audio-safe to also call on the audio
-  // thread.
-  void primeSilence(int n);
-
   // Audio thread: ADDS the wet (tail convolution) into `wet` (1 or
   // `channels` channels, wet.getNumSamples() <= kMaxCall samples). The
   // head's output stays underneath: the caller adds this on top.

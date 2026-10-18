@@ -283,15 +283,3 @@ void BudgetConvolver::process(juce::AudioBuffer<float>& wet) {
   stepOne(in, out, n);
 }
 
-void BudgetConvolver::primeSilence(int n) {
-  // Message-thread warm-up: advance the schedule over n silent samples so the
-  // first live pass starts on the steady-state schedule. Pure state
-  // advancement (no allocation past the buffers made at construction).
-  const int ch = channels_;
-  // inFrame_ is zero at construction -> a ready zero source; ft_[0] discards
-  // the (also zero) wet so the schedule alone advances.
-  const float* z[2] = {inFrame_[0].data(), inFrame_[0].data()};
-  float* o[2] = {ft_[0].data(), ft_[0].data()};
-  (void)ch;
-  for (int i = 0; i < n && isReady_; ++i) stepOne(z, o, 1);
-}
