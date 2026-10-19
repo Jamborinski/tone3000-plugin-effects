@@ -1483,7 +1483,12 @@ struct ScrollSurfacesTests : juce::UnitTest {
       return root.settings() != nullptr ? &root.settings()->scroller() : nullptr;
     };
     const Surface surfaces[] = {
-        {"the chain lane", "main-mono", lengthenChain, nullptr, screenScroller(DragScroller::Axis::horizontal), true,
+        // main-meters-hot (not main-mono): the same chain in the GALLERY view.
+        // Since e24236b main-mono's fixture carries t3k.nodeView=true and starts
+        // in the node view, where the lane's scroller (a gallery child) is
+        // isShowing()==false and screenScroller() finds nothing.
+        {"the chain lane", "main-meters-hot", lengthenChain, nullptr,
+         screenScroller(DragScroller::Axis::horizontal), true,
          true, laneGap},
         {"a block's detail column with its info open", "main-detail-info", nullptr, nullptr,
          screenScroller(DragScroller::Axis::vertical), true, true},
@@ -1501,7 +1506,8 @@ struct ScrollSurfacesTests : juce::UnitTest {
 
     beginTest("a mouse drag on a tile sorts it; the lane around it stays put");
     {
-      LiveScenario live(*this, "main-mono");
+      // Gallery view (main-meters-hot) — see the chain-lane entry above.
+      LiveScenario live(*this, "main-meters-hot");
       if (!live.ok) return;
       live.drive();
       lengthenChain(live);
