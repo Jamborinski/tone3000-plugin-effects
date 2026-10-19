@@ -83,7 +83,7 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   foreground tool calls start with a **minimal env**: `cmake: command not
   found`, missing stage libs. Export the two canonical lines (`PATH` +
   `LD_LIBRARY_PATH`) at the top of EVERY build/test command.
-- The suite **grows with features** (512 as of the 2026-10-17 theme/OCR/label closeout; 503 was the 2026-10-16 reverb-budget pass; 487 the 2026-10-15 R2 closeout) — **never assert a
+- The suite **grows with features** (560 as of the 2026-10-20 state-size closeout; 512 was the 2026-10-17 theme/OCR/label closeout; 503 the 2026-10-16 reverb-budget pass; 487 the 2026-10-15 R2 closeout) — **never assert a
   stale total** on failure; check build RC and that the test names actually ran.
 - **gtest silent-0 trap:** a comma list like `--gtest_filter='A*,B*'` can run
   **0 tests with exit 0** (a green lie); a single `A*` works. Always confirm the
@@ -153,6 +153,23 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   sharpness/click metric (derivative RMS, transient hunt). Pin the useful
   ones as tests. Full protocol (stimuli, deciding metrics per artifact class,
   probe matrix, diagnostic tree): `docs/agents/audio-testing.md`.
+- **JUCE 9.0.3 (fork) API traps, measured 2026-10-20:**
+  - `juce::MemoryOutputStream` has NO `(void*, size_t)` default-arg trap you'd expect —
+    `juce::MemoryOutputStream out(nullptr, false)` silently matches the
+    0-byte fixed-buffer overload and `writeToStream` writes 0 bytes with no
+    error (the state-save blob was exactly its 5-byte header). Back every
+    save buffer with `juce::MemoryBlock` explicitly.
+  - `juce::ValueTree` lives in `juce_data_structures` (`modules/juce_data_structures/values/`),
+    NOT juce_core; `juce::Component` has no `getClassName()` (tag with a
+    `dynamic_cast` type-check lambda); `juce::Viewport` has no public
+    `getVisibleArea()`; `juce::String::contains` takes a single
+    `StringRef` (no case-sensitivity overload).
+  - `juce::MemoryBlock` has no `std::vector` ctor —
+    `juce::MemoryBlock(vec.data(), (int)vec.size())`.
+  - A standalone scratch JUCE program (own g++ build of `juce_core` +
+    modules) writes 0 bytes through its streams in this tree — its module
+    settings are incomplete; measure inside DspTests/UiTestbed instead of
+    trusting a scratch binary.
 - **`edit` tool drift trap (this repo, WSL/9p):** it intermittently reports
   spurious "content drift" even when the oldText is verbatim. On failure:
   re-check with `grep -n`/`sed -n`, then apply via `python3` `str.replace`

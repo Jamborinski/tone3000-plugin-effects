@@ -37,6 +37,17 @@ other controls; e.g. compact-conv Dry/Width were at (0,0) over the power
 LED). The pixels are the final word; the dump says where each control
 actually is.
 
+## Scenario fixtures are per-test contracts (2026-10-20)
+- A selftest scenario's fixture (localStorage prefs, view state) is consumed
+  by EVERY test that names it — adding a pref to one scenario for ONE test
+  silently re-points any other test using that scenario. (`main-mono` gained
+  `t3k.nodeView=true` for the node-view-cycle test; the two chain-lane
+  scroll tests driving the gallery off the same scenario then found no
+  visible scroller — 2 CI-red selftests, not a scroll bug.) Rule: before
+  mutating a shared scenario's fixture, `grep -n "<scenario>"` every consumer;
+  if a test needs a different view state, give it its own scenario (the
+  gallery-view twin was `main-meters-hot`) rather than changing the shared one.
+
 ## JUCE landmine (this fork): non-ASCII UI strings
 `juce::String(const char*)` decodes **byte-per-char** (ASCII/Latin-1) — a
 `"text \u2014"` literal renders as `text â□□`. Non-ASCII literals need the
