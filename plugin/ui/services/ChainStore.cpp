@@ -139,6 +139,10 @@ void ChainStore::setBlockParam(const std::string& blockId, const juce::String& p
 juce::var ChainStore::loadConvIr(const std::string& blockId, const juce::File& file) {
   return run([&] { return backend_.loadConvIr(blockId, file); });
 }
+juce::var ChainStore::exportConvIr(const std::string& blockId, const juce::File& file,
+                                   int bits, double sampleRate) {
+  return run([&] { return backend_.exportConvIr(blockId, file, bits, sampleRate); });
+}
 
 juce::var ChainStore::convPreview(const std::string& blockId) {
   return run([&] { return backend_.getConvPreview(blockId); });

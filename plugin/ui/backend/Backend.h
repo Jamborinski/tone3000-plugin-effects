@@ -80,6 +80,10 @@ public:
   virtual bool setBlockParam(const std::string& blockId, const juce::String& param, double value) = 0;
   // Convolution block: install an IR file (see TONE3000Processor::loadConvIr).
   virtual juce::var loadConvIr(const std::string& blockId, const juce::File& file) = 0;
+  // Convolution block: export the baked kernel as WAV (see
+  // TONE3000Processor::exportConvIr). var { blockId, error } on failure.
+  virtual juce::var exportConvIr(const std::string& blockId, const juce::File& file,
+                                 int bits, double sampleRate) = 0;
   // Convolution kernel waveform display (Phase C): { sampleRate, length,
   // channels, envL, envR } or {} when the block has no built kernel.
   virtual juce::var getConvPreview(const std::string& blockId) { return {}; }

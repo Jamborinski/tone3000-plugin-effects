@@ -519,6 +519,15 @@ public:
     loadIr_.onClick = [this] { v_.startConvIrLoader(g_lastStripBlockId); };
     loadIr_.setVisible(false);
     addAndMakeVisible(loadIr_);
+    addAndMakeVisible(settingsToggle_);
+    settingsToggle_.setVisible(false);
+    settingsToggle_.setClickingTogglesState(true);
+    settingsToggle_.onClick = [this] {
+      v_.setConvStripSettings(settingsToggle_.getToggleState());
+    };
+    addAndMakeVisible(settingsExport_);
+    settingsExport_.setVisible(false);
+    settingsExport_.onClick = [this] { v_.startConvExportLoader(g_lastStripBlockId); };
     clearContent();
   }
 
@@ -533,6 +542,12 @@ public:
   KernelPlot& convPlot() { return convPlot_; }
   juce::Label& convIr() { return convIr_; }
   juce::TextButton& loadIr() { return loadIr_; }
+  // Conv IR-settings group (the strip's mirror of the gallery tile's
+  // settings view): the 7 settings knobs are owned by NodeView (it
+  // resyncs them from the chain); only the chrome lives here.
+  juce::TextButton& settingsToggle() { return settingsToggle_; }
+  juce::TextButton& settingsExport() { return settingsExport_; }
+  std::vector<Knob*>& settings() { return settingsKnobs_; }
   std::vector<Knob*>& knobs() { return knobs_; }
   const std::vector<Knob*>& knobs() const { return knobs_; }
   // One value string per knob (the strip's persistent readout line).
@@ -555,7 +570,18 @@ public:
     convPlot_.setVisible(false);
     convIr_.setVisible(false);
     loadIr_.setVisible(false);
+    settingsToggle_.setVisible(false);
+    settingsExport_.setVisible(false);
+    for (auto* k : settingsKnobs_) k->setVisible(false);
     repaint();
+  }
+
+  // NodeView owns the settings knobs' lives (it resyncs them from the
+  // chain); the strip only stores + shows/hides them.
+  void setSettingsKnobs(std::vector<Knob*> knobs) {
+    for (auto* k : settingsKnobs_) delete k;
+    settingsKnobs_ = std::move(knobs);
+    for (auto* k : settingsKnobs_) addAndMakeVisible(*k);
   }
 
   void addKnob(Knob* k, juce::String value) {
@@ -604,6 +630,11 @@ private:
   // mono/stereo) — the conv strip lacked it while the gallery tile carried
   // it (user m03587).
   juce::Label convIr_;
+  // Conv IR-settings chrome: the Settings toggle + Export (the 7 settings
+  // knobs are NodeView-owned, see setSettingsKnobs).
+  juce::TextButton settingsToggle_;
+  juce::TextButton settingsExport_;
+  std::vector<Knob*> settingsKnobs_;
   std::vector<Knob*> knobs_;
   std::vector<juce::String> values_;
   int knobFace_ = 0;  // 0 = default kKnobFace; syncStrip sets the shrunk face
@@ -1088,7 +1119,12 @@ void NodeView::resized() {
   const bool convStrip =
       selB != nullptr && selB->isEffect && selB->effectKind == "convolution"
       && strip_->isVisible();
-  const int stripH = kStripHeadH + 6 + (convStrip ? 78 : 0) + kh + 20;
+  // The IR-settings row (Settings toggled) replaces the waveform row with a
+  // 2-knob-row grid + the toggle/export line: same budget as the plot band
+  // plus one knob row.
+  const int convBand =
+      convStrip ? (convStripSettings_ ? 152 : 78) : 0;
+  const int stripH = kStripHeadH + 6 + convBand + kh + 20;
   // Docked to the BOTTOM of the view (m01857): the grid sits up top, the
   // strip fills the full width along the bottom edge, gap kStripBottomGap.
   const int stripY = juce::jmax(0, getHeight() - stripH - kStripBottomGap);
@@ -1130,6 +1166,13 @@ void NodeView::refreshModeLine(NodeStrip& st, const ChainItem& b) {
     pullConvPreview(st, b);
     st.loadIr().setButtonText("Load IR...");
     st.loadIr().setVisible(true);
+    // The IR-settings row chrome (mirror of the gallery tile's Settings/
+    // Export): the 7 settings knobs are rebuilt by syncStrip.
+    st.settingsToggle().setButtonText("Settings");
+    st.settingsToggle().setToggleState(convStripSettings_, juce::dontSendNotification);
+    st.settingsToggle().setVisible(true);
+    st.settingsExport().setButtonText("Export");
+    st.settingsExport().setVisible(true);
   } else if (k == "reverb") {
     mb.setHelpText("Click to open the mode menu -- type: " +
                    juce::String(reverbTypeName(b.reverbMode, nodeReverbTypeOf(b, b.reverbMode))) +
@@ -1148,6 +1191,10 @@ void NodeView::refreshModeLine(NodeStrip& st, const ChainItem& b) {
     st.convPlot().setVisible(false);
     st.convIr().setVisible(false);
     st.loadIr().setVisible(false);
+    st.settingsToggle().setVisible(false);
+    st.settingsExport().setVisible(false);
+    for (auto* k : st.settings()) k->setVisible(false);
+    convStripSettings_ = false;
   }
 }
 
@@ -1171,6 +1218,8 @@ void NodeView::syncStrip() {
     updateStripKnobValues(st, *b);
     refreshModeLine(st, *b);  // a mode pick must be visible immediately
     if (g_stripDirty) rebuildStripKnobs(st, *b);
+    if (b->effectKind == "convolution")
+      updateStripSettingsKnobValues(st, *b);  // settings row mirrors too
     layoutStripKnobs();
     return;
   }
@@ -1202,6 +1251,8 @@ void NodeView::syncStrip() {
 
   updateStripChrome(*b);
   rebuildStripKnobs(st, *b);
+  if (b->effectKind == "convolution")
+    rebuildStripSettingsKnobs(st, *b);  // the strip's IR-settings row
   // layoutStripKnobs positions the header (name/mode/type buttons) — the
   // old fresh-pick called it here directly; rebuildStripKnobs must carry
   // that responsibility (without it modeB_ stays 0x0 and its menu never opens).
@@ -1391,6 +1442,30 @@ void NodeView::layoutStripKnobs() {
   const int knobTop = plotTop + plotH + (conv ? 0 : headPad);
   for (int i = 0; i < n; ++i)
     st.knobs()[i]->setBounds(x0 + i * cw, knobTop, cw, kh);
+
+  // Conv IR-settings band: the Settings/Export line replaces the waveform
+  // row when the toggle is on; the 7 settings knobs run 4 over 3 below it
+  // (the face knob row hides, mirroring the gallery tile's view swap).
+  const bool convSetOpen = conv && st.settingsToggle().getToggleState();
+  if (convSetOpen) {
+    const int bandTop = kStripHeadH + 6 + 18;  // the convIr_ line stays
+    st.loadIr().setBounds(st.getWidth() - 250, bandTop, 120, 24);
+    st.settingsToggle().setBounds(st.getWidth() - 380, bandTop, 58, 24);
+    st.settingsExport().setBounds(st.getWidth() - 314, bandTop, 58, 24);
+    const int sn = (int)st.settings().size();
+    if (sn > 0) {
+      const int sCols = 4;
+      const int sCw = juce::jmin(110, (st.getWidth() - 28) / sCols);
+      const int sX0 = (st.getWidth() - sCw * sCols) / 2;
+      const int sKH = juce::jmin(54, st.knobHeight());
+      for (int i = 0; i < sn; ++i) {
+        const int r = i / sCols;
+        const int c = i % sCols;
+        st.settings()[i]->setBounds(sX0 + c * sCw, bandTop + 30 + r * (sKH + 4),
+                                    sCw, sKH);
+      }
+    }
+  }
 }
 
 // ------------------------------------------------------- strip cyclers (m01857)
@@ -1679,6 +1754,120 @@ void NodeView::startConvIrLoader(const std::string& blockId) {
         services_.toast.show(
             name.isEmpty() ? juce::String("IR loaded") : name + juce::String(" loaded"));
         refresh();
+      });
+}
+
+void NodeView::setConvStripSettings(bool on) {
+  convStripSettings_ = on;
+  auto& st = *strip_;
+  if (st.settingsToggle().getToggleState() != on)
+    st.settingsToggle().setToggleState(on, juce::dontSendNotification);
+  // View swap, mirror of the gallery tile: the settings band opens, the
+  // waveform + face knob row hide; closing restores them.
+  for (auto* k : st.settings()) k->setVisible(on);
+  if (on) {
+    st.convPlot().setVisible(false);
+    for (auto* k : st.knobs()) k->setVisible(false);
+  } else {
+    for (auto* k : st.knobs()) k->setVisible(true);
+    // The waveform comes back via the preview pull (the block is still a
+    // conv node — this sync is the re-pull point for a closed row).
+    if (!g_lastStripBlockId.empty()) {
+      const auto* b =
+          services_.chain.state().findBlock(g_lastStripBlockId);
+      if (b != nullptr && b->effectKind == "convolution")
+        pullConvPreview(st, *b);
+    }
+  }
+  resized();
+  layoutStripKnobs();
+  repaint();
+}
+
+void NodeView::rebuildStripSettingsKnobs(NodeStrip& st, const ChainItem& b) {
+  const struct SK {
+    const KnobScale* scale; juce::String param; juce::String label; help::Key help;
+  } rows[7] = {
+      {&scales::convStart(), "convStartS", "Start", help::Key::convStartS},
+      {&scales::convEnd(), "convEndS", "End", help::Key::convEndS},
+      {&scales::convPre(), "convPreMs", "Pre", help::Key::convPre},
+      {&scales::convFade(), "convFadeIn", "F In", help::Key::convFadeIn},
+      {&scales::convFade(), "convFadeOut", "F Out", help::Key::convFadeOut},
+      {&scales::convFade(), "convInCurve", "InCrv", help::Key::convInCurve},
+      {&scales::convFade(), "convOutCurve", "OutCrv", help::Key::convOutCurve},
+  };
+  const double stored[7] = {b.convStartS, b.convEndS, b.convPreMs, b.convFadeIn,
+                            b.convFadeOut, b.convInCurve, b.convOutCurve};
+  std::vector<Knob*> out;
+  for (int i = 0; i < 7; ++i) {
+    Knob::Options o;
+    o.label = rows[i].label;
+    o.size = 32;
+    o.scale = rows[i].scale;
+    o.labelOnTop = true;
+    o.help = rows[i].help;
+    auto* knob = new Knob(o);
+    knob->setValue(knobFromStored(*rows[i].scale, stored[i]));
+    const KnobScale* sc = rows[i].scale;
+    const juce::String param = rows[i].param;
+    knob->onChange = [this, sc, param](float v) {
+      this->services_.chain.setBlockParam(
+          g_lastStripBlockId, param, knobToStored(*sc, (double)v));
+    };
+    knob->setVisible(convStripSettings_);
+    out.push_back(knob);
+  }
+  st.setSettingsKnobs(std::move(out));
+}
+
+void NodeView::updateStripSettingsKnobValues(NodeStrip& st, const ChainItem& b) {
+  const double stored[7] = {b.convStartS, b.convEndS, b.convPreMs, b.convFadeIn,
+                            b.convFadeOut, b.convInCurve, b.convOutCurve};
+  const KnobScale* scales[7] = {&scales::convStart(), &scales::convEnd(),
+                                &scales::convPre(), &scales::convFade(),
+                                &scales::convFade(), &scales::convFade(),
+                                &scales::convFade()};
+  auto& sk = st.settings();
+  for (int i = 0; i < (int)sk.size(); ++i)
+    sk[i]->setValue(knobFromStored(*scales[i], stored[i]));
+}
+
+void NodeView::startConvExportLoader(const std::string& blockId) {
+  if (blockId.empty() || convExportChooser_ != nullptr) return;  // re-entry
+  const auto* b = services_.chain.state().findBlock(blockId);
+  if (b == nullptr || !b->convIrLoaded) {
+    services_.toast.show("No IR loaded in this block");
+    return;
+  }
+  const juce::String base =
+      b->convIrName.isNotEmpty() ? b->convIrName + "_t3k_48k24"
+                                  : "untitled_t3k_48k24";
+  const juce::File def =
+      juce::File::getSpecialLocation(juce::File::userHomeDirectory)
+          .getChildFile("Music").getChildFile(base).getChildFile("untitled.wav");
+  convExportChooser_ = std::make_unique<juce::FileChooser>(
+      "Export IR", def, "*.wav");
+  const int token = ++g_irLoaderSeq;
+  convExportChooser_->launchAsync(
+      juce::FileBrowserComponent::saveMode |
+          juce::FileBrowserComponent::canSelectFiles,
+      [this, token, target = blockId](const juce::FileChooser& chooser) {
+        // Stale launch (a later chooser superseded us): ignore it.
+        if (token != g_irLoaderSeq) return;
+        juce::MessageManager::callAsync([this, token] {
+          if (token == g_irLoaderSeq) convExportChooser_.reset();
+        });
+        const auto results = chooser.getResults();
+        if (results.isEmpty()) return;
+        const juce::File dest = results.getReference(0);
+        const juce::var res =
+            services_.chain.exportConvIr(target, dest, 24, 48000.0);
+        const juce::String error = res["error"].toString();
+        if (error.isNotEmpty()) {
+          services_.toast.show("Export failed: " + error);
+          return;
+        }
+        services_.toast.show("IR exported: " + dest.getFileName());
       });
 }
 

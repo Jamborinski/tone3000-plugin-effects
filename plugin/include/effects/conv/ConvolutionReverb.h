@@ -165,6 +165,29 @@ class ConvolutionReverb {
   // depth scales with Width (0 = mono center, 1 = full spread).
   static constexpr double kHaasDelayMs = 3.5;
   static constexpr double kHaasDepth = 0.55;
+  // Wet peak management (behind the scenes, no user knob, never baked): a
+  // fixed soft-knee ceiling on the serving engine's wet, applied LAST in
+  // process() (after Width/Gain/Mod). Shape: a small flat lift at low
+  // levels, a smoothstep knee, then a 1/|x| roll (the crest-shaving law
+  // that keeps the wet's loudness consistent across IRs). Fitted 3-4 sig
+  // fig to a published peak-keeper curve; the fit's origin lives in
+  // research/conv-wet-clip.md, not in this file. LUT-evaluated (1024 x
+  // float, constant, built in the ctor); setClipEnabledForTest(false)
+  // disables the stage so contract tests pin the pre-clip laws.
+  static constexpr int kClipLutSize = 1024;
+  static constexpr double kClipLogLo = -6.9;   // log(0.001): floor of the table
+  static constexpr double kClipLogHi = 5.3;    // log(200):  top of the table
+  // Gain in dB at log-amplitude u: flat floor -> smoothstep -> 1/|x| roll.
+	  static double clipGainDb(double u) {
+    const double t = (u + 1.4498) / 4.4287;
+    const double T = t <= 0.0 ? 0.0 : (t >= 1.0 ? 1.0 : t * t * (3.0 - 2.0 * t));
+    // Linear ramp to the 1/|x| roll: slope s=-5.1009, pinned through the
+    // knee (b=-1.4498): s*u - A0 - s*b = -5.1009*u - 9.6838.
+    return 2.2886 + (-5.1009 * u - 9.6838) * T;
+  }
+  static constexpr double kClipFloorDb = 2.2886;     // low-level wet lift
+  static constexpr double kClipCeilingGain = 1.3232; // 1/|x| roll: |out| <= this
+  static constexpr double kClipKneeX = 0.2231;       // e^-1.4498: knee (T=0 -> ramp; floor lift ends here)
   // Engine-SWAP crossfade (the house swap law; the model path rides
   // swapWetMuteGain, the conv path rides this): on install the dying engine
   // keeps tailing out and its wet fades over this window while the new
@@ -213,7 +236,14 @@ class ConvolutionReverb {
     return 1.0 + juce::jlimit(0.0, 1.0, curve) * kMaxFadeCurve;
   }
 
-  ConvolutionReverb() : settleTimer_(*this) {}  // concrete Timer host (A6)
+  ConvolutionReverb() : settleTimer_(*this) {
+    // Wet-clip LUT (constant curve; the ctor runs on the message thread
+    // before the audio thread ever sees the object).
+    for (int i = 0; i < kClipLutSize; ++i)
+      clipLut_[i] = juce::Decibels::decibelsToGain(
+          static_cast<float>(clipGainDb(
+              kClipLogLo + (kClipLogHi - kClipLogLo) * i / (kClipLutSize - 1))));
+  }  // concrete Timer host (A6)
 
  public:
   friend class RebuildSettleTimer;  // settles the coalesced rebuild
@@ -272,11 +302,31 @@ class ConvolutionReverb {
   }
   // True zero latency by construction (both JUCE engines are zero-latency).
   int wetLatencySamples() const { return 0; }
+  // Test hook: disable the wet peak-management stage so contract tests
+  // pin the pre-clip amplitude laws bit-exactly (the clip has its own
+  // shape test). Default: enabled.
+  void setClipEnabledForTest(bool on) { clipEnabled_ = on; }
+  bool clipEnabledForTest() const { return clipEnabled_; }
+  // One through-sample of the wet clip LUT (tests: the LUT path vs the
+  // analytic curve).
+  float clipPreview(float x) const { return clipApply(x, clipLut_); }
   juce::String lastError() const { return lastError_; }
   // Waveform-display data for the currently-serving kernel (null before
   // the first successful load+prepare). Message-thread readers; the
   // shared_ptr copy keeps the payload alive regardless of later rebuilds.
   std::shared_ptr<const KernelPreview> kernelPreview() const;
+
+  // Kernel export (Settings tab): the EDITED kernel (trim + stretch +
+  // fades), resampled to targetRate, with the LINEAR live stages baked in
+  // (Pre as leading silence, Gain scale, Width baked into the kernels --
+  // stereo M/S fold, mono Haas spread), so a stock TDL convolver fed with
+  // this file at targetRate and width 1.0 reproduces the live block
+  // sample-for-sample. Mod and the wet clip are NONLINEAR: they cannot be
+  // baked and are deliberately excluded (no state, per-sample).
+  // Returns {} and sets the error when no IR is loaded or the window is
+  // empty; the buffer is always two channels (mono IRs are duplicated).
+  juce::AudioBuffer<float> exportKernel(double targetRate,
+                                        juce::String* error) const;
 
  private:
   struct State {
@@ -301,6 +351,11 @@ class ConvolutionReverb {
   // (JUCE resamples + normalises) -> prepare -> install-fade warmup. On
   // failure: nullptr + lastError_ (previous engine keeps serving).
   std::shared_ptr<State> makeEditedState();
+  // Shared trim + stretch + fade build (the engine's step 1..3): fills eL/eR
+  // with the edited stereo pair at the RAW file rate, or returns -1 on an
+  // empty window.
+  int buildEditedKernel(const Params& p, std::vector<float>* eL,
+                        std::vector<float>* eR) const;
 
   // message thread: swap in the new State (see header for the lifetime
   // hand-off). crossfade=true: the previous engine keeps tailing out on the
@@ -362,6 +417,25 @@ class ConvolutionReverb {
   std::vector<float> rawL_, rawR_;
   int rawLen_ = 0, rawCh_ = 0;  // rawCh_ = original file channel count
   double rawRate_ = 0.0;
+
+  // Wet clip LUT + stage state (law + constants are in the public block).
+  float clipLut_[kClipLutSize] = {};
+  bool clipEnabled_ = true;
+  // Per-sample wet clip (audio thread): odd, stateless, LUT + lerp.
+  static float clipApply(float x, const float* lut) {
+    const float sign = x < 0.0f ? -1.0f : 1.0f;
+    const float a = x < 0.0f ? -x : x;
+    const float u = std::log(juce::jlimit(0.001f, 200.0f, a));
+    float idx = (u - static_cast<float>(kClipLogLo)) *
+        (static_cast<float>(kClipLutSize - 1) /
+         static_cast<float>(kClipLogHi - kClipLogLo));
+    int i0 = static_cast<int>(idx);
+    if (i0 < 0) i0 = 0;
+    if (i0 > kClipLutSize - 2) i0 = kClipLutSize - 2;
+    const float f = idx - static_cast<float>(i0);
+    const float g = lut[i0] * (1.0f - f) + lut[i0 + 1] * f;
+    return sign * a * g;
+  }
 
   juce::String lastError_;
   juce::String irName_;

@@ -77,6 +77,11 @@ public:
     return size + theme::kKnobLabelGap + kLabelSlot + kEditorOverflow;
   }
 
+  // Value members start life with the default Options (empty label,
+  // primary size); the owner configures them via setScale/setLabel/setHelp
+  // before showing (the effect tile's settings-grid knobs are value
+  // members, so a no-arg construction point is needed).
+  Knob() : Knob(Options{}) {}
   explicit Knob(Options options);
   ~Knob() override;
 

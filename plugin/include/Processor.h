@@ -234,6 +234,12 @@ public:
       which the block owns. */
   juce::var loadConvIr(const std::string& blockId, const juce::File& file);
 
+  // Convolution block: export the baked kernel (trim/stretch/fades +
+  // pre-delay + gain + width, at `bits`/`sampleRate`) to `file`.
+  // var { blockId, error } on failure; { blockId, seconds } on success.
+  juce::var exportConvIr(const std::string& blockId, const juce::File& file,
+                         int bits, double sampleRate);
+
   // E-2: after any state restore, re-hydrate convolver engines from
   // their persisted IR paths (app start / presets / duplicate / paste).
   // Caller keeps holding chainMutex (every restore site already does).

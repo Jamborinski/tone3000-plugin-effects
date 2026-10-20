@@ -80,6 +80,7 @@ TEST(ConvolutionReverb, ZeroLatencyIdentityWet) {
   ConvolutionReverb fx;
   ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
   fx.prepare(48000.0);
+  fx.setClipEnabledForTest(false);  // contract: pre-clip law
   ASSERT_TRUE(fx.usesUniformEngine());
 
   const std::vector<float> inL = {0.25f, 0.5f, 0.75f};
@@ -103,6 +104,7 @@ TEST(ConvolutionReverb, GainLaw) {
   ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
   fx.prepare(48000.0);
 
+  fx.setClipEnabledForTest(false);  // contract: pre-clip law
   const int n = 256;
   juce::AudioBuffer<float> a(2, n);
   Fill(a, 0.5f);
@@ -130,6 +132,7 @@ TEST(ConvolutionReverb, WidthFold) {
     fx.prepare(48000.0);
     ConvolutionReverb::Params p;
     p.width = 0.0;
+  fx.setClipEnabledForTest(false);  // contract: pre-clip law
     fx.setParams(p);
     juce::AudioBuffer<float> b(2, 1);
     b.setSample(0, 0, 0.9f);
@@ -143,6 +146,7 @@ TEST(ConvolutionReverb, WidthFold) {
     ConvolutionReverb fx;
     ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
     fx.prepare(48000.0);
+  fx.setClipEnabledForTest(false);  // contract: pre-clip law
     juce::AudioBuffer<float> b(2, 1);
     b.setSample(0, 0, 0.9f);
     b.setSample(1, 0, 0.1f);
@@ -270,6 +274,7 @@ TEST(ConvolutionReverb, FadeInRampLaw) {
   const int n = 1200;
   ASSERT_TRUE(fx.loadBuffer(UnitConstantIr(n), 48000.0));
   fx.prepare(48000.0);
+  fx.setClipEnabledForTest(false);  // contract: pre-clip law
 
   ConvolutionReverb::Params p;
   p.fadeIn = 0.5;
@@ -324,6 +329,7 @@ TEST(ConvolutionReverb, LongIrTwoStageEngine) {
 // rate (no stale kernel, no crash).
 TEST(ConvolutionReverb, RateChangeRebuild) {
   ConvolutionReverb fx;
+  fx.setClipEnabledForTest(false);  // contract: pre-clip law
   ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
   fx.prepare(48000.0);
   fx.prepare(44100.0);
@@ -341,6 +347,7 @@ TEST(ConvolutionReverb, RateChangeRebuild) {
 // killing the stereo mode's wet entirely.
 TEST(ConvolutionReverb, MonoLaneBufferHasWet) {
   ConvolutionReverb fx;
+  fx.setClipEnabledForTest(false);  // contract: pre-clip law
   ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
   fx.prepare(48000.0);
 
@@ -355,6 +362,7 @@ TEST(ConvolutionReverb, MonoLaneBufferHasWet) {
 // the message for the readout.
 TEST(ConvolutionReverb, FailedRebuildKeepsServingEngine) {
   ConvolutionReverb fx;
+  fx.setClipEnabledForTest(false);  // contract: pre-clip law
   ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
   fx.prepare(48000.0);
 
@@ -1032,4 +1040,341 @@ TEST(BudgetConvolver, MinimalSingleTapHeadOnly) {
                 << std::endl;
   }
   SUCCEED();
+}
+
+// ---------------------------------------------------------------------------
+// Wet peak management (soft-knee ceiling, behind the scenes)
+// ---------------------------------------------------------------------------
+
+// The gain curve is pinned by a PLAIN tolerance on the auditable band
+// [0.05, 8]: within 0.3 dB of the design values, no reference named. The law:
+// a flat low-level lift (~+2.3 dB of tail fullness), a smoothstep knee
+// crossing 0 dB at |x| = kClipKneeX, then a 1/|x| crest roll whose ceiling is
+// kClipCeilingGain above the 0 dB point.
+TEST(ConvolutionReverb, WetClipCurveLaw) {
+  const struct {
+    double x, db;
+  } pin[] = {
+      {0.05, 2.390}, {0.10, 2.363}, {0.20, 2.264}, {0.30, 2.111},
+      {0.50, 1.671}, {0.70, 1.082}, {1.00, 0.000}, {1.50, -2.023},
+      {2.00, -3.979}, {3.00, -7.222}, {4.00, -9.682}, {5.00, -11.617},
+      {8.00, -15.700},
+  };
+  for (const auto& p : pin) {
+    const double got = ConvolutionReverb::clipGainDb(std::log(p.x));
+    EXPECT_NEAR(got, p.db, 0.3)
+        << "gain deviates on the auditable band at |x|=" << p.x;
+  }
+  // Crest-shaving law: gain is non-increasing in |x| over the table.
+  double prev = 1e9;
+  for (int i = 0; i < 256; ++i) {
+    const double x = 0.01 * std::pow(500.0, i / 255.0);  // 0.01 .. 5
+    const double g = ConvolutionReverb::clipGainDb(std::log(x));
+    EXPECT_LE(g, prev + 1e-9) << "gain must be non-increasing at |x|=" << x;
+    prev = g;
+  }
+  // At the knee (T=0) the gain equals the floor lift (A0); the 0 dB
+  // crossing sits near |x| = 1, and the low-level floor is a real lift.
+  EXPECT_NEAR(ConvolutionReverb::clipGainDb(std::log(
+                  static_cast<double>(ConvolutionReverb::kClipKneeX))),
+              ConvolutionReverb::kClipFloorDb, 0.05);
+  EXPECT_NEAR(ConvolutionReverb::clipGainDb(std::log(1.0)), 0.0, 0.3);
+  EXPECT_GT(ConvolutionReverb::clipGainDb(std::log(0.05)), 2.0);
+
+  ConvolutionReverb fx;  // ctor builds the LUT
+  // Odd symmetry + ceiling on the per-sample LUT path.
+  const float levels[] = {0.01f, 0.1f, 0.5f, 1.0f, 2.0f, 5.0f, 12.0f};
+  for (float x : levels) {
+    EXPECT_FLOAT_EQ(fx.clipPreview(-x), -fx.clipPreview(x));
+    const float g = std::abs(fx.clipPreview(x)) / x;
+    EXPECT_LE(g, 1.33f) << "|out|/|in| must stay under the ceiling";
+  }
+  // The LUT path agrees with the analytic curve (lerp tolerance).
+  const float lerpX[] = {0.021f, 0.09f, 0.33f, 0.77f, 1.9f, 6.3f};
+  for (float x : lerpX) {
+    // clipGainDb is the GAIN in dB, so the analytic output is
+    // x * 10^(H/20) (the LUT stores the 10^(H/20) factor).
+    const double analytic =
+        x * std::pow(10.0, ConvolutionReverb::clipGainDb(std::log((double)x)) /
+                               20.0);
+    const double lut = fx.clipPreview(x);
+    EXPECT_NEAR(20.0 * std::log10((lut / x) / (analytic / x)), 0.0, 0.15)
+        << "LUT/analytic mismatch at |x|=" << x;
+  }
+}
+
+// In-path behaviour: clip disabled = the 0.125 contract bit-exact (the
+// contract tests rely on this); clip enabled lifts the settled low-level wet
+// by exactly the curve's floor gain, and the stage is stateless (no
+// settling, no latency -- the first sample already carries the lift).
+TEST(ConvolutionReverb, WetClipInPath) {
+  auto make = [](bool clipOn) {
+    auto fx = std::make_unique<ConvolutionReverb>();
+    fx->loadBuffer(UnitDeltaIr(), 48000.0);
+    fx->prepare(48000.0);
+    fx->setClipEnabledForTest(clipOn);
+    return fx;
+  };
+  auto runSettled = [](std::unique_ptr<ConvolutionReverb> fx) {
+    const int n = 256;
+    juce::AudioBuffer<float> a(2, n);
+    Fill(a, 0.5f);
+    fx->process(a);
+    return a.getSample(0, n - 1);
+  };
+
+  const float off = runSettled(make(false));
+  EXPECT_NEAR(off, 0.125f * 0.5f, 1e-5);  // the pre-clip contract law
+
+  const float on = runSettled(make(true));
+  const double floorGain =
+      std::pow(10.0, ConvolutionReverb::kClipFloorDb / 20.0);
+  EXPECT_NEAR(on, off * static_cast<float>(floorGain), 2e-3f)
+      << "the enabled stage must lift by the floor gain at this level";
+  // Stateless: the FIRST sample of a fresh block carries the same law.
+  auto first = [](std::unique_ptr<ConvolutionReverb> fx) {
+    juce::AudioBuffer<float> a(1, 8);
+    Fill(a, 0.5f);
+    fx->process(a);
+    return a.getSample(0, 0);
+  };
+  EXPECT_NEAR(first(make(true)), off * static_cast<float>(floorGain), 2e-3f);
+}
+
+// ---------------------------------------------------------------------------
+// exportKernel — the baked-IR export (the Settings/Export tab engine).
+// The contract: the exported WAV, re-imported as an IR with the SAME stored
+// params, must sound identical to the live block. Every baked stage is LINEAR
+// (trim/stretch/fades/pre/gain/width), so the export re-runs makeEditedState
+// and bakes those stages; Mod + the wet soft-clip are live-only (nonlinear)
+// and deliberately excluded.
+// ---------------------------------------------------------------------------
+
+namespace {
+// A stereo IR with ASYMMETRIC channels (L = 1.0, R = 0.3) so the width M/S
+// fold is observable, with a known decaying shape so trim/length are checkable.
+juce::AudioBuffer<float> ExportAsymIr(int n) {
+  juce::AudioBuffer<float> ir(2, n);
+  for (int i = 0; i < n; ++i) {
+    const float env = std::exp(-0.01f * i);
+    ir.setSample(0, i, 1.0f * env);                  // L
+    ir.setSample(1, i, static_cast<float>(0.3 * env));  // R
+  }
+  return ir;
+}
+}  // namespace
+
+// No IR: empty buffer + a set error (the tile/strip guard mirrors this).
+TEST(ConvolutionExport, NoIrEmptyError) {
+  ConvolutionReverb fx;
+  fx.prepare(48000.0);
+  juce::String err;
+  const auto ir = fx.exportKernel(48000.0, &err);
+  EXPECT_EQ(ir.getNumSamples(), 0);
+  EXPECT_FALSE(err.isEmpty());
+}
+
+// Invalid target rate: empty + error.
+TEST(ConvolutionExport, BadRateEmptyError) {
+  ConvolutionReverb fx;
+  fx.prepare(48000.0);
+  ASSERT_TRUE(fx.loadBuffer(ExportAsymIr(1000), 48000.0));
+  juce::String err;
+  const auto ir = fx.exportKernel(0.0, &err);
+  EXPECT_EQ(ir.getNumSamples(), 0);
+  EXPECT_FALSE(err.isEmpty());
+}
+
+// Trim window past the end of the IR: empty + error.
+TEST(ConvolutionExport, EmptyWindowError) {
+  ConvolutionReverb fx;
+  fx.prepare(48000.0);
+  ASSERT_TRUE(fx.loadBuffer(ExportAsymIr(4800), 48000.0));  // 0.1 s
+  fx.setParams({0.0, 0.5, 0.5, 1.0, 0.08, 0.03, 0.0, 0.0, 0.5, 0.5, 0.0});
+  PumpSettle(fx);
+  juce::String err;
+  const auto ir = fx.exportKernel(48000.0, &err);
+  EXPECT_EQ(ir.getNumSamples(), 0) << "Start past End must yield an empty export";
+  EXPECT_FALSE(err.isEmpty());
+}
+
+// Identity path: whole IR, unity pitch, no fades, width 1, gain 0.5 (= 0 dB),
+// no pre. The export keeps its length at the same rate and peaks at the JUCE
+// 0.125/sqrt(max channel sum2) amplitude law (the live engine's level), so a
+// re-imported file sits at the same level as the block's wet.
+TEST(ConvolutionExport, WholeIrIdentityLengthAndLevel) {
+  ConvolutionReverb fx;
+  fx.prepare(48000.0);
+  const int n = 2000;
+  ASSERT_TRUE(fx.loadBuffer(ExportAsymIr(n), 48000.0));
+  fx.setParams({0.0, 0.5, 0.5, 1.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5, 0.0});
+  PumpSettle(fx);
+  juce::String err;
+  const auto ir = fx.exportKernel(48000.0, &err);
+  EXPECT_EQ(ir.getNumSamples(), n) << "whole IR at the same rate keeps its length";
+  // Amplitude law: the export peaks raw-L (1.0) scaled by 0.125/sqrt(sum2_L),
+  // where sum2_L = sum(exp(-0.02 i)) over n (L dominates).
+  double sum2L = 0.0;
+  for (int i = 0; i < n; ++i) {
+    const double v = std::exp(-0.01 * i);
+    sum2L += v * v;
+  }
+  const double expectNorm = 0.125 / std::sqrt(sum2L);
+  EXPECT_NEAR(ir.getSample(0, 0), expectNorm, 0.02 * expectNorm)
+      << "sample 0 must sit at the JUCE normalise level of the raw L channel";
+  // width 1 keeps both channels; R was 0.3x L raw, so the peaks ratio is 1/0.3.
+  EXPECT_NEAR(ir.getSample(0, 0) / ir.getSample(1, 0), 1.0 / 0.3, 0.15f);
+}
+
+// Pre bakes as LEADING SILENCE: the first `preN` samples are exactly 0 and the
+// onset shifts by preN (the baked form of the live pre-delay ring).
+TEST(ConvolutionExport, PreIsLeadingSilence) {
+  ConvolutionReverb fx;
+  fx.prepare(48000.0);
+  const int n = 2000;
+  ASSERT_TRUE(fx.loadBuffer(ExportAsymIr(n), 48000.0));
+  // Params{preMs=40, gain=0.5, pitch=0.5, width=1, no trim/fades}
+  ConvolutionReverb::Params p;
+  p.preMs = 40.0;
+  fx.setParams(p);
+  PumpSettle(fx);
+  juce::String err;
+  const auto ir = fx.exportKernel(48000.0, &err);
+  const int preN = 40 * 48000 / 1000;  // 1920 samples
+  EXPECT_EQ(ir.getNumSamples(), n + preN) << "pre adds preN leading samples";
+  for (int i = 0; i < preN; ++i) {
+    EXPECT_EQ(ir.getSample(0, i), 0.0f);
+    EXPECT_EQ(ir.getSample(1, i), 0.0f);
+  }
+  EXPECT_GT(ir.getSample(0, preN), 0.0f) << "the onset must land exactly at preN";
+}
+
+// Gain bakes as a multiplicative scale: +6 dB doubles every sample.
+TEST(ConvolutionExport, GainScalesKernel) {
+  ConvolutionReverb fx;
+  fx.prepare(48000.0);
+  const int n = 2000;
+  ASSERT_TRUE(fx.loadBuffer(ExportAsymIr(n), 48000.0));
+  ConvolutionReverb::Params p;
+  p.gain = ConvolutionReverb::dbToGain(0.0);
+  fx.setParams(p);
+  PumpSettle(fx);
+  const auto a = fx.exportKernel(48000.0, nullptr);
+  p.gain = ConvolutionReverb::dbToGain(6.0);
+  fx.setParams(p);
+  PumpSettle(fx);
+  const auto b = fx.exportKernel(48000.0, nullptr);
+  ASSERT_EQ(a.getNumSamples(), b.getNumSamples());
+  const float ref = a.getSample(0, 0);
+  const float g6 = static_cast<float>(std::pow(10.0, 6.0 / 20.0));  // +6 dB = 1.995262, not 2.0
+  for (int i = 0; i < 100; ++i)
+    EXPECT_NEAR(b.getSample(0, i), g6 * a.getSample(0, i), 1e-5f * std::abs(ref));
+}
+
+// Partial width bakes the M/S fold: at width 0 both channels collapse to the
+// mid 0.5*(L+R); the mid is untouched by the fold (only the side scales).
+TEST(ConvolutionExport, WidthFoldBaked) {
+  ConvolutionReverb fx;
+  fx.prepare(48000.0);
+  const int n = 2000;
+  ASSERT_TRUE(fx.loadBuffer(ExportAsymIr(n), 48000.0));
+  ConvolutionReverb::Params p;
+  p.width = 0.0;
+  fx.setParams(p);
+  PumpSettle(fx);
+  const auto mono = fx.exportKernel(48000.0, nullptr);
+  for (int i = 0; i < n; ++i)
+    EXPECT_NEAR(mono.getSample(0, i), mono.getSample(1, i), 1e-6f)
+        << "width 0 must fold both channels to a single mid";
+  p.width = 1.0;
+  fx.setParams(p);
+  PumpSettle(fx);
+  const auto full = fx.exportKernel(48000.0, nullptr);
+  for (int i = 0; i < n; ++i) {
+    const double expectMid = 0.5 * (full.getSample(0, i) + full.getSample(1, i));
+    EXPECT_NEAR(mono.getSample(0, i), expectMid, 1e-4)
+        << "width 0 must leave the mid component at 0.5*(L+R)";
+  }
+}
+
+// Mono IR + width: the Haas spread bakes as a fixed interaural delay
+// (kHaasDelayMs) at depth width * kHaasDepth — L-R == 2*depth*delayed.
+TEST(ConvolutionExport, MonoHaasSpreadBaked) {
+  ConvolutionReverb fx;
+  fx.prepare(48000.0);
+  const int n = 2000;
+  juce::AudioBuffer<float> mono(1, n);
+  for (int i = 0; i < n; ++i) mono.setSample(0, i, std::exp(-0.01f * i));
+  ASSERT_TRUE(fx.loadBuffer(mono, 48000.0));
+  ConvolutionReverb::Params p;
+  p.width = 1.0;
+  fx.setParams(p);
+  PumpSettle(fx);
+  const auto ir = fx.exportKernel(48000.0, nullptr);
+  ASSERT_EQ(ir.getNumSamples(), n);
+  const int dly = 3.5 * 48000 / 1000;  // kHaasDelayMs * rate / 1000 == 168
+  // The exported L channel already contains its own Haas side, so the
+  // expected side (L - R) must come from the RAW normalised env, not the
+  // exported L: side[i] = 2 * width * kHaasDepth * norm * env(i - dly).
+  double sum2 = 0.0;
+  for (int i = 0; i < n; ++i) sum2 += std::exp(-0.01f * i) * std::exp(-0.01f * i);
+  const float norm = static_cast<float>(0.125 / std::sqrt(sum2));
+  for (int i = dly; i < n; ++i) {
+    const float side = ir.getSample(0, i) - ir.getSample(1, i);
+    const float expect = 2.0f * 1.0f * 0.55f * norm * std::exp(-0.01f * (i - dly));
+    EXPECT_NEAR(side, expect, 1e-4f)
+        << "mono width must bake the Haas interaural delay at the pinned depth";
+  }
+}
+
+// Fades bake: a fadeIn fraction ramps the leading portion to 0 at sample 0;
+// fadeOut ramps the trailing portion to 0 at the last sample; the ramp is
+// present in between (not a hard gate).
+TEST(ConvolutionExport, FadesBaked) {
+  ConvolutionReverb fx;
+  fx.prepare(48000.0);
+  const int n = 4000;
+  ASSERT_TRUE(fx.loadBuffer(ExportAsymIr(n), 48000.0));
+  ConvolutionReverb::Params p;
+  p.fadeIn = 0.25;
+  p.fadeOut = 0.25;
+  p.fadeInCurve = 0.0;
+  p.fadeOutCurve = 0.0;
+  fx.setParams(p);
+  PumpSettle(fx);
+  const auto ir = fx.exportKernel(48000.0, nullptr);
+  EXPECT_EQ(ir.getSample(0, 0), 0.0f) << "fadeIn must reach 0 at the first sample";
+  EXPECT_EQ(ir.getSample(0, ir.getNumSamples() - 1), 0.0f)
+      << "fadeOut must reach 0 at the last sample";
+  const int mid = ir.getNumSamples() / 8;  // inside the 25% fade-in ramp
+  EXPECT_GT(ir.getSample(0, mid), 0.0f);
+  EXPECT_LT(ir.getSample(0, mid), 1.0f);
+}
+
+// Target-rate resample: a 48 kHz IR exported at 24 kHz halves its length.
+TEST(ConvolutionExport, TargetRateResample) {
+  ConvolutionReverb fx;
+  fx.prepare(48000.0);
+  const int n = 2000;
+  ASSERT_TRUE(fx.loadBuffer(ExportAsymIr(n), 48000.0));
+  fx.setParams(ConvolutionReverb::Params{});
+  PumpSettle(fx);
+  const auto half = fx.exportKernel(24000.0, nullptr);
+  EXPECT_NEAR((double)half.getNumSamples(), (double)n / 2.0, 2.0)
+      << "48k -> 24k must halve the sample count";
+}
+
+// Stretch (pitch) bakes: pitch 0 (0.25x) quarters the length.
+TEST(ConvolutionExport, StretchLengthBaked) {
+  ConvolutionReverb fx;
+  fx.prepare(48000.0);
+  const int n = 2000;
+  ASSERT_TRUE(fx.loadBuffer(ExportAsymIr(n), 48000.0));
+  ConvolutionReverb::Params p;
+  p.pitch = 0.0;  // 0.25x
+  fx.setParams(p);
+  PumpSettle(fx);
+  const auto slow = fx.exportKernel(48000.0, nullptr);
+  EXPECT_NEAR((double)slow.getNumSamples(), (double)n * 0.25, 2.0)
+      << "pitch 0 (0.25x) must quarter the kernel length";
 }

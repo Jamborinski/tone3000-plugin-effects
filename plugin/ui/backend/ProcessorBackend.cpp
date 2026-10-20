@@ -125,6 +125,10 @@ juce::var ProcessorBackend::getConvPreview(const std::string& blockId) {
 juce::var ProcessorBackend::loadConvIr(const std::string& blockId, const juce::File& file) {
   return processor_.loadConvIr(blockId, file);
 }
+juce::var ProcessorBackend::exportConvIr(const std::string& blockId, const juce::File& file,
+                                         int bits, double sampleRate) {
+  return processor_.exportConvIr(blockId, file, bits, sampleRate);
+}
 bool ProcessorBackend::setBlockSlimSize(const std::string& blockId, double slimSize) {
   return processor_.setBlockSlimSize(blockId, slimSize);
 }

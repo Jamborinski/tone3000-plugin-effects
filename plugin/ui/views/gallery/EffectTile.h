@@ -72,6 +72,17 @@ class EffectTile : public GalleryTile {
   // flashes the toast on success/failure.
   void enterConvIrFile();
   void updateConvIrLabel();
+  // Convolution: flip the full tile's settings view (grid <-> knob face).
+  void setConvSettings(bool on);
+  // Convolution: resync the settings-grid knobs from the chain state
+  // (setBlock refresh; both views mirror the same stored params).
+  void updateConvSettingsKnobs();
+  // Convolution: the Export save-picker (same async-guard pattern as the IR
+  // load picker); on OK, chain.exportConvIr writes the baked kernel WAV.
+  void enterConvExport();
+  // The settings-view child set (toggle, export, 7 knobs, note) for
+  // show/hide flips.
+  juce::Array<juce::Component*> convSettingsChildren();
 
   ChainItem block_;
   bool enabled_ = true;  // optimistic; native converges via the resync
@@ -141,6 +152,23 @@ class EffectTile : public GalleryTile {
   // is the only launch in this JUCE build -- no showOKDialog), so it is a
   // member, guarded exactly like LocalFiles' chooser.
   std::unique_ptr<juce::FileChooser> convIrChooser_;
+
+  // Convolution only, FULL tile: the IR-settings view. The Settings toggle
+  // swaps the plot strip + main knob grid for a 7-knob settings grid
+  // (Start / End trim + Pre / fades / curves -- mirror views over the same
+  // stored params the face writes, so both stay in sync for free) and an
+  // Export button (baked kernel -> bare-RIFF WAV, default 24-bit/48 kHz).
+  // Toggling back resyncs the main knobs from the chain. Compact tiles
+  // (160 px) keep the face only; Export reaches them via the strip.
+  bool convSettings_ = false;
+  juce::TextButton convSettingsToggle_;
+  juce::TextButton convExportButton_;
+  Knob convStartKnob_, convEndKnob_, convPreKnob_;
+  Knob convFadeInKnob_, convFadeOutKnob_;
+  Knob convInCurveKnob_, convOutCurveKnob_;
+  juce::Label convExportNote_;
+  bool convExporting_ = false;
+  std::unique_ptr<juce::FileChooser> convExportChooser_;
 
   // Delay only: the mode-set signature KNOB -- the mode's UNIQUE control.
   // PING/CHIP are continuous 0..100% (scales::fraction01), HEADS steps 1/2/3/4

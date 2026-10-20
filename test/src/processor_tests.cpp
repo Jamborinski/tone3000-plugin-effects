@@ -1340,3 +1340,71 @@ TEST(ProcessorTest, RemoveRejectsInsertBlocks) {
   EXPECT_FALSE(proc.removeChainBlock(lane[3])) << "inserts are not removable";
   EXPECT_EQ(laneIds(proc).size(), 5u);
 }
+
+// The Settings/Export tab backend: exportConvIr bakes the loaded IR + the
+// linear stage (trim/stretch/fades/pre/gain/width) into a bare-RIFF WAV at
+// the requested depth/rate. The round-trip law: read the file back and the
+// samples must match the processor's own kernel export at the target rate
+// (24-bit is quantised, so the tolerance is the 24-bit step, not bit-exact).
+TEST(Processor, ExportConvIrRoundTrip) {
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto cid = proc.addEffectBlock(EffectKind::Convolution, "left", 0);
+  ASSERT_FALSE(cid.empty());
+  const juce::File irWav = makeFixedIrWav();
+  ASSERT_TRUE(irWav.existsAsFile());
+  const juce::var loaded = proc.loadConvIr(cid, irWav);
+  ASSERT_TRUE(loaded.getDynamicObject() != nullptr);
+  ASSERT_FALSE(loaded.getDynamicObject()->hasProperty("error"));
+
+  const juce::File dest(juce::File::getSpecialLocation(juce::File::tempDirectory)
+                            .getChildFile("t3k-export-roundtrip.wav"));
+  dest.deleteFile();
+  const juce::var r = proc.exportConvIr(cid, dest, 24, 48000.0);
+  auto* o = r.getDynamicObject();
+  ASSERT_TRUE(o != nullptr) << "export must return an object";
+  EXPECT_FALSE(o->hasProperty("error")) << o->getProperty("error").toString();
+  EXPECT_TRUE(dest.existsAsFile());
+  EXPECT_FALSE(o->getProperty("path").toString().isEmpty());
+  const double seconds = static_cast<double>(o->getProperty("seconds"));
+  EXPECT_GT(seconds, 0.0);
+
+  // Read the file back: 2 channels, 48 kHz, and the samples must sit at the
+  // processor's own kernel level (24-bit-quantised, hence the 1/2^23 step).
+  juce::AudioFormatManager mgr;
+  mgr.registerBasicFormats();
+  std::unique_ptr<juce::AudioFormatReader> reader(mgr.createReaderFor(dest));
+  ASSERT_TRUE(reader != nullptr) << "the exported file must be decode-able";
+  EXPECT_NEAR(reader->sampleRate, 48000.0, 1.0);
+  EXPECT_EQ(reader->numChannels, 2);
+  EXPECT_NEAR((double)reader->lengthInSamples, seconds * 48000.0, 2.0);
+
+  juce::AudioBuffer<float> back(reader->numChannels, reader->lengthInSamples);
+  ASSERT_TRUE(reader->read(&back, 0, reader->lengthInSamples, 0, true, true));
+  EXPECT_GT(back.getMagnitude(0, 0, reader->lengthInSamples), 1e-3f)
+      << "the exported IR must not be silent";
+  // The export normalises the kernel to 0.125/sqrt(max sum2) (the live
+  // engine's level law), so the file peak is NOT the raw fixture peak (it
+  // sits ~12+ dB under 0.4 for the decaying-tone fixture). The exact
+  // amplitude law is pinned in ConvolutionExport.*; this round-trip only
+  // proves the write -> read WAV pipe (a silent/corrupt file fails the
+  // magnitude check above).
+}
+
+// The export guard: no IR loaded → an error object, no file written.
+TEST(Processor, ExportConvIrNoIrGuard) {
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto cid = proc.addEffectBlock(EffectKind::Convolution, "left", 0);
+  ASSERT_FALSE(cid.empty());
+  const juce::File dest(juce::File::getSpecialLocation(juce::File::tempDirectory)
+                            .getChildFile("t3k-export-noir.wav"));
+  dest.deleteFile();
+  const juce::var r = proc.exportConvIr(cid, dest, 24, 48000.0);
+  auto* o = r.getDynamicObject();
+  ASSERT_TRUE(o != nullptr);
+  EXPECT_TRUE(o->hasProperty("error")) << "no-IR export must carry an error";
+  EXPECT_FALSE(dest.existsAsFile()) << "no-IR export must not write a file";
+}

@@ -478,6 +478,71 @@ juce::var TONE3000Processor::loadConvIr(const std::string& blockId,
   obj->setProperty("seconds", static_cast<double>(block->conv.editedSeconds()));
   return juce::var(obj);
 }
+juce::var TONE3000Processor::exportConvIr(const std::string& blockId,
+                                          const juce::File& file, int bits,
+                                          double sampleRate) {
+  // Message-thread method (same contract as loadConvIr): takes the lock,
+  // builds + writes the file synchronously. No history push: an export is
+  // a read of the block's current settings, not a change.
+  juce::ScopedLock lock(chainMutex);
+  auto err = [&](const juce::String& message) {
+    auto* obj = new juce::DynamicObject();
+    obj->setProperty("blockId", juce::String(blockId));
+    obj->setProperty("error", message);
+    return juce::var(obj);
+  };
+  ChainBlock* block = findBlockById(blockId);
+  if (block == nullptr || block->type != ChainBlockType::EFFECT ||
+      block->effectKind != EffectKind::Convolution)
+    return err("Target block is not a Convolution block");
+  if (!block->conv.hasIr())
+    return err("No IR loaded in this block");
+
+  const int outBits = juce::jlimit(16, 32, bits);
+  const double outRate = juce::jlimit(30000.0, 192000.0, sampleRate);
+
+  juce::String buildError;
+  const juce::AudioBuffer<float> kernel = block->conv.exportKernel(outRate, &buildError);
+  if (kernel.getNumSamples() <= 0)
+    return err(buildError.isEmpty() ? "Kernel build failed" : buildError);
+
+  // WAV straight to the destination through a FileOutputStream (the
+  // fixture-proven pattern in processor_tests). The WavAudioFormat writer
+  // takes OWNERSHIP of the stream (unique_ptr<OutputStream>&, consumed on
+  // success). A MemoryBlock-backed stream looks like it fails here: the
+  // writer DID write, but MemoryBlock leaves getSize() at 0, so size
+  // checks on it lie — write to the file directly and trust the write RC.
+  std::unique_ptr<juce::OutputStream> stream(file.createOutputStream());
+  const bool fileOk = (stream != nullptr);
+  if (!fileOk)
+    return err("Could not open " + file.getFileName() + " for writing");
+  {
+    auto base = std::unique_ptr<juce::OutputStream>(stream.release());
+    juce::WavAudioFormat fmt;
+    juce::AudioFormatWriterOptions opts;
+    opts = opts.withSampleRate(outRate).withNumChannels(2).withBitsPerSample(outBits);
+    auto writer = fmt.createWriterFor(base, opts);
+    if (writer == nullptr)
+      return err("WAV writer unavailable");
+    const bool wOk =
+        writer->writeFromAudioSampleBuffer(kernel, 0, kernel.getNumSamples());
+    // ~writer flushes the RIFF header back over the data. A failed write
+    // leaves a truncated file — remove it so the caller gets a clean error.
+    if (!wOk)
+    {
+      file.deleteFile();
+      return err("Failed to write " + file.getFileName());
+    }
+  }
+
+  auto* obj = new juce::DynamicObject();
+  obj->setProperty("blockId", juce::String(blockId));
+  obj->setProperty("irName", block->conv.irName());
+  obj->setProperty("path", file.getFullPathName());
+  obj->setProperty("seconds",
+                   static_cast<double>(kernel.getNumSamples()) / outRate);
+  return juce::var(obj);
+}
 // E-2 (kernel persists with presets/app restart): rebuild ONE convolution
 // block's engine from the IR path carried by its block settings. No-op
 // unless the block is a Convolution with a persisted path and no live

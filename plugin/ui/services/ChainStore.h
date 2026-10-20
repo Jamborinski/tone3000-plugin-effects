@@ -68,6 +68,8 @@ public:
   // ({ blockId, irName, seconds } or { blockId, error }); call on the UI
   // thread (blocks on the backend run).
   juce::var loadConvIr(const std::string& blockId, const juce::File& file);
+  juce::var exportConvIr(const std::string& blockId, const juce::File& file,
+                         int bits, double sampleRate);
   // Convolution block: the kernel's waveform-strip data (Phase C) — or {}
   // when the block has no built kernel yet. Reads on the message thread.
   juce::var convPreview(const std::string& blockId);

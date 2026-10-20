@@ -151,6 +151,12 @@ private:
   // Convolution node: the strip's "Load IR..." button (async FileChooser,
   // mirrors EffectTile's convIrChooser_ flow).
   void startConvIrLoader(const std::string& blockId);
+  // Convolution node: the strip's IR-settings row (the strip's mirror of
+  // the gallery tile's settings view) + its Export save-picker.
+  void setConvStripSettings(bool on);
+  void rebuildStripSettingsKnobs(NodeStrip&, const ChainItem&);
+  void updateStripSettingsKnobValues(NodeStrip&, const ChainItem&);
+  void startConvExportLoader(const std::string& blockId);
 
   void applyPreview();  // drag: rebuild cells from the optimistic lane
   void moveActiveTo(int target);  // drag: splice the optimistic lane
@@ -182,6 +188,8 @@ private:
   // the grid reflows LIVE under the pointer exactly like the gallery.
   std::vector<ChainItem> preview_;
   std::unique_ptr<juce::FileChooser> convIrChooser_;  // strip "Load IR..."
+  std::unique_ptr<juce::FileChooser> convExportChooser_;  // strip "Export..."
+  bool convStripSettings_ = false;  // the strip's IR-settings row is open
   std::unique_ptr<ContextMenu> stripMenu_;  // the strip's mode/type menus
   bool nodeView_ = true;
 

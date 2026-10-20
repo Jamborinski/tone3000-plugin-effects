@@ -574,6 +574,62 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
     convIrSeconds_.setColour(juce::Label::textColourId, theme::kGray);
     addAndMakeVisible(convIrSeconds_);
     updateConvIrLabel();
+
+    if (!compact_) {
+      // IR-settings view (full tile only; the 160-px face has no room and
+      // the strip reaches every tile): Settings swaps the plot strip for a
+      // 7-knob grid -- Start / End (trim, absent from the face; their home)
+      // + Pre / fades / curves as MIRROR views over the same stored params
+      // the face writes, so both stay in sync for free. Export bakes the
+      // linear stages (trim, stretch, fades, Pre, Gain, Width) to a
+      // bare-RIFF WAV (default 24-bit / 48 kHz); Mod + the wet clip are
+      // nonlinear, stay live, and are deliberately not flagged here.
+      convSettingsToggle_.setButtonText("Settings");
+      convSettingsToggle_.setClickingTogglesState(true);
+      convSettingsToggle_.setHelpText(
+          juce::String(juce::CharPointer_UTF8(
+              "IR settings: Start / End trim + Pre / fades / curves (mirror "
+              "of the face), and Export the baked kernel")));
+      convSettingsToggle_.onClick = [this] {
+        this->setConvSettings(this->convSettingsToggle_.getToggleState());
+      };
+      addAndMakeVisible(convSettingsToggle_);
+
+      convExportButton_.setButtonText("Export");
+      convExportButton_.setHelpText(juce::String(juce::CharPointer_UTF8(
+          "Export the baked kernel as WAV (default 24-bit / 48 kHz); the "
+          "save dialog's filename is editable")));
+      convExportButton_.onClick = [this] { this->enterConvExport(); };
+      addAndMakeVisible(convExportButton_);
+
+      struct SetKnob { Knob& k; const KnobScale* scale; juce::String param; juce::String label; help::Key help; };
+      const SetKnob sks[7] = {
+          {convStartKnob_, &scales::convStart(), "convStartS", "Start", help::Key::convStartS},
+          {convEndKnob_, &scales::convEnd(), "convEndS", "End", help::Key::convEndS},
+          {convPreKnob_, &scales::convPre(), "convPreMs", "Pre", help::Key::convPre},
+          {convFadeInKnob_, &scales::convFade(), "convFadeIn", "F In", help::Key::convFadeIn},
+          {convFadeOutKnob_, &scales::convFade(), "convFadeOut", "F Out", help::Key::convFadeOut},
+          {convInCurveKnob_, &scales::convFade(), "convInCurve", "InCrv", help::Key::convInCurve},
+          {convOutCurveKnob_, &scales::convFade(), "convOutCurve", "OutCrv", help::Key::convOutCurve},
+      };
+      for (const auto& sk : sks) {
+        sk.k.setScale(sk.scale);
+        sk.k.setLabel(sk.label);
+        sk.k.setHelp(sk.help);
+        const KnobScale* sc = sk.scale;
+        const juce::String param = sk.param;
+        sk.k.onChange = [this, sc, param](float v) {
+          this->services().chain.setBlockParam(
+              this->blockId(), param, knobToStored(*sc, (double)v));
+        };
+        addAndMakeVisible(sk.k);
+      }
+      convExportNote_.setFont(Fonts::sans(9));
+      convExportNote_.setColour(juce::Label::textColourId, theme::kGray);
+      addAndMakeVisible(convExportNote_);
+      for (auto* c : convSettingsChildren()) c->setVisible(false);
+      updateConvSettingsKnobs();
+    }
   }
 
   const bool isDelay = block_.effectKind == "delay";
@@ -606,8 +662,13 @@ void EffectTile::setBlock(const ChainItem& block) {
     // A re-hydrated IR (E-2: state carries path+length but never bytes) only
     // re-appears in the preview/strip if we pull it here — otherwise the
     // waveform goes stale until the user loads the file in the UI again.
-    if (!compact_)
+    if (!compact_) {
       pullConvPreview();
+      // The settings-grid knobs mirror the face's stored params; refresh
+      // them too so an external edit (other view / preset / strip) lands
+      // in both views.
+      updateConvSettingsKnobs();
+    }
   }
   syncKnobs();
   applySync();
@@ -1118,6 +1179,137 @@ void EffectTile::updateConvIrLabel() {
   convIrButton_.setHelpText(help::text(help::Key::convIrLoad));
 }
 
+juce::Array<juce::Component*> EffectTile::convSettingsChildren() {
+  juce::Array<juce::Component*> c;
+  c.add(&convSettingsToggle_);
+  c.add(&convExportButton_);
+  c.add(&convStartKnob_);
+  c.add(&convEndKnob_);
+  c.add(&convPreKnob_);
+  c.add(&convFadeInKnob_);
+  c.add(&convFadeOutKnob_);
+  c.add(&convInCurveKnob_);
+  c.add(&convOutCurveKnob_);
+  c.add(&convExportNote_);
+  return c;
+}
+
+void EffectTile::updateConvSettingsKnobs() {
+  if (block_.effectKind != "convolution" || compact_)
+    return;
+  const auto set = [](Knob& k, const KnobScale* scale, double stored) {
+    k.setValue((float)knobFromStored(*scale, stored));
+  };
+  set(convStartKnob_, &scales::convStart(), block_.convStartS);
+  set(convEndKnob_, &scales::convEnd(), block_.convEndS);
+  set(convPreKnob_, &scales::convPre(), block_.convPreMs);
+  set(convFadeInKnob_, &scales::convFade(), block_.convFadeIn);
+  set(convFadeOutKnob_, &scales::convFade(), block_.convFadeOut);
+  set(convInCurveKnob_, &scales::convFade(), block_.convInCurve);
+  set(convOutCurveKnob_, &scales::convFade(), block_.convOutCurve);
+  // The note is the only place the live-only stages are visible at all;
+  // keep it terse and un-branded (Mod + the wet clip are behind the scenes).
+  convExportNote_.setText(
+      juce::String(juce::CharPointer_UTF8(
+          "export bakes the audio settings; modulation stays live")),
+      juce::dontSendNotification);
+}
+
+void EffectTile::setConvSettings(bool on) {
+  if (block_.effectKind != "convolution" || compact_)
+    return;
+  convSettings_ = on;
+  convSettingsToggle_.setToggleState(on, juce::dontSendNotification);
+  if (on) {
+    // Settings replaces the plot strip: the 7 knobs live in the plot band
+    // + the row-1/row-2 region; the face knobs + Mix/In/Out trio hide.
+    for (auto* c : convSettingsChildren()) c->setVisible(true);
+    mix_.setVisible(false);
+    input_.setVisible(false);
+    output_.setVisible(false);
+    knobA_.setVisible(false);
+    knobB_.setVisible(false);
+    knobC_.setVisible(false);
+    knobD_.setVisible(false);
+    knobE_.setVisible(false);
+    sigKnob_.setVisible(false);
+    modKnob_.setVisible(false);
+    knobF_.setVisible(false);
+    knobG_.setVisible(false);
+    convPlot_.setVisible(false);
+    updateConvSettingsKnobs();
+  } else {
+    for (auto* c : convSettingsChildren()) c->setVisible(false);
+    mix_.setVisible(true);
+    input_.setVisible(true);
+    output_.setVisible(true);
+    knobA_.setVisible(true);
+    knobB_.setVisible(true);
+    knobC_.setVisible(true);
+    knobD_.setVisible(true);
+    knobE_.setVisible(true);
+    sigKnob_.setVisible(true);
+    modKnob_.setVisible(true);
+    knobF_.setVisible(true);
+    knobG_.setVisible(true);
+    convPlot_.setVisible(true);
+  }
+  resized();
+  repaint();
+}
+
+void EffectTile::enterConvExport() {
+  if (block_.effectKind != "convolution")
+    return;
+  if (convExporting_)
+    return;
+  if (!block_.convIrLoaded) {
+    services().toast.show("No IR loaded in this block");
+    return;
+  }
+  if (convExportChooser_ != nullptr)
+    return;
+  // Default name: <irBase>_t3k_<rate>k<bit>  -- the user edits it in the
+  // save dialog (launchAsync saveMode: the field is typed, not fixed).
+  const juce::String base =
+      block_.convIrName.isNotEmpty()
+          ? juce::File(block_.convIrName).getFileNameWithoutExtension()
+          : juce::String("conv_ir");
+  const juce::String defName =
+      base + "_t3k_48k24" + juce::File::getSeparatorString() + "untitled.wav";
+  convExporting_ = true;
+  convExportChooser_ =
+      std::make_unique<juce::FileChooser>("Export IR", juce::File{}, "*.wav");
+  const auto target = blockId();
+  juce::WeakReference<EffectTile> self(this);
+  convExportChooser_->launchAsync(
+      juce::FileBrowserComponent::saveMode |
+          juce::FileBrowserComponent::canSelectFiles,
+      [self, target, defName](const juce::FileChooser& chooser) {
+        if (self == nullptr)
+          return;
+        juce::MessageManager::callAsync([self] {
+          if (self != nullptr) {
+            self->convExportChooser_.reset();
+            self->convExporting_ = false;
+          }
+        });
+        const juce::File dest0 = chooser.getResult();
+        if (dest0 == juce::File())  // cancelled
+          return;
+        // Default 24-bit / 48 kHz; the chosen path's extension decides the
+        // format (WAV is the only writer we ship for this).
+        const juce::var res =
+            self->services().chain.exportConvIr(target, dest0, 24, 48000.0);
+        const juce::String error = res["error"].toString();
+        if (error.isNotEmpty()) {
+          self->services().toast.show("Export failed: " + error);
+          return;
+        }
+        self->services().toast.show("IR exported");
+      });
+}
+
 void EffectTile::applySync() {
   if (block_.effectKind != "delay")
     return;
@@ -1183,7 +1375,9 @@ void EffectTile::resized() {
     // Compact conv: ONE label line (seconds appended to the name in
     // updateConvIrLabel — no height for a second line + waveform), then a
     // clean 4x2 below. The old 30px rows collided with that band.
-    convIrButton_.setBounds(28, 4, 68, 20);
+    convIrButton_.setBounds(28, 4, 58, 20);
+    convSettingsToggle_.setBounds(90, 4, 50, 20);
+    convExportButton_.setBounds(144, 4, 48, 20);
     convIrLabel_.setBounds(4, 25, W - 8, 14);
     convIrSeconds_.setVisible(false);
   }
@@ -1310,8 +1504,26 @@ void EffectTile::resized() {
     knobC_.setBounds(x, row2Y, colW, knobH); x += colW;
   }
   output_.setBounds(x, row2Y, colW, knobH);
-  if (convFullTile)
+  if (convFullTile) {
     convPlot_.setBounds(4, 50, W - 8, 40);
+    // IR-settings view: the plot strip + face rows are replaced by a 4-col
+    // 54-px grid (Start/End/Pre/F In over F Out/InCrv/OutCrv) + the bake
+    // note. Bounds are always kept current so show/hide flips never show a
+    // stale geometry.
+    const int setCols = 4;
+    const int setColW = (W - 8) / setCols;
+    const auto setRow = [&](juce::Component& c, int row, int col) {
+      c.setBounds(4 + col * setColW, 50 + row * (knobH + rowGap), setColW, knobH);
+    };
+    setRow(convStartKnob_, 0, 0);
+    setRow(convEndKnob_, 0, 1);
+    setRow(convPreKnob_, 0, 2);
+    setRow(convFadeInKnob_, 0, 3);
+    setRow(convFadeOutKnob_, 1, 0);
+    setRow(convInCurveKnob_, 1, 1);
+    setRow(convOutCurveKnob_, 1, 2);
+    convExportNote_.setBounds(4 + 3 * setColW, 50 + (knobH + rowGap), setColW, knobH);
+  }
 }
 
 void EffectTile::paint(juce::Graphics& g) {

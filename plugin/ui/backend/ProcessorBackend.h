@@ -56,6 +56,8 @@ public:
 
   bool setBlockParam(const std::string& blockId, const juce::String& param, double value) override;
   juce::var loadConvIr(const std::string& blockId, const juce::File& file) override;
+  juce::var exportConvIr(const std::string& blockId, const juce::File& file,
+                         int bits, double sampleRate) override;
   juce::var getConvPreview(const std::string& blockId) override;
   bool setBlockSlimSize(const std::string& blockId, double slimSize) override;
   bool setBlockEqBand(const std::string& blockId, int bandIndex, const juce::var& band) override;

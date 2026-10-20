@@ -173,6 +173,80 @@ std::shared_ptr<const KernelPreview> makeKernelPreview(const std::vector<float>&
   return pv;
 }
 
+// Trim + stretch + fades (the kernel SHAPING, engine's step 1..3). Shared
+// by makeEditedState (feeds the live engine) and exportKernel (feeds a
+// file) so the two can never drift. Returns -1 on an empty window.
+int ConvolutionReverb::buildEditedKernel(const Params& p, std::vector<float>* eL,
+                                         std::vector<float>* eR) const {
+  const double fileRate = rawRate_ > 0.0 ? rawRate_ : rate_;
+  if (fileRate <= 0.0 || rawLen_ <= 0)
+    return -1;
+  const int rawLen = rawLen_;
+
+  // 1. Explicit trim window (seconds of the raw IR; JUCE's Trim is
+  //    silence-stripping, so the window is ours).
+  const double startS = juce::jlimit(0.0, rawSeconds(), p.startS);
+  const double endS = (p.endS > 0.0 ? juce::jlimit(0.0, rawSeconds(), p.endS)
+                                    : rawSeconds());
+  const double winS = endS - startS;
+  if (winS <= 0.0)
+    return -1;
+  const int inL0 = static_cast<int>(std::llround(startS * fileRate));
+  const int inLen = std::min<int>(std::llround(winS * fileRate), rawLen - inL0);
+  if (inLen < 1)
+    return -1;
+
+  // 2. Stretch: `scale` is a LENGTH multiplier (0.25x..4x; 1 = unity).
+  //    scale > 1 = lower pitch = LONGER IR (outLen grows), sampled from the
+  //    window at i/scale -> linearly interpolated (a light resample that
+  //    commutes with JUCE's resample-to-engine-rate — no home resampler).
+  const double scale = pitchToScale(p.pitch);
+  const int outLen = std::max(1, static_cast<int>(std::llround(inLen * scale)));
+  if (static_cast<double>(outLen) / fileRate > kMaxEditedSeconds)
+    return -1;
+  std::vector<float> L(outLen, 0.0f), R(outLen, 0.0f);
+  const auto* sL = rawL_.data();
+  const auto* sR = rawR_.data();
+  for (int i = 0; i < outLen; ++i) {
+    const double t = static_cast<double>(i) / scale; // position in the window
+    const int base = std::min(inLen - 1, static_cast<int>(t));
+    const double frac = t - base;
+    // Clamp both taps in-range (t==inLen at the last sample when base is
+    // rounded down past the window end).
+    const int b1 = std::min(inLen - 1, base + 1);
+    L[i] = static_cast<float>(sL[inL0 + base] + (sL[inL0 + b1] - sL[inL0 + base]) * frac);
+    R[i] = static_cast<float>(sR[inL0 + base] + (sR[inL0 + b1] - sR[inL0 + base]) * frac);
+  }
+
+  // 3. Fades (fractions of the edited IR, independent ramps).
+  const int nF = static_cast<int>(std::llround(p.fadeIn * outLen));
+  if (nF > 1) {
+    const double e = fadeExponent(p.fadeInCurve);
+    for (int i = 0; i < nF; ++i) {
+      const float g = static_cast<float>(std::pow(static_cast<double>(i) / nF, e));
+      L[i] *= g;
+      R[i] *= g;
+    }
+  }
+  const int nO = static_cast<int>(std::llround(p.fadeOut * outLen));
+  if (nO > 1) {
+    const double e = fadeExponent(p.fadeOutCurve);
+    const int off = outLen - nO;
+    for (int i = off; i < outLen; ++i) {
+      // Fade-Out law: the decay fades 1 -> 0 into the end. `p` is
+      // 0 at the very last sample.
+      const double p = static_cast<double>(outLen - 1 - i) / (nO - 1);
+      const float g = static_cast<float>(std::pow(p, e));
+      L[i] *= g;
+      R[i] *= g;
+    }
+  }
+
+  *eL = std::move(L);
+  *eR = std::move(R);
+  return outLen;
+}
+
 std::shared_ptr<ConvolutionReverb::State> ConvolutionReverb::makeEditedState() {
   lastError_.clear();
 
@@ -186,75 +260,13 @@ std::shared_ptr<ConvolutionReverb::State> ConvolutionReverb::makeEditedState() {
   }
 
   const double fileRate = rawRate_ > 0.0 ? rawRate_ : rate_;
-  const int rawLen = rawLen_;
 
-  // 1. Explicit trim window (seconds of the raw IR; JUCE's Trim is
-  //    silence-stripping, so the window is ours).
-  const double startS = juce::jlimit(0.0, rawSeconds(), params_.startS);
-  const double endS = (params_.endS > 0.0
-                           ? juce::jlimit(0.0, rawSeconds(), params_.endS)
-                           : rawSeconds());
-  const double winS = endS - startS;
-  if (winS <= 0.0) {
+  std::vector<float> eL, eR;
+  if (buildEditedKernel(params_, &eL, &eR) < 0) {
     lastError_ = "Trim window is empty (Start must precede End)";
     return nullptr;
   }
-  const int inL0 = static_cast<int>(std::llround(startS * fileRate));
-  const int inLen = std::min<int>(std::llround(winS * fileRate), rawLen - inL0);
-  if (inLen < 1) {
-    lastError_ = "Trim window is empty";
-    return nullptr;
-  }
-
-  // 2. Stretch: `scale` is a LENGTH multiplier (0.25x..4x; 1 = unity).
-  //    scale > 1 = lower pitch = LONGER IR (outLen grows), sampled from the
-  //    window at i/scale -> linearly interpolated (a light resample that
-  //    commutes with JUCE's resample-to-engine-rate — no home resampler).
-  const double scale = pitchToScale(params_.pitch);
-  const int outLen = std::max(1, static_cast<int>(std::llround(inLen * scale)));
-  if (static_cast<double>(outLen) / fileRate > kMaxEditedSeconds) {
-    lastError_ = juce::String(static_cast<double>(kMaxEditedSeconds), 1) +
-                 " s edited-IR cap exceeded (Length)";
-    return nullptr;
-  }
-  std::vector<float> eL(outLen, 0.0f), eR(outLen, 0.0f);
-  const auto* sL = rawL_.data();
-  const auto* sR = rawR_.data();
-  for (int i = 0; i < outLen; ++i) {
-    const double t = static_cast<double>(i) / scale; // position in the window
-    const int base = std::min(inLen - 1, static_cast<int>(t));
-    const double frac = t - base;
-    // Clamp both taps in-range (t==inLen at the last sample when base is
-    // rounded down past the window end).
-    const int b1 = std::min(inLen - 1, base + 1);
-    eL[i] = static_cast<float>(sL[inL0 + base] + (sL[inL0 + b1] - sL[inL0 + base]) * frac);
-    eR[i] = static_cast<float>(sR[inL0 + base] + (sR[inL0 + b1] - sR[inL0 + base]) * frac);
-  }
-
-
-  // 3. Fades (fractions of the edited IR, independent ramps).
-  const int nF = static_cast<int>(std::llround(params_.fadeIn * outLen));
-  if (nF > 1) {
-    const double e = fadeExponent(params_.fadeInCurve);
-    for (int i = 0; i < nF; ++i) {
-      const float g = static_cast<float>(std::pow(static_cast<double>(i) / nF, e));
-      eL[i] *= g;
-      eR[i] *= g;
-    }
-  }
-  const int nO = static_cast<int>(std::llround(params_.fadeOut * outLen));
-  if (nO > 1) {
-    const double e = fadeExponent(params_.fadeOutCurve);
-    const int off = outLen - nO;
-    for (int i = off; i < outLen; ++i) {
-      // Fade-Out law: the decay fades 1 -> 0 into the end. `p` is
-      // 0 at the very last sample.
-      const double p = static_cast<double>(outLen - 1 - i) / (nO - 1);
-      const float g = static_cast<float>(std::pow(p, e));
-      eL[i] *= g;
-      eR[i] *= g;
-    }
-  }
+  const int outLen = static_cast<int>(eL.size());
 
   // 4. Engine choice (house 1.0 s cutoff; the two-stage non-uniform engine
   //    is also zero-latency — this is a CPU choice, not an audible one).
@@ -373,6 +385,122 @@ void ConvolutionReverb::installState(std::shared_ptr<State> next, bool crossfade
   dyingParams_ = params_;
   ++fadeGen_;   // a stale in-flight advance must not touch the new slots
   fadePos_ = 0.0f;
+}
+
+juce::AudioBuffer<float> ConvolutionReverb::exportKernel(double targetRate,
+                                                         juce::String* error) const {
+  juce::AudioBuffer<float> empty;
+  if (rawLen_ <= 0) {
+    if (error != nullptr)
+      *error = "No IR loaded";
+    return empty;
+  }
+  if (targetRate <= 0.0) {
+    if (error != nullptr)
+      *error = "Invalid target rate";
+    return empty;
+  }
+
+  // 1. Build the edited kernel (trim + stretch + fades) at the raw file
+  //    rate, via the SAME shared builder the live engine uses.
+  std::vector<float> eL, eR;
+  if (buildEditedKernel(params_, &eL, &eR) < 0) {
+    if (error != nullptr)
+      *error = "Trim window is empty (Start must precede End)";
+    return empty;
+  }
+  const int inLen_raw_rate = static_cast<int>(eL.size());
+  const double fileRate = rawRate_ > 0.0 ? rawRate_ : rate_;
+
+  // 1b. Amplitude law: the live engine serves the kernel at
+  //      0.125 / sqrt(max channel sum2) (JUCE NonUniform/Uniform
+  //      normalisation, applied pre-split by the long path). The export
+  //      must match so a re-imported file has the same level as this
+  //      block's wet had.
+  double sumL = 0.0, sumR = 0.0;
+  for (int i = 0; i < inLen_raw_rate; ++i) {
+    sumL += static_cast<double>(eL[i]) * eL[i];
+    sumR += static_cast<double>(eR[i]) * eR[i];
+  }
+  const double maxS = std::max(sumL, sumR);
+  const float norm = (maxS < 1e-8) ? 0.0f
+                                   : static_cast<float>(0.125 / std::sqrt(maxS));
+  for (int i = 0; i < inLen_raw_rate; ++i) {
+    eL[i] *= norm;
+    eR[i] *= norm;
+  }
+
+  // 2. Resample to the target rate (linear interp, same family as the
+  //    stretch — the export target may differ from the file rate).
+  const int outLen = std::max(
+      1, static_cast<int>(std::llround(
+             static_cast<double>(inLen_raw_rate) * targetRate / fileRate)));
+  std::vector<float> xL(outLen, 0.0f), xR(outLen, 0.0f);
+  const auto* sL = eL.data();
+  const auto* sR = eR.data();
+  const double rs = static_cast<double>(fileRate) / targetRate;
+  for (int i = 0; i < outLen; ++i) {
+    const double t = static_cast<double>(i) * rs; // position in the edited IR
+    const int base = std::min(inLen_raw_rate - 1, static_cast<int>(t));
+    const double frac = t - base;
+    const int b1 = std::min(inLen_raw_rate - 1, base + 1);
+    xL[i] = static_cast<float>(sL[base] + (sL[b1] - sL[base]) * frac);
+    xR[i] = static_cast<float>(sR[base] + (sR[b1] - sR[base]) * frac);
+  }
+
+  // 3. BAKE the linear live stages into the kernels.
+  const int irCh = (rawCh_ >= 2) ? 2 : 1;
+  const float width = static_cast<float>(juce::jlimit(0.0, 1.0, params_.width));
+  const float gain = static_cast<float>(
+      std::pow(10.0, static_cast<double>(gainToDb(params_.gain)) / 20.0));
+
+  if (irCh <= 1) {
+    // mono IR: duplicate to both ears, then apply the Haas spread (the
+    // baked form of the live mono-Width stage: a fixed interaural
+    // difference of depth width * kHaasDepth).
+    const int dly = std::max(1, static_cast<int>(std::llround(
+                                    kHaasDelayMs * targetRate / 1000.0)));
+    std::vector<float> dlL(outLen, 0.0f), dlR(outLen, 0.0f);
+    for (int i = 0; i < outLen; ++i) {
+      const float v = xL[i] * gain;
+      const float delayed = (i - dly >= 0) ? xL[i - dly] * gain : 0.0f;
+      const float side = static_cast<float>(width * kHaasDepth) * delayed;
+      dlL[i] = v + side;
+      dlR[i] = v - side;
+    }
+    juce::AudioBuffer<float> out(2, outLen);
+    out.copyFrom(0, 0, dlL.data(), outLen);
+    out.copyFrom(1, 0, dlR.data(), outLen);
+    return out;
+  }
+
+  // 4. Pre as leading silence (the baked form of the live pre-delay ring).
+  const int preN = std::max(
+      0, static_cast<int>(std::llround(
+             juce::jlimit(0.0, kMaxPreMs, params_.preMs) * targetRate / 1000.0)));
+  juce::AudioBuffer<float> out(2, preN + outLen);
+  out.clear();
+  const int off = preN;
+
+  if (width >= 1.0f - 1e-6f) {
+    // Full stereo: the M/S fold is identity — just offset + gain.
+    for (int i = 0; i < outLen; ++i) {
+      out.setSample(0, off + i, xL[i] * gain);
+      out.setSample(1, off + i, xR[i] * gain);
+    }
+  } else {
+    // Width-baked stereo: fold the M/S to (1 - width/2) * (l+r) / 2 + s
+    // so a downstream TDL at width 1.0 reproduces the live fold.
+    // Live law: w0 = (m + width*s) * g; w1 = (m - width*s) * g.
+    // Baked (pre-gain): B0 = m + width*s; B1 = m - width*s.
+    for (int i = 0; i < outLen; ++i) {
+      const float m = 0.5f * (xL[i] + xR[i]);
+      const float sd = 0.5f * (xL[i] - xR[i]);
+      out.setSample(0, off + i, (m + width * sd) * gain);
+      out.setSample(1, off + i, (m - width * sd) * gain);
+    }
+  }
+  return out;
 }
 
 bool ConvolutionReverb::loadBuffer(const juce::AudioBuffer<float>& src,
@@ -687,6 +815,17 @@ void ConvolutionReverb::process(juce::AudioBuffer<float>& buffer) {
         modW_[c] = (int) w;
       }
     }
+    // 3c. Wet peak management (fixed soft-knee ceiling; the tail-fullness
+    //     law -- crests shaved, tail average preserved, dry untouched).
+    //     Applied on the serving engine's wet only: the dying engine
+    //     (stage 4) is crossfading out under the same wet history, so a
+    //     second clip pass would double-dip. Stateless, LUT + lerp.
+    if (clipEnabled_)
+      for (int c = 0; c < ch; ++c) {
+        float* wet = buffer.getWritePointer(c);
+        for (int i = 0; i < n; ++i)
+          wet[i] = clipApply(wet[i], clipLut_);
+      }
   } else {
     // Nothing serving: only the dying tail below contributes.
     buffer.clear();
