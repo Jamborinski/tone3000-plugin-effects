@@ -21,6 +21,10 @@ sources:
   - resource: repo://docs/tickets/handoff/HANDOFF-nodeview.md
   - id: openwiki-source-c3846816d3d592e2ee7c8d4e
     resource: repo://plugin/ui/services/ChainStore.h
+  - id: openwiki-source-b5b2a6c9978bb54fa1923b60
+    resource: repo://plugin/ui/testbed/e2e/conv-strip.js
+  - id: openwiki-source-5ce252cfdcd91a240c635a5e
+    resource: repo://plugin/ui/testbed/NodeViewE2E.cpp
   - id: openwiki-source-5ce285990005ab7ecadd0e65
     resource: repo://plugin/ui/views/ChainScreen.h
   - id: openwiki-source-6c2abe72c3679eefdf9c9c53
@@ -34,7 +38,7 @@ sources:
 generated: { by: "pi", at: "2026-10-18T19:36:10.014Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-18T23:18:48.824Z
+    at: 2026-10-20T22:14:33.483Z
 ---
 
 # Node view: the signal-line grid
@@ -287,6 +291,38 @@ open mode menu does not leak over the gallery, gallery wheel scroll alive).
 - **`ChainScreen::setView(bool)`** hides the gallery / shows the node view;
   the node view has no DragScroller (`scroller()` keeps returning the
   gallery's).
+
+## Conv strip: Settings/Export band (commit 89afb4e + b80bca7)
+
+The conv node strip (selected conv block) grows a second band when the user
+flips **Settings** (`NodeStrip`'s `settingsToggle_`, a
+`clickingTogglesState` TextButton next to the IR label; `settingsExport_`
+beside it): `NodeView::setConvStripSettings(bool)` (NodeView.cpp:1764) owns
+the chrome — both buttons stay visible only while the band is open (at rest
+the strip shows face-only, state `0:0:0:7/0`), and it swaps the single knob
+row for a **4-column 7-knob grid** (Start / End / Pre / F In / F Out / InCrv /
+OutCrv — the `scales::convStart/convEnd` trim parameters that have no face
+knob on the gallery tile; the conv tile carries the same grid in its own
+Settings view, full tile only, compact tiles face-only). The band height is
+`convBand = convStrip ? (convStripSettings_ ? 152 : 78) : 0`
+(NodeView.cpp:1125-1127).
+
+**Export:** the **Export** button calls
+`NodeView::startConvExportLoader(blockId)` (NodeView.cpp:1861), which
+toasts "No IR loaded in this block" (guard) otherwise opens a save
+FileChooser (default name `<irName>_t3k_48k24.wav`, `untitled.wav` when the
+IR has no name) and calls
+`chain.exportConvIr(blockId, dest, 24, 48000)` — 24-bit / 48 kHz default,
+the kernel baked as the live engine sees it (see the ir-convolution page's
+Kernel export section).
+
+**E2E:** `NodeView::convStripStateForE2E()` reports
+`<toggleVis>:<toggleOn>:<exportVis>:<knobCount>/<visCount>|<toast>|<convIr>`;
+the `node-conv-strip` handler (NodeViewE2E.cpp, ops select / toggle /
+export-click) drives it; the 6-check regression
+`plugin/ui/testbed/e2e/conv-strip.js` is a STANDALONE script because two
+AppConnections in one process race on socket teardown (unregistered message
+→ `Response::fail`, TestCentre.cpp:97).
 
 ## Testbed
 

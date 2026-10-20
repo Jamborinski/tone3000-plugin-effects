@@ -19,7 +19,7 @@ sources:
 generated: { by: "pi", at: "2026-10-18T23:18:48.824Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-18T23:18:48.824Z
+    at: 2026-10-20T22:14:33.483Z
 ---
 
 # Presets and runtime persistence

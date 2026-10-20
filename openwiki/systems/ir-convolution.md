@@ -13,12 +13,18 @@ sources:
     resource: repo://plugin/include/effects/conv/ConvolutionReverb.h
   - id: openwiki-source-d8041e84a03828e0d221b0ce
     resource: repo://plugin/src/effects/conv/ConvolutionReverb.cpp
+  - id: openwiki-source-fd29254520bef2ca5ddb33d0
+    resource: repo://plugin/src/ProcessorChain.cpp
   - id: openwiki-source-8a517d0ba4e262c409b9866c
     resource: repo://plugin/src/ProcessorModelLoader.cpp
+  - id: openwiki-source-323fe87bd1df0bede6a732eb
+    resource: repo://test/src/convolution_reverb_tests.cpp
+  - id: openwiki-source-a95d9a96cf87c30a610c9c3b
+    resource: repo://test/src/processor_tests.cpp
 generated: { by: "pi", at: "2026-10-18T23:18:48.824Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-18T23:18:48.824Z
+    at: 2026-10-20T22:14:33.483Z
 ---
 
 
@@ -115,9 +121,35 @@ Its own additions:
   per ramp.
 - **Pre** (0..100 ms wet pre-delay), **Width** (M/S fold), smoothed **Gain**
   (0.5 = 0 dB) — all live on the wet path, none baked into the kernel.
+- **Wet soft-knee peak limiter** (the final wet stage, `ConvolutionReverb.cpp:823-827`,
+  gated by `clipEnabled_`, NOT applied on the dying crossfade tail): a 1024-entry
+  LUT over `log|x|` in `[kClipLogLo, kClipLogHi]` with the smoothstep
+  ramp/floor/ceiling law (`kClipFloorDb` lift at low levels, knee at
+  `kClipKneeX`, `kClipCeilingGain` ceiling — constants at `ConvolutionReverb.h:177-190`).
+  No user knob, not part of state, and deliberately **excluded from IR export**.
+  Guarded by `WetClipCurveLaw` + `WetClipInPath` in
+  `test/src/convolution_reverb_tests.cpp` (plain 0.3 dB tolerance; the 7
+  pre-clip contract tests call `setClipEnabledForTest(false)`).
 - **4.0 (quad) → stereo downmix law** at load:
   `L = (c0 + c2)/√2, R = (c1 + c3)/√2` — JUCE itself reads only channels
   0/1 and would silently drop the rear pair, so the fold happens here first.
+
+## Kernel export (`exportKernel`, commit 89afb4e)
+
+`ConvolutionReverb::exportKernel(targetRate, &error)` (`ConvolutionReverb.h:328`,
+`ConvolutionReverb.cpp:390`) produces the IR exactly as the live engine sees
+it, at the target sample rate: it re-runs the SAME linear `makeEditedState`
+pipeline — Start/End trim, Time stretch, fade in/out + curves — at the raw
+file rate, resamples to the target, then bakes the remaining linear stages:
+**Pre** zero-pad, **Gain** (`pow(10, gainToDb/20)`), **Width** (stereo M/S
+fold; a mono IR becomes the Haas interaural-delay pair). **Mod** and the wet
+soft clip are live-only and deliberately not baked. The result is always
+2-channel (mono duplicated). `TONE3000Processor::exportConvIr`
+(`plugin/src/ProcessorChain.cpp:481`) wraps it for the UI: bits clamped
+16..32, `WavAudioFormat` writer over the file stream (the
+`juce::MemoryOutputStream` 0-byte trap class), the file deleted on failure.
+Guarded by `ConvIrExport*` tests (`test/src/convolution_reverb_tests.cpp`) and
+an `exportConvIr` WAV round-trip (`test/src/processor_tests.cpp`).
 
 ## IR short/long classification
 

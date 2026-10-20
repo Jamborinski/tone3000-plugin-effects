@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:e38e15c8f3109908276257697af541321d3d547406e0e647e9f3ee39c25c2436",
+  "pageVersion": "sha256:e58a9ec5cff1a85a8dbbbd985fbc3272ccffbb8e46fb2abd01cddf0e5b1dbb92",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -56,7 +56,7 @@
       "evidence": [
         {
           "resource": "repo://test/src/processor_tests.cpp",
-          "version": "repo-file-v1:sha256:d99c7ba9d580b98f3590d462e127e0c58044c59f108a37a840d6ff8ac4f25639"
+          "version": "repo-file-v1:sha256:1133e1368009946ff89a5bf27ca4aeae1b9736ac9a482c052466621cb06a542a"
         }
       ]
     },
@@ -190,7 +190,7 @@
         },
         {
           "resource": "repo://plugin/ui/testbed/e2e/node-drag.js",
-          "version": "repo-file-v1:sha256:2555061010bc1e2345cfb44aca1ed2c6ba60b6b969fd3d9acaa30b5d8f50002c"
+          "version": "repo-file-v1:sha256:abd241b5825e73f0a06c4b48b57c9ecafb03cdccbc10712efdd2a154e9ad37bd"
         }
       ]
     },
@@ -207,10 +207,68 @@
           "version": "repo-file-v1:sha256:62163390e75c0bd10d830593ccf0a5900e3282b0578ed5868222c7a7ea973b76"
         }
       ]
+    },
+    {
+      "id": "claim_ef6fb07515fb470886259576388caa33",
+      "statement": "The R1 reverb Dry anchor test TEST(ProcessorTest, ReverbDryScalesOnlyTheDryPathAllModes) (test/src/processor_tests.cpp:905) loops all 6 reverb modes; at mix=0 it asserts a -6 dB Dry setting scales the dry term by exactly gain(-6 dB); at mix=1 it asserts the wet (reverb tail) output is invariant under the Dry knob. It runs in ~460 ms and passes. The positional m06828 tests added below sit further down the same file (line numbers shifted).",
+      "evidence": [
+        {
+          "resource": "repo://test/src/processor_tests.cpp",
+          "version": "repo-file-v1:sha256:1133e1368009946ff89a5bf27ca4aeae1b9736ac9a482c052466621cb06a542a"
+        }
+      ]
+    },
+    {
+      "id": "claim_551f834dfc9540a0970ac888a4c6f457",
+      "statement": "A juce-end-to-end layer is a SUPPLEMENT (2026-10-18, commit f0b06d4; spec spc-1792273651114-39383: supplement only, never a replacement): plugin/ui/testbed/CMakeLists.txt does add_subdirectory(libs/focusrite-e2e) and links focusrite-e2e::focusrite-e2e into UiTestbed; the JS client lives in plugin/ui/testbed/e2e/ (npm package.json, node_modules/ gitignored). node-drag.js carries 35 check() asserts (opaque-ghost / follows-pointer / no-origin-box / post-drag-idle / symmetric 1-tile swap / drop-glow / off-chain cancel / right-press-SURVIVES-drag / positional far-slot drop laws) and runs under `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`; conv-strip.js (commit b80bca7) is a STANDALONE 6-check script for the node-view conv strip's settings/export band (at-rest chrome `0:0:0`, toggle on `1:1:1:7/7`, export toast `No IR loaded in this block`, toggle off back to `0:0:0`) driven by the `node-conv-strip` handler in NodeViewE2E.cpp + `NodeView::convStripStateForE2E()` — it got its own script because two AppConnections in one process race on socket teardown (TestCentre.cpp:97 returns a failure for unregistered message types). e2e.js APP honors a T3K_E2E_APP env override (commit 72f48ea) so the rig can point at an alternate UiTestbed build tree without editing the file. DspTests, the testbed selftest, TileShot goldens, and the e2e scripts remain the complementary gates.",
+      "evidence": [
+        {
+          "resource": "repo://docs/tickets/juce-e2e-suite-draft.md",
+          "version": "repo-file-v1:sha256:4b70d4e0be146604a5c7b6f884f4ab180517deb79d54c97548bb2f9c019e36b0"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:cadfb63c5c14f32929ecafb3b6c49931e1084e58fda3c5e9264df00bd05eda48"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/NodeViewE2E.cpp",
+          "version": "repo-file-v1:sha256:493d0be1532a5e0dd1f03dcbf31df0edf891debeffd1cdc97112e39bce6f8a43"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/e2e/conv-strip.js",
+          "version": "repo-file-v1:sha256:dfc433b5ed07a59d4b773ce139b9bd35b684097d9af0d251dea24e5fc5f11f02"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/e2e/node-drag.js",
+          "version": "repo-file-v1:sha256:abd241b5825e73f0a06c4b48b57c9ecafb03cdccbc10712efdd2a154e9ad37bd"
+        }
+      ]
+    },
+    {
+      "id": "claim_f818caf1b6ac417189c4de6e4fe8230e",
+      "statement": "The optimization-findings state-size work added src/state_size_tests.cpp (line 36 of test/CMakeLists.txt): 8 tests pinning the DAW-host state footprint — a 2+2 dual-mono NAM rig with 4 blocks sharing one ~8 MB synthetic LCG payload, v1 raw-blob baseline (33.6 MB, ~5 ms save), the v2 ModelLibrary dedup shape (one payload + ref strings), the gzip flag layer (incompressible LCG payload saves flag 0 raw; real 360 KB-class SYN20 captures syn20-amp-c1.nam/syn20-amp-c2.nam save flag 1 with saved < rawSize+5), byte-identical re-saves, v1-forward-compat restore, and a corrupt-header fuzz case. The test-side blob parser lives in shared header test/src/StateSizeBlob.h (parseFlagAwareStateBlob / blobTreeContains), consumed by state_cache, processor, pitch_shift and gate tests because the state header gained the format flag. Full-suite snapshot: 560 after this pass; 575 after the conv wet-clip + Settings/Export-kernel pass (convolution_reverb_tests.cpp WetClip* + ConvIrExport* suites) — lower-bound; never assert stale totals.",
+      "evidence": [
+        {
+          "resource": "repo://test/CMakeLists.txt",
+          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+        },
+        {
+          "resource": "repo://test/src/convolution_reverb_tests.cpp",
+          "version": "repo-file-v1:sha256:02d65f19edaeb48d4692ad0bb3ef24121dbddb9febe46ebc316eab6842861243"
+        },
+        {
+          "resource": "repo://test/src/processor_tests.cpp",
+          "version": "repo-file-v1:sha256:1133e1368009946ff89a5bf27ca4aeae1b9736ac9a482c052466621cb06a542a"
+        },
+        {
+          "resource": "repo://test/src/state_size_tests.cpp",
+          "version": "repo-file-v1:sha256:62163390e75c0bd10d830593ccf0a5900e3282b0578ed5868222c7a7ea973b76"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T23:18:48.824Z"
+    "at": "2026-10-20T22:14:33.483Z"
   }
 }

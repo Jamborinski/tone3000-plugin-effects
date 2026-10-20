@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:4b07fb6f7340fdc1401b0c6316a11a06f01f1cb375299ae81b485c5d8eaf8f48",
+  "pageVersion": "sha256:57f81b56d738b3b0dcfa517198bbd990f6cbf4f4708d10f52b72bdf4ca239218",
   "claims": [
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
@@ -36,11 +36,11 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:ee4e2a7466cc53f03d99e47553984d09ad7453104d03172fe6e7d3144c692ef7"
+          "version": "repo-file-v1:sha256:3c6eeb4762bb20a7ed07739bc6e66b1cb12f6b57ce4dc8cf9746562c671e356b"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:c384ac0419ad92593913b7a810ec897c1839c55b6ca1f3a5f09fc781803c9181"
+          "version": "repo-file-v1:sha256:ff55dee1d55097fdd70b711267a525fdb717ecffe6fce241daa3f1637969147f"
         }
       ]
     },
@@ -54,7 +54,7 @@
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:b40adc6572ec6489d056f994383b04d1e42a6ff17f232f28df03667d5d5fd560"
+          "version": "repo-file-v1:sha256:996c07043fd6a0f4578fcd44a2338f6445d7127bd62308f08e3e520102e00651"
         }
       ]
     },
@@ -64,19 +64,19 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:f7120aac7135a75dd946b451c5dfd050d30f8ae939aea964c93b385e6cc0e048"
+          "version": "repo-file-v1:sha256:7562d6c4af63bb001257e2af596f59c9d20747c84eb3e54a079cc83715ead452"
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:ee4e2a7466cc53f03d99e47553984d09ad7453104d03172fe6e7d3144c692ef7"
+          "version": "repo-file-v1:sha256:3c6eeb4762bb20a7ed07739bc6e66b1cb12f6b57ce4dc8cf9746562c671e356b"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
-          "version": "repo-file-v1:sha256:a2a6191e41e0dc0cea7667b886d9b2a4aeb514228799f11bf80036aff54548d0"
+          "version": "repo-file-v1:sha256:ad055d383717f9f03bbd1d0a1f93b9b4d7ea101b621b7069923a642f2af0cf04"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:c384ac0419ad92593913b7a810ec897c1839c55b6ca1f3a5f09fc781803c9181"
+          "version": "repo-file-v1:sha256:ff55dee1d55097fdd70b711267a525fdb717ecffe6fce241daa3f1637969147f"
         }
       ]
     },
@@ -86,23 +86,23 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:f7120aac7135a75dd946b451c5dfd050d30f8ae939aea964c93b385e6cc0e048"
+          "version": "repo-file-v1:sha256:7562d6c4af63bb001257e2af596f59c9d20747c84eb3e54a079cc83715ead452"
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:ee4e2a7466cc53f03d99e47553984d09ad7453104d03172fe6e7d3144c692ef7"
+          "version": "repo-file-v1:sha256:3c6eeb4762bb20a7ed07739bc6e66b1cb12f6b57ce4dc8cf9746562c671e356b"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
-          "version": "repo-file-v1:sha256:a2a6191e41e0dc0cea7667b886d9b2a4aeb514228799f11bf80036aff54548d0"
+          "version": "repo-file-v1:sha256:ad055d383717f9f03bbd1d0a1f93b9b4d7ea101b621b7069923a642f2af0cf04"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:c384ac0419ad92593913b7a810ec897c1839c55b6ca1f3a5f09fc781803c9181"
+          "version": "repo-file-v1:sha256:ff55dee1d55097fdd70b711267a525fdb717ecffe6fce241daa3f1637969147f"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.h",
-          "version": "repo-file-v1:sha256:fdeb2be4cc68f23249c01d46001d47d40186f49d5bf4b2448319c51857cded01"
+          "version": "repo-file-v1:sha256:6759fd9b4bc456c48540060167701dc0fbe8b47aab3f27b89abbd89735d91296"
         }
       ]
     },
@@ -140,7 +140,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:ee4e2a7466cc53f03d99e47553984d09ad7453104d03172fe6e7d3144c692ef7"
+          "version": "repo-file-v1:sha256:3c6eeb4762bb20a7ed07739bc6e66b1cb12f6b57ce4dc8cf9746562c671e356b"
         },
         {
           "resource": "repo://test/src/add_at_slot_tests.cpp",
@@ -157,10 +157,32 @@
           "version": "repo-file-v1:sha256:968cc2cdc2a6b1bf5f7d62a917dd4eaef770decb7cd66ff66592dd1f222ae9c5"
         }
       ]
+    },
+    {
+      "id": "claim_5a435e18b5cc45569504e7c60f02b8f2",
+      "statement": "T-DAT-001 added a THIRD family member to the four-state-place rule: engine param reverbLoCut (0..1 clamped, default 0 = bit-pass). Its four places (line numbers as of the post-settings/export-tab state; the 2026-10-20 state-dedup pass inserted resolveModelRefs into ProcessorState.cpp, shifting its later lines +6; the compressor reorg was commit 3ffb35b): (1) ChainBlock.h:412 field `double reverbLoCut = 0.0;` + the reverbParams() aggregate ending `reverbSharedMod, reverbWave, reverbLoCut` (reverbParams() at :426, aggregate end :436; matches Reverb::Params struct order) + ProcessorChain.cpp BlockRow field (:1312 region), row mirror (:1423), and params->setProperty(\"reverbLoCut\", …) in serializeChain (:1601); (2) ChainState.cpp parseItem :230 `item.reverbLoCut = num(v[\"params\"], \"reverbLoCut\", 0.0)` (+ ChainState.h:187); (3) ProcessorChain.cpp isEffectParam list (:2070) + updateBlockParam branch (jlimit 0..1 + block->reverb.setParams(block->reverbParams())); (4) ProcessorState.cpp blockState.setProperty (:289) + jlimit restore (:480). The same four places carry convStartS/convEndS (BlockRow fields at :1312, row mirror :1430, serializeChain :1608, parseItem ChainState.cpp:238-239, updateBlockParam :2388-2390 with the kMaxIrSeconds clamp) — the conv Settings tab (commit 89afb4e) is their UI home via scales::convStart()/convEnd() (KnobScale.h:647-653, linear 0..10 s).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/ChainBlock.h",
+          "version": "repo-file-v1:sha256:7562d6c4af63bb001257e2af596f59c9d20747c84eb3e54a079cc83715ead452"
+        },
+        {
+          "resource": "repo://plugin/src/ProcessorChain.cpp",
+          "version": "repo-file-v1:sha256:3c6eeb4762bb20a7ed07739bc6e66b1cb12f6b57ce4dc8cf9746562c671e356b"
+        },
+        {
+          "resource": "repo://plugin/src/ProcessorState.cpp",
+          "version": "repo-file-v1:sha256:ad055d383717f9f03bbd1d0a1f93b9b4d7ea101b621b7069923a642f2af0cf04"
+        },
+        {
+          "resource": "repo://plugin/ui/model/ChainState.cpp",
+          "version": "repo-file-v1:sha256:ff55dee1d55097fdd70b711267a525fdb717ecffe6fce241daa3f1637969147f"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T23:18:48.824Z"
+    "at": "2026-10-20T22:14:33.483Z"
   }
 }

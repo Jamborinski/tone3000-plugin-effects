@@ -23,6 +23,8 @@ sources:
     resource: repo://plugin/ui/services/Services.h
   - id: openwiki-source-3f6e8a6ed2edd60ef99f8565
     resource: repo://plugin/ui/testbed/CMakeLists.txt
+  - id: openwiki-source-b5b2a6c9978bb54fa1923b60
+    resource: repo://plugin/ui/testbed/e2e/conv-strip.js
   - id: openwiki-source-face5087f131b3d99de9f7e7
     resource: repo://plugin/ui/testbed/e2e/node-drag.js
   - id: openwiki-source-b68d5a6792d458694c05da8b
@@ -50,7 +52,7 @@ sources:
 generated: { by: "pi", at: "2026-10-18T14:31:43.894Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-18T23:18:48.824Z
+    at: 2026-10-20T22:14:33.483Z
 ---
 
 

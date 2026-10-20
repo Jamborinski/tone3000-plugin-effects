@@ -12,14 +12,20 @@ sources:
     resource: repo://docs/tickets/plate-dat-rebuild-draft.md
   - id: openwiki-source-3f6e8a6ed2edd60ef99f8565
     resource: repo://plugin/ui/testbed/CMakeLists.txt
+  - id: openwiki-source-b5b2a6c9978bb54fa1923b60
+    resource: repo://plugin/ui/testbed/e2e/conv-strip.js
   - id: openwiki-source-face5087f131b3d99de9f7e7
     resource: repo://plugin/ui/testbed/e2e/node-drag.js
+  - id: openwiki-source-5ce252cfdcd91a240c635a5e
+    resource: repo://plugin/ui/testbed/NodeViewE2E.cpp
   - id: openwiki-source-fbe20d668cd183c9fb53adb2
     resource: repo://script/test-dsp.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
   - id: openwiki-source-a20d64964340cf417ace1f84
     resource: repo://test/src/add_at_slot_tests.cpp
+  - id: openwiki-source-323fe87bd1df0bede6a732eb
+    resource: repo://test/src/convolution_reverb_tests.cpp
   - id: openwiki-source-22db8812ec3771683e6a7ddc
     resource: repo://test/src/dat_probe_tests.cpp
   - id: openwiki-source-9122ffeb8c7fc8e2457955ce
@@ -43,7 +49,7 @@ sources:
 generated: { by: "pi", at: "2026-10-18T23:18:48.824Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-18T23:18:48.824Z
+    at: 2026-10-20T22:14:33.483Z
 ---
 
 # DSP test suite (DspTests)

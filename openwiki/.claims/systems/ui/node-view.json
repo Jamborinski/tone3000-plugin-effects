@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:a2651bb9453cb975efa402c0cb132093fe32ca459f026c18aee4b47c4205fec5",
+  "pageVersion": "sha256:3b188369ba38609b81adf8070ba0ca0cea4fdcb53c948718f586a328e02eea8d",
   "claims": [
     {
       "id": "claim_4e8284a0f0bc4fe0b4e5fa2bda920264",
@@ -54,7 +54,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/Help.cpp",
-          "version": "repo-file-v1:sha256:e72f421c0524295a648fca84cc5c8f08093a21b3f16c54262295a57e3835d395"
+          "version": "repo-file-v1:sha256:0f9a4747c0e14d526d199979ab5f12a3fd2e108f6ba608f2105f3153a4ede1b7"
         }
       ]
     },
@@ -78,7 +78,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
+          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
+          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
         }
       ]
     },
@@ -120,7 +120,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
+          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
         }
       ]
     },
@@ -148,7 +148,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
+          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
         }
       ]
     },
@@ -172,7 +172,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
+          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
         }
       ]
     },
@@ -182,7 +182,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
+          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
         }
       ]
     },
@@ -192,11 +192,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/services/ChainStore.h",
-          "version": "repo-file-v1:sha256:55b2742e662864d35825b359e57f19dd6f75546e3aace1a87fe518851e1df5d5"
+          "version": "repo-file-v1:sha256:f5eed611fa58903a9739696e1a41e4ce5fc5144b4a5862c1bd578b59a4a65f2b"
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
+          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
         }
       ]
     },
@@ -206,7 +206,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
+          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
         }
       ]
     },
@@ -220,7 +220,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
+          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
         },
         {
           "resource": "repo://test/src/strip_knob_tests.cpp",
@@ -234,7 +234,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
+          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
         }
       ]
     },
@@ -244,13 +244,59 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:4bc3ec2e5dcac31e669b8236a507df3c518a32f1ce4037e0c8b5b36161d2f772"
+          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+        }
+      ]
+    },
+    {
+      "id": "claim_21c6fbf316824f9499f5546bddc38d9c",
+      "statement": "Repaint invariants (bug found in the 2026-10-15 capture hunt — the line stayed invisible for a whole debug session): setNodeView(bool) (NodeView.cpp:660) and chainChanged() (NodeView.cpp:692) both END WITH repaint(), because refresh() only updates the cell children; the body (signal line segments, In/Out labels, strip) must repaint on first-time activation, on lane row gain/loss, and on selection change or the line silently stays absent until an unrelated invalidate. Line numbers re-verified after the m06828 batch (commit 72f48ea) and the 2026-10-20 conv settings/export band; the law is unchanged.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+        }
+      ]
+    },
+    {
+      "id": "claim_919072a01ad845d7b4bce7f74ab3613e",
+      "statement": "The convolution node's strip carries an IR preview: pullConvPreview (NodeView.cpp:1677) pulls chain.convPreview(blockId) (envL/envR arrays + length/sampleRate + fade curves, same pattern as the gallery EffectTile::pullConvPreview) into the strip's KernelPlot (convPlot_). Batch 3 (item 6): with NO kernel loaded the preview shows a cleared envelope + the loaded block's fade curves so the layout holds. The 'Load IR…' button (loadIr_) calls startConvIrLoader (NodeView.cpp:1734) which launches an async juce::FileChooser (*.wav;*.wave;*.aiff;*.aif) and on OK calls chain.loadConvIr(blockId, file); a g_irLoaderSeq token guard (plus a convIrChooser_ re-entry guard) drops stale chooser results; an 'error' property on the result is toasted. CLEAR LAW (m06828 item 1, commit 72f48ea): refreshModeLine's non-conv branch hides convPlot_/convIr_/loadIr_ AND the conv settings chrome, and resets convStripSettings_ = false, so selecting any other kind after a convolution block leaks nothing onto the new strip.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/services/ChainStore.h",
+          "version": "repo-file-v1:sha256:f5eed611fa58903a9739696e1a41e4ce5fc5144b4a5862c1bd578b59a4a65f2b"
+        },
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+        }
+      ]
+    },
+    {
+      "id": "claim_89a15efe0a8e4466a63884eaa2a1d154",
+      "statement": "The conv node's strip carries a Settings/Export band (commit 89afb4e, e2e layer b80bca7): settingsToggle_ (a stateful 'Settings' TextButton, mirror of the gallery tile) + settingsExport_ ('Export') + a std::vector<Knob*> of 7 settings knobs (rebuildStripSettingsKnobs: Start/End via scales::convStart()/convEnd(), Pre, F In, F Out, InCrv, OutCrv) written back through chain.setBlockParam. NodeView::setConvStripSettings (NodeView.cpp:1764) is the single owner of the chrome visibility — refreshModeLine keeps the chrome HIDDEN in the face view (a conv selection must not leak the Settings/Export line, the at-rest e2e probe saw 1:0:1); opening hides the waveform + face knobs and shows the 7 settings knobs, closing re-pulls the preview. resized() budgets the band: convBand = convStrip ? (convStripSettings_ ? 152 : 78) : 0 (NodeView.cpp:1125-1127). The Export button calls startConvExportLoader (NodeView.cpp:1861): no IR in the block → guard toast 'No IR loaded in this block' (the e2e-pinned path, since the save dialog can't be driven headless); else a save-mode FileChooser defaulting to <irName>_t3k_48k24/untitled.wav and, on pick, chain.exportConvIr(blockId, dest, 24, 48000). e2e surface: convStripStateForE2E() returns '<toggleVis>:<toggleOn>:<exportVis>:<knobCount>/<visCount>|<toast>|<convIr>' (or 'no-strip'), driven by the node-conv-strip handler in plugin/ui/testbed/NodeViewE2E.cpp and pinned by plugin/ui/testbed/e2e/conv-strip.js (6 checks; its own script because two AppConnections in one process race on socket teardown).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/testbed/NodeViewE2E.cpp",
+          "version": "repo-file-v1:sha256:493d0be1532a5e0dd1f03dcbf31df0edf891debeffd1cdc97112e39bce6f8a43"
+        },
+        {
+          "resource": "repo://plugin/ui/testbed/e2e/conv-strip.js",
+          "version": "repo-file-v1:sha256:dfc433b5ed07a59d4b773ce139b9bd35b684097d9af0d251dea24e5fc5f11f02"
+        },
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+        },
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.h",
+          "version": "repo-file-v1:sha256:970f396d11a98a48353edfb59616f99736aba62c4638635b562490852549e229"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T23:18:48.824Z"
+    "at": "2026-10-20T22:14:33.483Z"
   }
 }

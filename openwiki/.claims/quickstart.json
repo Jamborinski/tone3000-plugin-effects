@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:6af48472e73b1ea564ca0413af4e22efdba4dc59c351f6dcfee31079d5a3aee6",
+  "pageVersion": "sha256:f649dfd4b75ac45656949603efdfad6b53ca40958e0186fdeec31b6753a4445b",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -60,11 +60,11 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:797b6e43f40dab7f34fc5df98b242e32a14edd58e564c99992693b2489a58d78"
+          "version": "repo-file-v1:sha256:b31ccc7ddf60d335d6d9bf3409749da871916e52c248d272fb64510ca952c686"
         },
         {
           "resource": "repo://docs/agents/audio-testing.md",
-          "version": "repo-file-v1:sha256:5cee80bdee4ebb06ea950a294e4271dde2760b8db8a1f65aace78e1ca38f61dd"
+          "version": "repo-file-v1:sha256:835cf19370870ff97666c846ea4f795433941efbc2b3e9dc25513cbb75b173fd"
         },
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
@@ -82,7 +82,7 @@
         },
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:f685ded94d575b183595358fb7860c8d3d84ce8654de4eaccfc8bd781177d90a"
+          "version": "repo-file-v1:sha256:d15b5c97987c647fc5a91d9027bd56a84188d44cff930cc4c086137e569c60a8"
         },
         {
           "resource": "repo://script/signing/sign-exe.sh",
@@ -100,7 +100,7 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:797b6e43f40dab7f34fc5df98b242e32a14edd58e564c99992693b2489a58d78"
+          "version": "repo-file-v1:sha256:b31ccc7ddf60d335d6d9bf3409749da871916e52c248d272fb64510ca952c686"
         },
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
@@ -126,11 +126,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:f7120aac7135a75dd946b451c5dfd050d30f8ae939aea964c93b385e6cc0e048"
+          "version": "repo-file-v1:sha256:7562d6c4af63bb001257e2af596f59c9d20747c84eb3e54a079cc83715ead452"
         },
         {
           "resource": "repo://plugin/include/Processor.h",
-          "version": "repo-file-v1:sha256:cff72535b91c0655dc4758acdd605814901bf71bc26fc91cb4b606effb13a1dd"
+          "version": "repo-file-v1:sha256:e694215eb24026f642d95380301404cd0c278dda16c37fc1dd0c54ff03ac3e42"
         },
         {
           "resource": "repo://plugin/include/effects/compressor/Compressor.h",
@@ -138,7 +138,7 @@
         },
         {
           "resource": "repo://plugin/include/effects/conv/ConvolutionReverb.h",
-          "version": "repo-file-v1:sha256:6c10f5af885783ebdec6a7487ea57762af1a942515d07e168578432e76899e20"
+          "version": "repo-file-v1:sha256:ab37807bf16b69d9e61c91bd2c9337a9bcc3feb47602929c42ba10647ddbdc63"
         },
         {
           "resource": "repo://plugin/include/effects/reverb/Reverb.h",
@@ -167,10 +167,24 @@
           "version": "repo-file-v1:sha256:62163390e75c0bd10d830593ccf0a5900e3282b0578ed5868222c7a7ea973b76"
         }
       ]
+    },
+    {
+      "id": "claim_19705f55e7664ffc9c35ff7a5f86ac09",
+      "statement": "Porting-license rule (reworded 2026-10-20, commit 89afb4e, into the two-lane form): the VERBATIM lane — MIT-licensed or public-domain reference code IS portable, structure AND constants, with an attribution + license comment at the port site, order/arrangement restructured to repo style (no verbatim transcription); the MEASURE-DON'T-COPY lane — RE'd binaries, copyleft (GPL/LGPL/AGPL), and unlicensed references stay oracle-only: over the full domain, fit a cheap per-sample family of OURS, pin named constants (3–4 sig figs), and assert with a PLAIN tolerance (e.g. 'within 0.3 dB') that names no reference; the origin lives only in research/. The detailed rule text now lives in the GLOBAL machine AGENTS.md (~/.pi/agent/AGENTS.md, uncommitted) and is no longer duplicated in the repo AGENTS.md, whose hard rules keep the ZERO-latency decision (all ports, no oversampling), the model/subtype permissive rule, the standing sonic-MEASURE rule, and the 2026-10-20 JUCE 9.0.3 API-trap list. Zero-latency applies to ALL ports regardless of license.",
+      "evidence": [
+        {
+          "resource": "repo://AGENTS.md",
+          "version": "repo-file-v1:sha256:b31ccc7ddf60d335d6d9bf3409749da871916e52c248d272fb64510ca952c686"
+        },
+        {
+          "resource": "repo://docs/agents/dsp-invariants.md",
+          "version": "repo-file-v1:sha256:98597409fc24a416a9fc2053986ee435456b609a48430b38f072774cd54a85d9"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-18T23:18:48.824Z"
+    "at": "2026-10-20T22:14:33.483Z"
   }
 }
