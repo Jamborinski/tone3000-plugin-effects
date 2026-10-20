@@ -243,7 +243,7 @@ ChainItem parseItem(const juce::var& v) {
     item.convFadeOut = num(v["params"], "convFadeOut", 0.0);
     item.convInCurve = num(v["params"], "convInCurve", 0.5);
     item.convOutCurve = num(v["params"], "convOutCurve", 0.5);
-    item.convToneDb = num(v["params"], "convToneDb", 0.0);
+    item.convMod = num(v["params"], "convMod", 0.0);
     item.convIrName = str(v, "convIrName", "");
     item.convIrPath = str(v, "convIrPath", "");
     item.convIrLoaded = boolean(v, "convIrLoaded", false);

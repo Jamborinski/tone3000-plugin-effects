@@ -1247,7 +1247,7 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
     double convStartS = 0.0, convEndS = 0.0;
     double convPitch = 0.5;
     double convPreMs = 0.0, convFadeIn = 0.0, convFadeOut = 0.0;
-    double convInCurve = 0.5, convOutCurve = 0.5, convToneDb = 0.0;
+    double convInCurve = 0.5, convOutCurve = 0.5, convMod = 0.0;
     juce::String convIrName;  // the IR this block is running (session data; display only)
     juce::String convIrPath;  // its source file (Load-IR recovery on a fresh engine)
     bool convIrLoaded = false;  // the engine actually holds the IR (else: file missing)
@@ -1370,7 +1370,7 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
           row.convFadeOut = block->convFadeOut;
           row.convInCurve = block->convInCurve;
           row.convOutCurve = block->convOutCurve;
-          row.convToneDb = block->convToneDb;
+          row.convMod = block->convMod;
           row.convIrName = block->conv.irName();
           row.convIrPath = block->convIrPath;
           row.convIrLoaded = block->conv.hasIr();
@@ -1548,7 +1548,7 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
         params->setProperty("convFadeOut", row.convFadeOut);
         params->setProperty("convInCurve", row.convInCurve);
         params->setProperty("convOutCurve", row.convOutCurve);
-        params->setProperty("convToneDb", row.convToneDb);
+        params->setProperty("convMod", row.convMod);
         // Convolution block's loaded IR (display only; the IR data itself
         // is session and does not persist). Item-level, like parseItem
         // reads it.
@@ -2002,7 +2002,7 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
                              param == "tremoloSpread" || param == "tremoloWave" ||
                              param == "compRatio" || param == "compAttackMs" ||
                              param == "compReleaseMs" || param == "compToneDb" ||
-                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compType" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbDry" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbType0" || param == "reverbType1" || param == "reverbType2" || param == "reverbType3" || param == "reverbType4" || param == "reverbType5" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSharedMod" || param == "reverbWave" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace" || param == "reverbLoCut" || param == "convGain" || param == "convDry" || param == "convWidth" || param == "convStartS" || param == "convEndS" || param == "convPitch" || param == "convPreMs" || param == "convFadeIn" || param == "convFadeOut" || param == "convInCurve" || param == "convOutCurve" || param == "convToneDb";
+                             param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compType" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbDry" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbType0" || param == "reverbType1" || param == "reverbType2" || param == "reverbType3" || param == "reverbType4" || param == "reverbType5" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSharedMod" || param == "reverbWave" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace" || param == "reverbLoCut" || param == "convGain" || param == "convDry" || param == "convWidth" || param == "convStartS" || param == "convEndS" || param == "convPitch" || param == "convPreMs" || param == "convFadeIn" || param == "convFadeOut" || param == "convInCurve" || param == "convOutCurve" || param == "convMod";
   const bool isContinuous = param == "inputGain" || param == "outputGain" || param == "mix" ||
                             isEffectParam;
   // Mode/type selects are one-shot menu picks, not knob drags — they resync
@@ -2346,8 +2346,8 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
   } else if (param == "convOutCurve") {
     block->convOutCurve = juce::jlimit(0.0, 1.0, value);
     block->conv.setParams(block->convParams());
-  } else if (param == "convToneDb") {
-    block->convToneDb = juce::jlimit(ConvolutionReverb::kMinToneDb, ConvolutionReverb::kMaxToneDb, value);
+  } else if (param == "convMod") {
+    block->convMod = juce::jlimit(0.0, 1.0, value);
     block->conv.setParams(block->convParams());
   }
 

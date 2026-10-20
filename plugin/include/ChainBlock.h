@@ -480,15 +480,14 @@ struct ChainBlock {
     else if (convIrChannels == 1)
       convWidthMono = v;
   }
-  // The engine's live/creative params, all round-tripped (FogConvolver-2
-  // parity): wet pre-delay + the edit-window fades/ramps + the Tone
+  // The engine's live/creative params, all round-tripped: wet pre-delay +
   // peaking (0 = exactly flat).
   double convPreMs = 0.0;   // 0..100 wet pre-delay (ms) -- the "Pre" knob
   double convFadeIn = 0.0;  // 0..1 fraction of the edited IR ramped in -- "F In"
   double convFadeOut = 0.0; // 0..1 fraction ramped out -- "F Out"
   double convInCurve = 0.5; // 0 = linear, 1 = strongest -- "InCrv"
   double convOutCurve = 0.5;// 0 = linear, 1 = strongest -- "OutCrv"
-  double convToneDb = 0.0;  // -12..+12 peaking @ 2.5 kHz -- "Tone"
+  double convMod = 0.0;     // 0..1 wet-tail modulation -- "Mod" (0 = off)
   /** Mirror the convolution block's controls into the engine in one call.
       Starts from the engine's own default Params, so the non-persisted
       fields (preMs, the fades + curves) keep their documented defaults. */
@@ -504,7 +503,7 @@ struct ChainBlock {
     p.fadeOut = convFadeOut;
     p.fadeInCurve = convInCurve;
     p.fadeOutCurve = convOutCurve;
-    p.toneDb = convToneDb;
+    p.mod = convMod;
     return p;
   }
   Delay delay;

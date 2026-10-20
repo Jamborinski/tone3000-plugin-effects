@@ -731,20 +731,18 @@ inline const KnobScale& reverbWave() {
   return s;
 }
 
-// TONE: live peaking on the wet, -12..+12 dB (same shape as convGain at a
-// shorter span; 0 dB = exactly flat).
-inline const KnobScale& convTone() {
+// MOD: wet-tail modulation depth, stored 0..1 (0 = off/flat), shown 0..100 %.
+// The engine gates on mod > 0 per pass: an off dial is bit-identical to an
+// unmodulated build, so the knob's zero IS the bypass, like the reverb Mod.
+inline const KnobScale& convMod() {
   static const KnobScale s = [] {
     KnobScale c;
-    c.toDisplay = [](double n) { return juce::jmap(n, 0.0, 1.0, -12.0, 12.0); };
-    c.fromDisplay = [](double d) { return juce::jmap(d, -12.0, 12.0, 0.0, 1.0); };
+    c.toDisplay = [](double n) { return n; };
+    c.fromDisplay = [](double d) { return d; };
     c.toStored = [](double n) { return n; };
     c.fromStored = [](double d) { return d; };
-    c.format = [](double n) {
-      const double db = juce::jmap(n, 0.0, 1.0, -12.0, 12.0);
-      return juce::String(db, std::abs(db) - std::trunc(db) < 0.05 ? 0 : 1) + " dB";
-    };
-    c.editText = [](double n) { return juce::String(juce::jmap(n, 0.0, 1.0, -12.0, 12.0), 1); };
+    c.format = [](double n) { return juce::String(juce::roundToInt(n * 100.0)) + "%"; };
+    c.editText = [](double n) { return juce::String(juce::roundToInt(n * 100.0)); };
     return c;
   }();
   return s;

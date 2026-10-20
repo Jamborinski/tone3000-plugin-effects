@@ -145,12 +145,21 @@ class ConvolutionReverb {
   static constexpr double kMinGain = -24.0, kMaxGain = 24.0;  // dB
   static constexpr double kMinPitchScale = 0.25, kMaxPitchScale = 4.0;
   static constexpr double kMaxFadeCurve = 7.0;  // ramp exponent = 1 + curve*7
-  // Tone (live peaking biquad on the wet path -- never baked): fixed
-  // centre + Q, gain +-kMaxToneDb; 0 dB is exactly flat (the filter is not
-  // even run, so the wet is bit-identical to a tone-less build).
-  static constexpr double kToneHz = 2500.0;
-  static constexpr double kToneQ = 0.7;
-  static constexpr double kMinToneDb = -12.0, kMaxToneDb = 12.0;
+  // Mod (live, WET-PATH ONLY -- never baked): a multi-voice modulation of the
+  // wet tail, the same law family as the plate reverb's shared Mod -- the
+  // undelayed wet stays at FULL unity level and a layer of incoherently
+  // wobbled delayed taps is ADDED on top (zero latency: the dry path is
+  // untouched and sample 0 of any input is the same wet as unmodulated).
+  // mod = 0.0 (default) skips the whole stage: bit-identical to an
+  // unmodulated build.
+  static constexpr int kModVoices = 3;  // 2 delay lines (v=1..2)
+  static constexpr double kModDepthMs = 12.0;   // max sweep of the deepest voice
+  static constexpr double kModRateHz = 1.0;     // base LFO rate (per-voice xR)
+  static constexpr double kModAmt = 0.5;        // layer level at full dial
+  static constexpr double kModVoiceFloor = 0.30; // taps sweep 30..100 %
+  static constexpr double kModVoiceD[] = {0.0, 1.00, 0.62};  // index 0 unused
+  static constexpr double kModVoiceR[] = {1.00, 1.31, 0.71};  // incommensurable
+  static constexpr double kModVoiceO[] = {0.00, 1.90, 4.30};  // rad offsets
   // Width on a MONO IR (whose wet is identical both ears, so the M/S fold
   // has no material): a Haas pair -- a fixed interaural difference whose
   // depth scales with Width (0 = mono center, 1 = full spread).
@@ -179,7 +188,7 @@ class ConvolutionReverb {
     double fadeOut = 0.0;      // 0..1 fraction of the edited IR ramped out
     double fadeInCurve = 0.5;  // 0 = linear, 1 = strongest
     double fadeOutCurve = 0.5; // 0 = linear, 1 = strongest
-    double toneDb = 0.0;       // -12..+12 peaking (kToneHz, kToneQ); 0 = flat
+    double mod = 0.0;          // 0..1 wet-tail modulation (0 = off/flat)
   };
 
   // Display/storage helpers (single source of the laws; UI scales + the
@@ -338,15 +347,16 @@ class ConvolutionReverb {
   // target plus per-sample audio-thread advance at ~5 ms.
   juce::SmoothedValue<float> gainSmoother_;
 
-  // Tone (peaking biquad, live on the wet path). The FILTER state is audio-
-  // owned; coefficients are (re)built on the audio thread from a smoothed
-  // linear gain, so a message-thread setParams never touches it. Two
-  // instances: the serving engine's live gain, and the frozen gain of the
-  // engine fading out during a swap window (its state must not cross-talk).
-  juce::dsp::IIR::Filter<float> toneLive_, toneDying_;
-  juce::SmoothedValue<float> toneSmoother_;  // linear gain; 1.0 = flat
-  float toneLiveApplied_ = -1.0f;            // last coefficients' gain (audio)
-  float toneDyingApplied_ = -1.0f;
+  // Mod (multi-voice wet-tail modulation -- the law class of the plate
+  // reverb's shared Mod, trimmed to this engine's budget). RING + PHASE
+  // state is audio-owned; `params_.mod` is read per pass.
+  // mod == 0 skips the stage entirely (bit-identical to unmodulated).
+  struct ModVoiceState {
+    uint32_t ph = 0;
+  };
+  std::vector<float> modBuf_[2];   // wet ring (per channel, audio-owned)
+  int modCap_ = 0, modW_[2] = {0, 0};
+  double modPh_[2] = {0.0, 0.0};  // persistent per-channel LFO phase (audio)
 
   // Raw IR (message thread only; rebuilt into the engine on demand).
   std::vector<float> rawL_, rawR_;

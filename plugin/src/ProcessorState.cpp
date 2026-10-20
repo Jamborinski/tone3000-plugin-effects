@@ -301,7 +301,7 @@ juce::ValueTree TONE3000Processor::serializeBlockSettings(const ChainBlock& bloc
       blockState.setProperty("convFadeOut", block.convFadeOut, nullptr);
       blockState.setProperty("convInCurve", block.convInCurve, nullptr);
       blockState.setProperty("convOutCurve", block.convOutCurve, nullptr);
-      blockState.setProperty("convToneDb", block.convToneDb, nullptr);
+      blockState.setProperty("convMod", block.convMod, nullptr);
       // E-2 (+time readout): the kernel is referenced by path (bytes stay in
       // the user's IR library, out of state); name/loaded/seconds give the
       // tile the honest kernel state incl. the IR-missing recovery.
@@ -507,7 +507,7 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
       block.convFadeOut = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convFadeOut", 0.0)));
       block.convInCurve = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convInCurve", 0.5)));
       block.convOutCurve = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convOutCurve", 0.5)));
-      block.convToneDb = juce::jlimit(ConvolutionReverb::kMinToneDb, ConvolutionReverb::kMaxToneDb, static_cast<double>(blockState.getProperty("convToneDb", 0.0)));
+      block.convMod = juce::jlimit(0.0, 1.0, static_cast<double>(blockState.getProperty("convMod", 0.0)));
       // E-2: the persisted IR reference (identity + path). Engine bytes are
       // restored separately via restoreConvIrsLocked at the restore site.
       block.convIrPath =

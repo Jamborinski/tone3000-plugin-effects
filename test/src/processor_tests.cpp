@@ -617,14 +617,14 @@ TEST(ProcessorTest, ConvolutionParamsAreAcceptedBySetBlockParam) {
   EXPECT_TRUE(proc.setBlockParam(id, "convStartS", 1.5)) << "convStartS rejected";
   EXPECT_TRUE(proc.setBlockParam(id, "convEndS", 4.0)) << "convEndS rejected";
   EXPECT_TRUE(proc.setBlockParam(id, "convPitch", 0.9)) << "convPitch rejected";
-  // The B-surface additions (Pre / F In / F Out / InCrv / OutCrv / Tone)
+  // The B-surface additions (Pre / F In / F Out / InCrv / OutCrv / Mod)
   // must survive the allow-list too, with clamped-but-distinct values.
   EXPECT_TRUE(proc.setBlockParam(id, "convPreMs", 25.0)) << "convPreMs rejected";
   EXPECT_TRUE(proc.setBlockParam(id, "convFadeIn", 0.18)) << "convFadeIn rejected";
   EXPECT_TRUE(proc.setBlockParam(id, "convFadeOut", 0.33)) << "convFadeOut rejected";
   EXPECT_TRUE(proc.setBlockParam(id, "convInCurve", 0.22)) << "convInCurve rejected";
   EXPECT_TRUE(proc.setBlockParam(id, "convOutCurve", 0.66)) << "convOutCurve rejected";
-  EXPECT_TRUE(proc.setBlockParam(id, "convToneDb", 3.5)) << "convToneDb rejected";
+  EXPECT_TRUE(proc.setBlockParam(id, "convMod", 0.75)) << "convMod rejected";
   EXPECT_TRUE(proc.setBlockParam(id, "convDry", 0.42)) << "convDry rejected";
 }
 
@@ -652,7 +652,7 @@ TEST(ProcessorTest, ConvolutionBlockRoundTripsAllParams) {
   set("convFadeOut", 0.33);
   set("convInCurve", 0.22);
   set("convOutCurve", 0.66);
-  set("convToneDb", 3.5);
+  set("convMod", 0.75);
 
   // (1) the UI's read path: getChainState must expose every knob.
   auto convRow = [](TONE3000Processor& prc) {
@@ -681,7 +681,7 @@ TEST(ProcessorTest, ConvolutionBlockRoundTripsAllParams) {
   EXPECT_NEAR(static_cast<double>(row["convFadeOut"]), 0.33, 1e-9);
   EXPECT_NEAR(static_cast<double>(row["convInCurve"]), 0.22, 1e-9);
   EXPECT_NEAR(static_cast<double>(row["convOutCurve"]), 0.66, 1e-9);
-  EXPECT_NEAR(static_cast<double>(row["convToneDb"]), 3.5, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row["convMod"]), 0.75, 1e-9);
 
   // (2) the persistence path: save, restore into a fresh processor.
   juce::MemoryBlock saved;
@@ -703,7 +703,7 @@ TEST(ProcessorTest, ConvolutionBlockRoundTripsAllParams) {
   EXPECT_NEAR(static_cast<double>(row2["convFadeOut"]), 0.33, 1e-9);
   EXPECT_NEAR(static_cast<double>(row2["convInCurve"]), 0.22, 1e-9);
   EXPECT_NEAR(static_cast<double>(row2["convOutCurve"]), 0.66, 1e-9);
-  EXPECT_NEAR(static_cast<double>(row2["convToneDb"]), 3.5, 1e-9);
+  EXPECT_NEAR(static_cast<double>(row2["convMod"]), 0.75, 1e-9);
 }
 
 
@@ -1168,7 +1168,7 @@ TEST(ProcessorTest, ConvIrSurvivesUndoRedoOfConvEdit) {
 
   // A parameter edit after the load (its pushChainHistory carries the
   // pre-edit snapshot, engine included via the convIrPath reference).
-  ASSERT_TRUE(proc.setBlockParam(id, "convToneDb", -3.0));
+  ASSERT_TRUE(proc.setBlockParam(id, "convMod", 0.35));
   EXPECT_TRUE(proc.undoChain());
 
   const juce::var chain = proc.getChainState(-1);

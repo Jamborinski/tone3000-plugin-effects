@@ -1,7 +1,6 @@
 // Convolver waveform display (Phase C): peak-window envelope of the FINAL
 // edited kernel (trim + stretch + fades already baked in) with the fade
-// ramps drawn over it as curves -- FConv2's "Show Fade Curves" in the tile
-// strip. Static per kernel (the data is the kernel, not a live signal), so
+// ramps drawn over it as curves in the tile strip. Static per kernel (the data is the kernel, not a live signal), so
 // it is crossfade-safe by construction; refreshed whenever the tile
 // re-syncs (every engine rebuild lands in the chain resync anyway).
 #pragma once
@@ -98,8 +97,7 @@ public:
     if (!envR_.empty())
       plotLine(envR_, theme::kBrandYellow.withAlpha(0.70f));
 
-    // Fade ramps drawn OVER the envelope (FConv2's "Show Fade Curves"): the
-    // exact DSP law -- gain t^e across the ramp region, e from the Curve knob.
+    // Fade ramps drawn OVER the envelope: the exact DSP law -- gain t^e
     auto ramp = [&](float xFrom, float xTo, bool fadeOutRamp, double exp) {
       if (std::abs(xTo - xFrom) < 2.0f) return;
       juce::Path p;

@@ -140,7 +140,7 @@ std::vector<EffectParams> paramsFor(const ChainItem& b, bool compact) {
         {&scales::loCutTaper(), "reverbLoCut", "LoCut", b.reverbLoCut, help::Key::reverbLoCut},
     };
   if (k == "convolution") {
-    // Full 6x2 surface (FogConvolver-2 parity): 12 knobs = the fixed
+    // Full 6x2 surface: 12 knobs = the fixed
     // Mix/In/Out trio + these nine, in slot order (A..E, sig, mod, F, G).
     // "Dry" is the DRY-path level (a gain on the dry term of the Mix crossfade);
     // the shared In knob is re-labelled "Dwell" on the conv tile (wet input gain).
@@ -149,14 +149,14 @@ std::vector<EffectParams> paramsFor(const ChainItem& b, bool compact) {
         {&scales::convPre(), "convPreMs", "Pre", b.convPreMs, help::Key::convPre},
         {&scales::convFade(), "convFadeIn", "F In", b.convFadeIn, help::Key::convFadeIn},
         {&scales::convFade(), "convFadeOut", "F Out", b.convFadeOut, help::Key::convFadeOut},
-        {&scales::convTone(), "convToneDb", "Tone", b.convToneDb, help::Key::convTone},
+        {&scales::convMod(), "convMod", "Mod", b.convMod, help::Key::convMod},
         {&scales::convGain(), "convDry", "Dry", b.convDry, help::Key::convDry},
         {&scales::convWidth(), "convWidth", "Width", b.convWidth, help::Key::convWidth},
         {&scales::convFade(), "convInCurve", "InCrv", b.convInCurve, help::Key::convInCurve},
         {&scales::convFade(), "convOutCurve", "OutCrv", b.convOutCurve, help::Key::convOutCurve},
     };
     if (compact) {
-      // 4x2: Mix/Length/Pre/Tone over Dwell/Dry/Width/Out.
+      // 4x2: Time/Pre/Mod over Dwell/Width. (index 4 = Mod, was Tone)
       const int sel[5] = {0, 1, 4, 5, 6};
       std::vector<EffectParams> c;
       for (int j = 0; j < 5; ++j) c.push_back(full[sel[j]]);

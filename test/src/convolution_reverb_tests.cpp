@@ -457,78 +457,83 @@ TEST(ConvolutionReverb, SwapCrossfadeKeepsWetAlive) {
   EXPECT_GT(worst, 0.25 * steady);
 }
 
-// Tone: a live peaking biquad on the wet path (kToneHz, Q 0.7). At 0 dB it
-// must be exactly flat (the filter is not even run, so the bit-identical
-// law holds); at the centre frequency the settled level shifts by the knob.
-TEST(ConvolutionReverb, ToneCentreLaw) {
+// Mod: the wet-tail modulation stage (3b). mod == 0 must be EXACTLY the
+// unmodulated engine (the stage is not even run); a mod dial adds a
+// layer to the wet (level rises above the unmodulated wet, bounded).
+// mod never schedules a kernel rebuild (it is a live wet-path stage).
+TEST(ConvolutionReverb, ModOffIsBitIdenticalAndNoRebuild) {
   ConvolutionReverb fx;
-  ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
+  ASSERT_TRUE(fx.loadBuffer(UnitConstantIr(4096), 48000.0));
   fx.prepare(48000.0);
 
-  auto fill2500 = [](juce::AudioBuffer<float>& b) {
-    for (int i = 0; i < b.getNumSamples(); ++i) {
-      const float v = 0.5f * static_cast<float>(std::sin(2.0 * M_PI * 2500.0 * i / 48000.0));
-      b.getWritePointer(0)[i] = v;
-      b.getWritePointer(1)[i] = v;
-    }
+  // Deterministic noise fill so both runs are comparable.
+  auto fillNoise = [](juce::AudioBuffer<float>& b, int seed) {
+    srand(seed);
+    for (int ch = 0; ch < b.getNumChannels(); ++ch)
+      for (int i = 0; i < b.getNumSamples(); ++i)
+        b.getWritePointer(ch)[i] =
+            static_cast<float>(rand()) / RAND_MAX * 2.0f - 1.0f;
   };
-  auto rms = [](const juce::AudioBuffer<float>& b, int from, int to) {
+  auto rms = [](const juce::AudioBuffer<float>& b) {
     double sum = 0.0;
-    for (int i = from; i < to; ++i) sum += b.getSample(0, i) * b.getSample(0, i);
-    return std::sqrt(sum / std::max(1, to - from));
-  };
-  // The smoother advances on wall time (house law), so settle by pumping
-  // passes until the measurement converges within 0.05 dB.
-  auto settled = [&](int n = 4096) {
-    juce::AudioBuffer<float> buf(2, n);
-    fill2500(buf);
-    fx.process(buf);
-    const int skip = n / 2;
-    return rms(buf, skip, n);
-  };
-  auto converged = [](float got, float want, double tolDb) {
-    return std::abs(20.0 * std::log10(got / want) - tolDb) < 0.05;
-  };
-  auto pumpTo = [&](float want, double tolDb) {
-    float cur = 0.0f;
-    for (int i = 0; i < 400; ++i) {
-      cur = settled();
-      if (converged(cur, want, tolDb))
-        break;
-    }
-    return cur;
+    for (int ch = 0; ch < b.getNumChannels(); ++ch)
+      for (int i = 0; i < b.getNumSamples(); ++i) {
+        const float s = b.getSample(ch, i);
+        sum += static_cast<double>(s) * s;
+      }
+    return std::sqrt(sum / std::max(1.0, (double)(b.getNumSamples() * b.getNumChannels())));
   };
 
-  float flat = settled();
-  ConvolutionReverb::Params p;
-  p.toneDb = 12.0;
-  fx.setParams(p);  // live: the smoother re-targets, NO engine rebuild
-  const float boost = pumpTo(flat, 12.0);
-  ConvolutionReverb::Params pmin;
-  pmin.toneDb = -12.0;
-  fx.setParams(pmin);
-  const float cut = pumpTo(flat, -12.0);
+  const int n = 2048;
+  juce::AudioBuffer<float> outOff(2, n), outOn(2, n), outOff1(2, n);
 
-  EXPECT_NEAR(20.0 * std::log10(boost / flat), 12.0, 0.25)
-      << "a +12 dB Tone at its centre must read +12 dB settled (got "
-         << 20.0 * std::log10(boost / flat) << " dB)";
-  EXPECT_NEAR(20.0 * std::log10(flat / cut), 12.0, 0.25)
-      << "a -12 dB Tone at its centre must read -12 dB settled (got "
-         << 20.0 * std::log10(flat / cut) << " dB)";
+  ConvolutionReverb::Params pMod;
+  pMod.mod = 1.0;
+
+  fx.setParams(ConvolutionReverb::Params{});  // mod = 0
+  PumpSettle(fx);
+  fx.reset();
+  fillNoise(outOff1, 1234);
+  fx.process(outOff1);
+  const double rmsOff = rms(outOff1);
+
+  fx.setParams(pMod);  // mod = 1: live, NO rebuild
+  PumpSettle(fx);
+  fx.reset();
+  fillNoise(outOn, 1234);
+  fx.process(outOn);
+  const double rmsOn = rms(outOn);
+
+  // mod-on must add a bounded layer: more wet energy than mod-off, bounded.
+  EXPECT_GT(rmsOn, rmsOff)
+      << "mod-on must add an audible layer to the wet";
+  EXPECT_LT(rmsOn, 2.0 * rmsOff)
+      << "the mod layer must be bounded (amt <= 0.5 of the wet)";
+
+  // Back to mod = 0: bit-identical to the first run (the stage is not run).
+  fx.setParams(ConvolutionReverb::Params{});
+  PumpSettle(fx);
+  fx.reset();
+  fillNoise(outOff, 1234);
+  fx.process(outOff);
+  for (int ch = 0; ch < 2; ++ch)
+    for (int i = 0; i < n; ++i)
+      EXPECT_EQ(outOff.getSample(ch, i), outOff1.getSample(ch, i))
+          << "mod off must be bit-identical to the first unmodulated run";
 }
 
-// Tone must never schedule a rebuild: it is a live biquad, not a baked
-// shape, so setParams(tone) must not touch the settle timer.
-TEST(ConvolutionReverb, ToneSchedulingNoRebuild) {
+// mod must never schedule a rebuild: it is a live wet-path stage, not a
+// baked shape, so setParams(mod) must not touch the settle timer.
+TEST(ConvolutionReverb, ModSchedulingNoRebuild) {
   ConvolutionReverb fx;
   ASSERT_TRUE(fx.loadBuffer(UnitDeltaIr(), 48000.0));
   fx.prepare(48000.0);
   const int before = fx.installs();
   ConvolutionReverb::Params p;
-  p.toneDb = 8.0;
+  p.mod = 1.0;
   fx.setParams(p);
   PumpSettle(fx);  // if a rebuild were scheduled it would fire here
-  EXPECT_EQ(fx.installs(), before) << "a Tone change must not schedule an engine rebuild";
+  EXPECT_EQ(fx.installs(), before) << "a Mod change must not schedule an engine rebuild";
 }
 
 // Waveform display (Phase C): the preview is 1024 peak windows of the FINAL

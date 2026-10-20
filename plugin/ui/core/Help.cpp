@@ -222,7 +222,7 @@ std::map<Key, String> buildTable() {
   t[Key::convFadeOut] = knobDesktop("F Out", "ramp the kernel's tail over % of its length (0..100).");
   t[Key::convInCurve] = knobDesktop("InCrv", "steepness of the F In ramp (0 = linear, 100 = strongest curve).");
   t[Key::convOutCurve] = knobDesktop("OutCrv", "steepness of the F Out ramp (0 = linear, 100 = strongest curve).");
-  t[Key::convTone] = knobDesktop("Tone", "live peaking on the wet, -12..+12 dB around 2.5 kHz (0 = exactly flat).");
+  t[Key::convMod] = knobDesktop("Mod", "live wet-tail modulation (0 = off): incoherent wobble added to the reverb tail, dry untouched.");
   t[Key::convIrLoad] = knobDesktop("Load IR", "pick a wav/aiff impulse response (mono, stereo or quad). The quad law folds L=(c0+c2)/sqrt(2), R=(c1+c3)/sqrt(2).");
   t[Key::effectReverb] = U("Reverb setting: adjust the value for this block.");
   t[Key::reverbDecay] = knobDesktop("Decay", "reverb tail length, 50-3000 ms.");

@@ -34,14 +34,6 @@ namespace {
 
 // Copy up to min(dest, src) channels,  samples: JUCE 9's copyFrom is
 // per-channel (destChannel, destStart, source, sourceChannel, srcStart, n).
-// Tone coefficients (live peaking; kToneHz/kToneQ fixed, linear gain).
-inline juce::dsp::IIR::Coefficients<float>::Ptr peakCoefs(double rate,
-                                                           double linearGain) {
-  return juce::dsp::IIR::Coefficients<float>::makePeakFilter(
-      rate, ConvolutionReverb::kToneHz, ConvolutionReverb::kToneQ,
-      static_cast<float>(linearGain));
-}
-
 void copyChannels(juce::AudioBuffer<float>& dest, int dStart,
                   const juce::AudioBuffer<float>& src, int sStart, int n) {
   const int ch = std::min(dest.getNumChannels(), src.getNumChannels());
@@ -255,8 +247,7 @@ std::shared_ptr<ConvolutionReverb::State> ConvolutionReverb::makeEditedState() {
     const double e = fadeExponent(params_.fadeOutCurve);
     const int off = outLen - nO;
     for (int i = off; i < outLen; ++i) {
-      // Fade-Out law (FConv2): the decay fades 1 -> 0 into the end.  is
-      // the fraction of the ramp still to go: 1 at the region's entry,
+      // Fade-Out law: the decay fades 1 -> 0 into the end. `p` is
       // 0 at the very last sample.
       const double p = static_cast<double>(outLen - 1 - i) / (nO - 1);
       const float g = static_cast<float>(std::pow(p, e));
@@ -453,12 +444,8 @@ void ConvolutionReverb::setParams(const Params& p) {
   params_.fadeOut = juce::jlimit(0.0, 1.0, params_.fadeOut);
   params_.fadeInCurve = juce::jlimit(0.0, 1.0, params_.fadeInCurve);
   params_.fadeOutCurve = juce::jlimit(0.0, 1.0, params_.fadeOutCurve);
-  params_.toneDb = juce::jlimit(kMinToneDb, kMaxToneDb, params_.toneDb);
-  // Tone is LIVE (never baked into the kernel): the message thread moves
-  // only the smoother's target; the audio thread rebuilds the coefficients
-  // and advances the ~5 ms smooth each pass (no shared state with it).
-  toneSmoother_.setTargetValue(
-      static_cast<float>(std::pow(10.0, params_.toneDb / 20.0)));
+  params_.mod = juce::jlimit(0.0, 1.0, params_.mod);
+  // mod is LIVE (the wet-tail modulation stage gates on it per pass).
 
   // Live wet path: smoothed Gain (0.5 = 0 dB), pre-delay width.
   gainSmoother_.setTargetValue(
@@ -518,19 +505,20 @@ void ConvolutionReverb::prepare(double rate) {
   fadeInBuf_ = juce::AudioBuffer<float>(2, kIrConvolverMaxBlockSize);
   fadeOutBuf_ = juce::AudioBuffer<float>(2, kIrConvolverMaxBlockSize);
 
-  // Tone: prepare both peaking biquads at this rate; the smooth re-presents
-  // the CURRENT target immediately (a rate change must not re-ramp it).
-  const juce::dsp::ProcessSpec toneSpec{
-      rate, static_cast<juce::uint32>(kIrConvolverMaxBlockSize), 2};
-  toneLive_.prepare(toneSpec);
-  toneDying_.prepare(toneSpec);
-  toneSmoother_.reset(rate, 5.0e-3);
-  const float initTone =
-      static_cast<float>(std::pow(10.0, params_.toneDb / 20.0));
-  toneSmoother_.setCurrentAndTargetValue(initTone);
-  toneLive_.coefficients = peakCoefs(rate, initTone);
-  toneLiveApplied_ = initTone;
-  toneDyingApplied_ = -1.0f;  // rebuilt lazily from dyingParams_ on a swap
+  // Mod: size the wet-tail rings at max depth (one head sample block for
+  // tap-fraction rounding), rounded UP TO A POWER OF TWO (the stage masks
+  // with cap-1). Zero allocation in steady state after this.
+  const int modMin =
+      static_cast<int>(rate * kModDepthMs / 1000.0) + kIrConvolverMaxBlockSize;
+  int modCap = 1;
+  while (modCap < modMin) modCap <<= 1;
+  modBuf_[0].assign(static_cast<size_t>(modCap), 0.0f);
+  modBuf_[1].assign(static_cast<size_t>(modCap), 0.0f);
+  modPh_[0] = 0.0;
+  modPh_[1] = M_PI;  // per-ear LFO decorrelation
+  modCap_ = modCap;
+  modW_[0] = 0;
+  modW_[1] = 0;
 
   if (rateChanged || state_ == nullptr) {
     // Rate change / first run: the previous engine (if any) was built at a
@@ -545,14 +533,9 @@ void ConvolutionReverb::prepare(double rate) {
 void ConvolutionReverb::reset() {
   if (!hasIr() || rate_ <= 0.0)
     return;
-  // House reset contract: a fresh engine, no stale wet leaking. The ring is
-  // kept (its contents are past input — still correct for any delay width).
-  // A failed rebuild keeps the serving engine (A5). Tone biquad state
-  // cleared too: no stale IIR history may feed the first pass.
-  toneLive_.reset();
-  toneDying_.reset();
-  toneLiveApplied_ = -1.0f;
-  toneDyingApplied_ = -1.0f;
+  // House reset contract: a fresh engine, no stale wet leaking. The rings
+  // (pre / haas / mod) are kept -- their contents are PAST wet/input, still
+  // correct for any delay width.
   auto next = makeEditedState();
   if (next != nullptr)
     installState(std::move(next), true);
@@ -660,16 +643,50 @@ void ConvolutionReverb::process(juce::AudioBuffer<float>& buffer) {
       for (int i = 0; i < n; ++i)
         w0[i] = w0[i] * gainSmoother_.getNextValue() * fadeW;
     }
-    // 3b. Tone (peaking biquad on the wet). 0 dB = exactly flat: the
-    //     filter is not even run, so a tone-less wet stays bit-identical.
-    const float toneG = toneSmoother_.getNextValue();
-    if (std::abs(toneG - toneLiveApplied_) > 1e-6f)
-      toneLive_.coefficients = peakCoefs(rate_, toneG);
-    if (std::abs(toneG - 1.0f) > 1e-6f) {
-      juce::dsp::AudioBlock<float> toneBlk(buffer);
-      toneLive_.process(juce::dsp::ProcessContextReplacing<float>(toneBlk));
+    // 3b. Mod (multi-voice wet-tail modulation; the plate shared-Mod law
+    //     class, trimmed to this engine's budget): the undelayed wet stays
+    //     at FULL unity and a layer of incoherently wobbled delayed taps is
+    //     ADDED on top. mod == 0 skips the whole stage -- bit-identical to
+    //     an unmodulated build. Zero latency by construction (the tap is
+    //     strictly PAST wet; sample 0 of an input is unmodulated wet).
+    const double mod = params_.mod;
+    if (mod > 0.0 && modCap_ > 0) {
+      const double taper = mod * mod * (3.0 - 2.0 * mod); // smoothstep
+      const double amt = kModAmt * taper;
+      const double maxDepth = mod * (rate_ * kModDepthMs * 0.001);
+      const double inc = 2.0 * M_PI * kModRateHz / rate_;
+      for (int c = 0; c < ch; ++c) {
+        float* wet = buffer.getWritePointer(c);
+        float* wr = modBuf_[c].data();
+        uint32_t cap = (uint32_t) modCap_;
+        uint32_t w = (uint32_t) modW_[c];
+        double& base = modPh_[c];  // persistent per-channel LFO phase
+        for (int i = 0; i < n; ++i) {
+          wr[w] = wet[i];  // write BEFORE the taps read (delay >= 1)
+          w = (w + 1) & (cap - 1);
+          double sum = 0.0;
+          const double invN = 1.0 / (kModVoices - 1);
+          for (int v = 1; v < kModVoices; ++v) {
+            const double sweep =
+                0.5 + 0.5 * std::sin(base * kModVoiceR[v] + kModVoiceO[v]);
+            const double D =
+                (kModVoiceFloor + (1.0 - kModVoiceFloor) * sweep) *
+                maxDepth * kModVoiceD[v];
+            const uint32_t d0 = (uint32_t) juce::jlimit(1.0, (double) cap, D);
+            const float frac = static_cast<float>(D - (double) d0);
+            const uint32_t iA = (w - 1u - d0) & (cap - 1);
+            const uint32_t iB = (iA == 0) ? (cap - 1) : (iA - 1);
+            const float x = wr[iA] + frac * (wr[iB] - wr[iA]);
+            sum += x * invN;
+          }
+          wet[i] += static_cast<float>(amt * sum);
+          base += inc;
+          if (base >= 2.0 * M_PI)
+            base -= 2.0 * M_PI;
+        }
+        modW_[c] = (int) w;
+      }
     }
-    toneLiveApplied_ = toneG;
   } else {
     // Nothing serving: only the dying tail below contributes.
     buffer.clear();
@@ -717,18 +734,8 @@ void ConvolutionReverb::process(juce::AudioBuffer<float>& buffer) {
       for (int i = 0; i < n; ++i)
         o0[i] += d0[i] * gainD;
     }
-
-    // 4b. The tail's frozen Tone: coefficients from the settings captured
-    //     at the swap, so the dying engine sounds exactly like before.
-    const float toneD =
-        static_cast<float>(std::pow(10.0, dyingParams_.toneDb / 20.0));
-    if (std::abs(toneD - toneDyingApplied_) > 1e-6f)
-      toneDying_.coefficients = peakCoefs(rate_, toneD);
-    if (std::abs(toneD - 1.0f) > 1e-6f) {
-      juce::dsp::AudioBlock<float> toneBlkD(fadeOutBuf_);
-      toneDying_.process(juce::dsp::ProcessContextReplacing<float>(toneBlkD));
-    }
-    toneDyingApplied_ = toneD;
+    // (No frozen Mod on the dying tail: the 150 ms swap window is short
+    // enough that the serving mod ring carries the continuity.)
   }
 
   // 5. Advance the fade (audio owns progress); retire the dying engine only

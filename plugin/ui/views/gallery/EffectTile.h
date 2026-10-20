@@ -89,7 +89,7 @@ class EffectTile : public GalleryTile {
   // reverb's 7-knob surface (R2: +Mod +Dry) needs F/G/H).
   Knob knobF_, knobG_, knobH_;
   // Waveform strip (Phase C): edited-kernel envelope + fade curves.
-  // FConv2's "Show Fade Curves". Full tile only.
+  // Full tile only.
   KernelPlot convPlot_;
   const KnobScale* scaleA_ = nullptr;
   const KnobScale* scaleB_ = nullptr;
