@@ -36,21 +36,52 @@ juce::Component* deepestAt(juce::Component* frame, juce::Point<int> local) {
 // (isVisible() is the component's OWN flag only; isShowing() is
 // ancestor-recursive, which is what separates the live grid from a hidden
 // sibling that shares its bounds.)
+// Const predicate: the component's own visibility flag AND every ancestor's.
+// Deliberately NOT juce::Component::isShowing() — that path runs
+// updateVisibleRegionAndEnabledness(), which pushes state into the native
+// peer; this reads only flags, so running it cannot touch the tree.
+static bool isShowingConst(juce::Component* n) {
+  for (auto* a = n; a != nullptr; a = a->getParentComponent())
+    if (!a->isVisible()) return false;
+  return true;
+}
+
 t3k::ui::nodeview::NodeView* findNodeView(juce::Component* c) {
+  // Iterative walk, depth-first. The tree is a JUCE forest (no parent
+  // pointers below the roots, no sharing), so a visited-set is unnecessary;
+  // children are snapshotted per node (getChildren() returns the live
+  // internal Array) so a same-thread mutation observed mid-walk cannot
+  // invalidate iteration.
   t3k::ui::nodeview::NodeView* best = nullptr;
   int bestDepth = -1;
-  std::function<void(juce::Component*, int)> walk =
-      [&](juce::Component* n, int depth) {
-        if (n == nullptr) return;
-        if (n->isShowing() && (best == nullptr || depth > bestDepth)) {
-          if (auto* nv = dynamic_cast<t3k::ui::nodeview::NodeView*>(n)) {
-            best = nv;
-            bestDepth = depth;
-          }
-        }
-        for (auto* ch : n->getChildren()) walk(ch, depth + 1);
-      };
-  walk(c, 0);
+  struct Frame {
+    juce::Component* node;
+    std::vector<juce::Component*> kids;
+    size_t next = 0;
+    int depth;
+  };
+  std::vector<Frame> stack;
+  std::vector<juce::Component*> rootKids;
+  for (auto* k : c->getChildren()) rootKids.push_back(k);
+  stack.push_back(Frame{c, std::move(rootKids), 0, 0});
+  while (!stack.empty()) {
+    Frame& f = stack.back();
+    if (f.next < f.kids.size()) {
+      auto* child = f.kids[f.next++];
+      if (child == nullptr) continue;
+      std::vector<juce::Component*> snap;
+      for (auto* k : child->getChildren()) snap.push_back(k);
+      stack.push_back(Frame{child, std::move(snap), 0, f.depth + 1});
+      continue;
+    }
+    // Node fully covered: evaluate it, then pop.
+    if (isShowingConst(f.node) && f.depth > bestDepth)
+      if (auto* nv = dynamic_cast<t3k::ui::nodeview::NodeView*>(f.node)) {
+        best = nv;
+        bestDepth = f.depth;
+      }
+    stack.pop_back();
+  }
   return best;
 }
 

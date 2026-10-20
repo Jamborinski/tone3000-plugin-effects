@@ -43,15 +43,15 @@ async function launchApp(scenario, timeoutMs = 15000) {
 // the screenshots taken between steps.
 async function pointerDrag(app, from, to, steps = 10, button = "left") {
   const log = [];
-  await app.sendCommand({ type: 'node-drag-begin', args: { x: from.x, y: from.y } });
+  await sendT(app, { type: 'node-drag-begin', args: { x: from.x, y: from.y } });
   for (let i = 1; i <= steps; ++i) {
     const x = Math.round(from.x + ((to.x - from.x) * i) / steps);
     const y = Math.round(from.y + ((to.y - from.y) * i) / steps);
-    await app.sendCommand({ type: 'node-drag-move', args: { x, y, button } });
+    await sendT(app, { type: 'node-drag-move', args: { x, y, button } });
     const g = await app.sendCommand({ type: 'node-geometry', args: {} });
     log.push({ step: i, x, y, ghost: g.ghost, drag: g.drag, lane: g.lane });
   }
-  await app.sendCommand({ type: 'node-drag-end', args: { button } });
+  await sendT(app, { type: 'node-drag-end', args: { button } });
   const after = await app.sendCommand({ type: 'node-geometry', args: {} });
   return { log, after };
 }
@@ -61,12 +61,21 @@ async function pointerDrag(app, from, to, steps = 10, button = "left") {
 // cancel (the cancel lives in NodeCell::mouseDown, so a drag-MOVE with a
 // right modifier would not trigger it). Returns the geometry after the press.
 async function dragPress(app, pt, button = "right") {
-  await app.sendCommand({ type: 'node-drag-press', args: { x: pt.x, y: pt.y, button } });
+  await sendT(app, { type: 'node-drag-press', args: { x: pt.x, y: pt.y, button } });
   return app.sendCommand({ type: 'node-geometry', args: {} });
 }
 
+let _cmdN = 0;
+async function sendT(app, cmd) {
+  const n = ++_cmdN;
+  const t0 = Date.now();
+  if (process.env.T3K_FW_VERBOSE) process.stderr.write(`FWSEND[${n}] ${cmd.type} ${JSON.stringify(cmd.args || {})}\n`);
+  const r = await app.sendCommand(cmd);
+  if (process.env.T3K_FW_VERBOSE) process.stderr.write(`FWRESP[${n}] ${Date.now() - t0}ms\n`);
+  return r;
+}
 async function geometry(app) {
-  return app.sendCommand({ type: 'node-geometry', args: {} });
+  return sendT(app, { type: 'node-geometry', args: {} });
 }
 
 async function setView(app, nodeView) {
@@ -84,7 +93,7 @@ async function cells(app) {
 }
 
 async function screenshot(app, out) {
-  return app.sendCommand({ type: 'node-screenshot', args: { out } });
+  return sendT(app, { type: 'node-screenshot', args: { out } });
 }
 
 module.exports = { launchApp, pointerDrag, dragPress, geometry, cells, setView, screenshot, APP };
