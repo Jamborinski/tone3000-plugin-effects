@@ -1170,9 +1170,13 @@ void NodeView::refreshModeLine(NodeStrip& st, const ChainItem& b) {
     // Export): the 7 settings knobs are rebuilt by syncStrip.
     st.settingsToggle().setButtonText("Settings");
     st.settingsToggle().setToggleState(convStripSettings_, juce::dontSendNotification);
-    st.settingsToggle().setVisible(true);
+    // The chrome stays HIDDEN in the face view: convSetOpen (the toggle's
+    // on-state via setConvStripSettings) is the single source of truth —
+    // a conv selection must not leak the Settings/Export line into the
+    // face view (the at-rest e2e probe saw 1:0:1).
+    st.settingsToggle().setVisible(convStripSettings_);
     st.settingsExport().setButtonText("Export");
-    st.settingsExport().setVisible(true);
+    st.settingsExport().setVisible(convStripSettings_);
   } else if (k == "reverb") {
     mb.setHelpText("Click to open the mode menu -- type: " +
                    juce::String(reverbTypeName(b.reverbMode, nodeReverbTypeOf(b, b.reverbMode))) +
@@ -1762,8 +1766,12 @@ void NodeView::setConvStripSettings(bool on) {
   auto& st = *strip_;
   if (st.settingsToggle().getToggleState() != on)
     st.settingsToggle().setToggleState(on, juce::dontSendNotification);
-  // View swap, mirror of the gallery tile: the settings band opens, the
-  // waveform + face knob row hide; closing restores them.
+  // View swap, mirror of the gallery tile: the settings band opens (the
+  // Settings/Export chrome is owned by THIS function — refreshModeLine
+  // keeps it in the closed state), the waveform + face knob row hide;
+  // closing restores them.
+  st.settingsToggle().setVisible(on);
+  st.settingsExport().setVisible(on);
   for (auto* k : st.settings()) k->setVisible(on);
   if (on) {
     st.convPlot().setVisible(false);
@@ -1830,6 +1838,24 @@ void NodeView::updateStripSettingsKnobValues(NodeStrip& st, const ChainItem& b) 
   auto& sk = st.settings();
   for (int i = 0; i < (int)sk.size(); ++i)
     sk[i]->setValue(knobFromStored(*scales[i], stored[i]));
+}
+
+juce::String NodeView::convStripStateForE2E() const {
+  // e2e probe: the conv strip's settings-band state, one line, pipe-joined
+  // (the save-file dialog can't be driven headless, so the export GUARD
+  // toast is what the e2e layer pins):
+  //   "no-strip" | "<toggleVis>:<toggleOn>:<exportVis>:<knobCount>/<visCount>|<toast>|<convIr>"
+  if (strip_ == nullptr || !strip_->isVisible()) return "no-strip";
+  const auto& knobs = strip_->settings();
+  int vis = 0;
+  for (auto* k : knobs)
+    if (k->isVisible()) ++vis;
+  return juce::String(strip_->settingsToggle().isVisible() ? 1 : 0) + ":"
+         + juce::String(strip_->settingsToggle().getToggleState() ? 1 : 0) + ":"
+         + juce::String(strip_->settingsExport().isVisible() ? 1 : 0) + ":"
+         + juce::String((int)knobs.size()) + "/" + juce::String(vis) + "|"
+         + services_.toast.message() + "|"
+         + convIrLabelForShot();
 }
 
 void NodeView::startConvExportLoader(const std::string& blockId) {

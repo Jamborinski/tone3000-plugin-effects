@@ -89,6 +89,15 @@ public:
   // The live lane (node drives assert the committed order; scoping
   // exception for the testbed, same as the private-model drives above).
   const std::vector<ChainItem>& laneForShot() const;
+  // e2e: the conv strip's settings-band state (toggle/export visibility,
+  // settings-knob count, current toast, conv IR label) — one pipe-joined
+  // string the e2e layer pins (the save dialog can't be driven headless,
+  // so the no-IR export GUARD toast is what is asserted).
+  juce::String convStripStateForE2E() const;
+  // e2e/testbed drives (the strip's settings band + Export save-picker
+  // entry points, same exception as the shot helpers above):
+  void setConvStripSettings(bool on);
+  void startConvExportLoader(const std::string& blockId);
   // m01463 screenshot path: start a live grid drag from `fromCell` with the
   // pointer held at the centre of `toCell` (drop target + cascade preview
   // painting) — capture, then release with endDragFromShot().
@@ -151,12 +160,11 @@ private:
   // Convolution node: the strip's "Load IR..." button (async FileChooser,
   // mirrors EffectTile's convIrChooser_ flow).
   void startConvIrLoader(const std::string& blockId);
-  // Convolution node: the strip's IR-settings row (the strip's mirror of
-  // the gallery tile's settings view) + its Export save-picker.
-  void setConvStripSettings(bool on);
+  // Convolution node: the strip's IR-settings row internals (the 7
+  // settings knobs + their value resync); the e2e entry points sit in
+  // the public section above.
   void rebuildStripSettingsKnobs(NodeStrip&, const ChainItem&);
   void updateStripSettingsKnobValues(NodeStrip&, const ChainItem&);
-  void startConvExportLoader(const std::string& blockId);
 
   void applyPreview();  // drag: rebuild cells from the optimistic lane
   void moveActiveTo(int target);  // drag: splice the optimistic lane

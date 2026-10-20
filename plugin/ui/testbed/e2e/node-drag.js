@@ -303,6 +303,10 @@ function parseGhost(s) {
           `${g7.drag} / ${g7.ghost}`);
     await screenshot(app, path.join(OUT, 'rightclick-after.png'));
 
+    // The conv strip's settings/export band has its OWN e2e layer
+    // (conv-strip.js): two AppConnections in one process race on the
+    // first app's socket teardown ("Unhandled message").
+
     console.log(`\nnode-drag e2e: ${passed} passed, ${failed} failed (shots in ${OUT})`);
   } finally {
     try {

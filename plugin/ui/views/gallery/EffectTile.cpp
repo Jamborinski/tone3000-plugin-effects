@@ -1374,10 +1374,10 @@ void EffectTile::resized() {
   } else if (block_.effectKind == "convolution") {
     // Compact conv: ONE label line (seconds appended to the name in
     // updateConvIrLabel — no height for a second line + waveform), then a
-    // clean 4x2 below. The old 30px rows collided with that band.
-    convIrButton_.setBounds(28, 4, 58, 20);
-    convSettingsToggle_.setBounds(90, 4, 50, 20);
-    convExportButton_.setBounds(144, 4, 48, 20);
+    // clean 4x2 below. The old 30px rows collided with that band. No
+    // settings chrome on the 160px tile (too crowded) — the node strip
+    // carries the conv settings/export for compact tiles.
+    convIrButton_.setBounds(28, 4, 68, 20);
     convIrLabel_.setBounds(4, 25, W - 8, 14);
     convIrSeconds_.setVisible(false);
   }
