@@ -20,7 +20,7 @@ Behind-the-scenes wet-path soft-knee peak limiter in
 exported, zero-latency, measure-don't-copy fit (LUT 1024 over log|x|;
 constants at ConvolutionReverb.h:177-190; applied at ConvolutionReverb.cpp:823).
 
-### Settings view (conv full tile)
+### Settings view (conv full tile) — SUPERSEDED by the face rework (44a78ea, see below)
 
 `plugin/ui/views/gallery/EffectTile.{h,cpp}` — full 224 px tile only (the
 compact 160 px tile stays face-only; its settings live on the node strip).
@@ -30,7 +30,7 @@ Start / End / Pre / F In / F Out / InCrv / OutCrv (32 px faces, the same
 `kCompactKnobFace` as the R3 addendum). Start/End use
 `scales::convStart/convEnd` (KnobScale.h:647-657).
 
-### Settings/Export band (node strip)
+### Settings/Export band (node strip) — SUPERSEDED by the face rework (44a78ea, see below)
 
 `plugin/ui/views/nodeview/NodeView.{h,cpp}` — the conv strip gains the same
 Settings toggle (clickingTogglesState) + Export button; `setConvStripSettings`
@@ -61,6 +61,74 @@ Start/End/Pre already had all four (ProcessorChain.cpp getChainState/
 copyLane/serializeChain, ChainState.cpp parseItem, setBlockParam branch,
 ProcessorState.cpp) — no new state places were needed; the UI just surfaced
 existing params.
+
+## Face rework (commit 44a78ea, 2026-10-20) — supersedes the Settings view
+
+User direction (m03044): the export UI was "jammed to the top right", the
+Settings tab wasn't discoverable, and the right-click gate-knob pattern
+(extra band + armed knob colour) should host the fade curves so the face can
+carry Start/End. m03783 later widened the In window to ±18 dB.
+
+### Tile face (7-col grid, full 224 px)
+
+- **Row 1** = Mix | **Dwell** | Dry | Time | Pre | **Start** | **End**
+- **Row 2** = Width | Mod | **F In** | **F Out** | Out
+- `input_` relabelled **Dwell**, re-scaled to `scales::convDwell()`
+  (KnobScale.h:633) — ±18 dB *display* window over the same
+  `inputGainNormalized` store (identity toStored; engine law
+  `(s-0.5)*48` dB at Processor.cpp:1283) — no DSP/state change.
+- **Start/End on the face** (`scales::convStart/convEnd`, 0..10 s, 2 dp) —
+  this is why the old 7-knob Settings view was **deleted** (full tile AND
+  strip); `setConvSettings`/`convSettingsChildren`/`updateConvSettingsKnobs`
+  gone.
+- **InCrv/OutCrv off the face** → `ConvCurveBand` (Popover subclass,
+  EffectTile.h, 130×76, one 32-px knob on `scales::convFade()`): right-click
+  (or touch long-press) of F In / F Out opens the band above the anchor;
+  the armed anchor keeps a **brand-yellow label** via new
+  `Knob::Options.labelArmed` + `Knob::setArmed` (Knob.cpp:418). The
+  right-click gate-knob deck (GateGroup/SecondaryPressTarget) is the
+  precedent; EffectTile now implements `SecondaryPressTarget`.
+- **Header buttons**: Change IR (76,4,68,20) + **Export** (148,4,52,20) to
+  the right of the title (paint titleX0 = 30 for full conv).
+- Compact 160 px tiles face-only: row1 Mix/Time/Pre, row2 Dwell/Dry/Width/Out.
+
+### Node strip
+
+Settings toggle + 7-knob grid deleted; **Load IR + Export are always
+visible, right of the CONVOLUTION mode bar** (NodeView.cpp:1406-1412,
+btnTop = kStripHeadH + 3); `convBand = convStrip ? 78 : 0`.
+
+### Mod wet-ring click fix (spec spc-1792538043915-13755)
+
+"mod does a periodic clicking when up" → one-pole smoothing on the modulated
+wet **ring write** (`kModWriteTauMs = 80.0`, ConvolutionReverb.h:168;
+state h:423-425, coef in process; write smoothed **before** the taps read,
+zero-latency causal; `setModWriteTauForTest(ms)`: <0 = raw write bit-exact,
+0 = ship). +186 test lines (click-index/tap-body) in
+convolution_reverb_tests.cpp.
+
+Also fixed: the dB-scale integer-detection bug in `convGain/convDwell/
+reverbDry` format — `std::abs(db) - std::trunc(db) < 0.05` equals 2|db| for
+negative db (exact negative integers always rendered 1 dp) →
+`std::abs(db - std::trunc(db)) < 0.05`.
+
+### Closeout log (2026-10-20)
+
+| Gate | Result |
+|------|--------|
+| DspTests | **579/579** (incl. 2 new ConvDwell scale/round-trip tests + 186 mod-click lines) |
+| GUI build | TONE3000_Standalone / UiTestbed / TileShot all link |
+| UiTestbed --selftest | green |
+| e2e node-drag.js | **35/35** |
+| e2e conv-strip.js | **4/4** (state string now `<loadIrVis>:<exportVis>|<toast>|<convIr>`; toggle op dropped) |
+| TileShot goldens | 6 conv-*.png re-shot + human-reviewed, **0 px** (full/compact face changed — deliberate) |
+| Windows stage | `/mnt/c/Users/jambo/Downloads/TONE3000-win-20261020-232111/TONE3000.exe` (29 M) · md5 `9c280ec3642118d1aa8f5ba0086c1630` (first attempt hit `STAGE_ROOT=/mnt/c/Users/Default User/Downloads` — no write rights; re-run with `T3K_STAGE_DIR=/mnt/c/Users/jambo/Downloads`) |
+| OpenWiki | run `914e5322` (update, 7 pages) + hand-edited prose in node-view.md / ui/page.md / ir-convolution.md — committed 14d37f1 |
+
+### Commits (this section)
+
+- `44a78ea` — conv: face rework (Dwell/Start/End on the face, right-click curve bands, Export in the header) + mod wet-ring tau click fix — 20 files, +521/−393
+- `14d37f1` — openwiki: reconcile conv face-rework + mod wet-ring tau (run 914e5322)
 
 ## Closeout log (2026-10-20)
 
