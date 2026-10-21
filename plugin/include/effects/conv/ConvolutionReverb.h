@@ -177,6 +177,16 @@ class ConvolutionReverb {
   // transient spikes get tamed (layer jump-RMS cut 3.8x, layer ~4 dB
   // louder than the 1e-2 build).
   static constexpr double kModClipScale = 1e-1;
+  // Tap-read lowpass on the ADDED layer sum (one-pole, ~2 kHz corner):
+  // the wobbled taps re-emit the wet's SHARP transients ~100x off from the
+  // original (a transient at delay D lands a click at the EAR that the LFO
+  // has the material in - at 1 Hz the L/R material alternates ~every half
+  // cycle, which is the perceived "alternating" click). A one-pole on the
+  // LAYER SUM (not the ring feed - that variant lowpassed the wet history
+  // to ~2 Hz and killed the layer, 2026-10-21) passes the 1 Hz body and the
+  // 14 Hz sweep band (100x below corner) and kills the transient edges.
+  // 0 = bit-exact linear tap reads (test anchor).
+  static constexpr double kModTapTauMs = 5.0;
   // Width on a MONO IR (whose wet is identical both ears, so the M/S fold
   // has no material): a Haas pair -- a fixed interaural difference whose
   // depth scales with Width (0 = mono center, 1 = full spread).
@@ -325,6 +335,21 @@ class ConvolutionReverb {
   void setClipEnabledForTest(bool on) { clipEnabled_ = on; }
   bool clipEnabledForTest() const { return clipEnabled_; }
   void setModClipScaleForTest(double scale) { modTestClipScale_ = scale; }
+  void setModTapTauForTest(double ms) { modTestTapTauMs_ = ms; }
+  double modTapTauForTest() const { return modTestTapTauMs_; }
+  // Audio thread; the law tests' shared-baseline reset (mod rings + LFO +
+  // tap smoothing). A fresh mod-off render, then zeroModStageForTest, then
+  // a mod-on render gives a bit-identical wet baseline across engines.
+  void zeroModStageForTest() {
+    std::fill(modBuf_[0].begin(), modBuf_[0].end(), 0.0f);
+    std::fill(modBuf_[1].begin(), modBuf_[1].end(), 0.0f);
+    modPh_[0] = 0.0;
+    modPh_[1] = 0.0;
+    modW_[0] = 0;
+    modW_[1] = 0;
+    modSumSm_[0] = 0.0;
+    modSumSm_[1] = 0.0;
+  }
   double modClipScaleForTest() const { return modTestClipScale_; }
   // One through-sample of the wet clip LUT (tests: the LUT path vs the
   // analytic curve).
@@ -431,6 +456,8 @@ class ConvolutionReverb {
   std::vector<float> modBuf_[2];   // wet ring (per channel, audio-owned)
   int modCap_ = 0, modW_[2] = {0, 0};
   double modPh_[2] = {0.0, 0.0};  // persistent per-channel LFO phase (audio)
+  double modSumSm_[2] = {0.0, 0.0}; // per-channel one-pole state (tap reads)
+  double modTestTapTauMs_ = -1.0;  // <0: ship default, >=0: explicit ms
 
   double modTestClipScale_ = 0.0; // >0: explicit, 0: ship default
                                    // (kModClipScale), <0: disabled (linear)

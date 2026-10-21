@@ -788,6 +788,10 @@ void ConvolutionReverb::process(juce::AudioBuffer<float>& buffer) {
                                    : (modTestClipScale_ > 0.0
                                           ? modTestClipScale_
                                           : kModClipScale);
+      const double tapTauMs =
+          modTestTapTauMs_ < 0.0 ? kModTapTauMs : modTestTapTauMs_;
+      const double tapCoef =
+          (tapTauMs > 0.0) ? std::exp(-1.0 / (rate_ * tapTauMs * 0.001)) : 0.0;
       const double taper = mod * mod * (3.0 - 2.0 * mod); // smoothstep
       const double amt = kModAmt * taper;
       const double maxDepth = mod * (rate_ * kModDepthMs * 0.001);
@@ -822,7 +826,13 @@ void ConvolutionReverb::process(juce::AudioBuffer<float>& buffer) {
             sum += x * invN;
           }
           {
-            const double lay = amt * sum;
+            // One-pole on the LAYER SUM (see kModTapTauMs): tames the
+            // re-emitted transient edges the wobbled taps pick up; the 1 Hz
+            // body is far below the corner. tau == 0 -> alpha 0 -> the raw
+            // sum passes (bit-exact linear anchor).
+            const double a = tapCoef;
+            modSumSm_[c] = a * modSumSm_[c] + (1.0 - a) * sum;
+            const double lay = amt * modSumSm_[c];
             const double cl = clipScale;
             wet[i] += static_cast<float>(
                 (cl > 0.0) ? cl * std::tanh(lay / cl) : lay);
