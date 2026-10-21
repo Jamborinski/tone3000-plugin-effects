@@ -46,7 +46,7 @@ sources:
 generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T08:40:03.735Z
+    at: 2026-10-21T20:35:38.263Z
 ---
 
 
@@ -441,12 +441,16 @@ JUCE's non-uniform convolution engine (head partition + tail partitions),
   `juce::Decibels::decibelsToGain` (an `exp(db*0.05)` fill is off a
   constant −1.29 dB). See `research/conv-wet-clip.md` for the provenance
   (never named in shipping code).
-- **Mod layer soft clip** (the 2026-10-21 click fix, replacing the
-  one-pole write-tau that lowpassed the modulated layer to near-silence):
-  the wet ring write is raw; a `tanh` soft clip is applied to the **added
-  mod layer only** (`kModClipScale = 1e-2`, `ConvolutionReverb.h:172`) —
-  zero-latency, stateless, causal. `setModClipScaleForTest` (`<0` = linear,
-  bit-exact anchor for the contract tests; `0` = ship).
+- **Mod layer soft clip + tap-read lowpass** (the 2026-10-21 click fixes,
+  replacing the one-pole write-tau that lowpassed the modulated layer to
+  near-silence): the wet ring write is raw; a `tanh` soft clip is applied to
+  the **added mod layer only** (`kModClipScale = 1e-1`,
+  `ConvolutionReverb.h:179`) — zero-latency, stateless, causal. A one-pole
+  on the **layer sum** (`kModTapTauMs = 5.0`, `h:189`) kills the
+  L/R-alternating click (re-emitted transient edges); a one-pole on the ring
+  FEED is the dead variant. `setModClipScaleForTest` (`<0` = linear,
+  bit-exact anchor for the contract tests; `0` = ship) +
+  `zeroModStageForTest()` for shared-baseline law renders (`h:337-343`).
 - **Per-IR trim cap** — the Start/End faces use
   `scales::convTrimScale(rawSeconds)` so a window can never point past a
   short IR's tail (an empty window silently keeps serving the old kernel).

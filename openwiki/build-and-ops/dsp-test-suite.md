@@ -51,7 +51,7 @@ sources:
 generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T08:40:03.735Z
+    at: 2026-10-21T20:35:38.263Z
 ---
 
 # DSP test suite (DspTests)
@@ -143,8 +143,12 @@ confirm the "Running N tests" line is non-zero before trusting the result.**
 
 ## Suite size
 
-The suite grows with features — **581 tests as of the 2026-10-21
-conv strip-face closeout** (commit `9a5c3c8`: `ProcessorTest.
+The suite grows with features — **584 tests as of the 2026-10-21
+mod-click closeout** (commit `2b04a71`: `ConvolutionReverb.ModTapSmoothing-
+Law` + `ConvolutionReverb.TwoFreshEnginesSameModLayer` shared-baseline law
+tests in `test/src/convolution_reverb_tests.cpp`, alongside the tanh-frame
+`ModLayerClipClickHunt` + `ModClipDisabledIsBitExact`); 581 was the
+2026-10-21 conv strip-face closeout (commit `9a5c3c8`: `ProcessorTest.
 ConvIrLoadResetsTrimWindowAndTime` in `test/src/processor_tests.cpp` — the
 on-IR-load reset law (Start=0 / End=raw length / Time=1.00×) + the
 `convRawSeconds` state field — plus `ConvTrimScaleTest.CapIsRawLength-

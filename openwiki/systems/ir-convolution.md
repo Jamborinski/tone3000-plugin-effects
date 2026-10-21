@@ -26,7 +26,7 @@ sources:
 generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T08:40:03.735Z
+    at: 2026-10-21T20:35:38.263Z
 ---
 
 
@@ -131,17 +131,27 @@ Its own additions:
   per ramp.
 - **Pre** (0..100 ms wet pre-delay), **Width** (M/S fold), smoothed **Gain**
   (0.5 = 0 dB) — all live on the wet path, none baked into the kernel.
-- **Mod layer soft clip** (commit 9a5c3c8, spec spc-1792538043915-13755;
-  supersedes the 44a78ea one-pole write-tau, which lowpassed the modulated
-  layer to ~silence — layer +0.00 dB at mod 1.0): the wet ring write is
-  **raw again**, and a `tanh` soft clip is applied to the **added layer
-  only** (never the wet itself) before it is summed in: `lay = cl * tanh(
-  lay / cl)` where `cl` is the soft-clip scale `kModClipScale = 1e-2`
-  (`ConvolutionReverb.h:172`), site `ConvolutionReverb.cpp:782-790,828`.
-  Zero-latency and stateless; mod 1.0 = +1.00 dB layer measured, and the
-  ship clip cuts the burst click hunt > 2× (derivative RMS). `setModClip-
-  ScaleForTest(scale)`: `<0` = linear (bit-exact anchor for the contract
-  tests), `0` = ship `kModClipScale`, `>0` = explicit — `ConvolutionReverb.h:320`.
+- **Mod layer soft clip + tap-read smoothing** (commits 9a5c3c8 + 2b04a71,
+  spec spc-1792538043915-13755; supersedes the 44a78ea one-pole wet-ring
+  write-tau, which lowpassed the modulated layer to ~silence — layer +0.00 dB
+  at mod 1.0): the wet ring write is **raw**, a `tanh` soft clip is applied
+  to the **added layer only** (never the wet itself) before it is summed in:
+  `lay = cl * tanh(lay / cl)` where `cl = kModClipScale = 1e-1`
+  (`ConvolutionReverb.h:179`). A one-pole on the **layer sum**
+  (`kModTapTauMs = 5.0`, `ConvolutionReverb.h:189`, site
+  `ConvolutionReverb.cpp:829`) tames the re-emitted sharp transients — the
+  wobbled taps re-emit the wet's edges far from the originals, and at width
+  1.0 that incoherent material alternated ears at the 1 Hz LFO rate (the
+  audible "clicking L/R" report). A one-pole on the ring FEED is the dead
+  variant (3 dB by ~2 Hz kills the layer); on the LAYER SUM it passes the
+  body and the sweep band (100× below the ~2 kHz corner). Zero-latency,
+  stateless; scale chosen so 0% of steady-layer samples clamp across the
+  full drive sweep (1e-2 clamped ~98% = an LFO-swept compression shimmer).
+  `setModClipScaleForTest(scale)`: `<0` = linear (bit-exact anchor), `0` =
+  ship, `>0` = explicit — `ConvolutionReverb.h:337`; `zeroModStageForTest()`
+  (`h:343`) zeros the mod stage for shared-baseline law renders. Law tests:
+  `ModLayerClipClickHunt`, `ModTapSmoothingLaw`,
+  `TwoFreshEnginesSameModLayer` (test/src/convolution_reverb_tests.cpp).
 - **Wet soft-knee peak limiter** (the final wet stage, `ConvolutionReverb.cpp:845-849`,
   gated by `clipEnabled_`, NOT applied on the dying crossfade tail): a 1024-entry
   LUT over `log|x|` in `[kClipLogLo, kClipLogHi]` with the smoothstep

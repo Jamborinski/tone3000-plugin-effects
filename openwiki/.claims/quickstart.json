@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:86a43bbfb1756342e0ee1b458ee7751ed2bc40c8de0987d0f94aab44f7e5624f",
+  "pageVersion": "sha256:6287e6c0f6761c80892196ca24b7576995e855a6d3908db64b76f200da6fae65",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -174,7 +174,33 @@
         },
         {
           "resource": "repo://plugin/include/effects/conv/ConvolutionReverb.h",
-          "version": "repo-file-v1:sha256:d552c113cff3415652392409a9a964b779ec9af24f40a21043f77fa4b1fbd638"
+          "version": "repo-file-v1:sha256:aa0cdaf4833a9f46eb7bf5cfd182533d767bb9449f1ab6b4e3723f8eb1e30135"
+        },
+        {
+          "resource": "repo://plugin/include/effects/reverb/Reverb.h",
+          "version": "repo-file-v1:sha256:874d200a4c5281dbf7bd434098d31a1e5d9b47f1666a5f50acc965ac03e8d829"
+        }
+      ]
+    },
+    {
+      "id": "claim_f06f129c586f4d12aa7c822865d7433b",
+      "statement": "The chain is a left/right lane of blocks (ChainBlock: Nam, IR, Insert, Effect, each with a ChainSide), processed at a fixed 48 kHz base rate (plugin/include/ChainDomain.h, kChainBaseSampleRate = 48000.0) with the host rate re-sampled at the chain's boundary (Lanczos-12). Zero-latency (PDC) is a hard invariant; the NAM engine and the reverb/convolver run inside the chain (convDry and, since the 2026-10-13 R1 pass, reverbDry are chain-layer dry-gain fields on the Convolution and Reverb effect blocks respectively). After the repo-organization reorg the effect engines live per-effect under plugin/include/effects/, each a HOST class header that pulls in its per-mode engine bodies via #include at the file end, plus thin mode/subtype wrappers: delay/Delay.h, chorus/Chorus.h, tremolo/Tremolo.h (single-engine), the reverb host at effects/reverb/Reverb.h with one engine header per mode family — digital/comb_engine.h (the Digital comb base + widthTapScaleFor), digital/Reverb_Plate.h (legacy comb-plate arm), plate/plate_engine.h (the DAT Dattorro tank + datApf), spring/Reverb_Spring.h, room/Reverb_Room.h, chamber/Reverb_Chamber.h, hall/Reverb_Hall.h, shared/Reverb_SharedMod.h — plus thin type wrappers at digital/types/Reverb_DIG.h and plate/types/Reverb_DAT.h; the compressor host at effects/compressor/Compressor.h with one engine header per mode family — vca/Compressor_Vca.h, tube/Compressor_Tube.h, opto/Compressor_Opto.h, fet/Compressor_Fet.h, varimu/Compressor_VariMu.h — plus thin type wrappers at <mode>/types/Compressor_<Mode>.h (commit 3ffb35b, mirroring the reverb engine/wrapper split; the per-block compType field selects the mode's sub-type, 1 per mode today); and the convolver at effects/conv/ConvolutionReverb.h — which since the 2026-10-21 mod-v2 pass (9a5c3c8/9c203cb, superseding the 44a78ea kModWriteTauMs = 80.0 ms one-pole on the wet RING WRITE) soft-clamps the ADDED mod layer only: the ring write is RAW again (`wr[w] = wet[i]`, write before taps read) and the LFO-voiced tap sum gets TWO layer-only protections: a one-pole lowpass on the layer SUM (`modSumSm_[c] = a*modSumSm_[c] + (1.0-a)*sum`, ConvolutionReverb.cpp:832) with kModTapTauMs = 5.0 at ConvolutionReverb.h:189 (the 2b04a71 fix for the user-audible L/R-alternating click — the wobbled taps re-emit transient edges; 5 ms shaves none of the ~32 Hz-corner 1 Hz body), then a tanh clip at the add step (`wet[i] += cl*tanh(lay/cl)`, cpp:837-838) with kModClipScale = 1e-1 at ConvolutionReverb.h:179 (1e-2 left 97–99 % of the steady layer inside the tanh knee at full mod + 18 dB dwell — the periodic click; 1e-1 measures 0 % clamped, jump-RMS 0.26× the raw layer, crest 3.08→2.23); setModClipScaleForTest(double) at h:337 (<0 = linear bit-exact anchor, 0 = ship default, >0 = explicit), modTapTauForTest() at h:339, and zeroModStageForTest() at h:343 (shared-baseline law-test reset) drive the ModLayerClipClickHunt + ModLoudDriveLaw + ModTapSmoothingLaw + TwoFreshEnginesSameModLayer tests. The wet-path one-pole τ remains banned from feedback-loop feeds (AGENTS.md hard rule). The UI build (NativeUi.cmake) adds these per-effect dirs to its include path so ChainBlock.h's bare engine includes resolve. LANE-LENGTH NOTE (m06828 batch, commit 72f48ea): the baseline-lane-length comment at ChainBlock.h:76-88 is now FLOOR-ONLY — alignBranchLaneLengths pads short lanes up to the baseline (insertCount == max(kMinLaneSlots - toneCount, 1)) but never trims a lane that grew past it (the node view's lazy insert padding can legally grow a lane to the full 20-slot grid size; a branch lane is the only lane still trimmed, ProcessorChain.cpp trimLaneToBaseline), and removeChainBlock leaves an insert gap in place rather than left-shifting. PER-CALLBACK RENDER NOTE (optimization-findings Stage 5, commit 8f6d868): the three per-callback full-lane scans in processChainOnBuffer (the lastNamIndex sweep, the multi-core laneHasWork check, the setSpreadLane lane-stamp sweep) are now memoised in Processor.h's LaneScheduleCache / lastSpreadLane, invalidated by the single chainRevision funnel (bumpChainRevision), so chain-unchanged callbacks pay no scan cost; BudgetConvolver's zero-caller message-thread primeSilence warm-up was deleted in the same pass.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/ChainBlock.h",
+          "version": "repo-file-v1:sha256:7562d6c4af63bb001257e2af596f59c9d20747c84eb3e54a079cc83715ead452"
+        },
+        {
+          "resource": "repo://plugin/include/Processor.h",
+          "version": "repo-file-v1:sha256:e694215eb24026f642d95380301404cd0c278dda16c37fc1dd0c54ff03ac3e42"
+        },
+        {
+          "resource": "repo://plugin/include/effects/compressor/Compressor.h",
+          "version": "repo-file-v1:sha256:5ffe74a1aceac4d3bb9095480ceb3d21ad7e2fc752d2ca2d9e0a458cfb0d5c5d"
+        },
+        {
+          "resource": "repo://plugin/include/effects/conv/ConvolutionReverb.h",
+          "version": "repo-file-v1:sha256:aa0cdaf4833a9f46eb7bf5cfd182533d767bb9449f1ab6b4e3723f8eb1e30135"
         },
         {
           "resource": "repo://plugin/include/effects/reverb/Reverb.h",
@@ -185,6 +211,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-21T08:40:03.735Z"
+    "at": "2026-10-21T20:35:38.263Z"
   }
 }

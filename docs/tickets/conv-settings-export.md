@@ -138,6 +138,63 @@ curve bands) get `Knob::setThumb(Thumb::secondary)` (new Knob.h setter)
 | OpenWiki | run `e9ea429a` (update, 9 pages) — committed 2e01a52 |
 | Windows stage | `/mnt/c/Users/jambo/Downloads/TONE3000-win-20261021-081522/TONE3000.exe` (29 M) · md5 `2b0966872ba47b2bafee3c04505fae21` (T3K_STAGE_DIR=/mnt/c/Users/jambo/Downloads; last functional commit 9c203cb) |
 
+## Mod L/R-alternating click kill (commit 2b04a71, 2026-10-21)
+
+User report (m05609): "the mod click is still audible, and it alternates
+between the left and right channels." Root cause: the 1 Hz LFO wobbles the
+tap delays, and the wobbled taps re-emit the original input's transient
+edges as a layer whose high-frequency content is incoherent with the wet —
+heard as an alternating L/R click (the two channels' LFO phases are 90°
+apart). The 9c203cb tanh clip (kModClipScale=1e-1) tamed the layer's peaks
+but NOT its re-emitted HF edges.
+
+### Fix: one-pole on the layer SUM (never the ring write)
+
+- `kModTapTauMs = 5.0` (ConvolutionReverb.h:189): a one-pole lowpass on the
+  LAYER SUM only — `modSumSm_[c] = a*modSumSm_[c] + (1.0-a)*sum` (cpp:832) —
+  applied BEFORE the tanh clip. The 1 Hz LFO body is far below the ~32 Hz
+  corner; the re-emitted transient edges are damped. `tau == 0`
+  → `alpha == 0` → raw sum passes (bit-exact linear anchor for the contract
+  tests). The wet ring write stays RAW (`wr[w] = wet[i]`, cpp:809) — the
+  m04350 law (no one-pole in a feedback-loop feed) is preserved: this
+  one-pole is on the ADDED layer's sum, not the ring.
+- New `zeroModStageForTest()` (ConvolutionReverb.h:343): zeros
+  modBuf_/modPh_/modW_/modSumSm_ so a shared-baseline law test can render
+  mod-off → zero → mod-on on the SAME engine (bit-identical wet baseline,
+  layer = on − off).
+
+### Law tests (3 new, replacing the drift-prone old probes)
+
+- **ModTapSmoothingLaw** (test ~:841): shared-baseline per-channel — HF
+  sharpness on the burst band `EXPECT_LE(hf(ship), 1.15*hf(raw))` (tau 5
+  ≈ raw; tau 10 measured ×0.026 → would fail); burst body
+  `EXPECT_GE(rms(ship), 0.50*rms(raw))` (16× margin above the tau-10
+  collapse). Tail-body assertion removed (drift-dominated).
+- **TwoFreshEnginesSameModLayer** (test ~:1001): two fresh engines both at
+  ship config — per-channel audibility `EXPECT_GT(rms(burst), 1e-3)` +
+  comparable-energy factor ≤ 10.0 (worst observed 4.55; a dead layer
+  → ~100+). Guards against a silent regression that kills the layer.
+- **ModLayerClipClickHunt** (test ~:620): crest bound relaxed 0.8→0.95
+  (measured ship/raw crest ≈ 0.88–0.90 on the clicky-comb layer).
+
+### Closeout log (2026-10-21)
+
+| Gate | Result |
+|------|--------|
+| DspTests | **584/584** ×6 consecutive full-suite runs (BudgetConvolverCost.FlatPerBlockCostLongKernel = machine-load flake, passes standalone) |
+| GUI build | TONE3000_Standalone links |
+| UiTestbed --selftest | **23 passed, 0 failed** |
+| e2e node-drag.js | **35/35** |
+| e2e conv-strip.js | **11/11** |
+| TileShot goldens | 6 conv-*.png **0 px IDENTICAL** to committed (DSP-only change) |
+| OpenWiki | run `8a7937bc` (update, 4 pages: ir-convolution, effects-invariants, dsp-test-suite, quickstart) + hand-edited prose |
+| Windows stage | pending |
+
+### Commits (this section)
+
+- `2b04a71` — conv: kill the mod L/R-alternating click with a tap-sum one-pole — 3 files, +390/−3
+- `<pending>` — docs(openwiki): update for mod tap-tau click fix (run 8a7937bc) + ticket log
+
 ## Face rework (commit 44a78ea, 2026-10-20) — supersedes the Settings view
 
 User direction (m03044): the export UI was "jammed to the top right", the

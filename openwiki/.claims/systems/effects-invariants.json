@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:e3d3b3b01cdd362073bf738208a7169f0ef6d850f822f17246af2f2bd3fc3d04",
+  "pageVersion": "sha256:5761dbc8260c5693975cc9b52e56e78dbdff5becf07aee0d319fda0ebc8c8dd6",
   "claims": [
     {
       "id": "claim_9c6f8afc68d34500bf778a2da1af5f07",
@@ -106,7 +106,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:cdb4e4d95ba0fe42180bea468a04fd221db9352d00336cc5a98155784b0d4238"
+          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
         }
       ]
     },
@@ -220,13 +220,13 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:cdb4e4d95ba0fe42180bea468a04fd221db9352d00336cc5a98155784b0d4238"
+          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-21T08:40:03.735Z"
+    "at": "2026-10-21T20:35:38.263Z"
   }
 }
