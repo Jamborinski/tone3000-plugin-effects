@@ -16,10 +16,10 @@ sources:
     resource: repo://plugin/ui/services/UiPrefs.h
   - id: openwiki-source-78c1e0c44679b66507a1889c
     resource: repo://plugin/ui/views/PluginHeader.cpp
-generated: { by: "pi", at: "2026-10-18T23:18:48.824Z" }
+generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-20T22:14:33.483Z
+    at: 2026-10-21T08:40:03.735Z
 ---
 
 # Presets and runtime persistence
@@ -128,16 +128,17 @@ idempotent and a no-op off iOS or outside the standalone app.
 
 The **host project** save path is separate from the `.t3kpreset` file
 format above — a single `MemoryBlock` blob, `T3KB` magic + one format-flag
-byte + payload (plugin/src/ProcessorState.cpp:640-712):
+byte + payload (`getStateInformation` at plugin/src/ProcessorState.cpp:596,
+`setStateInformation` at :662):
 
 - **flag 1 = gzip** — an 8-byte LITTLE-ENDIAN original size followed by a
   zlib-wrapped stream (`juce::GZIPCompressorOutputStream`, level -1),
   chosen only when strictly smaller than the raw tree;
 - **flag 0 = raw** — binary `ValueTree` bytes (the pre-gzip v2 form);
 - **a 5th byte that is neither flag = legacy v1** — parsed from offset 4;
-  `kStateSchemaVersion` is 2 (bumped 1→2 by the optimization-findings
-  Stage 1, commit `353bac9`), and `setStateInformation` refuses a blob
-  whose embedded version exceeds it.
+  `kStateSchemaVersion` is 2 (ProcessorState.cpp:45; bumped 1→2 by the
+  optimization-findings Stage 1, commit `353bac9`), and `setStateInformation`
+  refuses a blob whose embedded version exceeds it (:720).
 
 The payload is **binary, not the original Base64-in-XML** — that path
 burned 100+ ms per host save on a heavy rig. The tree itself carries the

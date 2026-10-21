@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:5c7652f108e4fc6a50dcf4cd899f4e4fcc98a35d191556aee2262609ae2ea54b",
+  "pageVersion": "sha256:3c98a986534cbc0402dd95b3b439074e28712b7d6408df60cb3a98617dace786",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -56,7 +56,7 @@
       "evidence": [
         {
           "resource": "repo://test/src/processor_tests.cpp",
-          "version": "repo-file-v1:sha256:1133e1368009946ff89a5bf27ca4aeae1b9736ac9a482c052466621cb06a542a"
+          "version": "repo-file-v1:sha256:b060b7b2881eaf60caee43390d0f015c62993a9ec70602dcfc1b75abf90cf13c"
         }
       ]
     },
@@ -214,29 +214,21 @@
       "evidence": [
         {
           "resource": "repo://test/src/processor_tests.cpp",
-          "version": "repo-file-v1:sha256:1133e1368009946ff89a5bf27ca4aeae1b9736ac9a482c052466621cb06a542a"
+          "version": "repo-file-v1:sha256:b060b7b2881eaf60caee43390d0f015c62993a9ec70602dcfc1b75abf90cf13c"
         }
       ]
     },
     {
-      "id": "claim_551f834dfc9540a0970ac888a4c6f457",
-      "statement": "A juce-end-to-end layer is a SUPPLEMENT (2026-10-18, commit f0b06d4; spec spc-1792273651114-39383: supplement only, never a replacement): plugin/ui/testbed/CMakeLists.txt does add_subdirectory(libs/focusrite-e2e) and links focusrite-e2e::focusrite-e2e into UiTestbed; the JS client lives in plugin/ui/testbed/e2e/ (npm package.json, node_modules/ gitignored). node-drag.js carries 35 check() asserts (opaque-ghost / follows-pointer / no-origin-box / post-drag-idle / symmetric 1-tile swap / drop-glow / off-chain cancel / right-press-SURVIVES-drag / positional far-slot drop laws) and runs under `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`; conv-strip.js (commit b80bca7, reworked at 44a78ea) is a STANDALONE 4-check script for the node-view conv strip's FACE CHROME (at-rest `1:1|` = Load IR + Export both visible right of the CONVOLUTION mode bar, export with no IR fires the guard toast `No IR loaded in this block`, chrome survives the guarded export) driven by the `node-conv-strip` handler in NodeViewE2E.cpp + `NodeView::convStripStateForE2E()` whose state string is now `<loadIrVis>:<exportVis>|<toast>|<convIr>` — the settings-band toggle/checks were deleted with the settings view (44a78ea). It got its own script because two AppConnections in one process race on socket teardown (TestCentre.cpp:97 returns a failure for unregistered message types). e2e.js APP honors a T3K_E2E_APP env override (commit 72f48ea) so the rig can point at an alternate UiTestbed build tree without editing the file. DspTests, the testbed selftest, TileShot goldens, and the e2e scripts remain the complementary gates.",
+      "id": "claim_434bd4dbe2ae4c5ba55425c0d04c62bc",
+      "statement": "conv-strip.js (commit 9a5c3c8) is a STANDALONE 11-check script for the node-view conv strip: the probe asserts the 6-section `convStripStateForE2E()` string (load-vis:export-vis|toast|convIr|labels|loadX,exportX), the Dwell label appears in the <labels> field, the buttons sit beside the CONVOLUTION mode bar (coordinates in the final section), export with no IR fires the guard toast `No IR loaded in this block`, and F In / F Out right-clicks open the curve bands (band=in / band=out via `convCurveBandStateForE2E()`). It is driven by the `node-conv-strip` handler in NodeViewE2E.cpp (ops select / export-click / curve-in / curve-out) and is its own script — not a node-drag.js section — because two AppConnections in one process race on socket teardown (TestCentre.cpp:97 returns a failure for unregistered message types).",
       "evidence": [
         {
-          "resource": "repo://docs/tickets/juce-e2e-suite-draft.md",
-          "version": "repo-file-v1:sha256:4b70d4e0be146604a5c7b6f884f4ab180517deb79d54c97548bb2f9c019e36b0"
-        },
-        {
-          "resource": "repo://plugin/ui/testbed/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:cadfb63c5c14f32929ecafb3b6c49931e1084e58fda3c5e9264df00bd05eda48"
-        },
-        {
           "resource": "repo://plugin/ui/testbed/NodeViewE2E.cpp",
-          "version": "repo-file-v1:sha256:68b20034588a387c48b67e1fbb8f755ee9f9b16a635d3db86597ec27cda2e661"
+          "version": "repo-file-v1:sha256:5ef749288edb5610244fa9dae0df9dd3ca6a61cf939e547b4aa9780a43111f8a"
         },
         {
           "resource": "repo://plugin/ui/testbed/e2e/conv-strip.js",
-          "version": "repo-file-v1:sha256:6f71c43721712c68e7794bb1e53828635e3638ce2b7d3845991dc81bd78739aa"
+          "version": "repo-file-v1:sha256:48d3d9203f9acbbfab46680fa33764afb7b818351123d099a2e53956682a2ddb"
         },
         {
           "resource": "repo://plugin/ui/testbed/e2e/node-drag.js",
@@ -245,8 +237,8 @@
       ]
     },
     {
-      "id": "claim_f818caf1b6ac417189c4de6e4fe8230e",
-      "statement": "The optimization-findings state-size work added src/state_size_tests.cpp (line 36 of test/CMakeLists.txt): 8 tests pinning the DAW-host state footprint — a 2+2 dual-mono NAM rig with 4 blocks sharing one ~8 MB synthetic LCG payload, v1 raw-blob baseline (33.6 MB, ~5 ms save), the v2 ModelLibrary dedup shape (one payload + ref strings), the gzip flag layer (incompressible LCG payload saves flag 0 raw; real 360 KB-class SYN20 captures syn20-amp-c1.nam/syn20-amp-c2.nam save flag 1 with saved < rawSize+5), byte-identical re-saves, v1-forward-compat restore, and a corrupt-header fuzz case. The test-side blob parser lives in shared header test/src/StateSizeBlob.h (parseFlagAwareStateBlob / blobTreeContains), consumed by state_cache, processor, pitch_shift and gate tests because the state header gained the format flag. Full-suite snapshot: 560 after this pass; 575 after the conv wet-clip + Settings/Export-kernel pass (convolution_reverb_tests.cpp WetClip* + ConvIrExport* suites); 579 after the face-rework pass (44a78ea: conv mod click-index / tap-body tests + ConvDwell scale/chain-round-trip tests in effect_ui_scale_tests.cpp) — lower-bound; never assert stale totals.",
+      "id": "claim_f9b27028606e4bbeb54eebddc8038f22",
+      "statement": "Suite-size history (the state-size pass and after): 560 after the state-size closeout (728e144 + 9f34a3f); 575 after the conv wet-clip + Settings/Export-kernel pass (WetClip* + ConvIrExport* in convolution_reverb_tests.cpp); 579 after the face-rework pass (44a78ea: mod click-index/tap-body tests + ConvDwell scale tests); **581 after the 2026-10-21 conv strip-face closeout (commit 9a5c3c8: ProcessorTest.ConvIrLoadResetsTrimWindowAndTime in processor_tests.cpp — on-load Start=0/End=raw/Time=1.00× + the convRawSeconds state field — plus ConvTrimScaleTest.CapIsRawLengthRoundedUp in effect_ui_scale_tests.cpp; the conv Mod tests are now tanh-framed: ModLayerClipClickHunt + ModClipDisabledIsBitExact)**. Lower-bound; never assert stale totals.",
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
@@ -254,15 +246,15 @@
         },
         {
           "resource": "repo://test/src/convolution_reverb_tests.cpp",
-          "version": "repo-file-v1:sha256:13c3bcf3c89adc32ffbdc7ce9c217750155ce51130a109ca4f92dbf5553b0e84"
+          "version": "repo-file-v1:sha256:f5da9aaa1424ac26c49f082acbb9c4a36fe77043a54f45879b8181dab1ac0324"
         },
         {
           "resource": "repo://test/src/effect_ui_scale_tests.cpp",
-          "version": "repo-file-v1:sha256:6c25e8fb21f9a5edc6a4e2fe96a3b168b440c1743f2bb96aed479dc5b874bed5"
+          "version": "repo-file-v1:sha256:760cdef41a2e2d7d132dfee2603f4e57beb61d3c7d1ee64e2b61a6ca475e2201"
         },
         {
           "resource": "repo://test/src/processor_tests.cpp",
-          "version": "repo-file-v1:sha256:1133e1368009946ff89a5bf27ca4aeae1b9736ac9a482c052466621cb06a542a"
+          "version": "repo-file-v1:sha256:b060b7b2881eaf60caee43390d0f015c62993a9ec70602dcfc1b75abf90cf13c"
         },
         {
           "resource": "repo://test/src/state_size_tests.cpp",
@@ -273,6 +265,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-21T05:59:08.607Z"
+    "at": "2026-10-21T08:40:03.735Z"
   }
 }

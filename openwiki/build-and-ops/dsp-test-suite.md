@@ -48,10 +48,10 @@ sources:
     resource: repo://test/src/state_size_tests.cpp
   - id: openwiki-source-a9b10161f0531edad6c09d8e
     resource: repo://test/src/strip_knob_tests.cpp
-generated: { by: "pi", at: "2026-10-18T23:18:48.824Z" }
+generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T05:59:08.607Z
+    at: 2026-10-21T08:40:03.735Z
 ---
 
 # DSP test suite (DspTests)
@@ -143,7 +143,15 @@ confirm the "Running N tests" line is non-zero before trusting the result.**
 
 ## Suite size
 
-The suite grows with features — **560 tests as of the 2026-10-20
+The suite grows with features — **581 tests as of the 2026-10-21
+conv strip-face closeout** (commit `9a5c3c8`: `ProcessorTest.
+ConvIrLoadResetsTrimWindowAndTime` in `test/src/processor_tests.cpp` — the
+on-IR-load reset law (Start=0 / End=raw length / Time=1.00×) + the
+`convRawSeconds` state field — plus `ConvTrimScaleTest.CapIsRawLength-
+RoundedUp` in `test/src/effect_ui_scale_tests.cpp`; the conv Mod tests are
+now tanh-framed: `ConvolutionReverb.ModLayerClipClickHunt` + `ModClipDisabled-
+IsBitExact`). 575 was the 2026-10-20 conv settings/export tab closeout
+(commit `44a78ea`, the face rework); 560 was the 2026-10-20
 optimization-findings state-size closeout** (commits `728e144` + `9f34a3f`:
 8 `StateSize*` tests in `test/src/state_size_tests.cpp` — the DAW-host state
 footprint baseline, the ModelLibrary dedup shape, the gzip flag layer, and
@@ -183,6 +191,14 @@ m06828 batch, grown from the initial 13 — it catches the quarter-ghost /
 no-ghost / top-left-box drag-ghost bugs plus the symmetric-swap, drop-glow,
 right-press-survives-drag, and positional far-slot drop laws) runs with
 `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js` (`T3K_E2E_APP` env
-overrides the app binary). The shipped
+overrides the app binary). **Second regression: `conv-strip.js`** — an
+**11-check** standalone script driving the `node-conv-strip` handler
+(NodeViewE2E.cpp, ops select / export-click / curve-in / curve-out): probe
+the 6-section `convStripStateForE2E()` string, the guarded export toast, the
+Dwell label in the `<labels>` field, the buttons-beside-the-bar coordinates,
+and the F In / F Out curve-band opens (`band=in` / `out`). It is a separate
+script, not a node-drag.js section, because two AppConnections in one
+process race on socket teardown (unregistered message → `Response::fail`,
+TestCentre.cpp:97). The shipped
 plugin binary is untouched — only UiTestbed hosts the e2e port
 (`--e2e-test-port=`).

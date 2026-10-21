@@ -45,6 +45,8 @@ sources:
     resource: repo://plugin/ui/views/PluginHeader.cpp
   - id: openwiki-source-174467a0c2e30a63c2e8869e
     resource: repo://plugin/ui/views/PluginRoot.h
+  - id: openwiki-source-cc9bf106d26f04ab8caa6c85
+    resource: repo://plugin/ui/widgets/ConvCurveBand.h
   - id: openwiki-source-b3e537fe86dd20c6a400c242
     resource: repo://script/tile-ocr.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
@@ -53,10 +55,10 @@ sources:
     resource: repo://test/src/strip_knob_tests.cpp
   - id: openwiki-source-fde83b2ad879efba1865ca8d
     resource: repo://test/src/theme_palette_tests.cpp
-generated: { by: "pi", at: "2026-10-18T14:31:43.894Z" }
+generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T05:59:08.607Z
+    at: 2026-10-21T08:40:03.735Z
 ---
 
 
@@ -266,7 +268,7 @@ node-view.md).
   work — the six-mode row is the mode axis, and the type axis is the new
   second chip beside it.
 
-## Conv tile: face rework + right-click curve bands (2026-10-20, commit 44a78ea)
+## Conv tile: face rework + right-click curve bands (2026-10-20 commit 44a78ea, updated 9a5c3c8)
 
 Supersedes the 89afb4e Settings/Export-view face. The conversion tile's face
 is now a **7-col grid**:
@@ -282,16 +284,24 @@ Key decisions:
   engine law `(s-0.5)*48` dB at Processor.cpp:1283 means knob 0.25..0.75 =
   −12..+12 dB, the window clamps the face to a readable sub-range). No DSP
   or state change.
-- **Start/End on the face**: `scales::convStart()`/`convEnd()` (linear 0..10 s,
-  2 dp) — these now have home knobs, which is *why* the old separate
-  Settings view (the 7-knob Start/End/Pre/F In/F Out/InCrv/OutCrv grid) was
-  deleted from both the tile and the node strip.
+- **Start/End on the face**: per-IR scale `scales::convTrimScale(
+  rawSeconds)` (KnobScale.h:675) — linear 0..cap, 2 dp, the cap being the
+  raw IR length rounded up to whole seconds (sub-second IRs get a 1 s face;
+  the cap is cached per whole-second value). The raw length rides the chain
+  state as `convRawSeconds` (EffectParams.cpp:155-158 passes it in), so a
+  window can never point past a short IR's tail and silently keep the old
+  kernel. These now have home knobs (tile AND strip), which is *why* the old
+  separate Settings view (the 7-knob Start/End/Pre/F In/F Out/InCrv/OutCrv
+  grid) was deleted from both. On IR load the window resets: Start=0,
+  End=raw length, Time=1.00× (see the ir-convolution page).
 - **InCrv/OutCrv → right-click curve bands**: a `ConvCurveBand` (a
-  `Popover` subclass in EffectTile.h, 130×76, one 32-px knob at
+  `Popover` subclass in the shared widget **`plugin/ui/widgets/ConvCurveBand.
+  h`** — hoisted out of EffectTile.h in 9a5c3c8 so the node strip runs the
+  SAME bands, 130×76, one knob at
   `scales::convFade()`) opens on **right-click** (or touch long-press) of the
   F In knob (`curveInBand_`, InCrv) / F Out knob (`curveOutBand_`, OutCrv).
   The anchor face knob is **armed** while its band is open — its label stays
-  `theme::kBrandYellow` via the new `Knob::Options.labelArmed` +
+  `theme::kBrandYellow` via the `Knob::Options.labelArmed` +
   `Knob::setArmed(bool)` (Knob.cpp:418 colour gate). EffectTile implements
   `SecondaryPressTarget` (mouseDown + secondaryPress → `secondaryPressImpl`
   → `openConvCurveBand`; the gate-knob deck is the precedent). `openConvCurveBand`

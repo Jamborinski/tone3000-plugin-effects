@@ -43,10 +43,10 @@ sources:
     resource: repo://test/src/effect_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
     resource: repo://test/src/plate_family_tests.cpp
-generated: { by: "pi", at: "2026-10-14T21:12:00.922Z" }
+generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T05:59:08.607Z
+    at: 2026-10-21T08:40:03.735Z
 ---
 
 
@@ -432,6 +432,28 @@ JUCE's non-uniform convolution engine (head partition + tail partitions),
   path, not at first wet.
 - **Amplitude law: JUCE `Normalise`** — energy-based, 0.125/sqrt of the
   hottest channel energy; the IR's absolute level means nothing.
+- **Wet soft-knee limiter** — a **wet-only, stateless** peak-level
+  shaver on the live wet path (LUT, 1024 entries, **no user knob, not
+  exported**): `clipGainDb(u)` with `u = ln|x|`, the fitted
+  `H_db(u) = 2.2886 + (−5.1009·u − 9.6838)·T` where `T =
+  smoothstep((u + 1.4498)/4.4287)` — knee ≈ 0.25 dB from linear below
+  0.3, ceiling gain 1.3232. The LUT fill MUST use
+  `juce::Decibels::decibelsToGain` (an `exp(db*0.05)` fill is off a
+  constant −1.29 dB). See `research/conv-wet-clip.md` for the provenance
+  (never named in shipping code).
+- **Mod layer soft clip** (the 2026-10-21 click fix, replacing the
+  one-pole write-tau that lowpassed the modulated layer to near-silence):
+  the wet ring write is raw; a `tanh` soft clip is applied to the **added
+  mod layer only** (`kModClipScale = 1e-2`, `ConvolutionReverb.h:172`) —
+  zero-latency, stateless, causal. `setModClipScaleForTest` (`<0` = linear,
+  bit-exact anchor for the contract tests; `0` = ship).
+- **Per-IR trim cap** — the Start/End faces use
+  `scales::convTrimScale(rawSeconds)` so a window can never point past a
+  short IR's tail (an empty window silently keeps serving the old kernel).
+  **On IR load** the window resets to the full span and the stretch to
+  1.00× (`ProcessorChain.cpp:464-466`, before `setParams`): Start = 0, End
+  = raw length, Time = 1.00×. The raw length rides the chain state as
+  `convRawSeconds` (see the param-chain-wiring page).
 
 What this engine adds over the amp-IR path (the creative / modeling layer):
 - an explicit **Start/End trim window** in seconds of the raw IR (JUCE Trim
@@ -440,8 +462,11 @@ What this engine adds over the amp-IR path (the creative / modeling layer):
   re-samples the edited IR to the engine rate — no home resampler);
 - **Fade in / Fade out** fractions of the edited IR with a curve exponent
   per ramp;
-- **Pre** (0..100 ms wet pre-delay), **Width** (M/S fold), smoothed **Gain**
-  (0.5 = 0 dB) — all live on the wet path, none baked into the kernel;
+- **Pre** (0..100 ms wet pre-delay), **Width** (M/S fold; a mono IR uses a
+  Haas pair), the **Dwell** input gain (the `inputGain` store behind a ±18 dB
+  display window — `scales::convDwell()`, identity `toStored`) and the
+  smoothed **output Gain** (0.5 = 0 dB) — all live on the wet path, none
+  baked into the kernel;
 - the **4.0 (quad) → stereo downmix law** at load:
   `L = (c0 + c2)/√2, R = (c1 + c3)/√2` — JUCE itself reads only channels
   0/1 and would silently drop the rear pair, so the fold happens here first.

@@ -17,14 +17,16 @@ sources:
     resource: repo://plugin/src/ProcessorChain.cpp
   - id: openwiki-source-8a517d0ba4e262c409b9866c
     resource: repo://plugin/src/ProcessorModelLoader.cpp
+  - id: openwiki-source-2cc0983ddb88288e69accf75
+    resource: repo://plugin/ui/core/KnobScale.h
   - id: openwiki-source-323fe87bd1df0bede6a732eb
     resource: repo://test/src/convolution_reverb_tests.cpp
   - id: openwiki-source-a95d9a96cf87c30a610c9c3b
     resource: repo://test/src/processor_tests.cpp
-generated: { by: "pi", at: "2026-10-18T23:18:48.824Z" }
+generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T05:59:08.607Z
+    at: 2026-10-21T08:40:03.735Z
 ---
 
 
@@ -114,23 +116,32 @@ Its own additions:
   Stage 5 as a zero-caller).
 - **Explicit Start/End trim window** in **seconds** of the raw IR
   (JUCE's built-in Trim is silence-stripping only — the user can cut to a
-  chosen time window).
+  chosen time window). The **UI faces are per-IR**: `scales::convTrimScale(
+  rawSeconds)` (`KnobScale.h:675`) caps the knob at the raw IR length rounded
+  up (sub-second IRs get a 1 s face) — the old fixed 10 s faces let a window
+  point past a short IR's tail, and the empty window silently kept serving
+  the old kernel. The raw length rides the chain state as `convRawSeconds`
+  (all four state places). **On IR load** the window is reset to the full
+  span and the stretch to 1.00× (`ProcessorChain.cpp:464-466` in
+  `loadConvIr`, before `setParams`): `convStartS = 0.0`, `convEndS =
+  rawSeconds()`, `convPitch = 0.5`.
 - **User time-stretch** (25 % .. 400 % length scale, log-uniform; JUCE
   re-samples the edited IR to the engine rate — no home resampler).
 - **Fade in / Fade out** fractions of the edited IR with a curve exponent
   per ramp.
 - **Pre** (0..100 ms wet pre-delay), **Width** (M/S fold), smoothed **Gain**
   (0.5 = 0 dB) — all live on the wet path, none baked into the kernel.
-- **Mod wet-ring click fix** (commit 44a78ea, spec spc-1792538043915-13755):
-  one-pole smoothing on the modulated wet **ring write** — `kModWriteTauMs =
-  80.0` (`ConvolutionReverb.h:168`), state `modSmPrev_[2]` / `modSmCoef_`
-  (`ConvolutionReverb.h:423-425`, coef `exp(-1/(rate * wMs * 1e-3))` recomputed
-  in `prepare()`/per-callback). The write is smoothed **before** the comb taps
-  read it, so the LFO pass can't re-emit dry wet transients every
-  period — the "periodic clicking when Mod is up" the user heard. Zero-latency
-  and causal (a one-pole is a causal flatter; no look-ahead, no oversample).
-  `setModWriteTauForTest(ms)`: `<0` = raw write, bit-exact (the pre-fix
-  contract tests pin this); `0` = ship default.
+- **Mod layer soft clip** (commit 9a5c3c8, spec spc-1792538043915-13755;
+  supersedes the 44a78ea one-pole write-tau, which lowpassed the modulated
+  layer to ~silence — layer +0.00 dB at mod 1.0): the wet ring write is
+  **raw again**, and a `tanh` soft clip is applied to the **added layer
+  only** (never the wet itself) before it is summed in: `lay = cl * tanh(
+  lay / cl)` where `cl` is the soft-clip scale `kModClipScale = 1e-2`
+  (`ConvolutionReverb.h:172`), site `ConvolutionReverb.cpp:782-790,828`.
+  Zero-latency and stateless; mod 1.0 = +1.00 dB layer measured, and the
+  ship clip cuts the burst click hunt > 2× (derivative RMS). `setModClip-
+  ScaleForTest(scale)`: `<0` = linear (bit-exact anchor for the contract
+  tests), `0` = ship `kModClipScale`, `>0` = explicit — `ConvolutionReverb.h:320`.
 - **Wet soft-knee peak limiter** (the final wet stage, `ConvolutionReverb.cpp:845-849`,
   gated by `clipEnabled_`, NOT applied on the dying crossfade tail): a 1024-entry
   LUT over `log|x|` in `[kClipLogLo, kClipLogHi]` with the smoothstep
@@ -165,9 +176,12 @@ an `exportConvIr` WAV round-trip (`test/src/processor_tests.cpp`).
 
 From `plugin/src/ProcessorModelLoader.cpp`:
 
-- **`kMaxIrSeconds = 10.0`** — hard cap on loaded IR length (bounds memory
-  and engine-build time for arbitrary downloads while comfortably covering
-  any published reverb IR).
+- **`kMaxIrSeconds = 10.0`** — hard truncate cap on **tone-catalog** IR
+  length (bounds memory and engine-build time for arbitrary downloads while
+  comfortably covering any published reverb IR). User-loaded WAVs are capped
+  separately and higher: the engine's `ConvolutionReverb::kMaxIrSeconds =
+  30.0` (`plugin/include/effects/conv/ConvolutionReverb.h:133`, the "N s IR
+  cap" load error).
 - **`kShortIrMaxSeconds = 1.0`** (→ `kShortIrMaxBaseSamples = 1 × 48 kHz =
   48 000` samples at the base rate) — IRs at or below this are **short**
   (cabs): uniform zero-latency engine, **−18 dB output pad**, **100 %

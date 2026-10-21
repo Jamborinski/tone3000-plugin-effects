@@ -29,16 +29,18 @@ sources:
     resource: repo://plugin/ui/views/ChainScreen.h
   - id: openwiki-source-6c2abe72c3679eefdf9c9c53
     resource: repo://plugin/ui/views/gallery/EffectParams.h
+  - id: openwiki-source-cc9bf106d26f04ab8caa6c85
+    resource: repo://plugin/ui/widgets/ConvCurveBand.h
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
   - id: openwiki-source-949fdcdad6535ec560064216
     resource: repo://test/src/node_model_tests.cpp
   - id: openwiki-source-a9b10161f0531edad6c09d8e
     resource: repo://test/src/strip_knob_tests.cpp
-generated: { by: "pi", at: "2026-10-18T19:36:10.014Z" }
+generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T05:59:08.607Z
+    at: 2026-10-21T08:40:03.735Z
 ---
 
 # Node view: the signal-line grid
@@ -292,42 +294,65 @@ open mode menu does not leak over the gallery, gallery wheel scroll alive).
   the node view has no DragScroller (`scroller()` keeps returning the
   gallery's).
 
-## Conv strip: IR + Export header chrome (commits 89afb4e → 44a78ea)
+## Conv strip: IR + Export chrome, Dwell face, curve bands (commits 89afb4e → 9a5c3c8)
 
 The conv node strip (selected conv block) shows **two header buttons, always
-visible, to the right of the `CONVOLUTION` mode bar**: **Load IR** (`loadIr_`,
-120×24, calls `NodeView::startConvIrLoader(blockId)`) and **Export**
-(`settingsExport_`, 58×24, calls `NodeView::startConvExportLoader(blockId)`),
-both right-aligned in the header at `btnTop = kStripHeadH + 3`
-(NodeView.cpp:1406-1412). The **Settings/Export band that lived here before the
-44a78ea face rework is GONE** — `settingsToggle_`, the `setConvStripSettings`
-toggle, and the 4-column 7-knob settings grid (Start / End / Pre / F In / F Out /
-InCrv / OutCrv) were all deleted, because those parameters now have **home
-knobs on the gallery tile's face** (Start/End on the face, InCrv/OutCrv in the
-right-click curve bands — see the ui page's conv face-rework note). The strip
-band is fixed-height: `convBand = convStrip ? 78 : 0`
-(NodeView.cpp:1122-1127); the rest of that band is the single knob row plus the
-`KernelPlot` preview.
+visible, immediately to the right of the `CONVOLUTION` mode bar** — not
+right-aligned (m04482's red annotation superseded the earlier top-right
+placement): **Load IR** (`loadIr_`, 120×24, at `btnX = 14 + nameW + 8`)
+and **Export** (`settingsExport_`, 58×24, at `btnX + 120 + 8`), both at
+`btnTop = kStripHeadH + 3` (NodeView.cpp:1445-1452). The **Settings/Export
+band that lived here before the 44a78ea face rework is GONE** — `settings-
+Toggle_`, the `setConvStripSettings` toggle, and the 4-column 7-knob settings
+grid were all deleted, because those parameters now have **home knobs on the
+face** (Start/End on the strip face, InCrv/OutCrv in the right-click curve
+bands below). The strip band is fixed-height: `convBand = convStrip ? 78 : 0`
+(NodeView.cpp:1122-1127); the rest of that band is the single knob row plus
+the `KernelPlot` preview.
 
-**Export:** the **Export** button calls
-`NodeView::startConvExportLoader(blockId)` (NodeView.cpp:1720), which
-toasts "No IR loaded in this block" (guard) otherwise opens a save
-FileChooser (default name `<irName>_t3k_48k24.wav`, `untitled.wav` when the
-IR has no name) and calls
+**Dwell face + black thumbs (9a5c3c8, the m04334 strip-parity fixes):** the
+conv strip's input knob is labelled **Dwell** and rides the `scales::
+convDwell()` scale (the ±18 dB display window over the `inputGain` store,
+identity `toStored`) — NodeView.cpp:1300 `add(&scales::convDwell(),
+"inputGain", "Dwell", ..., help::Key::reverbDwell)`, value resync at
+:1384 `setv(1, &scales::convDwell(), in, false)`. And every strip knob gets
+the **black secondary thumb** (`o.thumb = Knob::Thumb::secondary`,
+NodeView.cpp:1345) so the strip matches the gallery tile.
+
+**Curve bands on the strip (9a5c3c8):** the InCrv/OutCrv knobs that were
+off-face in 44a78ea are reached the same way as on the tile — right-click
+(or long-press) **F In** / **F Out**. `NodeView` is now a `SecondaryPress-
+Target`; the two conv curve knobs (strip indices 10/11) forward secondary
+presses up (`Knob.cpp:165-167`) and also carry `onLongPress` (NodeView.
+cpp:1362/1365). `NodeView::openConvCurveBand(anchor)` (NodeView.cpp:1465)
+picks the band by index (10 → `curveInBand_`, 11 → `curveOutBand_`),
+dismisses the sibling, resyncs the knob from `convInCurve`/`convOutCurve`
+via `knobFromStored(scales::convFade(), …)`, arms the anchor (brand-yellow
+label), and opens the shared `ConvCurveBand` popover above it. The band was
+hoisted to **`plugin/ui/widgets/ConvCurveBand.h`** so the tile and strip
+share one widget; a direct secondary press on empty strip space also routes
+through `secondaryPressImpl`. Bands are closed in the dtor and before the
+strip knobs are rebuilt (anchors deleted).
+
+**Export:** the **Export** button calls `NodeView::startConvExportLoader(
+blockId)` (NodeView.cpp:1720), which toasts "No IR loaded in this block"
+(guard) otherwise opens a save FileChooser (default name `<irName>_t3k_48k24.
+wav`, `untitled.wav` when the IR has no name) and calls
 `chain.exportConvIr(blockId, dest, 24, 48000)` — 24-bit / 48 kHz default,
 the kernel baked as the live engine sees it (see the ir-convolution page's
 Kernel export section).
 
-**E2E:** `NodeView::convStripStateForE2E()` reports
-`no-strip`, or
-`<loadIrVis>:<exportVis>|<toast>|<convIr>` for the visible strip (the
-`<toggleVis>:<toggleOn>:<knobCount>/<visCount>` prefix was dropped with the
-settings band, NodeView.cpp:1708); the `node-conv-strip` handler
-(NodeViewE2E.cpp, ops select / export-click — the `toggle` op was removed)
-drives it; the 4-check regression
-`plugin/ui/testbed/e2e/conv-strip.js` is a STANDALONE script because two
-AppConnections in one process race on socket teardown (unregistered message
-→ `Response::fail`, TestCentre.cpp:97).
+**E2E:** `NodeView::convStripStateForE2E()` reports `no-strip`, or the
+**6-section** `<loadVis>:<exportVis>|<toast>|<convIr>|<labels>|<loadX>,
+<exportX>` for the visible strip (the `<labels>` field is the comma-joined
+knob-label string, which pins the Dwell rename; the coordinates pin the
+buttons-beside-the-bar layout, NodeView.cpp:1815) plus a `band` parameter
+from `convCurveBandStateForE2E()` → `none` (not a conv strip) / `closed` (conv,
+no band open) / `in` / `out` (NodeView.cpp:1853-1854). The `node-conv-strip`
+handler (NodeViewE2E.cpp, ops select / export-click / curve-in / curve-out)
+drives it; the **11-check** regression `plugin/ui/testbed/e2e/conv-strip.js`
+is a STANDALONE script because two AppConnections in one process race on
+socket teardown (unregistered message → `Response::fail`, TestCentre.cpp:97).
 
 ## Testbed
 

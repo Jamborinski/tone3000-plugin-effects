@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:46b241f091b469a3d4e47abd9a40446ad491a2f852c624611accee0aa0f10dfc",
+  "pageVersion": "sha256:dfea16c70d137e72c023767c1ffb6b1ac348f8ade18fa0bf286826055b42787f",
   "claims": [
     {
       "id": "claim_4e8284a0f0bc4fe0b4e5fa2bda920264",
@@ -78,7 +78,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
         }
       ]
     },
@@ -138,7 +138,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
         }
       ]
     },
@@ -162,7 +162,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
         }
       ]
     },
@@ -172,7 +172,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
         }
       ]
     },
@@ -186,7 +186,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
         }
       ]
     },
@@ -196,7 +196,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
         }
       ]
     },
@@ -210,7 +210,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
         },
         {
           "resource": "repo://test/src/strip_knob_tests.cpp",
@@ -224,7 +224,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
         }
       ]
     },
@@ -234,7 +234,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
         }
       ]
     },
@@ -244,7 +244,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
         }
       ]
     },
@@ -258,35 +258,65 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
         }
       ]
     },
     {
-      "id": "claim_89a15efe0a8e4466a63884eaa2a1d154",
-      "statement": "The conv node's strip carries Load IR + Export in its header (commit 89afb4e, face rework 44a78ea replaced the old Settings toggle + 7-knob settings band — settingsToggle_ / the 7 settings knobs / convStripSettings_ are all deleted): for a conv selection layoutStripKnobs places settingsExport_ ('Export', 58×24) and loadIr_ ('Load IR…', 120×24) ALWAYS VISIBLE in the strip header right-aligned at the y of the CONVOLUTION mode bar (btnTop = kStripHeadH + 3; NodeView.cpp:1406-1408), with the IR name/time label (convIr_, NodeView.cpp:1412) to their left; the conv band height is fixed (resized(): convBand = convStrip ? 78 : 0). The Export button (settingsExport_, NodeView.cpp:524) calls startConvExportLoader (NodeView.cpp:1720): no IR in the block → guard toast 'No IR loaded in this block' (the e2e-pinned path, since the save dialog can't be driven headless); else a save-mode FileChooser defaulting to <irName>_t3k_48k24/untitled.wav and, on pick, chain.exportConvIr(blockId, dest, 24, 48000). e2e surface: convStripStateForE2E() (NodeView.cpp:1708) returns 'no-strip' or '<loadIrVis>:<exportVis>|<toast>|<convIr>', driven by the node-conv-strip handler in plugin/ui/testbed/NodeViewE2E.cpp (the 'toggle' op was dropped with the settings band) and pinned by plugin/ui/testbed/e2e/conv-strip.js (its own script because two AppConnections in one process race on socket teardown).",
+      "id": "claim_f0c127a5602e4e208f46f6c825583195",
+      "statement": "Conv strip header, m05125 layout (supersedes the 89afb4e right-aligned buttons and m04482's below-the-bar position): for a conv selection layoutStripKnobs places Load IR (120x22) and Export (58x22) at btnY=23 — the SAME Y as the CONVOLUTION mode bar (modeB_.setBounds(14, 23, nameW, 22)) — starting at btnX = 14 + nameW + 8 (nameW = jmax(0, jmin(W-248, 320))), i.e. inline with the bar in the gap its red annotation pointed at (NodeView.cpp:1470-1473). The IR name/time label (convIr_, 14 px) sits at (14, 47) and the KernelPlot at (14, plotTop, jmin(520, W-280), 56), plotTop = kStripHeadH + 6 + 18; the conv band height is budgeted in resized() (convBand = convStrip ? 78 : 0). startConvExportLoader (NodeView.cpp:1880): no IR in the block -> guard toast 'No IR loaded in this block' (the e2e-pinned path, the save dialog can't be driven headless); else a save-mode FileChooser defaulting to ~/Music/<irName>_exported_48k24/untitled.wav (untitled_exported_48k24 when the block has no IR name — spec spc-1792589064398-69352, mirrored by the tile at EffectTile.cpp:1244) and, on pick, chain.exportConvIr(blockId, dest, 24, 48000); a convExportChooser_ + g_irLoaderSeq token guard drops stale results. startConvIrLoader (NodeView.cpp:1807) runs the async juce::FileChooser (*.wav;*.wave;*.aiff;*.aif) -> chain.loadConvIr(blockId, file), same token guard. CLEAR LAW: refreshModeLine's non-conv branch hides convPlot_/convIr_/loadIr_ AND settingsExport_, so selecting another kind after a convolution block leaks nothing.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+        }
+      ]
+    },
+    {
+      "id": "claim_95037ec4d42848e98cade27ff6dff11b",
+      "statement": "Conv strip Dwell face: the conv strip's second knob (idx 1) is labelled 'Dwell' and runs scales::convDwell() — the +/-18 dB DISPLAY window on the shared inputGainNormalized store with identity toStored (NodeView.cpp:1313-1317, help::Key::reverbDwell); the value resync path is setv(1, &scales::convDwell(), in, false) at :1406. The e2e layer pins the rename as TEXT: convStripStateForE2E's labels section must contain 'Dwell' and no bare 'In' (conv-strip.js checks).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+        }
+      ]
+    },
+    {
+      "id": "claim_5ae0db27868f4115a4512560cee34614",
+      "statement": "Conv strip thumbs + curve bands (m05141 + m04334 item 2): ONLY the F In / F Out faces (knobs()[10]/[11] on the 12-knob conv face mix/dwell/out/dry/time/pre/start/end/width/mod/f-in/f-out) get Knob::Thumb::secondary — the black 'right-clickable' thumb the Gate knob uses — via setThumb right after their onLongPress wiring (NodeView.cpp:1378-1386); every other strip knob stays primary (the earlier blanket secondary was the bug m05141 called out). onLongPress (500 ms touch; mouse secondary presses forward through Knob.cpp to the parent) calls openConvCurveBand(anchor) (:1487): it maps knob index 10 -> curveInBand_, 11 -> curveOutBand_ (NodeView-owned members created with the strip at :633-642), closes the other band, resyncs the band knob from the block's convInCurve/convOutCurve stored value, and opens the band over the anchor's OverlayHost with Placement::above. The bands are the SAME plugin/ui/widgets/ConvCurveBand.h panel the gallery tile uses (kWidth=130, kHeight=76, single InCrv/OutCrv knob on scales::convFade(), its own knob also Thumb::secondary); the band's onChange writes back through chain.setBlockParam(id, 'convInCurve'/'convOutCurve', knobToStored). closeConvCurveBands() runs on strip rebuild (:1341) and selection change (:656).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+        },
+        {
+          "resource": "repo://plugin/ui/widgets/ConvCurveBand.h",
+          "version": "repo-file-v1:sha256:bda623ef029f0ecd063f9dff885076560af142a408cab0f228115077bce8674e"
+        }
+      ]
+    },
+    {
+      "id": "claim_004ab9985f0e44dfbcc3e507de81f60c",
+      "statement": "Conv-strip e2e surface: convStripStateForE2E() (NodeView.cpp:1837) returns 'no-strip' or a 6-section pipe-joined string '<loadIrVis>:<exportVis>|<toast>|<convIr>|<labels comma-joined>|<loadX>,<exportX>' — the labels section exists to pin the Dwell rename and the x-section to pin the inline-with-the-bar button positions. convCurveBandStateForE2E() (:1867) returns 'none' (no conv strip) / 'closed' / 'in' / 'out'. The node-conv-strip handler in plugin/ui/testbed/NodeViewE2E.cpp:261-280 takes blockId (selectBlockForShot) + op in {export-click, curve-in, curve-out} (curve ops drive openConvCurveBandForE2E on knobsForE2E()[10]/[11]) and returns {state, band}. plugin/ui/testbed/e2e/conv-strip.js is a STANDALONE 11-check script (own process — two AppConnections in one process race on socket teardown, TestCentre.cpp:97) pinning: face chrome visible, Dwell not In, Load IR/Export inline with the bar, guard toast on export with no IR, F In/F Out bands open + mutual dismissal, chrome stable.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/testbed/NodeViewE2E.cpp",
-          "version": "repo-file-v1:sha256:68b20034588a387c48b67e1fbb8f755ee9f9b16a635d3db86597ec27cda2e661"
+          "version": "repo-file-v1:sha256:5ef749288edb5610244fa9dae0df9dd3ca6a61cf939e547b4aa9780a43111f8a"
         },
         {
           "resource": "repo://plugin/ui/testbed/e2e/conv-strip.js",
-          "version": "repo-file-v1:sha256:6f71c43721712c68e7794bb1e53828635e3638ce2b7d3845991dc81bd78739aa"
+          "version": "repo-file-v1:sha256:48d3d9203f9acbbfab46680fa33764afb7b818351123d099a2e53956682a2ddb"
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
-        },
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeView.h",
-          "version": "repo-file-v1:sha256:e0f423b9fcd927475c952e8ed2c04acbafe0af2efcc7d3580dde2f2666189f51"
+          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-21T05:59:08.607Z"
+    "at": "2026-10-21T08:40:03.735Z"
   }
 }

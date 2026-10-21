@@ -31,10 +31,10 @@ sources:
     resource: repo://plugin/ui/views/PluginHeader.cpp
   - id: openwiki-source-a20d64964340cf417ace1f84
     resource: repo://test/src/add_at_slot_tests.cpp
-generated: { by: "pi", at: "2026-10-12T23:07:19.188Z" }
+generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T05:59:08.607Z
+    at: 2026-10-21T08:40:03.735Z
 ---
 
 
@@ -79,10 +79,29 @@ codebase:
 - `delayHeads()` — shows 1..4 heads, stores 0..1 (the classic 2026-10-06
   Heads bug).
 - `springLines` — shows 1..6 lines, stores 0..1.
-- `convGain`, `convWidth`, `convFade`, `convTone`, `convPitch` — Convolution
-  reverb: gain ±dB, width %, tone ±12 dB, pitch 0.25x..4x. All store 0..1.
+- `convGain`, `convDwell`, `convWidth`, `convFade`, `convPitch` —
+  Convolution reverb: gain ±dB, dwell (the ±18 dB display window over the
+  `inputGain` store, identity `toStored`), width %, fades %, pitch 0.25x..4x.
+  All store 0..1. (`convTone` no longer exists on the conv face; `convStart-
+  S`/`convEndS` store **seconds** directly — their per-IR faces come from
+  `scales::convTrimScale(rawSeconds)`, `KnobScale.h:675`, not a `toStored`
+  split.)
 - `compClip` — CLIP depth knob: shows 0..200%, stores the 0..2 raw depth
   the engine clamps to.
+
+### Conv `convRawSeconds` (engine-observed IR length, shipped 2026-10-21)
+
+`convRawSeconds` is the raw, untrimmed IR length in seconds — the cap the
+Start/End **UI faces** use (`scales::convTrimScale`, so a window can never
+point past a short IR's tail). It is **engine-observed, not dialable**: it
+is set in `getChainState` (`BlockRow.convRawSeconds`, filled from
+`block->conv.rawSeconds()` when an IR is loaded — ProcessorChain.cpp:1452,
+serialized only `if (> 0)` at :1638), `parseItem` (`num(v, "convRawSeconds",
+0.0)` — ChainState.cpp), and `ProcessorState.cpp` (the `setProperty` after
+`convSeconds`) — three of the four places; there is deliberately **no**
+`updateBlockParam` branch (nothing user-written may touch it). A missing
+key falls back to 0.0, and `convTrimScale` turns that into a 1 s face
+rather than a 0-cap knob.
 
 For every other knob (ms/Hz/BPM/ratio/dB stored in real units, or pure
 0..1 identity), `toStored` is left empty and the storage domain IS the

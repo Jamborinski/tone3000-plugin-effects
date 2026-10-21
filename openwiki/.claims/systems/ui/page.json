@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:87017425baf5e7d1afecb5fc2c40318f17476b86b3ee0e4a6da8e650a0011234",
+  "pageVersion": "sha256:8f538361f5569802ebc3aa79055d70338d42b7c58769342212c2454f642b4df2",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -72,11 +72,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:d4c5c3ba8a1fba44db88dffd61765e16496c7ceec8929956a2e52c802ed5a84f"
+          "version": "repo-file-v1:sha256:fde7bfcbb18d359666a17d264c85175cbf9b5fce311a915d7a9835a1f7a1f805"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:cdb4e4d95ba0fe42180bea468a04fd221db9352d00336cc5a98155784b0d4238"
+          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
         }
       ]
     },
@@ -86,7 +86,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:cdb4e4d95ba0fe42180bea468a04fd221db9352d00336cc5a98155784b0d4238"
+          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
         }
       ]
     },
@@ -100,7 +100,7 @@
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:d4c5c3ba8a1fba44db88dffd61765e16496c7ceec8929956a2e52c802ed5a84f"
+          "version": "repo-file-v1:sha256:fde7bfcbb18d359666a17d264c85175cbf9b5fce311a915d7a9835a1f7a1f805"
         },
         {
           "resource": "repo://plugin/ui/views/PluginHeader.cpp",
@@ -108,7 +108,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:cdb4e4d95ba0fe42180bea468a04fd221db9352d00336cc5a98155784b0d4238"
+          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
         }
       ]
     },
@@ -122,7 +122,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:cdb4e4d95ba0fe42180bea468a04fd221db9352d00336cc5a98155784b0d4238"
+          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
         }
       ]
     },
@@ -179,22 +179,62 @@
       ]
     },
     {
-      "id": "claim_ba00fcb14bd84c96b28a628c27a2c9af",
-      "statement": "Knob FACE SIZE (R3 UI addendum, 2026-10-16; conv Settings view replaced by curve bands at 44a78ea): the compact knob face (kCompactKnobFace = 32 px, defined at plugin/ui/views/gallery/EffectTile.cpp:21) applies to compact tiles AND the convolution AND the reverb full tile (14 ternary sites verified present; 12.0-px labels via `if (faceSize != theme::kKnobSizeSecondary) o.labelSize = 12.0f;` inside knob() at :37). The conv full tile's former 2026-10-20 Settings view (commit 89afb4e, the 7 settings knobs Start/End/Pre/F In/F Out/InCrv/OutCrv) was DELETED at 44a78ea; in its place the curve knobs (InCrv/OutCrv) live in ConvCurveBand popovers (a ConvCurveBand is a Popover subclass, plugin/ui/views/gallery/EffectTile.h, single Knob at .size=32 / labelOnTop / scales::convFade()) that open on right-click (or touch long-press) of the F In / F Out face knobs. The reverb compact param-stream gates and the 6+6 layout are unchanged.",
+      "id": "claim_41ee22d2a6b44431a8e89a4b74919a13",
+      "statement": "Conv Start/End faces use scales::convTrimScale(b.convRawSeconds) (KnobScale.h:675): a per-IR linear 0..cap-second scale (2 dp, 's') whose cap is the raw IR length rounded UP to whole seconds (jlimit 1..999 — a sub-second IR gets a 1 s face, not 0), cached in a static unordered_map<int, KnobScale> keyed by the whole-second cap. The stored domain is seconds in every case (no toStored split, mirroring the delay/chorus time knobs). Reason (m04334 item 5, spec spc-1792564638419-71605): the old fixed convStart()/convEnd() 0..10 s faces let the user trim PAST the tail of a short IR, and an empty/past-tail trim window silently kept serving the old kernel; the face cap must track the loaded IR. This is also where the on-load defaults depend on the face knowing the IR length (Start=0 / End=IR-length set in ProcessorChain::loadConvIr, plus the strip's IR-length-change rebuild — see the node-view page). Wired at EffectParams.cpp:155-158 as the Start/End scales of the conv full param table (tile and strip share paramsFor).",
       "evidence": [
         {
-          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:cdb4e4d95ba0fe42180bea468a04fd221db9352d00336cc5a98155784b0d4238"
+          "resource": "repo://plugin/ui/core/KnobScale.h",
+          "version": "repo-file-v1:sha256:fde7bfcbb18d359666a17d264c85175cbf9b5fce311a915d7a9835a1f7a1f805"
         },
         {
-          "resource": "repo://plugin/ui/views/gallery/EffectTile.h",
-          "version": "repo-file-v1:sha256:a493c72a544aeb518914ec74e0c761fbda85825c728f2a9e439c056d12672016"
+          "resource": "repo://plugin/ui/views/gallery/EffectParams.cpp",
+          "version": "repo-file-v1:sha256:9fe44b6c46c48e1ae32171d226a3c54ae0744412d8630e31ce67c004c897fcaa"
         }
       ]
     },
     {
-      "id": "claim_6b3f4d4d8432467880a3bdc83b09b320",
-      "statement": "juce-end-to-end supplement (2026-10-18, commit f0b06d4; drag-UX closeout 6df21a2; m06828 batch 72f48ea; conv-strip layer commit b80bca7; face rework 44a78ea): UiTestbed links the in-tree focusrite-e2e C++ transport (libs/focusrite-e2e, node_modules/ gitignored) and is inert unless launched with --e2e-test-port=N; NodeViewE2E.cpp registers a focusrite::e2e::CommandHandler driven from PluginRoot with real-pointer drag commands (node-drag-press stamps NodeView::setE2eReleaseButton around a synthetic release — JUCE 9 has no mouseWasClicked(int)) plus node-cells/node-geometry/node-tree/node-screenshot/node-conv-strip probes. TWO JS regression scripts: plugin/ui/testbed/e2e/node-drag.js (35 check() asserts; `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`, T3K_E2E_APP env override) guards the opaque full-size ghost + drag-UX laws; plugin/ui/testbed/e2e/conv-strip.js (now 4 checks after the 44a78ea face rework dropped the Settings toggle: conv node selected + face chrome visible Load IR+Export, the no-IR export-guard toast, and chrome survives the guarded export) drives the conv node-strip's header chrome through the node-conv-strip handler (the 'toggle' op was dropped with the settings band). conv-strip.js is a STANDALONE script because two AppConnections in one process race on socket teardown (the framework answers unregistered message types with Response::fail, TestCentre.cpp:97, and the second connection's teardown drops an in-flight response). This is a SUPPLEMENT to the testbed gates, not a replacement (spec spc-1792273651114-39383).",
+      "id": "claim_54bcb630f40b492d92750cd3b394e2ac",
+      "statement": "CONV FULL-TILE FACE (commit 44a78ea face rework; Start/End per-IR caps + shared curve band + _exported_ name as of 9a5c3c8/9c203cb): the convolution full tile's face is a 7-col grid — ROW 1 = Mix (chain-level) | Dwell | Dry | Time | Pre | Start | End; ROW 2 = Width | Mod | F In | F Out | Out (chain-level). The 'In' input_ knob is relabelled Dwell and re-scaled to scales::convDwell() (KnobScale.h:634 — a +-18..+18 dB DISPLAY window over the SAME inputGainNormalized store, identity toStored/fromStored, signed-dB format; the engine law (s-0.5)*48 dB at Processor.cpp means knob 0.25..0.75 = -12..+12 dB, the window is clamped so the face is a readable sub-range). Start/End on the face use the per-IR scales::convTrimScale(b.convRawSeconds) (see that claim) — the old fixed convStart()/convEnd() 0..10 s scales are gone, and the old separate Settings view is gone. InCrv/OutCrv are OFF the face: right-clicking (or touch long-press) F In opens the curveInBand_ band popover with an InCrv knob (scales::convFade()), F Out opens curveOutBand_ with OutCrv; the anchor knob is 'armed' (label theme::kBrandYellow while open) via Knob::Options.labelArmed + Knob::setArmed(bool) (Knob.cpp:418 colour gate); EffectTile implements SecondaryPressTarget (mouseDown + secondaryPress -> openConvCurveBand, EffectTile.cpp:1174+, ctor wiring :597-621) and the bands are the SHARED widget plugin/ui/widgets/ConvCurveBand.h (hoisted out of EffectTile.h at 44a78ea so the node strip can open the same band without a gallery dependency; band knob Thumb::secondary, kWidth=130 kHeight=76). Tile header: convIrButton_ 'Load IR'/'Change IR' at (76,4,68,20) + convExportButton_ 'Export' at (148,4,52,20) (EffectTile.cpp:1336-1337; paint titleX0 at :1510); Export -> save-mode FileChooser defaulting to <irName>_exported_48k24 (EffectTile.cpp:1244, mirroring the strip) -> chain.exportConvIr(blockId, dest, 24, 48000). Compact conv face: 4x2 sel[5]={1,2,6,0,5} (Time/Pre/Mod over Dwell/Width), FACE-ONLY (no curve bands/settings chrome — the compact branch squeezes the header, golden-verified). TileShot goldens conv-full.png + conv-compact.png (+ -empty/-long/-missing/-mono) re-shot and re-approved at 0 px; DspTests 582/582 at 9c203cb.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/core/KnobScale.h",
+          "version": "repo-file-v1:sha256:fde7bfcbb18d359666a17d264c85175cbf9b5fce311a915d7a9835a1f7a1f805"
+        },
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectParams.cpp",
+          "version": "repo-file-v1:sha256:9fe44b6c46c48e1ae32171d226a3c54ae0744412d8630e31ce67c004c897fcaa"
+        },
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
+          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
+        },
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectTile.h",
+          "version": "repo-file-v1:sha256:bf7d59e4be1ed5cbd1822795b3619a89e8059f1d5ba26c66ed78bb10ddff79c0"
+        },
+        {
+          "resource": "repo://plugin/ui/widgets/ConvCurveBand.h",
+          "version": "repo-file-v1:sha256:bda623ef029f0ecd063f9dff885076560af142a408cab0f228115077bce8674e"
+        }
+      ]
+    },
+    {
+      "id": "claim_b82615a1863243dea68012f3dafa878e",
+      "statement": "Knob FACE SIZE (R3 UI addendum, 2026-10-16; conv bands are the SHARED widget as of 44a78ea): the compact knob face (kCompactKnobFace = 32 px, plugin/ui/views/gallery/EffectTile.cpp:21) applies to compact tiles AND the convolution AND the reverb full tile (12.0-px labels via `if (faceSize != theme::kKnobSizeSecondary) o.labelSize = 12.0f;` inside knob() at :37). The conv full tile's former 2026-10-20 Settings view (commit 89afb4e, the 7 settings knobs Start/End/Pre/F In/F Out/InCrv/OutCrv) was DELETED at 44a78ea; in its place the curve knobs (InCrv/OutCrv) live in ConvCurveBand popovers that open on right-click (or touch long-press) of the F In / F Out face knobs — and the band is the SHARED widget plugin/ui/widgets/ConvCurveBand.h (a Popover subclass hoisted OUT of EffectTile.h at 44a78ea so the node-view strip, the primary UI surface, opens the same band from its F In / F Out knobs without a gallery dependency; single Knob at .size=32 / labelOnTop / scales::convFade() / Thumb::secondary). EffectTile.h now only #includes it and owns the two band instances. The reverb compact param-stream gates and the 6+6 layout are unchanged.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
+          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
+        },
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectTile.h",
+          "version": "repo-file-v1:sha256:bf7d59e4be1ed5cbd1822795b3619a89e8059f1d5ba26c66ed78bb10ddff79c0"
+        }
+      ]
+    },
+    {
+      "id": "claim_642e1c758897488baa5f21a58489622f",
+      "statement": "juce-end-to-end supplement (2026-10-18 commit f0b06d4; drag-UX closeout 6df21a2; m06828 batch 72f48ea; conv-strip layer b80bca7; face rework 44a78ea; Dwell/bands/inline-buttons layer 9a5c3c8-9c203cb): UiTestbed links the in-tree focusrite-e2e C++ transport (libs/focusrite-e2e, node_modules/ gitignored) and is inert unless launched with --e2e-test-port=N; NodeViewE2E.cpp registers a focusrite::e2e::CommandHandler driven from PluginRoot with real-pointer drag commands (node-drag-press stamps NodeView::setE2eReleaseButton around a synthetic release — JUCE 9 has no mouseWasClicked(int)) plus node-cells/node-geometry/node-tree/node-screenshot/node-conv-strip probes. TWO JS regression scripts: plugin/ui/testbed/e2e/node-drag.js (35 check() asserts; `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`, T3K_E2E_APP env override) guards the opaque full-size ghost + drag-UX laws; plugin/ui/testbed/e2e/conv-strip.js is now an 11-check standalone script (own process — two AppConnections in one process race on socket teardown: the framework answers unregistered message types with Response::fail, TestCentre.cpp:97, and the second connection's teardown drops an in-flight response) driving the node-conv-strip handler ops {select, export-click, curve-in, curve-out} and pinning: face chrome visible, 'Dwell' not bare 'In' in the labels section, Load IR/Export inline with the CONVOLUTION bar (x-section), no-IR export guard toast, F In -> InCrv band / F Out -> OutCrv with mutual dismissal (band section), chrome stable. This is a SUPPLEMENT to the testbed gates, not a replacement (spec spc-1792273651114-39383).",
       "evidence": [
         {
           "resource": "repo://plugin/ui/testbed/CMakeLists.txt",
@@ -202,43 +242,21 @@
         },
         {
           "resource": "repo://plugin/ui/testbed/NodeViewE2E.cpp",
-          "version": "repo-file-v1:sha256:68b20034588a387c48b67e1fbb8f755ee9f9b16a635d3db86597ec27cda2e661"
+          "version": "repo-file-v1:sha256:5ef749288edb5610244fa9dae0df9dd3ca6a61cf939e547b4aa9780a43111f8a"
         },
         {
           "resource": "repo://plugin/ui/testbed/e2e/conv-strip.js",
-          "version": "repo-file-v1:sha256:6f71c43721712c68e7794bb1e53828635e3638ce2b7d3845991dc81bd78739aa"
+          "version": "repo-file-v1:sha256:48d3d9203f9acbbfab46680fa33764afb7b818351123d099a2e53956682a2ddb"
         },
         {
           "resource": "repo://plugin/ui/testbed/e2e/node-drag.js",
           "version": "repo-file-v1:sha256:abd241b5825e73f0a06c4b48b57c9ecafb03cdccbc10712efdd2a154e9ad37bd"
         }
       ]
-    },
-    {
-      "id": "claim_62f499a340b54f8da547416b9b5c7a6b",
-      "statement": "CONV FULL-TILE FACE REWORK (commit 44a78ea; supersedes the 89afb4e Settings/Export-view face): the convolution full tile's face is a 7-col grid. ROW 1 = Mix (chain-level) | Dwell | Dry | Time | Pre | Start | End; ROW 2 = Width | Mod | F In | F Out | Out (chain-level). The 'In' input_ knob is relabelled Dwell and re-scaled to scales::convDwell() (KnobScale.h:633 — a ±18..+18 dB DISPLAY window over the SAME inputGainNormalized store, identity toStored/fromStored, signed-dB format; the engine law (s-0.5)*48 dB at Processor.cpp means knob 0.25..0.75 = -12..+12 dB, the window is clamped so the face is a readable sub-range). Start/End moved ONTO the face (scales::convStart()/convEnd(), linear 0..10 s, 2 dp) — this is their home, the old separate Settings view is gone. InCrv/OutCrv are OFF the face: right-clicking (or touch long-press) the F In knob opens the curveInBand_ ConvCurveBand popover with an InCrv knob (scales::convFade()), right-clicking F Out opens curveOutBand_ with OutCrv; the anchor face knob is 'armed' (label stays theme::kBrandYellow while the band is open) via the new Knob::Options.labelArmed + Knob::setArmed(bool) (Knob.h/.cpp:418 colour gate); EffectTile implements SecondaryPressTarget (mouseDown + secondaryPress route to secondaryPressImpl -> openConvCurveBand; EffectTile.cpp:597-621 ctor wiring, :1174-1220 the band methods). The tile header puts convIrButton_ 'Change IR'/'Load IR' at (76,4,68,20) and convExportButton_ 'Export' at (148,4,52,20) to the right of the title (paint titleX0 = 30 for full conv; EffectTile.cpp:1336-1346). Export -> enterConvExport (a save-mode FileChooser defaulting to <irName>_t3k_48k24) -> chain.exportConvIr(blockId, dest, 24, 48000). TileShot goldens conv-full.png + conv-compact.png (+ -empty/-long/-missing/-mono) re-shot and re-approved at 0 px after user review; DspTests 579/579.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:d4c5c3ba8a1fba44db88dffd61765e16496c7ceec8929956a2e52c802ed5a84f"
-        },
-        {
-          "resource": "repo://plugin/ui/views/gallery/EffectParams.cpp",
-          "version": "repo-file-v1:sha256:9eee9366eecfd47e8bc066164decb6174cde1011467aa05b48c80a7fd1c30a7e"
-        },
-        {
-          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:cdb4e4d95ba0fe42180bea468a04fd221db9352d00336cc5a98155784b0d4238"
-        },
-        {
-          "resource": "repo://plugin/ui/views/gallery/EffectTile.h",
-          "version": "repo-file-v1:sha256:a493c72a544aeb518914ec74e0c761fbda85825c728f2a9e439c056d12672016"
-        }
-      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-21T05:59:08.607Z"
+    "at": "2026-10-21T08:40:03.735Z"
   }
 }

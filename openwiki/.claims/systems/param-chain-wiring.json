@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:db12ae6a408de00615bdea4cee6c5e8db143e1a0295eb26ce8820a3b028a2f9d",
+  "pageVersion": "sha256:3c74bb3b759dc14f41f61752207f7ed07f76c778685b29f76c7e9d969e1087cb",
   "claims": [
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
@@ -36,73 +36,11 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:3c6eeb4762bb20a7ed07739bc6e66b1cb12f6b57ce4dc8cf9746562c671e356b"
+          "version": "repo-file-v1:sha256:1801b052b9fe17b7a2d7aca92d76a34cbe208bac775241cbe52d1b374e7db55c"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:ff55dee1d55097fdd70b711267a525fdb717ecffe6fce241daa3f1637969147f"
-        }
-      ]
-    },
-    {
-      "id": "claim_9cf834ee9ffd4e4d825b80f6aab73a80",
-      "statement": "(placeholder — see updated claim)",
-      "evidence": [
-        {
-          "resource": "repo://docs/agents/ui-wiring.md",
-          "version": "repo-file-v1:sha256:50797644b910fb3d7092230ed69fd4771bc7b2946f89d465e48c5c477f410e07"
-        },
-        {
-          "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:d4c5c3ba8a1fba44db88dffd61765e16496c7ceec8929956a2e52c802ed5a84f"
-        }
-      ]
-    },
-    {
-      "id": "claim_049ac154b25041fe8fa0bf8414e0fdcf",
-      "statement": "T-DAT-001 added a THIRD family member to the four-state-place rule: engine param reverbLoCut (0..1 clamped, default 0 = bit-pass). Its four places (line numbers as of the 2026-10-20 state-dedup pass, which inserted resolveModelRefs into ProcessorState.cpp, shifting its later lines +6; the compressor reorg was commit 3ffb35b): (1) ChainBlock.h:409 field `double reverbLoCut = 0.0;` + the reverbParams() aggregate ending `reverbSharedMod, reverbWave, reverbLoCut` (reverbParams() at :423, aggregate end :433; matches Reverb::Params struct order) + ProcessorChain.cpp BlockRow init (:1204), row mirror (:1322), and params->setProperty(\"reverbLoCut\", …) in serializeChain (:1500); (2) ChainState.cpp parseItem :230 `item.reverbLoCut = num(v[\"params\"], \"reverbLoCut\", 0.0)`; (3) ProcessorChain.cpp isEffectParam list (:1939) + updateBlockParam branch (:2230-2231, jlimit 0..1 + block->reverb.setParams(block->reverbParams())); (4) ProcessorState.cpp blockState.setProperty (:289) + jlimit restore (:480).",
-      "evidence": [
-        {
-          "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:7562d6c4af63bb001257e2af596f59c9d20747c84eb3e54a079cc83715ead452"
-        },
-        {
-          "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:3c6eeb4762bb20a7ed07739bc6e66b1cb12f6b57ce4dc8cf9746562c671e356b"
-        },
-        {
-          "resource": "repo://plugin/src/ProcessorState.cpp",
-          "version": "repo-file-v1:sha256:ad055d383717f9f03bbd1d0a1f93b9b4d7ea101b621b7069923a642f2af0cf04"
-        },
-        {
-          "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:ff55dee1d55097fdd70b711267a525fdb717ecffe6fce241daa3f1637969147f"
-        }
-      ]
-    },
-    {
-      "id": "claim_5b55b75567f348e0bd7babb60b817954",
-      "statement": "The compressor TYPE axis added a fourth family member to the four-state-place rule: compType (int; per-mode sub-model within the compressor mode; 0 = the mode's own engine, the only type today — Compressor::numTypes(mode) returns 1 for every mode). Its four places (ProcessorState.cpp line numbers as of the 2026-10-20 state-dedup pass, +6 shift from resolveModelRefs): (1) ChainBlock.h:362 field `int compType = 0;` (immediately after compMode :361) + ProcessorChain.cpp BlockRow init (:1190), copyLane mirror row.compType = block->compType (:1291), and params->setProperty(\"compType\", row.compType) in serializeChain (:1464); (2) ChainState.h:160 `int compType = 0;` on ChainItem + ChainState.cpp parseItem :190 `item.compType = num(v[\"params\"], \"compType\", 0)`; (3) ProcessorChain.cpp param == \"compType\" in the isEffectParam list (:1939) + the else-if branch (:2123-2124) which stores the value VERBATIM (`block->compType = static_cast<int>(value)`) — no clamp here, the engine clamps via setParams (jlimit 0..numTypes-1) — and appends block->compType to the compressor setParams call site (:2128); (4) ProcessorState.cpp blockState.setProperty :238 + getProperty restore :390 (cast to int, verbatim). compType is the 11th and last field of the Compressor::Params aggregate, so every block->compressor.setParams({...}) call site (8 in ProcessorChain.cpp :2085-2146, 1 in ProcessorState.cpp :521) passes block->compType last.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:7562d6c4af63bb001257e2af596f59c9d20747c84eb3e54a079cc83715ead452"
-        },
-        {
-          "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:3c6eeb4762bb20a7ed07739bc6e66b1cb12f6b57ce4dc8cf9746562c671e356b"
-        },
-        {
-          "resource": "repo://plugin/src/ProcessorState.cpp",
-          "version": "repo-file-v1:sha256:ad055d383717f9f03bbd1d0a1f93b9b4d7ea101b621b7069923a642f2af0cf04"
-        },
-        {
-          "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:ff55dee1d55097fdd70b711267a525fdb717ecffe6fce241daa3f1637969147f"
-        },
-        {
-          "resource": "repo://plugin/ui/model/ChainState.h",
-          "version": "repo-file-v1:sha256:6759fd9b4bc456c48540060167701dc0fbe8b47aab3f27b89abbd89735d91296"
+          "version": "repo-file-v1:sha256:f88e49822e5cf5fa8159c45b346df55bdb356637aa924f79f137a665e79d9715"
         }
       ]
     },
@@ -140,7 +78,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:3c6eeb4762bb20a7ed07739bc6e66b1cb12f6b57ce4dc8cf9746562c671e356b"
+          "version": "repo-file-v1:sha256:1801b052b9fe17b7a2d7aca92d76a34cbe208bac775241cbe52d1b374e7db55c"
         },
         {
           "resource": "repo://test/src/add_at_slot_tests.cpp",
@@ -159,8 +97,30 @@
       ]
     },
     {
-      "id": "claim_5a435e18b5cc45569504e7c60f02b8f2",
-      "statement": "T-DAT-001 added a THIRD family member to the four-state-place rule: engine param reverbLoCut (0..1 clamped, default 0 = bit-pass). Its four places (line numbers as of the post-settings/export-tab state; the 2026-10-20 state-dedup pass inserted resolveModelRefs into ProcessorState.cpp, shifting its later lines +6; the compressor reorg was commit 3ffb35b): (1) ChainBlock.h:412 field `double reverbLoCut = 0.0;` + the reverbParams() aggregate ending `reverbSharedMod, reverbWave, reverbLoCut` (reverbParams() at :426, aggregate end :436; matches Reverb::Params struct order) + ProcessorChain.cpp BlockRow field (:1312 region), row mirror (:1423), and params->setProperty(\"reverbLoCut\", …) in serializeChain (:1601); (2) ChainState.cpp parseItem :230 `item.reverbLoCut = num(v[\"params\"], \"reverbLoCut\", 0.0)` (+ ChainState.h:187); (3) ProcessorChain.cpp isEffectParam list (:2070) + updateBlockParam branch (jlimit 0..1 + block->reverb.setParams(block->reverbParams())); (4) ProcessorState.cpp blockState.setProperty (:289) + jlimit restore (:480). The same four places carry convStartS/convEndS (BlockRow fields at :1312, row mirror :1430, serializeChain :1608, parseItem ChainState.cpp:238-239, updateBlockParam :2388-2390 with the kMaxIrSeconds clamp) — the conv Settings tab (commit 89afb4e) is their UI home via scales::convStart()/convEnd() (KnobScale.h:647-653, linear 0..10 s).",
+      "id": "claim_72effe7320e24967886eb0c0018aeb61",
+      "statement": "convRawSeconds is the raw, untrimmed IR length in seconds — the cap the Start/End UI faces use (scales::convTrimScale, KnobScale.h:675, so a window can never point past a short IR's tail). It is engine-observed, not dialable: set in getChainState (BlockRow.convRawSeconds at ProcessorChain.cpp:1327, filled from block->conv.rawSeconds() when an IR is loaded at :1452, serialized only if > 0 at :1638-1639), parseItem (num(v, \"convRawSeconds\", 0.0) — ChainState.cpp:251, ChainState.h:219), and ProcessorState.cpp (setProperty at :315, guarded by block.conv.hasIr()) — three of the four state places. There is deliberately NO updateBlockParam branch (nothing user-written may touch it). A missing key falls back to 0.0, and convTrimScale turns that into a 1 s face rather than a 0-cap knob. The on-load defaults (m04426/m04437, commit 9a5c3c8) reset convStartS=0.0 / convEndS=rawSeconds() / convPitch=0.5 in loadConvIr (ProcessorChain.cpp:463-467) before setParams, so switching to a shorter IR never leaves a stale trim window.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/src/ProcessorChain.cpp",
+          "version": "repo-file-v1:sha256:1801b052b9fe17b7a2d7aca92d76a34cbe208bac775241cbe52d1b374e7db55c"
+        },
+        {
+          "resource": "repo://plugin/src/ProcessorState.cpp",
+          "version": "repo-file-v1:sha256:c223c6db697b9961f2b104d75078dc5a5e14f0adfa0768d7ee81e2654d15cffa"
+        },
+        {
+          "resource": "repo://plugin/ui/model/ChainState.cpp",
+          "version": "repo-file-v1:sha256:f88e49822e5cf5fa8159c45b346df55bdb356637aa924f79f137a665e79d9715"
+        },
+        {
+          "resource": "repo://plugin/ui/model/ChainState.h",
+          "version": "repo-file-v1:sha256:f682afa7dc676d8a112d7530f71b59462872fe7e539ae02775de15f6b80aa51d"
+        }
+      ]
+    },
+    {
+      "id": "claim_0b2c1c4e3c8b4daab01d7c4de8faaad1",
+      "statement": "T-DAT-001 engine param reverbLoCut (0..1 clamped, default 0 = bit-pass) and the conv trim fields convStartS/convEndS (seconds, clamped to 0..kMaxIrSeconds=30) both follow the four-state-place rule. Line numbers as of commit 9c203cb: reverbLoCut: (1) ChainBlock.h:412 field + reverbParams() at :426 ending reverbSharedMod, reverbWave, reverbLoCut (aggregate end :436) + ProcessorChain.cpp BlockRow :1312, row mirror :1431, serializeChain :1611; (2) ChainState.h:187, ChainState.cpp parseItem :230; (3) ProcessorChain.cpp isEffectParam :2082 + updateBlockParam :2381-2382 (jlimit 0..1 + block->reverb.setParams); (4) ProcessorState.cpp :289 / restore :483. convStartS/convEndS: (1) ChainBlock.h:458-459, BlockRow :1319, mirror :1438-1439, serializeChain :1618-1619; (2) ChainState.h:202-203, ChainState.cpp :238-239; (3) isEffectParam :2082, updateBlockParam :2400-2406 (jlimit 0..ConvolutionReverb::kMaxIrSeconds); (4) ProcessorState.cpp :296-297 / restore :505-506. Their per-IR UI faces come from scales::convTrimScale(rawSeconds) (KnobScale.h:675), not a toStored split — the stored values are always absolute seconds.",
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
@@ -168,21 +128,51 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:3c6eeb4762bb20a7ed07739bc6e66b1cb12f6b57ce4dc8cf9746562c671e356b"
+          "version": "repo-file-v1:sha256:1801b052b9fe17b7a2d7aca92d76a34cbe208bac775241cbe52d1b374e7db55c"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
-          "version": "repo-file-v1:sha256:ad055d383717f9f03bbd1d0a1f93b9b4d7ea101b621b7069923a642f2af0cf04"
+          "version": "repo-file-v1:sha256:c223c6db697b9961f2b104d75078dc5a5e14f0adfa0768d7ee81e2654d15cffa"
+        },
+        {
+          "resource": "repo://plugin/ui/core/KnobScale.h",
+          "version": "repo-file-v1:sha256:fde7bfcbb18d359666a17d264c85175cbf9b5fce311a915d7a9835a1f7a1f805"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:ff55dee1d55097fdd70b711267a525fdb717ecffe6fce241daa3f1637969147f"
+          "version": "repo-file-v1:sha256:f88e49822e5cf5fa8159c45b346df55bdb356637aa924f79f137a665e79d9715"
         }
       ]
     },
     {
-      "id": "claim_1011e8420b554ce09bb2d739e446e3b7",
-      "statement": "KnobScale (plugin/ui/core/KnobScale.h, port of knobScale.ts) keeps three domains separate: normalised 0..1 knob position, a DISPLAY unit (ms/dB/%/name) for the drag readout and type-in, and a STORAGE contract via toStored/fromStored that is what actually goes into the block param. knobToStored()/knobFromStored() fall back to toDisplay/fromDisplay when no explicit storage pair is declared — bit-identical legacy behaviour for real-unit-stored and identity-stored fraction knobs. Knobs whose stored domain is 0..1 but whose display unit is human (delayHeads 1..4 heads, compClip 0..2 raw depth behind a 0..200 % face, convGain ±24 dB, convDwell ±18 dB, reverbDry ±24 dB, convPitch 0.25x..4x, spring lines 1..6) MUST declare toStored/fromStored or the tile writes the display unit into a 0..1 param, then the engine clamps it to 1.0, then the next resync snaps the knob back to max — the 2026-10-06 Heads glitch. convDwell (KnobScale.h:633, commit 44a78ea) is the convolver input Dwell knob: a ±18 dB display window (juce::jmap 0..1 ↔ −18..+18) over the SHARED 0..1 input-gain store with identity toStored/fromStored — same store as convGain (±24 dB), so 0.25..0.75 of the dial spans the ±18 dB window with no DSP/state change. Its format() integer-check is `std::abs(db - std::trunc(db)) < 0.05` — the original `std::abs(db) - std::trunc(db)` equals 2|db| for negative db and rendered \"-18.0 dB\"; the fix was propagated to convGain and reverbDry too. T-DAT-001 additions: reverbSharedMod and reverbWave (R2) have NO custom scale (sharedMod is a plain 0..1 depth OFF at 0 by default; wave is an int 0..4 detent, identity-bound); the LoCut knob uses the loCutTaper() scale (KnobScale.h:792) with toStored(n) = 0.85 * pow(n, 0.7) (0..0.85 fraction for the mode-0 45 Hz HPF blend — never reaches 1.0; the 40-120 Hz absolute band-floor measured at full LoCut, user m03131 approved the 80% ceiling) with an inverse fromStored.",
+      "id": "claim_f1dbf3f037ec4509a055a528e308e722",
+      "statement": "The compressor TYPE axis: compType (int; per-mode sub-model; 0 = the mode's own engine, the only type today — Compressor::numTypes(mode) returns 1 for every mode). Four places (line numbers as of commit 9c203cb): (1) ChainBlock.h:365 field int compType = 0 (immediately after compMode :364) + ProcessorChain.cpp BlockRow :1298, copyLane mirror :1400, serializeChain :1575; (2) ChainState.h:160 + ChainState.cpp parseItem :190; (3) ProcessorChain.cpp isEffectParam :2082 + updateBlockParam :2274-2275 (stores verbatim via static_cast<int> — no clamp here, the engine clamps via setParams jlimit 0..numTypes-1) + appends to compressor setParams at :2279; (4) ProcessorState.cpp :238 / restore :393 (cast to int, verbatim). compType is the 11th and last field of Compressor::Params, so every block->compressor.setParams({...}) call site passes block->compType last.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/ChainBlock.h",
+          "version": "repo-file-v1:sha256:7562d6c4af63bb001257e2af596f59c9d20747c84eb3e54a079cc83715ead452"
+        },
+        {
+          "resource": "repo://plugin/src/ProcessorChain.cpp",
+          "version": "repo-file-v1:sha256:1801b052b9fe17b7a2d7aca92d76a34cbe208bac775241cbe52d1b374e7db55c"
+        },
+        {
+          "resource": "repo://plugin/src/ProcessorState.cpp",
+          "version": "repo-file-v1:sha256:c223c6db697b9961f2b104d75078dc5a5e14f0adfa0768d7ee81e2654d15cffa"
+        },
+        {
+          "resource": "repo://plugin/ui/model/ChainState.cpp",
+          "version": "repo-file-v1:sha256:f88e49822e5cf5fa8159c45b346df55bdb356637aa924f79f137a665e79d9715"
+        },
+        {
+          "resource": "repo://plugin/ui/model/ChainState.h",
+          "version": "repo-file-v1:sha256:f682afa7dc676d8a112d7530f71b59462872fe7e539ae02775de15f6b80aa51d"
+        }
+      ]
+    },
+    {
+      "id": "claim_4a70f1f337164afd8f7f4e1d91abae05",
+      "statement": "KnobScale (plugin/ui/core/KnobScale.h, port of knobScale.ts) keeps three domains separate: normalised 0..1 knob position, a DISPLAY unit for the drag readout and type-in, and a STORAGE contract via toStored/fromStored. knobToStored()/knobFromStored() fall back to toDisplay/fromDisplay when no explicit storage pair is declared. Knobs whose stored domain is 0..1 but whose display unit is human MUST declare toStored/fromStored or the tile writes the display unit into a 0..1 param, the engine clamps to 1.0, and the next resync snaps the knob back to max (the 2026-10-06 Heads glitch). Current toStored list (line numbers as of commit 9c203cb): delayHeads (1..4 heads), compClip (0..2 raw depth behind a 0..200% face), convGain ±24 dB (KnobScale.h:613), convDwell ±18 dB (KnobScale.h:634 — a ±18 dB display window over the SHARED 0..1 input-gain store with identity toStored, same store as convGain; 0.25..0.75 of the dial spans the ±18 dB window), convWidth % (KnobScale.h:654), convFade % (KnobScale.h:691), convPitch 0.25x..4x (KnobScale.h:780), spring lines (1..6). convTone no longer exists on the conv face (removed in the face rework, commit 44a78ea). convStartS/convEndS store seconds directly — their per-IR faces come from convTrimScale (KnobScale.h:675), not a toStored split. The dB format() integer-check is std::abs(db - std::trunc(db)) < 0.05 (the original std::abs(db) - std::trunc(db) equals 2|db| for negative db, rendering \"-18.0 dB\"; fixed and propagated to convGain and reverbDry). T-DAT-001: reverbSharedMod and reverbWave have NO custom scale (sharedMod is plain 0..1; wave is an int 0..4 detent, identity-bound); LoCut uses loCutTaper() (KnobScale.h:816) with toStored(n) = 0.85 * pow(n, 0.7) (0..0.85 fraction for the mode-0 45 Hz HPF blend).",
       "evidence": [
         {
           "resource": "repo://docs/agents/ui-wiring.md",
@@ -190,13 +180,13 @@
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:d4c5c3ba8a1fba44db88dffd61765e16496c7ceec8929956a2e52c802ed5a84f"
+          "version": "repo-file-v1:sha256:fde7bfcbb18d359666a17d264c85175cbf9b5fce311a915d7a9835a1f7a1f805"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-21T05:59:08.607Z"
+    "at": "2026-10-21T08:40:03.735Z"
   }
 }
