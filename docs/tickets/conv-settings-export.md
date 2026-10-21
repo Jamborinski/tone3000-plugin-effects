@@ -1,7 +1,7 @@
 # Conv Settings/Export tab
 
-**Status:** COMPLETE (2026-10-20)
-**Specs:** spc-1792522875871-24097 (export tab, met) · spc-1792517552202-52890 (wet soft clip, met)
+**Status:** COMPLETE (2026-10-21) — through the 6-bug fix round (9a5c3c8 + 9c203cb)
+**Specs:** spc-1792522875871-24097 (export tab, met) · spc-1792517552202-52890 (wet soft clip, met) · spc-1792564638419-71605 (per-IR trim caps + on-load defaults, met) · spc-1792565053306-88633 (Time reset on load, met) · spc-1792589023865-46676 (buttons inline with bar, met, supersedes 13218/39946) · spc-1792589023867-19343 (mod click law, met) · spc-1792589064398-69352 (_exported_ names, met) · spc-1792589064399-43563 (IR-switch knob refresh, met) · spc-1792589272121-54302 (F In/F Out-only black thumbs, met) · spc-1792589854716-34930 (measured loud sweep, met)
 
 ## Goal
 
@@ -61,6 +61,82 @@ Start/End/Pre already had all four (ProcessorChain.cpp getChainState/
 copyLane/serializeChain, ChainState.cpp parseItem, setBlockParam branch,
 ProcessorState.cpp) — no new state places were needed; the UI just surfaced
 existing params.
+
+## Six-bug fix round (9a5c3c8 + 9c203cb, 2026-10-21)
+
+User complaint round m04334 (6 bugs, node strip screenshot) + follow-ups
+m04400-m04482, m05125-m05187. **The node strip is the acceptance surface**
+(AGENTS.md hard rule, m04350).
+
+### Mod tanh (specs 19343 + 34930)
+
+The 44a78ea "click fix" (80 ms one-pole τ on the wet ring write, kModWriteTauMs)
+was a ~2 Hz lowpass on the wet — the LFO layer died (+0.00 dB,
+taps ~7e-6 vs wet ~2e-3). Replaced with **raw ring write + tanh soft-clip on
+the ADDED layer only**: `wet[i] += cl*tanh(lay/cl)` (ConvolutionReverb.cpp:828),
+`kModClipScale` (ConvolutionReverb.h:179), `setModClipScaleForTest(double)`
+(<0 = linear bit-exact anchor, 0 = ship, >0 = explicit). Shipped at 1e-2,
+then **1e-1** after the measured loud sweep (m05168: mix + mod at max, gain
+1.0/+18 dB dwell, 3c wet clip OFF per m05187, ExpDecayIr 4096/48k/2.0 s, 75 Hz
+bursts): the true-linear layer is 44 % of wet RMS; at 1e-2 the 1e-2 ceiling
+sat at the layer RMS → 97–99 % of steady samples inside the tanh knee
+(LFO-swept compression = the audible periodic click); 1e-1 = 0 % clamped at
+all drive, jump-RMS 0.26× the raw layer, crest 3.08→2.23, layer stays
+78–80 % of linear (audible, m05168 "slightly more noticeable").
+Permanent laws: ModLayerClipClickHunt (ship-jump ≤ raw-jump, crest ≤ 0.8×raw)
++ ModLoudDriveLaw (per amp {0.6,1.0,1.2}: layer ≥ 3 % wet, jump ≤ 1.25× wet
+jump, clipped/linear RMS ≥ 0.75) in
+plugin/test/src/convolution_reverb_tests.cpp.
+
+### Strip face fixes (specs 71605, 88633, 46676, 54302, 69352, 43563)
+
+- **Dwell** (9a5c3c8): the strip's "In" was relabelled Dwell on scales::convDwell
+  (±18 dB display window over the inputGainNormalized store, identity toStored)
+  and its Start/End got the per-IR faces (below).
+- **Per-IR trim caps** (71605): Start/End faces use
+  `scales::convTrimScale(b.convRawSeconds)` (KnobScale.h:675) — linear 0..cap s,
+cap = jlimit(1..999, ceil(rawSeconds)), cached static map; the old fixed
+  0..10 s convStart()/convEnd() faces are gone. On load, ProcessorChain::loadConvIr
+  sets convStartS=0.0, convEndS=raw seconds, convPitch=1.0 **before** setParams
+  (Time reset = spec 88633). An empty/past-tail window was the root cause of
+  "set start/end to the end and nothing changes" — the engine silently kept
+  serving the old kernel.
+- **IR-switch glitch** (43563): a strip knob bakes its scale pointer at build
+time, so switching to a different-length IR left the knobs mapping new stored
+  values through the stale cap. Fix: file-static g_lastConvRawSeconds in
+  NodeView.cpp — syncStrip flags g_stripDirty when the selected conv block's
+  raw seconds change → full rebuildStripKnobs (fresh scales + fresh values).
+- **Buttons inline with the bar** (46676, 9c203cb): Load IR (120×22) + Export
+  (58×22) at y=23 — same row as the CONVOLUTION mode button (was y=59, below
+  the 56 px header). Tile: convIrButton_ (76,4,68,20) + convExportButton_
+  (148,4,52,20) in the header.
+- **Black thumbs F In/F Out only** (54302): the 9a5c3c8 blanket
+  `o.thumb = Knob::Thumb::secondary` in addOne hit EVERY strip knob → 9c203cb
+  removed it; only the conv block's knobs()[10]/[11] (F In/F Out, wired to the
+curve bands) get `Knob::setThumb(Thumb::secondary)` (new Knob.h setter)
+  along with the shared ConvCurveBand's own knob.
+- **Export names** (69352): default save name is now
+  `<irBase>_exported_48k24.wav` (untitled_exported_48k24 when no IR) —
+  NodeView.cpp:1887-1888 + EffectTile.cpp:1244 (was `_t3k_48k24`).
+
+### Commits (this section)
+
+- `9a5c3c8` — conv: strip face fixes (Dwell, curve bands, black thumbs) + mod tanh + per-IR trim cap — 18 files, +472/−123
+- `9c203cb` — conv: mod clip scale 1e-1, export names _exported_48k24, Load IR/Export inline with the mode bar, per-IR trim-cap strip refresh, only F In/F Out + band knobs black — 6 files, +167/−29
+- `2e01a52` — docs(openwiki): update for mod-1e-1 clip scale, _exported_48k24 names, per-IR trim caps, F In/F Out-only band thumbs
+
+### Closeout log (2026-10-21)
+
+| Gate | Result |
+|------|--------|
+| DspTests | **582/582** (incl. ModLoudDriveLaw 3-assert sweep + rewritten ModLayerClipClickHunt + convTrimScale/on-load-defaults laws) |
+| GUI build | TONE3000_Standalone / UiTestbed / TileShot all link |
+| UiTestbed --selftest | green |
+| e2e node-drag.js | **35/35** |
+| e2e conv-strip.js | **11/11** (Dwell label, buttons beside the bar, no-IR guard, F In→InCrv / F Out→OutCrv bands with mutual dismissal) |
+| TileShot goldens | 6 conv-*.png **0 px IDENTICAL** to committed (strip-only changes; tile faces unchanged) |
+| OpenWiki | run `e9ea429a` (update, 9 pages) — committed 2e01a52 |
+| Windows stage | TBD (script/win-standalone.sh, T3K_STAGE_DIR=/mnt/c/Users/jambo/Downloads) |
 
 ## Face rework (commit 44a78ea, 2026-10-20) — supersedes the Settings view
 
