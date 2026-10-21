@@ -188,12 +188,12 @@ but NOT its re-emitted HF edges.
 | e2e conv-strip.js | **11/11** |
 | TileShot goldens | 6 conv-*.png **0 px IDENTICAL** to committed (DSP-only change) |
 | OpenWiki | run `8a7937bc` (update, 4 pages: ir-convolution, effects-invariants, dsp-test-suite, quickstart) + hand-edited prose |
-| Windows stage | pending |
+| Windows stage | `TONE3000-win-20261021-134528` / TONE3000.exe md5 `099b985257dcf60116ca9ae6222e990d` |
 
 ### Commits (this section)
 
 - `2b04a71` — conv: kill the mod L/R-alternating click with a tap-sum one-pole — 3 files, +390/−3
-- `<pending>` — docs(openwiki): update for mod tap-tau click fix (run 8a7937bc) + ticket log
+- `27e0e35` — docs(openwiki): update for mod tap-tau click fix (run 8a7937bc) + ticket log
 
 ## Face rework (commit 44a78ea, 2026-10-20) — supersedes the Settings view
 
