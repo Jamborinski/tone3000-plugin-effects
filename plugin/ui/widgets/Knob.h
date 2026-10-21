@@ -118,6 +118,14 @@ public:
     options_.labelArmed = on;
     repaint();
   }
+  // Switch the face theme at runtime (F In / F Out knobs + their band
+  // knobs get black faces to flag the right-click/popover affordance;
+  // every other knob stays the default face — m05141).
+  void setThumb(Thumb t) {
+    if (options_.thumb == t) return;
+    options_.thumb = t;
+    repaint();
+  }
 
   // Every emitted value: drag steps, typed entries, resets.
   std::function<void(float)> onChange;

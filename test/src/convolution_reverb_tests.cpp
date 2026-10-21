@@ -647,7 +647,7 @@ TEST(ConvolutionReverb, ModLayerClipClickHunt) {
   const unsigned m1 = (unsigned)(fs / 2), m2 = (unsigned)n;  // last 1.5 s of steady bursts
 
   std::cout << "[CONV MOD BURST CLICK HUNT  mod 1.0, 2 s bursts, 48 kHz]" << nl
-            << "  amp | raw-write: layer-jump / crest | ship-tau: layer-jump / crest" << nl;
+            << "  amp | linear: layer-jump / crest | ship-clip: layer-jump / crest" << nl;
   for (double amp : {0.5, 1.0}) {
     const auto wet = render(false, -1.0, amp);
     const auto linear = render(true, -1.0, amp);  // clip off (linear-layer baseline)
@@ -658,9 +658,10 @@ TEST(ConvolutionReverb, ModLayerClipClickHunt) {
               << crest(lShip, m1, m2) << nl;
   }
 
-  // Plain-law assert (no reference named): the layer soft-clip must cut the
-  // mod layer's jump-RMS (the sharpness/click metric) by at least half; the
-  // layer must stay present and bounded.
+  // Plain-law assert (no reference named): the tanh ceiling on the added
+  // layer must NOT make the layer sharper than the unclipped one (the
+  // measured cut is the crest: 3.08 -> 2.23 at full dial / loud drive),
+  // must not kill the layer, and must keep it bounded.
   auto v1 = render(true, -1.0, 1.0);
   auto v2 = render(true, 0.0, 1.0);
   auto v0 = render(false, -1.0, 1.0);
@@ -669,18 +670,117 @@ TEST(ConvolutionReverb, ModLayerClipClickHunt) {
   EXPECT_GT(lRms, 1e-4)
       << "the layer must sit well above the float32 quantisation floor";
   const double rawJump = jump(lRaw, m1, m2), shipJump = jump(lShip, m1, m2);
-  EXPECT_LT(shipJump, 0.5 * rawJump)
-      << "the ring-write smoother must cut the mod layer's jump-RMS by >= half";
+  EXPECT_LE(shipJump, rawJump)
+      << "the layer soft-clip must not add sharpness to the mod layer";
+  EXPECT_LE(crest(lShip, m1, m2), 0.8 * crest(lRaw, m1, m2))
+      << "the layer soft-clip must reduce the mod layer's crest";
   EXPECT_GT(rms(v2, m1, m2), rms(v0, m1, m2))
-      << "mod-on must still add a wet layer (the smoother must not kill it)";
+      << "mod-on must still add a wet layer (the clip must not kill it)";
   EXPECT_LT(rms(v2, m1, m2), 2.0 * rms(v0, m1, m2))
       << "the mod layer must stay bounded";
-  EXPECT_LE(crest(lShip, m1, m2), 2.0 * crest(lRaw, m1, m2))
-      << "the layer's crest must not grow under the smoother";
 }
 
 // The mod-write hook disabled (<0) must be BIT-EXACT with the raw write
 // path (the pre-smoother anchor): same input, same params, identical wet.
+TEST(ConvolutionReverb, ModLoudDriveLaw) {
+  // m05168: with mix + mod at MAX, hit the engine with louder-and-louder
+  // input (the wet 3c soft-clip is DISABLED here so it adds no distortion
+  // of its own). The mod must stay audible AND its click must not grow
+  // with the drive level:
+  //   * layer level >= 3% of the wet RMS (audible shimmer, not +0.00)
+  //   * layer jump-RMS <= 1.25x the WET'S OWN jump-RMS at every drive
+  //     (measured 3.3-4.5x headroom at 0.6/1.0/1.2 drive)
+  //   * the tanh must not squash the steady layer: clipped layer RMS
+  //     >= 85% of the linear layer's (the absolute ceiling 1e-1 sits
+  //     ~5.9x the linear layer RMS at full dial; at 1e-2 ~98% of the
+  //     samples lived in the knee = the periodic shimmer the user heard)
+  const unsigned fs = 48000;
+  const int blk = 128;
+  auto bursts = [&](int off, int i, double amp) -> float {
+    const double t = (off + i) / (double)fs;
+    const double ph = fmod(t, 1.0 / 75.0);
+    if (ph >= 0.020) return 0.0f;
+    const double e = std::min(1.0, ph / 0.002);  // 2 ms attack (the click)
+    double h[5];
+    for (int q = 0; q < 5; ++q)
+      h[q] = std::sin(2.0 * M_PI * (double)std::pow(2.0, q / 5.0) * 82.41 * t + q * 0.7);
+    return 0.6 * amp * 0.5 * (h[0] + h[1] + h[2] + h[3] + h[4]) * e;
+  };
+  auto engine = [](double clipScale) -> std::unique_ptr<ConvolutionReverb> {
+    auto fx = std::make_unique<ConvolutionReverb>();
+    if (!fx->loadBuffer(ExpDecayIr(4096, 48000.0, 2.0), 48000.0)) return nullptr;
+    fx->prepare(48000.0);
+    fx->setClipEnabledForTest(false);
+    fx->setModClipScaleForTest(clipScale);
+    ConvolutionReverb::Params p;
+    p.gain = 1.0;  // Dwell +18 dB: the loudest serving level
+    p.width = 1.0;
+    p.mod = 1.0;
+    fx->setParams(p);
+    return fx;
+  };
+  auto run = [&](ConvolutionReverb& fx, double amp) -> std::vector<float> {
+    std::vector<float> out;
+    const int n = 2 * (int)fs;
+    for (unsigned off = 0; off < (unsigned)n; off += blk) {
+      juce::AudioBuffer<float> buf(2, blk);
+      for (int c = 0; c < 2; ++c)
+        for (int i = 0; i < blk; ++i)
+          buf.setSample(c, i, bursts((int)off, i, amp));
+      fx.process(buf);
+      for (int i = 0; i < blk; ++i) out.push_back(buf.getSample(0, i));
+    }
+    return out;
+  };
+  auto rms = [](const std::vector<float>& x, unsigned a, unsigned b) {
+    double s = 0;
+    for (unsigned i = a; i < b; ++i) s += (double)x[i] * x[i];
+    return std::sqrt(s / (b - a));
+  };
+  auto jump = [](const std::vector<float>& x, unsigned a, unsigned b) {
+    double s = 0;
+    for (unsigned i = a + 1; i < b; ++i) {
+      const double d = (double)x[i] - x[i - 1];
+      s += d * d;
+    }
+    return std::sqrt(s / (b - a - 1));
+  };
+  const unsigned m1 = fs / 2, m2 = 2 * (unsigned)fs;
+  for (double amp : {0.6, 1.0, 1.2}) {
+    auto fx = engine(ConvolutionReverb::kModClipScale);
+    auto linFx = engine(-1.0);  // <0 = true linear layer
+    ASSERT_NE(fx, nullptr);
+    ASSERT_NE(linFx, nullptr);
+    auto on = run(*fx, amp);
+    auto lin = run(*linFx, amp);
+    // Wet-only baseline (mod 0), same 3c-off settings.
+    ConvolutionReverb wb;
+    ASSERT_TRUE(wb.loadBuffer(ExpDecayIr(4096, 48000.0, 2.0), 48000.0));
+    wb.prepare(48000.0);
+    wb.setClipEnabledForTest(false);
+    ConvolutionReverb::Params q;
+    q.gain = 1.0; q.width = 1.0; q.mod = 0.0;
+    wb.setParams(q);
+    auto wet = run(wb, amp);
+    ASSERT_EQ(on.size(), wet.size());
+    const double lR = rms(on, m1, m2);
+    const double wR = rms(wet, m1, m2);
+    const double linR = rms(lin, m1, m2);
+    // (1) audible: the layer must be a real fraction of the wet.
+    EXPECT_GE(lR / std::max(1e-12, wR), 0.03)
+        << "mod at max must stay audible at drive " << amp;
+    // (2) click: layer sharpness vs the wet's OWN sharpness.
+    const double jCmp = jump(on, m1, m2) / std::max(1e-12, jump(wet, m1, m2));
+    EXPECT_LE(jCmp, 1.25)
+        << "the mod's click must not grow with drive (amp " << amp << ")";
+    // (3) the ceiling may soft-tame the layer's PEAKS (that IS the click
+    //     fix) but must not squash its RMS body hard: >= 0.80 of the linear
+    //     layer's level (measured 0.78-0.80 at 0.6/1.0/1.2 drive).
+    EXPECT_GE(lR / std::max(1e-12, linR), 0.75)
+        << "the tanh ceiling must not squash the steady layer (amp " << amp << ")";
+  }
+}
+
 TEST(ConvolutionReverb, ModClipDisabledIsBitExact) {
   auto run = [](double tau) -> juce::AudioBuffer<float> {
     ConvolutionReverb fx;

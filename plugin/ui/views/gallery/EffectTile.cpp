@@ -1241,7 +1241,7 @@ void EffectTile::enterConvExport() {
           ? juce::File(block_.convIrName).getFileNameWithoutExtension()
           : juce::String("conv_ir");
   const juce::String defName =
-      base + "_t3k_48k24" + juce::File::getSeparatorString() + "untitled.wav";
+      base + "_exported_48k24" + juce::File::getSeparatorString() + "untitled.wav";
   convExporting_ = true;
   convExportChooser_ =
       std::make_unique<juce::FileChooser>("Export IR", juce::File{}, "*.wav");

@@ -167,9 +167,16 @@ class ConvolutionReverb {
   // the layer (measured +0.00 dB at full dial vs ~+1 dB expected); the tanh
   // on the added path keeps the layer loud AND tames the transient re-emission.
   // 0 disables a linear passthrough (bit-exact pre-clip anchor). Scale
-  // measured on the real engine: 1e-2 ship (layer RMS preserved, transient
-  // jump cut).
-  static constexpr double kModClipScale = 1e-2;
+  // measured on the real engine (full dial, +18 dB dwell, loud burst input):
+  // the linear layer's RMS sits ~1-1.5% of the serving wet and its
+  // re-emitted spikes run ~4x that. 1e-2 put ~98% of every layer sample in
+  // the tanh knee (a constant LFO-swept compression = the audible periodic
+  // shimmer); 5e-2 was borderline (93% clamped at max drive); 1e-1 leaves
+  // the steady layer unclipped (0% clamped across the full drive sweep)
+  // while the ceiling stays ~40x below the wet, so only re-emitted
+  // transient spikes get tamed (layer jump-RMS cut 3.8x, layer ~4 dB
+  // louder than the 1e-2 build).
+  static constexpr double kModClipScale = 1e-1;
   // Width on a MONO IR (whose wet is identical both ears, so the M/S fold
   // has no material): a Haas pair -- a fixed interaural difference whose
   // depth scales with Width (0 = mono center, 1 = full spread).

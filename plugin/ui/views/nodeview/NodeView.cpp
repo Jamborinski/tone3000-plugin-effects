@@ -72,6 +72,10 @@ std::string g_lastStripBlockId;
 bool g_stripDirty = false;
 int g_stripCompMode = 0;
 int g_irLoaderSeq = 0;  // the active Load-IR launch (stale-token guard)
+// The selected conv block's raw IR length (seconds) — an IR swap to a
+// DIFFERENT length changes the Start/End scale cap, so the next sync
+// rebuilds the strip knobs once (fresh scale pointers, spec 43563).
+double g_lastConvRawSeconds = -1.0;
 
 juce::Font labelFont() { return Fonts::sans(11.0f); }
 juce::Font titleFont() { return Fonts::sans(15.0f, true); }
@@ -1202,6 +1206,14 @@ void NodeView::syncStrip() {
   }
   strip_->setVisible(true);
   if (g_lastStripBlockId == id) {
+    // IR swap to a different length: the Start/End knobs carry the OLD
+    // convTrimScale(cap) pointer; map through it and the new stored
+    // values (End is reset to the new raw length on load) land on wrong
+    // positions (knobs jumping, m05125 item 4). Rebuild once — fresh
+    // scales AND fresh values — only when the length actually changed.
+    if (b->isEffect && b->effectKind == "convolution"
+        && b->convRawSeconds != g_lastConvRawSeconds)
+      g_stripDirty = true;
     // Same block: a chain revision landed (a knob in flight, a param from
     // the chain). Refresh values + chrome IN PLACE so the drag survives.
     updateStripChrome(*b);
@@ -1209,11 +1221,15 @@ void NodeView::syncStrip() {
     refreshModeLine(st, *b);  // a mode pick must be visible immediately
     if (g_stripDirty) rebuildStripKnobs(st, *b);
     layoutStripKnobs();
+    g_lastConvRawSeconds =
+        (b->isEffect && b->effectKind == "convolution") ? b->convRawSeconds : -1.0;
     return;
   }
 
   st.clearKnobs();  // fresh pick: no knobs yet; keep the header components
   g_lastStripBlockId = id;
+  g_lastConvRawSeconds =
+      (b->isEffect && b->effectKind == "convolution") ? b->convRawSeconds : -1.0;
 
   // Stacked header (Q-Cortex style): block name (bold white) over the
   // coloured MODE cycler + TYPE cycler; power/remove at the far right.
@@ -1342,7 +1358,6 @@ void NodeView::rebuildStripKnobs(NodeStrip& st, const ChainItem& b) {
     o.labelOnTop = true;  // value slot above the face, name below
     o.defaultValue = pos;
     o.help = p.help;
-    o.thumb = Knob::Thumb::secondary;  // black faces (tile parity, m04334)
     auto* knob = new Knob(o);
     knob->setValue(pos);
     knob->onChange = [this, id = id.toStdString(), sc, identity,
@@ -1358,12 +1373,19 @@ void NodeView::rebuildStripKnobs(NodeStrip& st, const ChainItem& b) {
   // the touch counterpart of the right-click (gate-deck pattern).
   if (b.isEffect && b.effectKind == "convolution") {
     const int n = (int)st.knobs().size();
-    if (n > 10) st.knobs()[10]->onLongPress = [this, k = st.knobs()[10]]() mutable {
-      this->openConvCurveBand(k);
-    };
-    if (n > 11) st.knobs()[11]->onLongPress = [this, k = st.knobs()[11]]() mutable {
-      this->openConvCurveBand(k);
-    };
+    // Only F In (10) / F Out (11) + their band knobs are black (m05141).
+    if (n > 10) {
+      st.knobs()[10]->setThumb(Knob::Thumb::secondary);
+      st.knobs()[10]->onLongPress = [this, k = st.knobs()[10]]() mutable {
+        this->openConvCurveBand(k);
+      };
+    }
+    if (n > 11) {
+      st.knobs()[11]->setThumb(Knob::Thumb::secondary);
+      st.knobs()[11]->onLongPress = [this, k = st.knobs()[11]]() mutable {
+        this->openConvCurveBand(k);
+      };
+    }
   }
 }
 
@@ -1443,17 +1465,17 @@ void NodeView::layoutStripKnobs() {
   // shrunk face doesn't leave dead space.
   const int headPad = st.knobFace() < (int)kKnobFace ? 2 : 6;
   if (conv) {
-    // User's call (m04482, superseding m03044's top-right): Load IR +
-    // Export sit in the gap RIGHT OF THE CONVOLUTION mode bar — the red
-    // annotation in the strip screenshot pointed at exactly there.
-    const int btnTop = kStripHeadH + 3;
+    // User's call (m05125, superseding m04482's below-the-bar position):
+    // Load IR + Export sit RIGHT OF THE CONVOLUTION mode bar AND inline
+    // with it (same Y), in the gap the red annotation pointed at.
+    const int btnY = 23;  // == modeB_ y (setBounds above)
     const int btnX = 14 + nameW + 8;
-    st.loadIr().setBounds(btnX, btnTop, 120, 24);
-    st.settingsExport().setBounds(btnX + 120 + 8, btnTop, 58, 24);
+    st.loadIr().setBounds(btnX, btnY, 120, 22);
+    st.settingsExport().setBounds(btnX + 120 + 8, btnY, 58, 22);
     st.convPlot().setBounds(14, plotTop, juce::jmin(520, st.getWidth() - 280), 56);
     st.convIr().setFont(labelFont());
     st.convIr().setColour(juce::Label::textColourId, theme::kWhite);
-    st.convIr().setBounds(14, btnTop, st.getWidth() - 280 - 200 - 14, 14);
+    st.convIr().setBounds(14, 47, st.getWidth() - 280 - 200 - 14, 14);
   }
   const int knobTop = plotTop + plotH + (conv ? 0 : headPad);
   for (int i = 0; i < n; ++i)
@@ -1863,8 +1885,8 @@ void NodeView::startConvExportLoader(const std::string& blockId) {
     return;
   }
   const juce::String base =
-      b->convIrName.isNotEmpty() ? b->convIrName + "_t3k_48k24"
-                                  : "untitled_t3k_48k24";
+      b->convIrName.isNotEmpty() ? b->convIrName + "_exported_48k24"
+                                  : "untitled_exported_48k24";
   const juce::File def =
       juce::File::getSpecialLocation(juce::File::userHomeDirectory)
           .getChildFile("Music").getChildFile(base).getChildFile("untitled.wav");

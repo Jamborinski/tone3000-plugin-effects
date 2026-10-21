@@ -20,6 +20,7 @@ public:
   ConvCurveBand(const char* label, const KnobScale& scale, help::Key hk)
       : knob_(Knob::Options{.label = label,
                             .size = 32,
+                            .thumb = Knob::Thumb::secondary,
                             .scale = &scale,
                             .help = hk,
                             .labelOnTop = true}) {
