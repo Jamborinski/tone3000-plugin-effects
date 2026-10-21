@@ -622,6 +622,24 @@ private:
 NodeView::NodeView(Services& s) : services_(s), model_(s.chain.state()) {
   strip_ = new NodeStrip(*this);
   addAndMakeVisible(*strip_);
+  // Conv curve bands (right-click / long-press the strip's F In / F Out):
+  // the same one-knob popovers the gallery tile opens. The anchors are the
+  // strip's REBUILT knobs (face indices 10 / 11 on a conv face), wired per
+  // rebuild in rebuildStripKnobs; the bands themselves live here.
+  curveInBand_ = std::make_unique<ConvCurveBand>("InCrv", scales::convFade(),
+                                                 help::Key::convInCurve);
+  curveOutBand_ = std::make_unique<ConvCurveBand>("OutCrv", scales::convFade(),
+                                                  help::Key::convOutCurve);
+  curveInBand_->knob().onChange = [this](float v) {
+    if (g_lastStripBlockId.empty()) return;
+    services_.chain.setBlockParam(g_lastStripBlockId, "convInCurve",
+                                  knobToStored(scales::convFade(), (double)v));
+  };
+  curveOutBand_->knob().onChange = [this](float v) {
+    if (g_lastStripBlockId.empty()) return;
+    services_.chain.setBlockParam(g_lastStripBlockId, "convOutCurve",
+                                  knobToStored(scales::convFade(), (double)v));
+  };
   for (int i = 0; i < 2 * Row::kSlotCount; ++i)
     cells_.push_back(std::make_unique<NodeCell>(*this, i));
   for (auto& c : cells_) addAndMakeVisible(*c);
@@ -631,6 +649,7 @@ NodeView::NodeView(Services& s) : services_(s), model_(s.chain.state()) {
 
 NodeView::~NodeView() {
   services_.chain.removeListener(this);
+  closeConvCurveBands();
   cancelDrag();
 }
 
@@ -1274,8 +1293,16 @@ void NodeView::rebuildStripKnobs(NodeStrip& st, const ChainItem& b) {
     // Parity law (m01128): strip face == full gallery face. The trio is
     // NOT part of paramsFor — the baseline inline loop added it first.
     add(&scales::percent(), "mix", "Mix", b.params.mix, help::Key::effectMix);
-    add(&scales::gainDb(), "inputGain", "In", b.params.inputGain,
-        help::Key::effectInput);
+    if (b.effectKind == "convolution") {
+      // Dwell: the convolver's wet input gain — the shared inputGain store
+      // read on the +-18 dB window (the same law the conv tile's input_ uses;
+      // user m04334: the strip still showed a +-24 "In").
+      add(&scales::convDwell(), "inputGain", "Dwell", b.params.inputGain,
+          help::Key::reverbDwell);
+    } else {
+      add(&scales::gainDb(), "inputGain", "In", b.params.inputGain,
+          help::Key::effectInput);
+    }
     add(&scales::gainDb(), "outputGain", "Out", b.params.outputGain,
         help::Key::effectOutput);
     auto rest = paramsFor(b, false);
@@ -1295,6 +1322,7 @@ void NodeView::rebuildStripKnobs(NodeStrip& st, const ChainItem& b) {
   const int face = (int)std::min(list.size(), (size_t)kMaxKnobs) > 8 ? 32
                                                                      : (int)kKnobFace;
   st.setKnobFace(face);
+  closeConvCurveBands();  // the anchors below are about to be deleted
   st.clearKnobs();  // knobs only — clearContent hides the header (modeB_)
   g_stripDirty = false;
   auto addOne = [&](int i, const EffectParams& p) {
@@ -1314,6 +1342,7 @@ void NodeView::rebuildStripKnobs(NodeStrip& st, const ChainItem& b) {
     o.labelOnTop = true;  // value slot above the face, name below
     o.defaultValue = pos;
     o.help = p.help;
+    o.thumb = Knob::Thumb::secondary;  // black faces (tile parity, m04334)
     auto* knob = new Knob(o);
     knob->setValue(pos);
     knob->onChange = [this, id = id.toStdString(), sc, identity,
@@ -1325,6 +1354,17 @@ void NodeView::rebuildStripKnobs(NodeStrip& st, const ChainItem& b) {
   };
   for (int i = 0; i < (int)std::min(list.size(), (size_t)kMaxKnobs); ++i)
     addOne(i, list[i]);
+  // Conv face: long-press F In (10) / F Out (11) opens the curve band —
+  // the touch counterpart of the right-click (gate-deck pattern).
+  if (b.isEffect && b.effectKind == "convolution") {
+    const int n = (int)st.knobs().size();
+    if (n > 10) st.knobs()[10]->onLongPress = [this, k = st.knobs()[10]]() mutable {
+      this->openConvCurveBand(k);
+    };
+    if (n > 11) st.knobs()[11]->onLongPress = [this, k = st.knobs()[11]]() mutable {
+      this->openConvCurveBand(k);
+    };
+  }
 }
 
 void NodeView::updateStripKnobValues(NodeStrip& st, const ChainItem& b) {
@@ -1340,7 +1380,10 @@ void NodeView::updateStripKnobValues(NodeStrip& st, const ChainItem& b) {
   };
   if (b.isEffect) {
     setv(0, &scales::percent(), mix, true);
-    setv(1, &scales::gainDb(), in, true);
+    if (b.effectKind == "convolution")
+      setv(1, &scales::convDwell(), in, false);  // Dwell (convDwell stores identity)
+    else
+      setv(1, &scales::gainDb(), in, true);
     setv(2, &scales::gainDb(), out, true);
     auto rest = paramsFor(b, false);
     size_t i = 0;
@@ -1400,12 +1443,13 @@ void NodeView::layoutStripKnobs() {
   // shrunk face doesn't leave dead space.
   const int headPad = st.knobFace() < (int)kKnobFace ? 2 : 6;
   if (conv) {
-    // User's call (m03044): Load IR + Export sit RIGHT of the CONVOLUTION
-    // mode bar (their old positions crowded the name + the top-left plot
-    // line and the user "didn't see an export tab anywhere").
+    // User's call (m04482, superseding m03044's top-right): Load IR +
+    // Export sit in the gap RIGHT OF THE CONVOLUTION mode bar — the red
+    // annotation in the strip screenshot pointed at exactly there.
     const int btnTop = kStripHeadH + 3;
-    st.settingsExport().setBounds(st.getWidth() - 28 - 58, btnTop, 58, 24);
-    st.loadIr().setBounds(st.getWidth() - 28 - 58 - 8 - 120, btnTop, 120, 24);
+    const int btnX = 14 + nameW + 8;
+    st.loadIr().setBounds(btnX, btnTop, 120, 24);
+    st.settingsExport().setBounds(btnX + 120 + 8, btnTop, 58, 24);
     st.convPlot().setBounds(14, plotTop, juce::jmin(520, st.getWidth() - 280), 56);
     st.convIr().setFont(labelFont());
     st.convIr().setColour(juce::Label::textColourId, theme::kWhite);
@@ -1414,6 +1458,69 @@ void NodeView::layoutStripKnobs() {
   const int knobTop = plotTop + plotH + (conv ? 0 : headPad);
   for (int i = 0; i < n; ++i)
     st.knobs()[i]->setBounds(x0 + i * cw, knobTop, cw, kh);
+}
+
+  // ------------------------------------------------------- conv curve bands (m04334 item 2)
+
+void NodeView::openConvCurveBand(Knob* anchor) {
+  auto* st = strip_;
+  if (st == nullptr || !st->isVisible() || anchor == nullptr) return;
+  const auto* b = model_.selectedId.empty()
+                      ? nullptr
+                      : services_.chain.state().findBlock(model_.selectedId);
+  if (b == nullptr || b->effectKind != "convolution") return;
+  if (findParentComponentOfClass<OverlayHost>() == nullptr) return;
+  ConvCurveBand* band = nullptr;
+  auto& knobs = st->knobs();
+  for (int i = 0; i < (int)knobs.size(); ++i) {
+    if (knobs[i] != anchor) continue;
+    band = (i == 10) ? curveInBand_.get() : (i == 11 ? curveOutBand_.get()
+                                                     : nullptr);
+    break;
+  }
+  if (band == nullptr) return;
+  // One band at a time: dismiss the other (its onDismiss disarms its anchor),
+  // then resync this one's knob from the live block and arm the anchor.
+  closeConvCurveBands();
+  const double stored = (band == curveInBand_.get()) ? b->convInCurve
+                                                     : b->convOutCurve;
+  band->knob().setValue((float)knobFromStored(scales::convFade(), stored));
+  for (auto* k : knobs)
+    k->setArmed(k == anchor);
+  band->open(*anchor, Popover::Align::left, 6, 0, Popover::Placement::above);
+}
+
+void NodeView::closeConvCurveBands() {
+  if (curveInBand_ != nullptr && curveInBand_->isOpen())
+    curveInBand_->dismiss();
+  if (curveOutBand_ != nullptr && curveOutBand_->isOpen())
+    curveOutBand_->dismiss();
+}
+
+void NodeView::secondaryPressImpl(const juce::MouseEvent& e) {
+  if (!isSecondaryPress(e)) return;
+  auto* st = strip_;
+  if (st == nullptr || !st->isVisible()) return;
+  const auto* b = model_.selectedId.empty()
+                      ? nullptr
+                      : services_.chain.state().findBlock(model_.selectedId);
+  if (b == nullptr || b->effectKind != "convolution") return;
+  auto& knobs = st->knobs();
+  for (int i = 0; i < (int)knobs.size(); ++i)
+    if (knobs[i] == e.eventComponent && (i == 10 || i == 11)) {
+      openConvCurveBand(knobs[i]);
+      return;
+    }
+}
+
+void NodeView::secondaryPress(const juce::MouseEvent& e) {
+  secondaryPressImpl(e);  // Knob::mouseDown forwards secondary presses up here
+}
+
+void NodeView::mouseDown(const juce::MouseEvent& e) {
+  // The strip's own empty space reaching us directly (the knobs route
+  // through secondaryPress); everything else keeps the default behaviour.
+  secondaryPressImpl(e);
 }
 
 // ------------------------------------------------------- strip cyclers (m01857)
@@ -1711,10 +1818,41 @@ juce::String NodeView::convStripStateForE2E() const {
   // toast is what the e2e layer pins):
   //   "no-strip" | "<loadIrVis>:<exportVis>|<toast>|<convIr>"
   if (strip_ == nullptr || !strip_->isVisible()) return "no-strip";
-  return juce::String(strip_->loadIr().isVisible() ? 1 : 0) + ":"
-         + juce::String(strip_->settingsExport().isVisible() ? 1 : 0) + "|"
+  // The knob LABELS pin the Dwell rename (m04334 item 1): a second
+  // pipe-joined section, comma-joined, so a label regression (back to
+  // "In") is caught by the e2e text assert, not just a human screenshot.
+  juce::String labels;
+  for (auto* k : strip_->knobs()) {
+    if (labels.isNotEmpty()) labels << ",";
+    labels << k->knobLabel();
+  }
+  const auto& load = strip_->loadIr();
+  const auto& exp = strip_->settingsExport();
+  return juce::String(load.isVisible() ? 1 : 0) + ":"
+         + juce::String(exp.isVisible() ? 1 : 0) + "|"
          + services_.toast.message() + "|"
-         + convIrLabelForShot();
+         + convIrLabelForShot() + "|"
+         + labels + "|"
+         + juce::String(load.getX()) + "," + juce::String(exp.getX());
+}
+
+std::vector<Knob*> NodeView::g_emptyKnobs;
+
+std::vector<Knob*>& NodeView::knobsForE2E() {
+  return strip_ != nullptr ? strip_->knobs() : g_emptyKnobs;
+}
+
+juce::String NodeView::convCurveBandStateForE2E() const {
+  if (strip_ == nullptr || !strip_->isVisible()) return "none";
+  // "none" = not a conv strip; "closed" = conv strip, no band up;
+  // "in"/"out" = that band is parented into the overlay.
+  const auto* b = model_.selectedId.empty()
+                      ? nullptr
+                      : services_.chain.state().findBlock(model_.selectedId);
+  if (b == nullptr || b->effectKind != "convolution") return "none";
+  if (curveInBand_ != nullptr && curveInBand_->isOpen()) return "in";
+  if (curveOutBand_ != nullptr && curveOutBand_->isOpen()) return "out";
+  return "closed";
 }
 
 void NodeView::startConvExportLoader(const std::string& blockId) {

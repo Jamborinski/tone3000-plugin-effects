@@ -311,6 +311,9 @@ juce::ValueTree TONE3000Processor::serializeBlockSettings(const ChainBlock& bloc
       blockState.setProperty(
           "convSeconds", block.conv.hasIr() ? block.conv.editedSeconds() : 0.0,
           nullptr);
+      blockState.setProperty(
+          "convRawSeconds", block.conv.hasIr() ? block.conv.rawSeconds() : 0.0,
+          nullptr);
     }
   }
 

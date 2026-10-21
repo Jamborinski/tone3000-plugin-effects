@@ -1014,6 +1014,74 @@ TEST(ProcessorTest, ConvIrTypeSeededOnLiveLoad) {
   loadAndCheck(stereo, 2, 1.0);  // stereo -> width full (convWidthStereo default)
 }
 
+TEST(ProcessorTest, ConvIrLoadResetsTrimWindowAndTime) {
+  // User law (m04426 / m04437): loading a NEW IR resets the trim window to
+  // the whole raw file (Start = 0, End = the raw length) and Time to 1.00x.
+  // The old fixed 10 s faces let a window from a longer previous IR point
+  // PAST the new IR's tail, so the engine silently kept the old kernel.
+  auto convRow = [](TONE3000Processor& prc) -> juce::var {
+    juce::var row;
+    const juce::var state = prc.getChainState(-1);
+    const juce::var chainVar = state["chain"];
+    auto* const chain = chainVar.getArray();
+    for (int i = 0; chain != nullptr && i < chain->size(); ++i) {
+      const juce::var params = (*chain)[i]["params"];
+      if (params.isObject() && params.hasProperty("convGain"))
+        row = params;
+    }
+    return row;
+  };
+
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto cid = proc.addEffectBlock(EffectKind::Convolution, "left", 0);
+  ASSERT_FALSE(cid.empty());
+
+  const juce::File ir = makeFixedIrWav();  // 4096 samples @ 48k
+  ASSERT_TRUE(ir.existsAsFile());
+  const juce::var resp = proc.loadConvIr(cid, ir);
+  ASSERT_FALSE(resp.getDynamicObject() != nullptr &&
+               resp.getDynamicObject()->hasProperty("error"))
+      << "IR load should succeed";
+
+  // The raw length lands in the chain state as the per-IR face cap.
+  const double rawS = 4096.0 / 48000.0;  // 0.085333...
+  const juce::var chainState = proc.getChainState(-1);
+  juce::var item;
+  for (int i = 0; chainState["chain"].isArray() &&
+                  i < chainState["chain"].size(); ++i) {
+    juce::var it = chainState["chain"][i];
+    if (it.isObject() && it["blockId"].toString().toStdString() == cid)
+      item = it;
+  }
+  ASSERT_TRUE(item.isObject());
+  EXPECT_NEAR(static_cast<double>(item["convRawSeconds"]), rawS, 1e-9)
+      << "convRawSeconds must be the raw IR length (the Start/End face cap)";
+
+  // Move the window and Time, then load again: everything resets.
+  proc.setBlockParam(cid, "convStartS", 0.03);
+  proc.setBlockParam(cid, "convEndS", 0.05);
+  proc.setBlockParam(cid, "convPitch", 0.75);
+  juce::var pre = convRow(proc);
+  ASSERT_TRUE(pre.isObject());
+  EXPECT_NEAR(static_cast<double>(pre["convStartS"]), 0.03, 1e-9);
+  EXPECT_NEAR(static_cast<double>(pre["convEndS"]), 0.05, 1e-9);
+  EXPECT_NEAR(static_cast<double>(pre["convPitch"]), 0.75, 1e-9);
+
+  const juce::var resp2 = proc.loadConvIr(cid, ir);
+  ASSERT_FALSE(resp2.getDynamicObject() != nullptr &&
+               resp2.getDynamicObject()->hasProperty("error"));
+  const juce::var post = convRow(proc);
+  ASSERT_TRUE(post.isObject());
+  EXPECT_NEAR(static_cast<double>(post["convStartS"]), 0.0, 1e-9)
+      << "Start must reset to 0 on IR load";
+  EXPECT_NEAR(static_cast<double>(post["convEndS"]), rawS, 1e-9)
+      << "End must reset to the raw IR length on load (its cap)";
+  EXPECT_NEAR(static_cast<double>(post["convPitch"]), 0.5, 1e-9)
+      << "Time must reset to 1.00x on IR load";
+}
+
 
 TEST(ProcessorTest, ConvIrReferenceSurvivesStateRoundTrip) {
   // E-2: a loaded kernel must survive the preset/app-restart round trip.

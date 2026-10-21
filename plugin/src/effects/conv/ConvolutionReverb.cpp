@@ -647,9 +647,6 @@ void ConvolutionReverb::prepare(double rate) {
   modCap_ = modCap;
   modW_[0] = 0;
   modW_[1] = 0;
-  modSmPrev_[0] = 0.0;
-  modSmPrev_[1] = 0.0;
-  modSmCoef_ = 0.0;  // recomputed per process() call from the test hook
 
   if (rateChanged || state_ == nullptr) {
     // Rate change / first run: the previous engine (if any) was built at a
@@ -782,17 +779,15 @@ void ConvolutionReverb::process(juce::AudioBuffer<float>& buffer) {
     //     strictly PAST wet; sample 0 of an input is unmodulated wet).
     const double mod = params_.mod;
     if (mod > 0.0 && modCap_ > 0) {
-      // Ring-write smoother: >0 ms = explicit, 0 = ship default
-      // (kModWriteTauMs), <0 = disabled (raw write, bit-exact anchor).
-      // Recomputed per call so a test hook change applies without a
-      // re-prepare; one exp per 128-frame chunk is negligible.
-      const double wMs = modTestWriteTauMs_ < 0.0
-                             ? 0.0
-                             : (modTestWriteTauMs_ > 0.0 ? modTestWriteTauMs_
-                                                          : kModWriteTauMs);
-      modSmCoef_ = (wMs > 0.0 && rate_ > 0.0)
-                       ? std::exp(-1.0 / (rate_ * wMs * 1e-3))
-                       : 0.0;
+      // Layer soft-clamp scale (tanh): <0 = disabled (linear, bit-exact
+      // anchor), 0 = ship kModClipScale, >0 = explicit. A tanh on the ADDED
+      // layer clamps the re-emitted wet transients (the periodic click) while
+      // passing the steady layer band linearly.
+      const double clipScale = modTestClipScale_ < 0.0
+                                   ? 0.0
+                                   : (modTestClipScale_ > 0.0
+                                          ? modTestClipScale_
+                                          : kModClipScale);
       const double taper = mod * mod * (3.0 - 2.0 * mod); // smoothstep
       const double amt = kModAmt * taper;
       const double maxDepth = mod * (rate_ * kModDepthMs * 0.001);
@@ -807,12 +802,9 @@ void ConvolutionReverb::process(juce::AudioBuffer<float>& buffer) {
           // Write a SMOOTHED wet into the ring: the taps can no longer
           // re-emit the wet's transients (the periodic-click fix; raw
           // write when the smoother is off).
-          if (modSmCoef_ > 0.0)
-            modSmPrev_[c] = modSmCoef_ * modSmPrev_[c] +
-                            (1.0 - modSmCoef_) * wet[i];
-          wr[w] = (modSmCoef_ > 0.0) ? static_cast<float>(modSmPrev_[c])
-                                     : wet[i];  // write BEFORE the taps
-          // read (delay >= 1)
+          wr[w] = wet[i];  // RAW write = the layer's feed (write BEFORE the
+          // taps read; delay >= 1). The click taming is on the ADDED layer,
+          // not this feed (a one-pole here lowpasses the whole wet to ~2 Hz).
           w = (w + 1) & (cap - 1);
           double sum = 0.0;
           const double invN = 1.0 / (kModVoices - 1);
@@ -829,7 +821,12 @@ void ConvolutionReverb::process(juce::AudioBuffer<float>& buffer) {
             const float x = wr[iA] + frac * (wr[iB] - wr[iA]);
             sum += x * invN;
           }
-          wet[i] += static_cast<float>(amt * sum);
+          {
+            const double lay = amt * sum;
+            const double cl = clipScale;
+            wet[i] += static_cast<float>(
+                (cl > 0.0) ? cl * std::tanh(lay / cl) : lay);
+          }
           base += inc;
           if (base >= 2.0 * M_PI)
             base -= 2.0 * M_PI;

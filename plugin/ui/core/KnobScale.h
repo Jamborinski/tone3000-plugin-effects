@@ -9,6 +9,7 @@
 #include <cmath>
 #include <functional>
 #include <optional>
+#include <unordered_map>
 
 #include "Labels.h"
 
@@ -664,18 +665,20 @@ inline const KnobScale& convWidth() {
   return s;
 }
 
-// START: trim-window start in seconds of the raw IR (0..10 = the IR cap). The
-// stored domain IS seconds (a knob whose stored unit == the display unit), so
-// no toStored split is needed -- mirror the delay/chores time knobs.
-inline const KnobScale& convStart() {
-  static const KnobScale s = linear(0.0, 10.0, "s", 2);
-  return s;
-}
-
-// END: trim-window end in seconds of the raw IR; 0 = to the end.
-inline const KnobScale& convEnd() {
-  static const KnobScale s = linear(0.0, 10.0, "s", 2);
-  return s;
+// TRIM (START / END): seconds of the raw IR; the stored domain IS
+// seconds (a knob whose stored unit == the display unit, so no toStored
+// split -- mirror the delay/chorus time knobs). The FACE cap is per-IR:
+// the raw length, rounded UP to whole seconds (a sub-second IR gets a 1 s
+// face, not a 0 face). The old fixed 10 s faces let the user trim PAST
+// the tail of a short IR, which silently kept the old kernel (m04334 item 5;
+// the on-load defaults land here too -- ProcessorChain::loadConvIr).
+inline const KnobScale& convTrimScale(double capSeconds) {
+  const int cap = juce::jlimit(1, 999, (int)std::ceil(capSeconds));
+  static std::unordered_map<int, KnobScale> cache;
+  auto it = cache.find(cap);
+  if (it == cache.end())
+    it = cache.emplace(cap, linear(0.0, (double)cap, "s", 2)).first;
+  return it->second;
 }
 // PRE: wet pre-delay in ms (0..100). Stored domain == display domain.
 inline const KnobScale& convPre() {

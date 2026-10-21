@@ -436,3 +436,29 @@ TEST(ChainRoundTrip, ReverbModeOrderMarkerSurvivesUiJsonRoundTrip) {
   EXPECT_EQ((int)p["reverbMode"], 4)
       << "Hall stored as 4; a missing v2 marker would remap it to 3 (Chamber)";
 }
+
+
+// convTrimScale (m04426): the Start / End trim faces are per-IR -- the cap is
+// the RAW IR length rounded up to whole seconds (sub-second IRs get a 1 s
+// face), and the stored domain stays seconds so a value written through the
+// UI is exactly what the engine trims with.
+TEST(ConvTrimScaleTest, CapIsRawLengthRoundedUp) {
+  // Sub-second IR: the face must cap at 1 s, not 0 (a 0 face would let no
+  // trim value through) -- the old fixed-10 s face let the user point the
+  // window past the tail of a short IR (silently keeping the old kernel).
+  EXPECT_NEAR(scales::convTrimScale(0.085333).toDisplay(1.0), 1.0, 1e-9);
+  EXPECT_NEAR(scales::convTrimScale(0.085333).fromDisplay(1.0), 1.0, 1e-9);
+  // Exact-second IRs map 1:1.
+  EXPECT_NEAR(scales::convTrimScale(2.0).toDisplay(1.0), 2.0, 1e-9);
+  EXPECT_NEAR(scales::convTrimScale(2.0).fromDisplay(0.5), 0.25, 1e-9);
+  // Over-second fractions round UP (2.2 s IR -> a 3 s face).
+  EXPECT_NEAR(scales::convTrimScale(2.2).toDisplay(1.0), 3.0, 1e-9);
+  // The stored domain IS seconds: a knob sweep writes display==stored values
+  // (no toStored split), so a resync never snaps back.
+  const auto& sc = scales::convTrimScale(4.0);
+  for (int i = 0; i <= 10; ++i) {
+    const double n = i / 10.0;
+    EXPECT_NEAR(knobToStored(sc, n), sc.toDisplay(n), 1e-9);
+    EXPECT_NEAR(knobFromStored(sc, sc.toDisplay(n)), n, 1e-9);
+  }
+}

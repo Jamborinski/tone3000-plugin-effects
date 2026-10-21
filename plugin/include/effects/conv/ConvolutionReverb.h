@@ -160,12 +160,16 @@ class ConvolutionReverb {
   static constexpr double kModVoiceD[] = {0.0, 1.00, 0.62};  // index 0 unused
   static constexpr double kModVoiceR[] = {1.00, 1.31, 0.71};  // incommensurable
   static constexpr double kModVoiceO[] = {0.00, 1.90, 4.30};  // rad offsets
-  // One-pole time constant on the wet RING WRITE: the taps read a smoothed
-  // wet, so wet transients can no longer be re-emitted by the delay lines
-  // on each LFO pass (the periodic-click hunt). 0 disables = raw write
-  // (bit-exact pre-smooth anchor). Tau ladder measured on the real engine:
-  // 80 ms ship (tap body preserved, click index at the floor).
-  static constexpr double kModWriteTauMs = 80.0;
+  // Soft-clamp scale on the ADDED mod layer (tanh): clamps the re-emitted
+  // wet transients (the periodic click) while passing the steady layer band
+  // linearly. A one-pole on the ring WRITE was the click's first fix, but
+  // its 3 dB at ~(1/2pirtau) Hz lowpassed the whole feed to ~2 Hz and killed
+  // the layer (measured +0.00 dB at full dial vs ~+1 dB expected); the tanh
+  // on the added path keeps the layer loud AND tames the transient re-emission.
+  // 0 disables a linear passthrough (bit-exact pre-clip anchor). Scale
+  // measured on the real engine: 1e-2 ship (layer RMS preserved, transient
+  // jump cut).
+  static constexpr double kModClipScale = 1e-2;
   // Width on a MONO IR (whose wet is identical both ears, so the M/S fold
   // has no material): a Haas pair -- a fixed interaural difference whose
   // depth scales with Width (0 = mono center, 1 = full spread).
@@ -313,8 +317,8 @@ class ConvolutionReverb {
   // shape test). Default: enabled.
   void setClipEnabledForTest(bool on) { clipEnabled_ = on; }
   bool clipEnabledForTest() const { return clipEnabled_; }
-  void setModWriteTauForTest(double ms) { modTestWriteTauMs_ = ms; }
-  double modWriteTauForTest() const { return modTestWriteTauMs_; }
+  void setModClipScaleForTest(double scale) { modTestClipScale_ = scale; }
+  double modClipScaleForTest() const { return modTestClipScale_; }
   // One through-sample of the wet clip LUT (tests: the LUT path vs the
   // analytic curve).
   float clipPreview(float x) const { return clipApply(x, clipLut_); }
@@ -420,10 +424,9 @@ class ConvolutionReverb {
   std::vector<float> modBuf_[2];   // wet ring (per channel, audio-owned)
   int modCap_ = 0, modW_[2] = {0, 0};
   double modPh_[2] = {0.0, 0.0};  // persistent per-channel LFO phase (audio)
-  double modSmPrev_[2] = {0.0, 0.0};  // per-channel one-pole state on the
-                                      // ring write (kModWriteTauMs)
-  double modSmCoef_ = 0.0;         // per-sample one-pole coef (0 = off)
-  double modTestWriteTauMs_ = 0.0; // >0: ms, 0: ship default, <0: disabled
+
+  double modTestClipScale_ = 0.0; // >0: explicit, 0: ship default
+                                   // (kModClipScale), <0: disabled (linear)
 
   // Raw IR (message thread only; rebuilt into the engine on demand).
   std::vector<float> rawL_, rawR_;

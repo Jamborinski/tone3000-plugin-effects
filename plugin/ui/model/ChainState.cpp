@@ -248,6 +248,7 @@ ChainItem parseItem(const juce::var& v) {
     item.convIrPath = str(v, "convIrPath", "");
     item.convIrLoaded = boolean(v, "convIrLoaded", false);
     item.convSeconds = num(v, "convSeconds", 0.0);
+    item.convRawSeconds = num(v, "convRawSeconds", 0.0);
     item.params = parseParams(v["params"]);
     return item;
   }

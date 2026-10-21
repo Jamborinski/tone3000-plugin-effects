@@ -42,11 +42,14 @@
 #include "services/ChainStore.h"
 #include "services/Services.h"
 #include "widgets/ContextMenu.h"  // showStripMenu's Item vector (nested name)
+#include "widgets/ConvCurveBand.h"  // the conv F In / F Out curve popovers
 #include "widgets/Popover.h"  // OverlayHost (the root's overlay layer: the drag ghost's home)
+#include "widgets/SecondaryPress.h"  // F In / F Out right-clicks (knobs forward up)
 
 namespace t3k::ui::nodeview {
 
-class NodeView : public juce::Component, private ChainStore::Listener {
+class NodeView : public juce::Component, private ChainStore::Listener,
+              public SecondaryPressTarget {
 public:
   explicit NodeView(Services& services);
   ~NodeView() override;
@@ -94,6 +97,14 @@ public:
   // pins (the save dialog can't be driven headless, so the no-IR export
   // GUARD toast is what is asserted).
   juce::String convStripStateForE2E() const;
+  // e2e: which conv curve band is open ("in"/"out"/"closed"/"none")
+  // + the anchored knob's armed flag — the F In / F Out curve
+  // popovers (m04334 item 2) on the strip, the acceptance surface.
+  juce::String convCurveBandStateForE2E() const;
+  // e2e drives the band openers directly (headless has no right-button):
+  std::vector<Knob*>& knobsForE2E();  // body in the .cpp (NodeStrip is defined there)
+  void openConvCurveBandForE2E(Knob* anchor) { openConvCurveBand(anchor); }
+  static std::vector<Knob*> g_emptyKnobs;
   // e2e/testbed drive (the strip's Export save-picker entry point, same
   // exception as the shot helpers above):
   void startConvExportLoader(const std::string& blockId);
@@ -108,6 +119,8 @@ public:
   // e2e: every cell's centre in window (frame) coordinates, lane order.
   std::vector<juce::Point<int>> cellCentresForE2E(juce::Component* frame) const;
   juce::String gridForE2E() const;  // e2e debug only
+  void mouseDown(const juce::MouseEvent& e) override;
+  void secondaryPress(const juce::MouseEvent& e) override;
   void paint(juce::Graphics& g) override;
   void resized() override;
 
@@ -156,6 +169,11 @@ private:
                      const juce::Point<int>& anchor);
   void hideStrip();  // the strip's X (left of power) — the ONLY close path
   void pullConvPreview(NodeStrip&, const ChainItem&);
+  // Conv strip: the F In / F Out curve-band openers (right-click / long-press
+  // on the strip's knobs 10 / 11, the same faces as the gallery tile).
+  void openConvCurveBand(Knob* anchor);
+  void closeConvCurveBands();
+  void secondaryPressImpl(const juce::MouseEvent& e);
   // Convolution node: the strip's "Load IR..." button (async FileChooser,
   // mirrors EffectTile's convIrChooser_ flow).
   void startConvIrLoader(const std::string& blockId);
@@ -188,6 +206,10 @@ private:
   // during a hold it mirrors Model::laneOf and moveActiveTo splices it, so
   // the grid reflows LIVE under the pointer exactly like the gallery.
   std::vector<ChainItem> preview_;
+  // The conv strip's curve bands (the same popovers the gallery tile
+  // opens from its F In / F Out knobs; the anchors are the strip's rebuilt
+  // knobs, wired per-rebuild in rebuildStripKnobs).
+  std::unique_ptr<ConvCurveBand> curveInBand_, curveOutBand_;
   std::unique_ptr<juce::FileChooser> convIrChooser_;  // strip "Load IR..."
   std::unique_ptr<juce::FileChooser> convExportChooser_;  // strip "Export..."
   std::unique_ptr<ContextMenu> stripMenu_;  // the strip's mode/type menus

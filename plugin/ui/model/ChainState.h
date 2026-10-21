@@ -216,6 +216,7 @@ struct ChainItem {
   juce::String convIrPath;
   bool convIrLoaded = false;
   double convSeconds = 0.0;
+  double convRawSeconds = 0.0;  // the RAW IR length (Start/End face cap)
 
   bool isTone() const { return !isInsert && !isEffect; }
 };

@@ -266,7 +266,16 @@ NodeViewE2EHandler::process(const focusrite::e2e::Command& command) {
     if (blockId.isNotEmpty()) nv->selectBlockForShot(blockId.toStdString());
     if (op == "export-click")
       nv->startConvExportLoader(blockId.toStdString());
-    return Response::ok().withParameter("state", nv->convStripStateForE2E());
+    if (op == "curve-in" || op == "curve-out") {
+      // The F In / F Out faces are the last two knobs on the conv face
+      // (mix/dwell/out/dry/time/pre/start/end/width/mod/f-in/f-out).
+      auto& knobs = nv->knobsForE2E();
+      const int idx = (op == "curve-in") ? 10 : 11;
+      if (knobs.size() > static_cast<size_t>(idx))
+        nv->openConvCurveBandForE2E(knobs[idx]);
+    }
+    return Response::ok().withParameter("state", nv->convStripStateForE2E())
+        .withParameter("band", nv->convCurveBandStateForE2E());
   }
   if (type == "node-tree") {
     // Debug only: full tree dump. vis = isVisible() (own flag).

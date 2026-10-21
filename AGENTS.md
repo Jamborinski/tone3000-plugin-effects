@@ -121,6 +121,12 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
 | **Train a reverb mode against a convolved IR reference** (Plate now; Spring/Digital/Chamber next) — retune `Reverb.h`, add a reference-IR test, comb/decay metric, plate-vs-conv A/B or CPU bench | `docs/agents/ir-reverb-training.md` | Convolve the reference with the **house** `BudgetConvolver`; **peak-normalise both sides**; **measure the reference's own numbers first** — the guard must pass for the reference (EMT 140 itself drifts +4.85 dB) |
 
 ## Hard rules (always apply, no file needed)
+- **The NODE VIEW (strip view) is the PRIMARY UI. The gallery is SECONDARY**
+  (user m04350). Every UI feature ships on the node strip first / as the
+  acceptance surface — verify the strip (e2e/selftest shots) before declaring
+  any UI spec met; the gallery tile gets verified too, but a tile-only pass
+  is NOT enough. User screenshots are the acceptance view — check which
+  view they show.
 - C++20, match the existing style; keep changes scoped to the ticket; no
   drive-by refactors.
 - Tests live in `test/src/` and compile the **real** plugin sources (not

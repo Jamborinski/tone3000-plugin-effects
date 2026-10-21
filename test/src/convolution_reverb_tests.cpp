@@ -565,12 +565,15 @@ TEST(ConvolutionReverb, ModSchedulingNoRebuild) {
 // Mod ring-write click hunt (the reverb eleventh-cut precedent, applied to
 // this engine): the mod taps are DELAYED COPIES of the wet, so a spiky wet
 // re-emits its spikes through the layer on each LFO pass -- the periodic
-// click. Fix under test: the one-pole on the RING WRITE (kModWriteTauMs,
-// test hook setModWriteTauForTest; <0 disabled = raw-write baseline).
+// click. Fix under test: the tanh SOFT-CLIP on the ADDED LAYER
+// (kModClipScale, test hook setModClipScaleForTest; <0 disabled = linear
+// baseline). The failed first fix (one-pole on the ring WRITE) lowpassed the
+// whole feed to ~2 Hz and killed the layer (+0.00 dB at full dial, measured).
 // Metric per the audio-testing rule: the LAYER's (on-off) jump-RMS relative
 // to the WET's own jump-RMS in matching steady windows, sustained chords at
 // two amplitudes (louder input = louder re-emitted spike).
-TEST(ConvolutionReverb, ModWriteTauClickHunt) {
+
+TEST(ConvolutionReverb, ModLayerClipClickHunt) {
   const char nl[] = "\n";
   const unsigned int fs = 48000;
   const int n = 2 * fs, blk = 128;
@@ -595,7 +598,7 @@ TEST(ConvolutionReverb, ModWriteTauClickHunt) {
     ConvolutionReverb fx;
     if (!fx.loadBuffer(ExpDecayIr(4096, 48000.0, 2.0), (double)fs)) return {};
     fx.prepare((double)fs);
-    fx.setModWriteTauForTest(tauHook);  // <0 disabled, 0 = ship default
+    fx.setModClipScaleForTest(tauHook);  // <0 disabled, 0 = ship default
     ConvolutionReverb::Params p;
     p.mod = on ? 1.0 : 0.0;
     fx.setParams(p);
@@ -647,17 +650,17 @@ TEST(ConvolutionReverb, ModWriteTauClickHunt) {
             << "  amp | raw-write: layer-jump / crest | ship-tau: layer-jump / crest" << nl;
   for (double amp : {0.5, 1.0}) {
     const auto wet = render(false, -1.0, amp);
-    const auto raw = render(true, -1.0, amp);   // raw ring write (baseline)
-    const auto ship = render(true, 0.0, amp);   // kModWriteTauMs
-    const auto lRaw = layerVec(raw, wet), lShip = layerVec(ship, wet);
+    const auto linear = render(true, -1.0, amp);  // clip off (linear-layer baseline)
+    const auto ship = render(true, 0.0, amp);     // kModClipScale
+    const auto lRaw = layerVec(linear, wet), lShip = layerVec(ship, wet);
     std::cout << "  " << amp << " | " << jump(lRaw, m1, m2) << " / "
               << crest(lRaw, m1, m2) << " | " << jump(lShip, m1, m2) << " / "
               << crest(lShip, m1, m2) << nl;
   }
 
-  // Plain-law assert (no reference named): the ring-write smoother must cut
-  // the mod layer's jump-RMS (the sharpness/click metric) by at least
-  // half; the layer must stay present and bounded.
+  // Plain-law assert (no reference named): the layer soft-clip must cut the
+  // mod layer's jump-RMS (the sharpness/click metric) by at least half; the
+  // layer must stay present and bounded.
   auto v1 = render(true, -1.0, 1.0);
   auto v2 = render(true, 0.0, 1.0);
   auto v0 = render(false, -1.0, 1.0);
@@ -678,12 +681,12 @@ TEST(ConvolutionReverb, ModWriteTauClickHunt) {
 
 // The mod-write hook disabled (<0) must be BIT-EXACT with the raw write
 // path (the pre-smoother anchor): same input, same params, identical wet.
-TEST(ConvolutionReverb, ModWriteTauDisabledIsBitExact) {
+TEST(ConvolutionReverb, ModClipDisabledIsBitExact) {
   auto run = [](double tau) -> juce::AudioBuffer<float> {
     ConvolutionReverb fx;
     if (!fx.loadBuffer(ExpDecayIr(4096, 48000.0, 2.0), 48000.0)) return {};
     fx.prepare(48000.0);
-    fx.setModWriteTauForTest(tau);
+    fx.setModClipScaleForTest(tau);
     ConvolutionReverb::Params p;
     p.mod = 1.0;
     fx.setParams(p);
@@ -708,7 +711,7 @@ TEST(ConvolutionReverb, ModWriteTauDisabledIsBitExact) {
   ConvolutionReverb fx;
   ASSERT_TRUE(fx.loadBuffer(ExpDecayIr(4096, 48000.0, 2.0), 48000.0));
   fx.prepare(48000.0);
-  fx.setModWriteTauForTest(-1.0);
+  fx.setModClipScaleForTest(-1.0);
   ConvolutionReverb::Params p;
   p.mod = 1.0;
   fx.setParams(p);

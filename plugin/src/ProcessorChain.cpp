@@ -457,6 +457,13 @@ juce::var TONE3000Processor::loadConvIr(const std::string& blockId,
   // default both key off convIrChannels; the live path never set them before,
   // so a mono IR showed as stereo with the stereo width.
   if (block->conv.hasIr()) {
+    // On-load defaults (m04426 / m04437): the trim window resets to the WHOLE
+    // raw IR (Start = 0, End = the raw length -- the End knob's cap is
+    // per-IR, so a stale window from a longer previous IR silently kept the
+    // old kernel) and Time returns to 1.00x.
+    block->convStartS = 0.0;
+    block->convEndS = block->conv.rawSeconds();
+    block->convPitch = 0.5;
     block->convApplyIrType(block->conv.rawChannelCount());
     block->conv.setParams(block->convParams());
   }
@@ -1317,6 +1324,7 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
     juce::String convIrPath;  // its source file (Load-IR recovery on a fresh engine)
     bool convIrLoaded = false;  // the engine actually holds the IR (else: file missing)
     double convSeconds = 0.0;   // the edited kernel's length (time readout)
+    double convRawSeconds = 0.0;  // the raw IR length (Start/End face cap)
   };
 
   juce::uint32 revision = 0;
@@ -1441,6 +1449,8 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
           row.convIrLoaded = block->conv.hasIr();
           row.convSeconds =
               block->conv.hasIr() ? block->conv.editedSeconds() : 0.0;
+          row.convRawSeconds =
+              block->conv.hasIr() ? block->conv.rawSeconds() : 0.0;
           row.enabled = block->enabled;
           row.inputGain = block->inputGainNormalized;
           row.outputGain = block->outputGainNormalized;
@@ -1625,6 +1635,8 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
           item->setProperty("convIrLoaded", true);
         if (row.convSeconds > 0.0)
           item->setProperty("convSeconds", row.convSeconds);
+        if (row.convRawSeconds > 0.0)
+          item->setProperty("convRawSeconds", row.convRawSeconds);
         item->setProperty("params", juce::var(params.get()));
         chainArray.add(juce::var(item.get()));
         continue;
