@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:57f81b56d738b3b0dcfa517198bbd990f6cbf4f4708d10f52b72bdf4ca239218",
+  "pageVersion": "sha256:db12ae6a408de00615bdea4cee6c5e8db143e1a0295eb26ce8820a3b028a2f9d",
   "claims": [
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
@@ -46,7 +46,7 @@
     },
     {
       "id": "claim_9cf834ee9ffd4e4d825b80f6aab73a80",
-      "statement": "KnobScale (plugin/ui/core/KnobScale.h, port of knobScale.ts) keeps three domains separate: normalised 0..1 knob position, a DISPLAY unit (ms/dB/%/name) for the drag readout and type-in, and a STORAGE contract via toStored/fromStored that is what actually goes into the block param. knobToStored()/knobFromStored() fall back to toDisplay/fromDisplay when no explicit storage pair is declared — bit-identical legacy behaviour for real-unit-stored and identity-stored fraction knobs. Knobs whose stored domain is 0..1 but whose display unit is human (delayHeads 1..4 heads, compClip 0..2 raw depth behind a 0..200 % face, convGain ±24 dB, reverbDry ±24 dB, convPitch 0.25x..4x, spring lines 1..6) MUST declare toStored/fromStored or the tile writes the display unit into a 0..1 param, then the engine clamps it to 1.0, then the next resync snaps the knob back to max — the 2026-10-06 Heads glitch. T-DAT-001 additions: reverbSharedMod and reverbWave (R2) have NO custom scale (sharedMod is a plain 0..1 depth OFF at 0 by default; wave is an int 0..4 detent, identity-bound); the LoCut knob uses the loCutTaper() scale (KnobScale.h:792) with toStored(n) = 0.85 * pow(n, 0.7) (0..0.85 fraction for the mode-0 45 Hz HPF blend — never reaches 1.0; the 40-120 Hz absolute band-floor measured at full LoCut, user m03131 approved the 80% ceiling) with an inverse fromStored.",
+      "statement": "(placeholder — see updated claim)",
       "evidence": [
         {
           "resource": "repo://docs/agents/ui-wiring.md",
@@ -54,7 +54,7 @@
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:996c07043fd6a0f4578fcd44a2338f6445d7127bd62308f08e3e520102e00651"
+          "version": "repo-file-v1:sha256:d4c5c3ba8a1fba44db88dffd61765e16496c7ceec8929956a2e52c802ed5a84f"
         }
       ]
     },
@@ -179,10 +179,24 @@
           "version": "repo-file-v1:sha256:ff55dee1d55097fdd70b711267a525fdb717ecffe6fce241daa3f1637969147f"
         }
       ]
+    },
+    {
+      "id": "claim_1011e8420b554ce09bb2d739e446e3b7",
+      "statement": "KnobScale (plugin/ui/core/KnobScale.h, port of knobScale.ts) keeps three domains separate: normalised 0..1 knob position, a DISPLAY unit (ms/dB/%/name) for the drag readout and type-in, and a STORAGE contract via toStored/fromStored that is what actually goes into the block param. knobToStored()/knobFromStored() fall back to toDisplay/fromDisplay when no explicit storage pair is declared — bit-identical legacy behaviour for real-unit-stored and identity-stored fraction knobs. Knobs whose stored domain is 0..1 but whose display unit is human (delayHeads 1..4 heads, compClip 0..2 raw depth behind a 0..200 % face, convGain ±24 dB, convDwell ±18 dB, reverbDry ±24 dB, convPitch 0.25x..4x, spring lines 1..6) MUST declare toStored/fromStored or the tile writes the display unit into a 0..1 param, then the engine clamps it to 1.0, then the next resync snaps the knob back to max — the 2026-10-06 Heads glitch. convDwell (KnobScale.h:633, commit 44a78ea) is the convolver input Dwell knob: a ±18 dB display window (juce::jmap 0..1 ↔ −18..+18) over the SHARED 0..1 input-gain store with identity toStored/fromStored — same store as convGain (±24 dB), so 0.25..0.75 of the dial spans the ±18 dB window with no DSP/state change. Its format() integer-check is `std::abs(db - std::trunc(db)) < 0.05` — the original `std::abs(db) - std::trunc(db)` equals 2|db| for negative db and rendered \"-18.0 dB\"; the fix was propagated to convGain and reverbDry too. T-DAT-001 additions: reverbSharedMod and reverbWave (R2) have NO custom scale (sharedMod is a plain 0..1 depth OFF at 0 by default; wave is an int 0..4 detent, identity-bound); the LoCut knob uses the loCutTaper() scale (KnobScale.h:792) with toStored(n) = 0.85 * pow(n, 0.7) (0..0.85 fraction for the mode-0 45 Hz HPF blend — never reaches 1.0; the 40-120 Hz absolute band-floor measured at full LoCut, user m03131 approved the 80% ceiling) with an inverse fromStored.",
+      "evidence": [
+        {
+          "resource": "repo://docs/agents/ui-wiring.md",
+          "version": "repo-file-v1:sha256:50797644b910fb3d7092230ed69fd4771bc7b2946f89d465e48c5c477f410e07"
+        },
+        {
+          "resource": "repo://plugin/ui/core/KnobScale.h",
+          "version": "repo-file-v1:sha256:d4c5c3ba8a1fba44db88dffd61765e16496c7ceec8929956a2e52c802ed5a84f"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-20T22:14:33.483Z"
+    "at": "2026-10-21T05:59:08.607Z"
   }
 }

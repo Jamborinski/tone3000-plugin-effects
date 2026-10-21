@@ -35,8 +35,12 @@ sources:
     resource: repo://plugin/ui/testbed/TileShot.cpp
   - id: openwiki-source-adf8cc0014ed2fd3ed9fe7d4
     resource: repo://plugin/ui/views/block/BlockCard.h
+  - id: openwiki-source-d806f0d9a2546c7efd4d27ac
+    resource: repo://plugin/ui/views/gallery/EffectParams.cpp
   - id: openwiki-source-7fb62e48416333f990bd3d93
     resource: repo://plugin/ui/views/gallery/EffectTile.cpp
+  - id: openwiki-source-09eb1e1b1a7ba24f59d68de1
+    resource: repo://plugin/ui/views/gallery/EffectTile.h
   - id: openwiki-source-78c1e0c44679b66507a1889c
     resource: repo://plugin/ui/views/PluginHeader.cpp
   - id: openwiki-source-174467a0c2e30a63c2e8869e
@@ -52,7 +56,7 @@ sources:
 generated: { by: "pi", at: "2026-10-18T14:31:43.894Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-20T22:14:33.483Z
+    at: 2026-10-21T05:59:08.607Z
 ---
 
 
@@ -261,6 +265,47 @@ node-view.md).
 - `modeCycle_` / `modeCombo_` themselves are **unchanged** by the subtype
   work — the six-mode row is the mode axis, and the type axis is the new
   second chip beside it.
+
+## Conv tile: face rework + right-click curve bands (2026-10-20, commit 44a78ea)
+
+Supersedes the 89afb4e Settings/Export-view face. The conversion tile's face
+is now a **7-col grid**:
+
+- **Row 1** = Mix (chain-level `mix_`) | **Dwell** | Dry | Time | Pre | Start | End
+- **Row 2** = Width | Mod | F In | F Out | Out (chain-level `output_`)
+
+Key decisions:
+
+- **In → Dwell**: the `input_` knob is relabelled "Dwell" and re-scaled to
+  `scales::convDwell()` (KnobScale.h:633) — a **±18 dB display window** over
+  the same `inputGainNormalized` store (identity toStored/fromStored; the
+  engine law `(s-0.5)*48` dB at Processor.cpp:1283 means knob 0.25..0.75 =
+  −12..+12 dB, the window clamps the face to a readable sub-range). No DSP
+  or state change.
+- **Start/End on the face**: `scales::convStart()`/`convEnd()` (linear 0..10 s,
+  2 dp) — these now have home knobs, which is *why* the old separate
+  Settings view (the 7-knob Start/End/Pre/F In/F Out/InCrv/OutCrv grid) was
+  deleted from both the tile and the node strip.
+- **InCrv/OutCrv → right-click curve bands**: a `ConvCurveBand` (a
+  `Popover` subclass in EffectTile.h, 130×76, one 32-px knob at
+  `scales::convFade()`) opens on **right-click** (or touch long-press) of the
+  F In knob (`curveInBand_`, InCrv) / F Out knob (`curveOutBand_`, OutCrv).
+  The anchor face knob is **armed** while its band is open — its label stays
+  `theme::kBrandYellow` via the new `Knob::Options.labelArmed` +
+  `Knob::setArmed(bool)` (Knob.cpp:418 colour gate). EffectTile implements
+  `SecondaryPressTarget` (mouseDown + secondaryPress → `secondaryPressImpl`
+  → `openConvCurveBand`; the gate-knob deck is the precedent). `openConvCurveBand`
+  routes through `findParentComponentOfClass<OverlayHost>()->overlayLayer()`
+  with `Popover::Placement::above`.
+- **Header buttons**: `convIrButton_` ("Change IR"/"Load IR") at (76,4,68,20)
+  + `convExportButton_` ("Export") at (148,4,52,20) — both to the right of
+  the title (paint `titleX0 = 30` for full conv). Export → `enterConvExport`
+  (save-mode FileChooser, default `<irName>_t3k_48k24`) →
+  `chain.exportConvIr(blockId, dest, 24, 48000)`. Compact tiles (160 px) are
+  **face-only** (row1 Mix/Time/Pre, row2 Dwell/Dry/Width/Out; the header keeps
+  Change IR only).
+- Gate: TileShot goldens `conv-full.png` + `conv-compact.png` (+ -empty/-long/-missing/-mono)
+  re-shot and re-approved at 0 px after human review; DspTests 579/579.
 
 ## Theme: swappable colour palette + `--ocr` capture mode (2026-10-14)
 

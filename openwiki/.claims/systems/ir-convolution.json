@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:1e4fdf131ca8961752efa05b7997970e4003de6433359b724fbbc345c57e6848",
+  "pageVersion": "sha256:3f3eb08f32a1aca1d4e9e3e6fc9ea62bfa7f862891f924ee9f4aa1cf69698b31",
   "claims": [
     {
       "id": "claim_63767cf697ac4d45bfd45cb93f9a268b",
@@ -52,43 +52,43 @@
     },
     {
       "id": "claim_24754ba80a974ab29304c7c7267ca0f3",
-      "statement": "ConvolutionReverb (IR-driven plate reverb; now plugin/include/effects/conv/ConvolutionReverb.h) shares this engine: a ~150 ms install-fade warmup (JUCE's dry crossfade elapses off the live path by feeding the fresh tail one silence frame at rebuild — ConvolutionReverb.cpp ~325-327, `cold.clear()` then `tail->process(cold)` — not at first wet; the dedicated message-thread `primeSilence` warm-up was removed in the 2026-10-20 optimization-findings Stage 5 as a zero-caller), and the JUCE non-uniform OLA replaced by the BudgetConvolver tail. Reverb-specific: user time-stretch (JUCE re-samples the edited IR to engine rate), 4.0 quad→stereo downmix folded BEFORE JUCE sees it (L=(c0+c2)/√2, R=(c1+c3)/√2 — JUCE reads only ch 0/1 and would drop the rear pair), and JUCE Normalise on the load path.",
+      "statement": "ConvolutionReverb (IR-driven plate reverb; now plugin/include/effects/conv/ConvolutionReverb.h) shares this engine: a ~150 ms install-fade warmup (JUCE's dry crossfade elapses off the live path by feeding the fresh tail one silence frame at rebuild — ConvolutionReverb.cpp ~325-327, `cold.clear()` then `tail->process(cold)` — not at first wet; the dedicated message-thread `primeSilence` warm-up was removed in the 2026-10-20 optimization-findings Stage 5 as a zero-caller), and the JUCE non-uniform OLA replaced by the BudgetConvolver tail. Reverb-specific: user time-stretch (JUCE re-samples the edited IR to engine rate), 4.0 quad→stereo downmix folded BEFORE JUCE sees it (L=(c0+c2)/√2, R=(c1+c3)/√2 — JUCE reads only ch 0/1 and would drop the rear pair), and JUCE Normalise on the load path. The mod layer writes the wet ring through a one-pole smoother (kModWriteTauMs=80, 44a78ea) so repeated LFO passes never re-emit raw wet transients (the periodic click; see the mod claim below).",
       "evidence": [
         {
           "resource": "repo://plugin/include/effects/conv/ConvolutionReverb.h",
-          "version": "repo-file-v1:sha256:ab37807bf16b69d9e61c91bd2c9337a9bcc3feb47602929c42ba10647ddbdc63"
+          "version": "repo-file-v1:sha256:d5936d141835e91b1058a45a6493757a5292072f0ec82034b85d64194743b695"
         },
         {
           "resource": "repo://plugin/src/effects/conv/ConvolutionReverb.cpp",
-          "version": "repo-file-v1:sha256:e5967b8fac66cd4c2d096688f05fd208a9eda282a78692af0894a99602873c71"
+          "version": "repo-file-v1:sha256:6c380f390b679377e852982414879a7c6bac56751b86816a56ad949081c28446"
         }
       ]
     },
     {
       "id": "claim_e8f466989dc64549b4e14a574baadf03",
-      "statement": "The conv wet path ends in a stateless soft-knee peak limiter (process stage 3c, ConvolutionReverb.cpp:818-823, gated by clipEnabled_, NOT applied on the dying crossfade tail): a 1024-entry LUT over log|x| in [kClipLogLo=-6.9, kClipLogHi=5.3], law H(u) = 2.2886 + (-5.1009*u - 9.6838)*T with T = smoothstep((u + 1.4498)/4.4287) — floor lift kClipFloorDb=2.2886 dB at low levels, knee at x≈kClipKneeX=0.2231, ceiling kClipCeilingGain=1.3232 (1/|x| roll above it). The LUT is filled with juce::Decibels::decibelsToGain (a plain e^(db/20) fill is a constant -1.29 dB bug). No user knob, not part of state, and deliberately EXCLUDED from IR export. Law guarded by WetClipCurveLaw + WetClipInPath in test/src/convolution_reverb_tests.cpp (plain 0.3 dB tolerance); the 7 pre-clip contract tests call setClipEnabledForTest(false).",
+      "statement": "The conv wet path ends in a stateless soft-knee peak limiter (process stage 3c, ConvolutionReverb.cpp:845-849, gated by clipEnabled_, NOT applied on the dying crossfade tail): a 1024-entry LUT over log|x| in [kClipLogLo=-6.9, kClipLogHi=5.3], law H(u) = 2.2886 + (-5.1009*u - 9.6838)*T with T = smoothstep((u + 1.4498)/4.4287) — floor lift kClipFloorDb=2.2886 dB at low levels, knee at x≈kClipKneeX=0.2231, ceiling kClipCeilingGain=1.3232 (1/|x| roll above it). The LUT is filled with juce::Decibels::decibelsToGain (a plain e^(db/20) fill is a constant -1.29 dB bug). No user knob, not part of state, and deliberately EXCLUDED from IR export. Law guarded by WetClipCurveLaw + WetClipInPath in test/src/convolution_reverb_tests.cpp (plain 0.3 dB tolerance); the 7 pre-clip contract tests call setClipEnabledForTest(false).",
       "evidence": [
         {
           "resource": "repo://plugin/include/effects/conv/ConvolutionReverb.h",
-          "version": "repo-file-v1:sha256:ab37807bf16b69d9e61c91bd2c9337a9bcc3feb47602929c42ba10647ddbdc63"
+          "version": "repo-file-v1:sha256:d5936d141835e91b1058a45a6493757a5292072f0ec82034b85d64194743b695"
         },
         {
           "resource": "repo://plugin/src/effects/conv/ConvolutionReverb.cpp",
-          "version": "repo-file-v1:sha256:e5967b8fac66cd4c2d096688f05fd208a9eda282a78692af0894a99602873c71"
+          "version": "repo-file-v1:sha256:6c380f390b679377e852982414879a7c6bac56751b86816a56ad949081c28446"
         },
         {
           "resource": "repo://test/src/convolution_reverb_tests.cpp",
-          "version": "repo-file-v1:sha256:02d65f19edaeb48d4692ad0bb3ef24121dbddb9febe46ebc316eab6842861243"
+          "version": "repo-file-v1:sha256:13c3bcf3c89adc32ffbdc7ce9c217750155ce51130a109ca4f92dbf5553b0e84"
         }
       ]
     },
     {
       "id": "claim_ccdad9176e4e430d80070cb2b78dead5",
-      "statement": "Kernel export (commit 89afb4e): ConvolutionReverb::exportKernel(targetRate, &error) (ConvolutionReverb.h:328, cpp:390) re-runs the SAME makeEditedState linear pipeline — trim (convStartS/convEndS) + stretch (Time) + fades/curves — at the raw file rate, then resamples to the target rate and bakes the linear stages: Pre zero-pad, Gain (pow(10, gainToDb/20)), Width (stereo M/S fold; mono IR = Haas interaural delay pair, kHaasDelayMs, side = width*kHaasDepth*delayed). Mod and the wet soft clip are live-only and deliberately not baked. The result is always 2-channel (mono duplicated). TONE3000Processor::exportConvIr (ProcessorChain.cpp:481) wraps it: bits clamped 16..32, WavAudioFormat writer over a file OutputStream (the juce::MemoryOutputStream 0-byte trap class), deletes the file on failure. Guarded by ConvIrExport* tests (convolution_reverb_tests.cpp) + the exportConvIr WAV round-trip (processor_tests.cpp).",
+      "statement": "Kernel export (commit 89afb4e): ConvolutionReverb::exportKernel(targetRate, &error) (ConvolutionReverb.h:336, cpp:390) re-runs the SAME makeEditedState linear pipeline — trim (convStartS/convEndS) + stretch (Time) + fades/curves — at the raw file rate, then resamples to the target rate and bakes the linear stages: Pre zero-pad, Gain (pow(10, gainToDb/20)), Width (stereo M/S fold; mono IR = Haas interaural delay pair, kHaasDelayMs, side = width*kHaasDepth*delayed). Mod and the wet soft clip are live-only and deliberately not baked. The result is always 2-channel (mono duplicated). TONE3000Processor::exportConvIr (ProcessorChain.cpp:481) wraps it: bits clamped 16..32, WavAudioFormat writer over a file OutputStream (the juce::MemoryOutputStream 0-byte trap class), deletes the file on failure. Guarded by ConvIrExport* tests (convolution_reverb_tests.cpp) + the exportConvIr WAV round-trip (processor_tests.cpp).",
       "evidence": [
         {
           "resource": "repo://plugin/include/effects/conv/ConvolutionReverb.h",
-          "version": "repo-file-v1:sha256:ab37807bf16b69d9e61c91bd2c9337a9bcc3feb47602929c42ba10647ddbdc63"
+          "version": "repo-file-v1:sha256:d5936d141835e91b1058a45a6493757a5292072f0ec82034b85d64194743b695"
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
@@ -96,21 +96,39 @@
         },
         {
           "resource": "repo://plugin/src/effects/conv/ConvolutionReverb.cpp",
-          "version": "repo-file-v1:sha256:e5967b8fac66cd4c2d096688f05fd208a9eda282a78692af0894a99602873c71"
+          "version": "repo-file-v1:sha256:6c380f390b679377e852982414879a7c6bac56751b86816a56ad949081c28446"
         },
         {
           "resource": "repo://test/src/convolution_reverb_tests.cpp",
-          "version": "repo-file-v1:sha256:02d65f19edaeb48d4692ad0bb3ef24121dbddb9febe46ebc316eab6842861243"
+          "version": "repo-file-v1:sha256:13c3bcf3c89adc32ffbdc7ce9c217750155ce51130a109ca4f92dbf5553b0e84"
         },
         {
           "resource": "repo://test/src/processor_tests.cpp",
           "version": "repo-file-v1:sha256:1133e1368009946ff89a5bf27ca4aeae1b9736ac9a482c052466621cb06a542a"
         }
       ]
+    },
+    {
+      "id": "claim_38d9f22da5b841579e80214717a4609f",
+      "statement": "Mod wet-ring click fix (commit 44a78ea, spec spc-1792538043915-13755): when the Mod knob is up, the ring-tap path re-emitted the wet signal's transients once per LFO pass, producing a periodic click. The fix smooths the wet RING WRITE (not the tap read) with a causal one-pole: ConvolutionReverb.h kModWriteTauMs=80.0 (public law constant; test hooks setModWriteTauForTest(ms)/modWriteTauForTest(), <0 disables = raw write so the disabled path stays bit-exact against the pre-fix anchor, 0 = ship default); process() recomputes modSmCoef_=exp(-1/(rate*wMs*1e-3)) per call and writes modSmPrev_[c]=coef*modSmPrev_[c]+(1-coef)*wet[i] INTO the ring before the taps read it (write-before-read keeps the current sample causal — zero latency preserved, no look-ahead, no oversampling). Prepare zeros modSmPrev_[2]. The taps/lengths/gain law are unchanged, so with Mod=0 the ring write is the raw wet (identical to before). Guarded by the click-index / tap-body gtests added at 44a78ea in test/src/convolution_reverb_tests.cpp (DspTests 579/579).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/effects/conv/ConvolutionReverb.h",
+          "version": "repo-file-v1:sha256:d5936d141835e91b1058a45a6493757a5292072f0ec82034b85d64194743b695"
+        },
+        {
+          "resource": "repo://plugin/src/effects/conv/ConvolutionReverb.cpp",
+          "version": "repo-file-v1:sha256:6c380f390b679377e852982414879a7c6bac56751b86816a56ad949081c28446"
+        },
+        {
+          "resource": "repo://test/src/convolution_reverb_tests.cpp",
+          "version": "repo-file-v1:sha256:13c3bcf3c89adc32ffbdc7ce9c217750155ce51130a109ca4f92dbf5553b0e84"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-20T22:14:33.483Z"
+    "at": "2026-10-21T05:59:08.607Z"
   }
 }

@@ -38,7 +38,7 @@ sources:
 generated: { by: "pi", at: "2026-10-18T19:36:10.014Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-20T22:14:33.483Z
+    at: 2026-10-21T05:59:08.607Z
 ---
 
 # Node view: the signal-line grid
@@ -292,23 +292,25 @@ open mode menu does not leak over the gallery, gallery wheel scroll alive).
   the node view has no DragScroller (`scroller()` keeps returning the
   gallery's).
 
-## Conv strip: Settings/Export band (commit 89afb4e + b80bca7)
+## Conv strip: IR + Export header chrome (commits 89afb4e → 44a78ea)
 
-The conv node strip (selected conv block) grows a second band when the user
-flips **Settings** (`NodeStrip`'s `settingsToggle_`, a
-`clickingTogglesState` TextButton next to the IR label; `settingsExport_`
-beside it): `NodeView::setConvStripSettings(bool)` (NodeView.cpp:1764) owns
-the chrome — both buttons stay visible only while the band is open (at rest
-the strip shows face-only, state `0:0:0:7/0`), and it swaps the single knob
-row for a **4-column 7-knob grid** (Start / End / Pre / F In / F Out / InCrv /
-OutCrv — the `scales::convStart/convEnd` trim parameters that have no face
-knob on the gallery tile; the conv tile carries the same grid in its own
-Settings view, full tile only, compact tiles face-only). The band height is
-`convBand = convStrip ? (convStripSettings_ ? 152 : 78) : 0`
-(NodeView.cpp:1125-1127).
+The conv node strip (selected conv block) shows **two header buttons, always
+visible, to the right of the `CONVOLUTION` mode bar**: **Load IR** (`loadIr_`,
+120×24, calls `NodeView::startConvIrLoader(blockId)`) and **Export**
+(`settingsExport_`, 58×24, calls `NodeView::startConvExportLoader(blockId)`),
+both right-aligned in the header at `btnTop = kStripHeadH + 3`
+(NodeView.cpp:1406-1412). The **Settings/Export band that lived here before the
+44a78ea face rework is GONE** — `settingsToggle_`, the `setConvStripSettings`
+toggle, and the 4-column 7-knob settings grid (Start / End / Pre / F In / F Out /
+InCrv / OutCrv) were all deleted, because those parameters now have **home
+knobs on the gallery tile's face** (Start/End on the face, InCrv/OutCrv in the
+right-click curve bands — see the ui page's conv face-rework note). The strip
+band is fixed-height: `convBand = convStrip ? 78 : 0`
+(NodeView.cpp:1122-1127); the rest of that band is the single knob row plus the
+`KernelPlot` preview.
 
 **Export:** the **Export** button calls
-`NodeView::startConvExportLoader(blockId)` (NodeView.cpp:1861), which
+`NodeView::startConvExportLoader(blockId)` (NodeView.cpp:1720), which
 toasts "No IR loaded in this block" (guard) otherwise opens a save
 FileChooser (default name `<irName>_t3k_48k24.wav`, `untitled.wav` when the
 IR has no name) and calls
@@ -317,9 +319,12 @@ the kernel baked as the live engine sees it (see the ir-convolution page's
 Kernel export section).
 
 **E2E:** `NodeView::convStripStateForE2E()` reports
-`<toggleVis>:<toggleOn>:<exportVis>:<knobCount>/<visCount>|<toast>|<convIr>`;
-the `node-conv-strip` handler (NodeViewE2E.cpp, ops select / toggle /
-export-click) drives it; the 6-check regression
+`no-strip`, or
+`<loadIrVis>:<exportVis>|<toast>|<convIr>` for the visible strip (the
+`<toggleVis>:<toggleOn>:<knobCount>/<visCount>` prefix was dropped with the
+settings band, NodeView.cpp:1708); the `node-conv-strip` handler
+(NodeViewE2E.cpp, ops select / export-click — the `toggle` op was removed)
+drives it; the 4-check regression
 `plugin/ui/testbed/e2e/conv-strip.js` is a STANDALONE script because two
 AppConnections in one process race on socket teardown (unregistered message
 → `Response::fail`, TestCentre.cpp:97).

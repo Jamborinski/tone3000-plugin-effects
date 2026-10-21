@@ -30,6 +30,8 @@ sources:
     resource: repo://test/src/dat_probe_tests.cpp
   - id: openwiki-source-9122ffeb8c7fc8e2457955ce
     resource: repo://test/src/effect_tests.cpp
+  - id: openwiki-source-34a79a04e9ddbb2ab43b3d18
+    resource: repo://test/src/effect_ui_scale_tests.cpp
   - id: openwiki-source-949fdcdad6535ec560064216
     resource: repo://test/src/node_model_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
@@ -49,7 +51,7 @@ sources:
 generated: { by: "pi", at: "2026-10-18T23:18:48.824Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-20T22:14:33.483Z
+    at: 2026-10-21T05:59:08.607Z
 ---
 
 # DSP test suite (DspTests)

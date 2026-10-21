@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:3b188369ba38609b81adf8070ba0ca0cea4fdcb53c948718f586a328e02eea8d",
+  "pageVersion": "sha256:46b241f091b469a3d4e47abd9a40446ad491a2f852c624611accee0aa0f10dfc",
   "claims": [
     {
       "id": "claim_4e8284a0f0bc4fe0b4e5fa2bda920264",
@@ -78,7 +78,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
         }
       ]
     },
@@ -105,22 +105,12 @@
       ]
     },
     {
-      "id": "claim_af372e89c38a4030906530dad361f5b6",
-      "statement": "Repaint invariants (bug found in the 2026-10-15 capture hunt — the line stayed invisible for a whole debug session): setNodeView(bool) (NodeView.cpp:629) and chainChanged() (NodeView.cpp:661) both END WITH repaint(), because refresh() only updates the cell children; the body (signal line segments, In/Out labels, strip) must repaint on first-time activation, on lane row gain/loss, and on selection change or the line silently stays absent until an unrelated invalidate. Line numbers are as of the m06828 batch (commit 72f48ea); the law is unchanged.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
-        }
-      ]
-    },
-    {
       "id": "claim_12d20b84d71648b6a98f1151f17b6741",
       "statement": "Grid drag-and-drop (m06828 batch, commit 72f48ea, superseding the 6df21a2 drag-UX closeout): cellDragMove computes the target slot from the GHOST CENTRE (not the raw pointer, which carries the grab offset) with `slot = floor((x - rowX_) / cellW_)` — FLOOR, no half-tile offset — so swap thresholds are SYMMETRIC: crossing ~1 tile left or right targets the neighbour, hovering one's own slot targets it (the old roundToInt(v)=floor(v+0.5) evaluated a slot's own centre k+0.5 and rounded UP: instant right swap while a left swap needed 1.5 tiles, m05941). While the pointer is in the grid the other cells LIVE-REFLOW through the optimistic preview_ lane and a NodeView::DropGlow overlay child (separate from the Ghost, because NodeView's own paint sits UNDER its children) paints a soft halo — rounded-rect wash at 30% alpha + 1.5 px border at 70% in the DRAGGED BLOCK'S OWN border colour (Model::kind colour), centred on the target cell's visible square (m06686: inset x by (slotW - sq)/2) — so the user can see where the effect lands, especially with same-icon effects (m06356/m06359). POSITIONAL LAW (m06828 item 4): a far target beyond the compact lane tail no longer clamps — moveActiveTo splices at `to = jlimit(lead, n, lead + target)` where lead = countLeadingInserts(preview_) (raw list index diverges from grid slot by leading inserts; without this a far drop landed one slot off), and pads preview_ with fresh insert ChainItems (juce::Uuid ids) up to the target first, so dragging to slot 19 with 11 effects lands AT 19. cellDragEnd: an off-grid drop (dragInGrid_ false) CANCELS — cancelDrag() discards the preview, no commit (the ONLY cancel path; a right-click mid-drag no longer cancels, see the pointer-grammar claim, m06828-2); an in-grid drop commits the full-lane id list from preview_ through chain.reorderBlocks with a `>=` size gate (padded id lists are valid commits — reorderChainBlocks materialises the new insert ids), and a drop back on the origin slot is a no-op permutation.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
         }
       ]
     },
@@ -148,7 +138,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
         }
       ]
     },
@@ -172,7 +162,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
         }
       ]
     },
@@ -182,13 +172,13 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
         }
       ]
     },
     {
       "id": "claim_532f664d974b4f1c8f5b23e50931073d",
-      "statement": "The convolution node's strip carries an IR preview: pullConvPreview (NodeView.cpp:1598) pulls chain.convPreview(blockId) (envL/envR arrays + length/sampleRate + fade curves, same pattern as the gallery EffectTile::pullConvPreview) into the strip's KernelPlot (convPlot_, views/gallery/KernelPlot at 64 px). Batch 3 (item 6): with NO kernel loaded (null dynamic object) the preview now setVisible(true) with a cleared envelope + the loaded block's fade curves, so the flat plot + 'Load IR…' button lay out and the strip's knobs are no longer clipped. The 'Load IR…' button (loadIr_) calls startConvIrLoader (NodeView.cpp:1655) which launches an async juce::FileChooser (*.wav;*.wave;*.aiff;*.aif) and on OK calls chain.loadConvIr(blockId, file); a g_irLoaderSeq token guard (plus a convIrChooser_ re-entry guard) drops stale chooser results (WeakReference<Component> is private in JUCE 9, so the loader is token-guarded); an 'error' property on the result is toasted. CLEAR LAW (m06828 item 1, commit 72f48ea): refreshModeLine's non-conv/non-reverb branch now ALSO hides convPlot_/convIr_/loadIr_, so selecting any other kind after a convolution block no longer leaks the kernel's waveform + 'Load IR…' button + IR name/time line onto the new effect's strip (the old code only hid typeB_).",
+      "statement": "The convolution node's strip carries an IR preview: pullConvPreview (NodeView.cpp:1621) pulls chain.convPreview(blockId) (envL/envR arrays + length/sampleRate + fade curves, same pattern as the gallery EffectTile::pullConvPreview) into the strip's KernelPlot (convPlot_). Batch 3 (item 6): with NO kernel loaded the preview shows a cleared envelope + the loaded block's fade curves so the layout holds. The 'Load IR…' button (loadIr_, NodeView.cpp:519) calls startConvIrLoader (NodeView.cpp:1678) which launches an async juce::FileChooser (*.wav;*.wave;*.aiff;*.aif) and on OK calls chain.loadConvIr(blockId, file); a g_irLoaderSeq token guard (plus a convIrChooser_ re-entry guard) drops stale chooser results; an 'error' property on the result is toasted. CLEAR LAW (m06828 item 1, commit 72f48ea; the conv-settings-chrome bits dropped with the 44a78ea face rework): refreshModeLine's non-conv branch hides convPlot_/convIr_/loadIr_ AND settingsExport_, so selecting any other kind after a convolution block leaks nothing onto the new strip.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/services/ChainStore.h",
@@ -196,7 +186,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
         }
       ]
     },
@@ -206,7 +196,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
         }
       ]
     },
@@ -220,7 +210,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
         },
         {
           "resource": "repo://test/src/strip_knob_tests.cpp",
@@ -234,7 +224,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
         }
       ]
     },
@@ -244,23 +234,23 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
         }
       ]
     },
     {
       "id": "claim_21c6fbf316824f9499f5546bddc38d9c",
-      "statement": "Repaint invariants (bug found in the 2026-10-15 capture hunt — the line stayed invisible for a whole debug session): setNodeView(bool) (NodeView.cpp:660) and chainChanged() (NodeView.cpp:692) both END WITH repaint(), because refresh() only updates the cell children; the body (signal line segments, In/Out labels, strip) must repaint on first-time activation, on lane row gain/loss, and on selection change or the line silently stays absent until an unrelated invalidate. Line numbers re-verified after the m06828 batch (commit 72f48ea) and the 2026-10-20 conv settings/export band; the law is unchanged.",
+      "statement": "Repaint invariants (bug found in the 2026-10-15 capture hunt — the line stayed invisible for a whole debug session): setNodeView(bool) (NodeView.cpp:637) and chainChanged() (NodeView.cpp:669) both END WITH repaint(), because refresh() only updates the cell children; the body (signal line segments, In/Out labels, strip) must repaint on first-time activation, on lane row gain/loss, and on selection change or the line silently stays absent until an unrelated invalidate. Line numbers re-verified after the 2026-10-20-21 conv face rework (44a78ea); the law is unchanged.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
         }
       ]
     },
     {
       "id": "claim_919072a01ad845d7b4bce7f74ab3613e",
-      "statement": "The convolution node's strip carries an IR preview: pullConvPreview (NodeView.cpp:1677) pulls chain.convPreview(blockId) (envL/envR arrays + length/sampleRate + fade curves, same pattern as the gallery EffectTile::pullConvPreview) into the strip's KernelPlot (convPlot_). Batch 3 (item 6): with NO kernel loaded the preview shows a cleared envelope + the loaded block's fade curves so the layout holds. The 'Load IR…' button (loadIr_) calls startConvIrLoader (NodeView.cpp:1734) which launches an async juce::FileChooser (*.wav;*.wave;*.aiff;*.aif) and on OK calls chain.loadConvIr(blockId, file); a g_irLoaderSeq token guard (plus a convIrChooser_ re-entry guard) drops stale chooser results; an 'error' property on the result is toasted. CLEAR LAW (m06828 item 1, commit 72f48ea): refreshModeLine's non-conv branch hides convPlot_/convIr_/loadIr_ AND the conv settings chrome, and resets convStripSettings_ = false, so selecting any other kind after a convolution block leaks nothing onto the new strip.",
+      "statement": "The convolution node's strip carries an IR preview: pullConvPreview (NodeView.cpp:1621) pulls chain.convPreview(blockId) (envL/envR arrays + length/sampleRate + fade curves, same pattern as the gallery EffectTile::pullConvPreview) into the strip's KernelPlot (convPlot_). Batch 3 (item 6): with NO kernel loaded (null dynamic object) the preview now setVisible(true) with a cleared envelope + the loaded block's fade curves, so the flat plot + 'Load IR…' button lay out and the strip's knobs are no longer clipped. The 'Load IR…' button (loadIr_, NodeView.cpp:519) calls startConvIrLoader (NodeView.cpp:1678) which launches an async juce::FileChooser (*.wav;*.wave;*.aiff;*.aif) and on OK calls chain.loadConvIr(blockId, file); a g_irLoaderSeq token guard (plus a convIrChooser_ re-entry guard) drops stale chooser results (WeakReference<Component> is private in JUCE 9, so the loader is token-guarded); an 'error' property on the result is toasted. CLEAR LAW (m06828 item 1, commit 72f48ea; the conv-settings-chrome bits dropped with the 44a78ea face rework): refreshModeLine's non-conv branch hides convPlot_/convIr_/loadIr_ AND settingsExport_, so selecting any other kind after a convolution block leaks nothing onto the new strip.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/services/ChainStore.h",
@@ -268,35 +258,35 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
         }
       ]
     },
     {
       "id": "claim_89a15efe0a8e4466a63884eaa2a1d154",
-      "statement": "The conv node's strip carries a Settings/Export band (commit 89afb4e, e2e layer b80bca7): settingsToggle_ (a stateful 'Settings' TextButton, mirror of the gallery tile) + settingsExport_ ('Export') + a std::vector<Knob*> of 7 settings knobs (rebuildStripSettingsKnobs: Start/End via scales::convStart()/convEnd(), Pre, F In, F Out, InCrv, OutCrv) written back through chain.setBlockParam. NodeView::setConvStripSettings (NodeView.cpp:1764) is the single owner of the chrome visibility — refreshModeLine keeps the chrome HIDDEN in the face view (a conv selection must not leak the Settings/Export line, the at-rest e2e probe saw 1:0:1); opening hides the waveform + face knobs and shows the 7 settings knobs, closing re-pulls the preview. resized() budgets the band: convBand = convStrip ? (convStripSettings_ ? 152 : 78) : 0 (NodeView.cpp:1125-1127). The Export button calls startConvExportLoader (NodeView.cpp:1861): no IR in the block → guard toast 'No IR loaded in this block' (the e2e-pinned path, since the save dialog can't be driven headless); else a save-mode FileChooser defaulting to <irName>_t3k_48k24/untitled.wav and, on pick, chain.exportConvIr(blockId, dest, 24, 48000). e2e surface: convStripStateForE2E() returns '<toggleVis>:<toggleOn>:<exportVis>:<knobCount>/<visCount>|<toast>|<convIr>' (or 'no-strip'), driven by the node-conv-strip handler in plugin/ui/testbed/NodeViewE2E.cpp and pinned by plugin/ui/testbed/e2e/conv-strip.js (6 checks; its own script because two AppConnections in one process race on socket teardown).",
+      "statement": "The conv node's strip carries Load IR + Export in its header (commit 89afb4e, face rework 44a78ea replaced the old Settings toggle + 7-knob settings band — settingsToggle_ / the 7 settings knobs / convStripSettings_ are all deleted): for a conv selection layoutStripKnobs places settingsExport_ ('Export', 58×24) and loadIr_ ('Load IR…', 120×24) ALWAYS VISIBLE in the strip header right-aligned at the y of the CONVOLUTION mode bar (btnTop = kStripHeadH + 3; NodeView.cpp:1406-1408), with the IR name/time label (convIr_, NodeView.cpp:1412) to their left; the conv band height is fixed (resized(): convBand = convStrip ? 78 : 0). The Export button (settingsExport_, NodeView.cpp:524) calls startConvExportLoader (NodeView.cpp:1720): no IR in the block → guard toast 'No IR loaded in this block' (the e2e-pinned path, since the save dialog can't be driven headless); else a save-mode FileChooser defaulting to <irName>_t3k_48k24/untitled.wav and, on pick, chain.exportConvIr(blockId, dest, 24, 48000). e2e surface: convStripStateForE2E() (NodeView.cpp:1708) returns 'no-strip' or '<loadIrVis>:<exportVis>|<toast>|<convIr>', driven by the node-conv-strip handler in plugin/ui/testbed/NodeViewE2E.cpp (the 'toggle' op was dropped with the settings band) and pinned by plugin/ui/testbed/e2e/conv-strip.js (its own script because two AppConnections in one process race on socket teardown).",
       "evidence": [
         {
           "resource": "repo://plugin/ui/testbed/NodeViewE2E.cpp",
-          "version": "repo-file-v1:sha256:493d0be1532a5e0dd1f03dcbf31df0edf891debeffd1cdc97112e39bce6f8a43"
+          "version": "repo-file-v1:sha256:68b20034588a387c48b67e1fbb8f755ee9f9b16a635d3db86597ec27cda2e661"
         },
         {
           "resource": "repo://plugin/ui/testbed/e2e/conv-strip.js",
-          "version": "repo-file-v1:sha256:dfc433b5ed07a59d4b773ce139b9bd35b684097d9af0d251dea24e5fc5f11f02"
+          "version": "repo-file-v1:sha256:6f71c43721712c68e7794bb1e53828635e3638ce2b7d3845991dc81bd78739aa"
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fd02c41192719153af5f0914f9721efbdc2bda82703f3bec721eb04a3a9fa556"
+          "version": "repo-file-v1:sha256:8016ad7eeeb77208f743b164969fe11e3199d7d47db9e1186a7ef269069eae3a"
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.h",
-          "version": "repo-file-v1:sha256:970f396d11a98a48353edfb59616f99736aba62c4638635b562490852549e229"
+          "version": "repo-file-v1:sha256:e0f423b9fcd927475c952e8ed2c04acbafe0af2efcc7d3580dde2f2666189f51"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-20T22:14:33.483Z"
+    "at": "2026-10-21T05:59:08.607Z"
   }
 }

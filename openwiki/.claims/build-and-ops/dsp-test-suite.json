@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:e58a9ec5cff1a85a8dbbbd985fbc3272ccffbb8e46fb2abd01cddf0e5b1dbb92",
+  "pageVersion": "sha256:5c7652f108e4fc6a50dcf4cd899f4e4fcc98a35d191556aee2262609ae2ea54b",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -220,7 +220,7 @@
     },
     {
       "id": "claim_551f834dfc9540a0970ac888a4c6f457",
-      "statement": "A juce-end-to-end layer is a SUPPLEMENT (2026-10-18, commit f0b06d4; spec spc-1792273651114-39383: supplement only, never a replacement): plugin/ui/testbed/CMakeLists.txt does add_subdirectory(libs/focusrite-e2e) and links focusrite-e2e::focusrite-e2e into UiTestbed; the JS client lives in plugin/ui/testbed/e2e/ (npm package.json, node_modules/ gitignored). node-drag.js carries 35 check() asserts (opaque-ghost / follows-pointer / no-origin-box / post-drag-idle / symmetric 1-tile swap / drop-glow / off-chain cancel / right-press-SURVIVES-drag / positional far-slot drop laws) and runs under `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`; conv-strip.js (commit b80bca7) is a STANDALONE 6-check script for the node-view conv strip's settings/export band (at-rest chrome `0:0:0`, toggle on `1:1:1:7/7`, export toast `No IR loaded in this block`, toggle off back to `0:0:0`) driven by the `node-conv-strip` handler in NodeViewE2E.cpp + `NodeView::convStripStateForE2E()` — it got its own script because two AppConnections in one process race on socket teardown (TestCentre.cpp:97 returns a failure for unregistered message types). e2e.js APP honors a T3K_E2E_APP env override (commit 72f48ea) so the rig can point at an alternate UiTestbed build tree without editing the file. DspTests, the testbed selftest, TileShot goldens, and the e2e scripts remain the complementary gates.",
+      "statement": "A juce-end-to-end layer is a SUPPLEMENT (2026-10-18, commit f0b06d4; spec spc-1792273651114-39383: supplement only, never a replacement): plugin/ui/testbed/CMakeLists.txt does add_subdirectory(libs/focusrite-e2e) and links focusrite-e2e::focusrite-e2e into UiTestbed; the JS client lives in plugin/ui/testbed/e2e/ (npm package.json, node_modules/ gitignored). node-drag.js carries 35 check() asserts (opaque-ghost / follows-pointer / no-origin-box / post-drag-idle / symmetric 1-tile swap / drop-glow / off-chain cancel / right-press-SURVIVES-drag / positional far-slot drop laws) and runs under `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`; conv-strip.js (commit b80bca7, reworked at 44a78ea) is a STANDALONE 4-check script for the node-view conv strip's FACE CHROME (at-rest `1:1|` = Load IR + Export both visible right of the CONVOLUTION mode bar, export with no IR fires the guard toast `No IR loaded in this block`, chrome survives the guarded export) driven by the `node-conv-strip` handler in NodeViewE2E.cpp + `NodeView::convStripStateForE2E()` whose state string is now `<loadIrVis>:<exportVis>|<toast>|<convIr>` — the settings-band toggle/checks were deleted with the settings view (44a78ea). It got its own script because two AppConnections in one process race on socket teardown (TestCentre.cpp:97 returns a failure for unregistered message types). e2e.js APP honors a T3K_E2E_APP env override (commit 72f48ea) so the rig can point at an alternate UiTestbed build tree without editing the file. DspTests, the testbed selftest, TileShot goldens, and the e2e scripts remain the complementary gates.",
       "evidence": [
         {
           "resource": "repo://docs/tickets/juce-e2e-suite-draft.md",
@@ -232,11 +232,11 @@
         },
         {
           "resource": "repo://plugin/ui/testbed/NodeViewE2E.cpp",
-          "version": "repo-file-v1:sha256:493d0be1532a5e0dd1f03dcbf31df0edf891debeffd1cdc97112e39bce6f8a43"
+          "version": "repo-file-v1:sha256:68b20034588a387c48b67e1fbb8f755ee9f9b16a635d3db86597ec27cda2e661"
         },
         {
           "resource": "repo://plugin/ui/testbed/e2e/conv-strip.js",
-          "version": "repo-file-v1:sha256:dfc433b5ed07a59d4b773ce139b9bd35b684097d9af0d251dea24e5fc5f11f02"
+          "version": "repo-file-v1:sha256:6f71c43721712c68e7794bb1e53828635e3638ce2b7d3845991dc81bd78739aa"
         },
         {
           "resource": "repo://plugin/ui/testbed/e2e/node-drag.js",
@@ -246,7 +246,7 @@
     },
     {
       "id": "claim_f818caf1b6ac417189c4de6e4fe8230e",
-      "statement": "The optimization-findings state-size work added src/state_size_tests.cpp (line 36 of test/CMakeLists.txt): 8 tests pinning the DAW-host state footprint — a 2+2 dual-mono NAM rig with 4 blocks sharing one ~8 MB synthetic LCG payload, v1 raw-blob baseline (33.6 MB, ~5 ms save), the v2 ModelLibrary dedup shape (one payload + ref strings), the gzip flag layer (incompressible LCG payload saves flag 0 raw; real 360 KB-class SYN20 captures syn20-amp-c1.nam/syn20-amp-c2.nam save flag 1 with saved < rawSize+5), byte-identical re-saves, v1-forward-compat restore, and a corrupt-header fuzz case. The test-side blob parser lives in shared header test/src/StateSizeBlob.h (parseFlagAwareStateBlob / blobTreeContains), consumed by state_cache, processor, pitch_shift and gate tests because the state header gained the format flag. Full-suite snapshot: 560 after this pass; 575 after the conv wet-clip + Settings/Export-kernel pass (convolution_reverb_tests.cpp WetClip* + ConvIrExport* suites) — lower-bound; never assert stale totals.",
+      "statement": "The optimization-findings state-size work added src/state_size_tests.cpp (line 36 of test/CMakeLists.txt): 8 tests pinning the DAW-host state footprint — a 2+2 dual-mono NAM rig with 4 blocks sharing one ~8 MB synthetic LCG payload, v1 raw-blob baseline (33.6 MB, ~5 ms save), the v2 ModelLibrary dedup shape (one payload + ref strings), the gzip flag layer (incompressible LCG payload saves flag 0 raw; real 360 KB-class SYN20 captures syn20-amp-c1.nam/syn20-amp-c2.nam save flag 1 with saved < rawSize+5), byte-identical re-saves, v1-forward-compat restore, and a corrupt-header fuzz case. The test-side blob parser lives in shared header test/src/StateSizeBlob.h (parseFlagAwareStateBlob / blobTreeContains), consumed by state_cache, processor, pitch_shift and gate tests because the state header gained the format flag. Full-suite snapshot: 560 after this pass; 575 after the conv wet-clip + Settings/Export-kernel pass (convolution_reverb_tests.cpp WetClip* + ConvIrExport* suites); 579 after the face-rework pass (44a78ea: conv mod click-index / tap-body tests + ConvDwell scale/chain-round-trip tests in effect_ui_scale_tests.cpp) — lower-bound; never assert stale totals.",
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
@@ -254,7 +254,11 @@
         },
         {
           "resource": "repo://test/src/convolution_reverb_tests.cpp",
-          "version": "repo-file-v1:sha256:02d65f19edaeb48d4692ad0bb3ef24121dbddb9febe46ebc316eab6842861243"
+          "version": "repo-file-v1:sha256:13c3bcf3c89adc32ffbdc7ce9c217750155ce51130a109ca4f92dbf5553b0e84"
+        },
+        {
+          "resource": "repo://test/src/effect_ui_scale_tests.cpp",
+          "version": "repo-file-v1:sha256:6c25e8fb21f9a5edc6a4e2fe96a3b168b440c1743f2bb96aed479dc5b874bed5"
         },
         {
           "resource": "repo://test/src/processor_tests.cpp",
@@ -269,6 +273,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-20T22:14:33.483Z"
+    "at": "2026-10-21T05:59:08.607Z"
   }
 }

@@ -24,7 +24,7 @@ sources:
 generated: { by: "pi", at: "2026-10-18T23:18:48.824Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-20T22:14:33.483Z
+    at: 2026-10-21T05:59:08.607Z
 ---
 
 
@@ -121,11 +121,21 @@ Its own additions:
   per ramp.
 - **Pre** (0..100 ms wet pre-delay), **Width** (M/S fold), smoothed **Gain**
   (0.5 = 0 dB) — all live on the wet path, none baked into the kernel.
-- **Wet soft-knee peak limiter** (the final wet stage, `ConvolutionReverb.cpp:823-827`,
+- **Mod wet-ring click fix** (commit 44a78ea, spec spc-1792538043915-13755):
+  one-pole smoothing on the modulated wet **ring write** — `kModWriteTauMs =
+  80.0` (`ConvolutionReverb.h:168`), state `modSmPrev_[2]` / `modSmCoef_`
+  (`ConvolutionReverb.h:423-425`, coef `exp(-1/(rate * wMs * 1e-3))` recomputed
+  in `prepare()`/per-callback). The write is smoothed **before** the comb taps
+  read it, so the LFO pass can't re-emit dry wet transients every
+  period — the "periodic clicking when Mod is up" the user heard. Zero-latency
+  and causal (a one-pole is a causal flatter; no look-ahead, no oversample).
+  `setModWriteTauForTest(ms)`: `<0` = raw write, bit-exact (the pre-fix
+  contract tests pin this); `0` = ship default.
+- **Wet soft-knee peak limiter** (the final wet stage, `ConvolutionReverb.cpp:845-849`,
   gated by `clipEnabled_`, NOT applied on the dying crossfade tail): a 1024-entry
   LUT over `log|x|` in `[kClipLogLo, kClipLogHi]` with the smoothstep
   ramp/floor/ceiling law (`kClipFloorDb` lift at low levels, knee at
-  `kClipKneeX`, `kClipCeilingGain` ceiling — constants at `ConvolutionReverb.h:177-190`).
+  `kClipKneeX`, `kClipCeilingGain` ceiling — constants at `ConvolutionReverb.h:183-196`).
   No user knob, not part of state, and deliberately **excluded from IR export**.
   Guarded by `WetClipCurveLaw` + `WetClipInPath` in
   `test/src/convolution_reverb_tests.cpp` (plain 0.3 dB tolerance; the 7
@@ -136,7 +146,7 @@ Its own additions:
 
 ## Kernel export (`exportKernel`, commit 89afb4e)
 
-`ConvolutionReverb::exportKernel(targetRate, &error)` (`ConvolutionReverb.h:328`,
+`ConvolutionReverb::exportKernel(targetRate, &error)` (`ConvolutionReverb.h:336`,
 `ConvolutionReverb.cpp:390`) produces the IR exactly as the live engine sees
 it, at the target sample rate: it re-runs the SAME linear `makeEditedState`
 pipeline — Start/End trim, Time stretch, fade in/out + curves — at the raw
