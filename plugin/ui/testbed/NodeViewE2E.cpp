@@ -26,7 +26,6 @@ struct Drag {
   juce::Component* source = nullptr;  // component that got the mouseDown
 };
 Drag g_drag;
-bool convStripSettings_ = false;  // node-conv-strip toggle mirror
 
 // Deepest component under `local` (frame-local) via JUCE's own routing.
 juce::Component* deepestAt(juce::Component* frame, juce::Point<int> local) {
@@ -265,8 +264,6 @@ NodeViewE2EHandler::process(const focusrite::e2e::Command& command) {
     const juce::String blockId = command.getArgumentAs<juce::String>("blockId");
     const juce::String op = command.getArgumentAs<juce::String>("op");
     if (blockId.isNotEmpty()) nv->selectBlockForShot(blockId.toStdString());
-    if (op == "toggle")
-      nv->setConvStripSettings(convStripSettings_ = !convStripSettings_);
     if (op == "export-click")
       nv->startConvExportLoader(blockId.toStdString());
     return Response::ok().withParameter("state", nv->convStripStateForE2E());

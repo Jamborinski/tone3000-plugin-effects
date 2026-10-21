@@ -140,24 +140,28 @@ std::vector<EffectParams> paramsFor(const ChainItem& b, bool compact) {
         {&scales::loCutTaper(), "reverbLoCut", "LoCut", b.reverbLoCut, help::Key::reverbLoCut},
     };
   if (k == "convolution") {
-    // Full 6x2 surface: 12 knobs = the fixed
-    // Mix/In/Out trio + these nine, in slot order (A..E, sig, mod, F, G).
-    // "Dry" is the DRY-path level (a gain on the dry term of the Mix crossfade);
-    // the shared In knob is re-labelled "Dwell" on the conv tile (wet input gain).
+    // Full 7x2 surface: 12 knobs = the fixed Mix/Dwell/Out trio + these nine,
+    // in slot order (A..E, sig, mod, F, G) matching the face rows:
+    //   row 1: Mix  Dwell  Dry  Time  Pre  Start  End
+    //   row 2: Width Mod  Out  F In  F Out
+    // Start/End join the face (their old settings-view home is gone);
+    // InCrv/OutCrv moved out of the face into the F In / F Out right-click
+    // curve bands. "Dry" is the DRY-path level; the shared In knob is
+    // re-labelled "Dwell" on the conv tile (wet input gain, +-18 dB window).
     const std::vector<EffectParams> full = {
+        {&scales::convGain(), "convDry", "Dry", b.convDry, help::Key::convDry},
         {&scales::convPitch(), "convPitch", "Time", b.convPitch, help::Key::convPitch},
         {&scales::convPre(), "convPreMs", "Pre", b.convPreMs, help::Key::convPre},
+        {&scales::convStart(), "convStartS", "Start", b.convStartS, help::Key::convStartS},
+        {&scales::convEnd(), "convEndS", "End", b.convEndS, help::Key::convEndS},
+        {&scales::convWidth(), "convWidth", "Width", b.convWidth, help::Key::convWidth},
+        {&scales::convMod(), "convMod", "Mod", b.convMod, help::Key::convMod},
         {&scales::convFade(), "convFadeIn", "F In", b.convFadeIn, help::Key::convFadeIn},
         {&scales::convFade(), "convFadeOut", "F Out", b.convFadeOut, help::Key::convFadeOut},
-        {&scales::convMod(), "convMod", "Mod", b.convMod, help::Key::convMod},
-        {&scales::convGain(), "convDry", "Dry", b.convDry, help::Key::convDry},
-        {&scales::convWidth(), "convWidth", "Width", b.convWidth, help::Key::convWidth},
-        {&scales::convFade(), "convInCurve", "InCrv", b.convInCurve, help::Key::convInCurve},
-        {&scales::convFade(), "convOutCurve", "OutCrv", b.convOutCurve, help::Key::convOutCurve},
     };
     if (compact) {
-      // 4x2: Time/Pre/Mod over Dwell/Width. (index 4 = Mod, was Tone)
-      const int sel[5] = {0, 1, 4, 5, 6};
+      // 4x2: Time/Pre/Mod over Dwell/Width.
+      const int sel[5] = {1, 2, 6, 0, 5};
       std::vector<EffectParams> c;
       for (int j = 0; j < 5; ++j) c.push_back(full[sel[j]]);
       return c;

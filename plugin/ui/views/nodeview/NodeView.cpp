@@ -519,12 +519,6 @@ public:
     loadIr_.onClick = [this] { v_.startConvIrLoader(g_lastStripBlockId); };
     loadIr_.setVisible(false);
     addAndMakeVisible(loadIr_);
-    addAndMakeVisible(settingsToggle_);
-    settingsToggle_.setVisible(false);
-    settingsToggle_.setClickingTogglesState(true);
-    settingsToggle_.onClick = [this] {
-      v_.setConvStripSettings(settingsToggle_.getToggleState());
-    };
     addAndMakeVisible(settingsExport_);
     settingsExport_.setVisible(false);
     settingsExport_.onClick = [this] { v_.startConvExportLoader(g_lastStripBlockId); };
@@ -542,12 +536,7 @@ public:
   KernelPlot& convPlot() { return convPlot_; }
   juce::Label& convIr() { return convIr_; }
   juce::TextButton& loadIr() { return loadIr_; }
-  // Conv IR-settings group (the strip's mirror of the gallery tile's
-  // settings view): the 7 settings knobs are owned by NodeView (it
-  // resyncs them from the chain); only the chrome lives here.
-  juce::TextButton& settingsToggle() { return settingsToggle_; }
   juce::TextButton& settingsExport() { return settingsExport_; }
-  std::vector<Knob*>& settings() { return settingsKnobs_; }
   std::vector<Knob*>& knobs() { return knobs_; }
   const std::vector<Knob*>& knobs() const { return knobs_; }
   // One value string per knob (the strip's persistent readout line).
@@ -570,18 +559,8 @@ public:
     convPlot_.setVisible(false);
     convIr_.setVisible(false);
     loadIr_.setVisible(false);
-    settingsToggle_.setVisible(false);
     settingsExport_.setVisible(false);
-    for (auto* k : settingsKnobs_) k->setVisible(false);
     repaint();
-  }
-
-  // NodeView owns the settings knobs' lives (it resyncs them from the
-  // chain); the strip only stores + shows/hides them.
-  void setSettingsKnobs(std::vector<Knob*> knobs) {
-    for (auto* k : settingsKnobs_) delete k;
-    settingsKnobs_ = std::move(knobs);
-    for (auto* k : settingsKnobs_) addAndMakeVisible(*k);
   }
 
   void addKnob(Knob* k, juce::String value) {
@@ -630,11 +609,9 @@ private:
   // mono/stereo) — the conv strip lacked it while the gallery tile carried
   // it (user m03587).
   juce::Label convIr_;
-  // Conv IR-settings chrome: the Settings toggle + Export (the 7 settings
-  // knobs are NodeView-owned, see setSettingsKnobs).
-  juce::TextButton settingsToggle_;
+  // Conv IR chrome: Load IR + Export (both right of the CONVOLUTION
+  // mode bar; Start/End/curves live on the face / curve bands).
   juce::TextButton settingsExport_;
-  std::vector<Knob*> settingsKnobs_;
   std::vector<Knob*> knobs_;
   std::vector<juce::String> values_;
   int knobFace_ = 0;  // 0 = default kKnobFace; syncStrip sets the shrunk face
@@ -1119,11 +1096,10 @@ void NodeView::resized() {
   const bool convStrip =
       selB != nullptr && selB->isEffect && selB->effectKind == "convolution"
       && strip_->isVisible();
-  // The IR-settings row (Settings toggled) replaces the waveform row with a
-  // 2-knob-row grid + the toggle/export line: same budget as the plot band
-  // plus one knob row.
-  const int convBand =
-      convStrip ? (convStripSettings_ ? 152 : 78) : 0;
+    // Conv strip: a single fixed band (Load IR + Export right of the mode
+  // bar over the kernel plot) — the settings view is gone (Start/End
+  // moved to the face, InCrv/OutCrv to the curve bands).
+  const int convBand = convStrip ? 78 : 0;
   const int stripH = kStripHeadH + 6 + convBand + kh + 20;
   // Docked to the BOTTOM of the view (m01857): the grid sits up top, the
   // strip fills the full width along the bottom edge, gap kStripBottomGap.
@@ -1166,17 +1142,11 @@ void NodeView::refreshModeLine(NodeStrip& st, const ChainItem& b) {
     pullConvPreview(st, b);
     st.loadIr().setButtonText("Load IR...");
     st.loadIr().setVisible(true);
-    // The IR-settings row chrome (mirror of the gallery tile's Settings/
-    // Export): the 7 settings knobs are rebuilt by syncStrip.
-    st.settingsToggle().setButtonText("Settings");
-    st.settingsToggle().setToggleState(convStripSettings_, juce::dontSendNotification);
-    // The chrome stays HIDDEN in the face view: convSetOpen (the toggle's
-    // on-state via setConvStripSettings) is the single source of truth —
-    // a conv selection must not leak the Settings/Export line into the
-    // face view (the at-rest e2e probe saw 1:0:1).
-    st.settingsToggle().setVisible(convStripSettings_);
+    // Export is always visible on the conv strip (right of Load IR, both
+    // right of the CONVOLUTION mode bar — the user's m03044 call); the
+    // no-IR guard toasts on click.
     st.settingsExport().setButtonText("Export");
-    st.settingsExport().setVisible(convStripSettings_);
+    st.settingsExport().setVisible(true);
   } else if (k == "reverb") {
     mb.setHelpText("Click to open the mode menu -- type: " +
                    juce::String(reverbTypeName(b.reverbMode, nodeReverbTypeOf(b, b.reverbMode))) +
@@ -1195,10 +1165,7 @@ void NodeView::refreshModeLine(NodeStrip& st, const ChainItem& b) {
     st.convPlot().setVisible(false);
     st.convIr().setVisible(false);
     st.loadIr().setVisible(false);
-    st.settingsToggle().setVisible(false);
     st.settingsExport().setVisible(false);
-    for (auto* k : st.settings()) k->setVisible(false);
-    convStripSettings_ = false;
   }
 }
 
@@ -1222,8 +1189,6 @@ void NodeView::syncStrip() {
     updateStripKnobValues(st, *b);
     refreshModeLine(st, *b);  // a mode pick must be visible immediately
     if (g_stripDirty) rebuildStripKnobs(st, *b);
-    if (b->effectKind == "convolution")
-      updateStripSettingsKnobValues(st, *b);  // settings row mirrors too
     layoutStripKnobs();
     return;
   }
@@ -1255,8 +1220,6 @@ void NodeView::syncStrip() {
 
   updateStripChrome(*b);
   rebuildStripKnobs(st, *b);
-  if (b->effectKind == "convolution")
-    rebuildStripSettingsKnobs(st, *b);  // the strip's IR-settings row
   // layoutStripKnobs positions the header (name/mode/type buttons) — the
   // old fresh-pick called it here directly; rebuildStripKnobs must carry
   // that responsibility (without it modeB_ stays 0x0 and its menu never opens).
@@ -1437,39 +1400,20 @@ void NodeView::layoutStripKnobs() {
   // shrunk face doesn't leave dead space.
   const int headPad = st.knobFace() < (int)kKnobFace ? 2 : 6;
   if (conv) {
-    st.loadIr().setBounds(st.getWidth() - 250, plotTop, 120, 24);
+    // User's call (m03044): Load IR + Export sit RIGHT of the CONVOLUTION
+    // mode bar (their old positions crowded the name + the top-left plot
+    // line and the user "didn't see an export tab anywhere").
+    const int btnTop = kStripHeadH + 3;
+    st.settingsExport().setBounds(st.getWidth() - 28 - 58, btnTop, 58, 24);
+    st.loadIr().setBounds(st.getWidth() - 28 - 58 - 8 - 120, btnTop, 120, 24);
     st.convPlot().setBounds(14, plotTop, juce::jmin(520, st.getWidth() - 280), 56);
     st.convIr().setFont(labelFont());
     st.convIr().setColour(juce::Label::textColourId, theme::kWhite);
-    st.convIr().setBounds(14, kStripHeadH + 3, juce::jmin(520, st.getWidth() - 280), 14);
+    st.convIr().setBounds(14, btnTop, st.getWidth() - 280 - 200 - 14, 14);
   }
   const int knobTop = plotTop + plotH + (conv ? 0 : headPad);
   for (int i = 0; i < n; ++i)
     st.knobs()[i]->setBounds(x0 + i * cw, knobTop, cw, kh);
-
-  // Conv IR-settings band: the Settings/Export line replaces the waveform
-  // row when the toggle is on; the 7 settings knobs run 4 over 3 below it
-  // (the face knob row hides, mirroring the gallery tile's view swap).
-  const bool convSetOpen = conv && st.settingsToggle().getToggleState();
-  if (convSetOpen) {
-    const int bandTop = kStripHeadH + 6 + 18;  // the convIr_ line stays
-    st.loadIr().setBounds(st.getWidth() - 250, bandTop, 120, 24);
-    st.settingsToggle().setBounds(st.getWidth() - 380, bandTop, 58, 24);
-    st.settingsExport().setBounds(st.getWidth() - 314, bandTop, 58, 24);
-    const int sn = (int)st.settings().size();
-    if (sn > 0) {
-      const int sCols = 4;
-      const int sCw = juce::jmin(110, (st.getWidth() - 28) / sCols);
-      const int sX0 = (st.getWidth() - sCw * sCols) / 2;
-      const int sKH = juce::jmin(54, st.knobHeight());
-      for (int i = 0; i < sn; ++i) {
-        const int r = i / sCols;
-        const int c = i % sCols;
-        st.settings()[i]->setBounds(sX0 + c * sCw, bandTop + 30 + r * (sKH + 4),
-                                    sCw, sKH);
-      }
-    }
-  }
 }
 
 // ------------------------------------------------------- strip cyclers (m01857)
@@ -1761,99 +1705,14 @@ void NodeView::startConvIrLoader(const std::string& blockId) {
       });
 }
 
-void NodeView::setConvStripSettings(bool on) {
-  convStripSettings_ = on;
-  auto& st = *strip_;
-  if (st.settingsToggle().getToggleState() != on)
-    st.settingsToggle().setToggleState(on, juce::dontSendNotification);
-  // View swap, mirror of the gallery tile: the settings band opens (the
-  // Settings/Export chrome is owned by THIS function — refreshModeLine
-  // keeps it in the closed state), the waveform + face knob row hide;
-  // closing restores them.
-  st.settingsToggle().setVisible(on);
-  st.settingsExport().setVisible(on);
-  for (auto* k : st.settings()) k->setVisible(on);
-  if (on) {
-    st.convPlot().setVisible(false);
-    for (auto* k : st.knobs()) k->setVisible(false);
-  } else {
-    for (auto* k : st.knobs()) k->setVisible(true);
-    // The waveform comes back via the preview pull (the block is still a
-    // conv node — this sync is the re-pull point for a closed row).
-    if (!g_lastStripBlockId.empty()) {
-      const auto* b =
-          services_.chain.state().findBlock(g_lastStripBlockId);
-      if (b != nullptr && b->effectKind == "convolution")
-        pullConvPreview(st, *b);
-    }
-  }
-  resized();
-  layoutStripKnobs();
-  repaint();
-}
-
-void NodeView::rebuildStripSettingsKnobs(NodeStrip& st, const ChainItem& b) {
-  const struct SK {
-    const KnobScale* scale; juce::String param; juce::String label; help::Key help;
-  } rows[7] = {
-      {&scales::convStart(), "convStartS", "Start", help::Key::convStartS},
-      {&scales::convEnd(), "convEndS", "End", help::Key::convEndS},
-      {&scales::convPre(), "convPreMs", "Pre", help::Key::convPre},
-      {&scales::convFade(), "convFadeIn", "F In", help::Key::convFadeIn},
-      {&scales::convFade(), "convFadeOut", "F Out", help::Key::convFadeOut},
-      {&scales::convFade(), "convInCurve", "InCrv", help::Key::convInCurve},
-      {&scales::convFade(), "convOutCurve", "OutCrv", help::Key::convOutCurve},
-  };
-  const double stored[7] = {b.convStartS, b.convEndS, b.convPreMs, b.convFadeIn,
-                            b.convFadeOut, b.convInCurve, b.convOutCurve};
-  std::vector<Knob*> out;
-  for (int i = 0; i < 7; ++i) {
-    Knob::Options o;
-    o.label = rows[i].label;
-    o.size = 32;
-    o.scale = rows[i].scale;
-    o.labelOnTop = true;
-    o.help = rows[i].help;
-    auto* knob = new Knob(o);
-    knob->setValue(knobFromStored(*rows[i].scale, stored[i]));
-    const KnobScale* sc = rows[i].scale;
-    const juce::String param = rows[i].param;
-    knob->onChange = [this, sc, param](float v) {
-      this->services_.chain.setBlockParam(
-          g_lastStripBlockId, param, knobToStored(*sc, (double)v));
-    };
-    knob->setVisible(convStripSettings_);
-    out.push_back(knob);
-  }
-  st.setSettingsKnobs(std::move(out));
-}
-
-void NodeView::updateStripSettingsKnobValues(NodeStrip& st, const ChainItem& b) {
-  const double stored[7] = {b.convStartS, b.convEndS, b.convPreMs, b.convFadeIn,
-                            b.convFadeOut, b.convInCurve, b.convOutCurve};
-  const KnobScale* scales[7] = {&scales::convStart(), &scales::convEnd(),
-                                &scales::convPre(), &scales::convFade(),
-                                &scales::convFade(), &scales::convFade(),
-                                &scales::convFade()};
-  auto& sk = st.settings();
-  for (int i = 0; i < (int)sk.size(); ++i)
-    sk[i]->setValue(knobFromStored(*scales[i], stored[i]));
-}
-
 juce::String NodeView::convStripStateForE2E() const {
-  // e2e probe: the conv strip's settings-band state, one line, pipe-joined
+  // e2e probe: the conv strip's face-chrome state, one line, pipe-joined
   // (the save-file dialog can't be driven headless, so the export GUARD
   // toast is what the e2e layer pins):
-  //   "no-strip" | "<toggleVis>:<toggleOn>:<exportVis>:<knobCount>/<visCount>|<toast>|<convIr>"
+  //   "no-strip" | "<loadIrVis>:<exportVis>|<toast>|<convIr>"
   if (strip_ == nullptr || !strip_->isVisible()) return "no-strip";
-  const auto& knobs = strip_->settings();
-  int vis = 0;
-  for (auto* k : knobs)
-    if (k->isVisible()) ++vis;
-  return juce::String(strip_->settingsToggle().isVisible() ? 1 : 0) + ":"
-         + juce::String(strip_->settingsToggle().getToggleState() ? 1 : 0) + ":"
-         + juce::String(strip_->settingsExport().isVisible() ? 1 : 0) + ":"
-         + juce::String((int)knobs.size()) + "/" + juce::String(vis) + "|"
+  return juce::String(strip_->loadIr().isVisible() ? 1 : 0) + ":"
+         + juce::String(strip_->settingsExport().isVisible() ? 1 : 0) + "|"
          + services_.toast.message() + "|"
          + convIrLabelForShot();
 }

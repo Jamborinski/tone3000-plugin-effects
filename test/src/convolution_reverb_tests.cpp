@@ -47,6 +47,24 @@ juce::AudioBuffer<float> UnitConstantIr(int n) {
   return ir;
 }
 
+// Decaying exponential IR (a decaying tail: the wet is a filtered input,
+// NOT a scaled copy of it -- the mod click-hunt needs the wet to carry its
+// own structure, so the layer's jump ratio stops being a constant).
+juce::AudioBuffer<float> ExpDecayIr(int n, double fs, double tau) {
+  juce::AudioBuffer<float> ir(2, n);
+  double s2 = 0;
+  for (int i = 0; i < n; ++i) {
+    const double v = std::exp(-(double)i / fs / tau);
+    ir.setSample(0, i, static_cast<float>(v));
+    ir.setSample(1, i, static_cast<float>(v));
+    s2 += v * v;
+  }
+  for (int c = 0; c < 2; ++c)
+    for (int i = 0; i < n; ++i)
+      ir.setSample(c, i, static_cast<float>(ir.getSample(c, i) / std::sqrt(s2)));
+  return ir;
+}
+
 // Message-thread pump for the coalesced-rebuild settle timer (A6):
 // setParams on shape knobs SCHEDULES the rebuild kRebuildSettleMs after the
 // last change (a drag must not rebuild per nudge); tests advance the same
@@ -542,6 +560,174 @@ TEST(ConvolutionReverb, ModSchedulingNoRebuild) {
   fx.setParams(p);
   PumpSettle(fx);  // if a rebuild were scheduled it would fire here
   EXPECT_EQ(fx.installs(), before) << "a Mod change must not schedule an engine rebuild";
+}
+
+// Mod ring-write click hunt (the reverb eleventh-cut precedent, applied to
+// this engine): the mod taps are DELAYED COPIES of the wet, so a spiky wet
+// re-emits its spikes through the layer on each LFO pass -- the periodic
+// click. Fix under test: the one-pole on the RING WRITE (kModWriteTauMs,
+// test hook setModWriteTauForTest; <0 disabled = raw-write baseline).
+// Metric per the audio-testing rule: the LAYER's (on-off) jump-RMS relative
+// to the WET's own jump-RMS in matching steady windows, sustained chords at
+// two amplitudes (louder input = louder re-emitted spike).
+TEST(ConvolutionReverb, ModWriteTauClickHunt) {
+  const char nl[] = "\n";
+  const unsigned int fs = 48000;
+  const int n = 2 * fs, blk = 128;
+
+  auto makeBurst = [&](int off, int i, double amp) -> float {
+    // A 20 ms sine burst at 75 Hz: transients INSIDE the measurement
+    // window (a steady chord would leave the wet constant where we look).
+    // The 48 Hz LFO sweep is well below the 75 Hz burst rate, so the tap
+    // delays stay ~steady (the layer is a clean delayed copy of the wet,
+    // and only the RING WRITE differs between raw and smoothed).
+    const double t = (off + i) / (double)fs;
+    const double ph = fmod(t, 1.0 / 75.0);
+    if (ph >= 0.020) return 0.0f;
+    const double e = std::min(1.0, ph / 0.002);  // 2 ms attack (the click)
+    double h[5];
+    for (int q = 0; q < 5; ++q)
+      h[q] = std::sin(2.0 * M_PI * (double)std::pow(2.0, q / 5.0) * 82.41 * t +
+                      q * 0.7);
+    return static_cast<float>(0.6 * amp * 0.5 * (h[0] + h[1] + h[2] + h[3] + h[4]) * e);
+  };
+  auto render = [&](bool on, double tauHook, double amp) -> std::vector<float> {
+    ConvolutionReverb fx;
+    if (!fx.loadBuffer(ExpDecayIr(4096, 48000.0, 2.0), (double)fs)) return {};
+    fx.prepare((double)fs);
+    fx.setModWriteTauForTest(tauHook);  // <0 disabled, 0 = ship default
+    ConvolutionReverb::Params p;
+    p.mod = on ? 1.0 : 0.0;
+    fx.setParams(p);
+    std::vector<float> out(n);
+    for (int off = 0; off + blk <= n; off += blk) {
+      juce::AudioBuffer<float> b(2, blk);
+      for (int i = 0; i < blk; ++i) {
+        const float v = makeBurst(off, i, amp);
+        b.setSample(0, i, v);
+        b.setSample(1, i, v);
+      }
+      fx.process(b);
+      for (int i = 0; i < blk; ++i)
+        out[off + i] = b.getSample(0, i);
+    }
+    return out;
+  };
+  const auto rms = [](const std::vector<float>& x, unsigned m1, unsigned m2) {
+    double e = 0;
+    for (unsigned i = m1; i < m2; ++i)
+      e += (double)x[i] * x[i];
+    return std::sqrt(e / (m2 - m1));
+  };
+  const auto jump = [](const std::vector<float>& x, unsigned m1, unsigned m2) {
+    double e = 0;
+    for (unsigned i = m1 + 1; i < m2; ++i) {
+      const double dd = (double)x[i] - x[i - 1];
+      e += dd * dd;
+    }
+    return std::sqrt(e / (m2 - m1 - 1));
+  };
+  const auto layerVec = [](const std::vector<float>& on, const std::vector<float>& wet_) {
+    std::vector<float> l(on.size());
+    for (size_t i = 0; i < l.size(); ++i)
+      l[i] = on[i] - wet_[i];
+    return l;
+  };
+  const auto crest = [&](const std::vector<float>& x, unsigned m1, unsigned m2) {
+    double pk = 0, e = 0;
+    for (unsigned i = m1; i < m2; ++i) {
+      pk = std::max(pk, std::abs((double)x[i]));
+      e += (double)x[i] * x[i];
+    }
+    return pk / std::max(std::sqrt(e / (m2 - m1)), 1e-18);
+  };
+  const unsigned m1 = (unsigned)(fs / 2), m2 = (unsigned)n;  // last 1.5 s of steady bursts
+
+  std::cout << "[CONV MOD BURST CLICK HUNT  mod 1.0, 2 s bursts, 48 kHz]" << nl
+            << "  amp | raw-write: layer-jump / crest | ship-tau: layer-jump / crest" << nl;
+  for (double amp : {0.5, 1.0}) {
+    const auto wet = render(false, -1.0, amp);
+    const auto raw = render(true, -1.0, amp);   // raw ring write (baseline)
+    const auto ship = render(true, 0.0, amp);   // kModWriteTauMs
+    const auto lRaw = layerVec(raw, wet), lShip = layerVec(ship, wet);
+    std::cout << "  " << amp << " | " << jump(lRaw, m1, m2) << " / "
+              << crest(lRaw, m1, m2) << " | " << jump(lShip, m1, m2) << " / "
+              << crest(lShip, m1, m2) << nl;
+  }
+
+  // Plain-law assert (no reference named): the ring-write smoother must cut
+  // the mod layer's jump-RMS (the sharpness/click metric) by at least
+  // half; the layer must stay present and bounded.
+  auto v1 = render(true, -1.0, 1.0);
+  auto v2 = render(true, 0.0, 1.0);
+  auto v0 = render(false, -1.0, 1.0);
+  const auto lRaw = layerVec(v1, v0), lShip = layerVec(v2, v0);
+  const double lRms = rms(lRaw, m1, m2);
+  EXPECT_GT(lRms, 1e-4)
+      << "the layer must sit well above the float32 quantisation floor";
+  const double rawJump = jump(lRaw, m1, m2), shipJump = jump(lShip, m1, m2);
+  EXPECT_LT(shipJump, 0.5 * rawJump)
+      << "the ring-write smoother must cut the mod layer's jump-RMS by >= half";
+  EXPECT_GT(rms(v2, m1, m2), rms(v0, m1, m2))
+      << "mod-on must still add a wet layer (the smoother must not kill it)";
+  EXPECT_LT(rms(v2, m1, m2), 2.0 * rms(v0, m1, m2))
+      << "the mod layer must stay bounded";
+  EXPECT_LE(crest(lShip, m1, m2), 2.0 * crest(lRaw, m1, m2))
+      << "the layer's crest must not grow under the smoother";
+}
+
+// The mod-write hook disabled (<0) must be BIT-EXACT with the raw write
+// path (the pre-smoother anchor): same input, same params, identical wet.
+TEST(ConvolutionReverb, ModWriteTauDisabledIsBitExact) {
+  auto run = [](double tau) -> juce::AudioBuffer<float> {
+    ConvolutionReverb fx;
+    if (!fx.loadBuffer(ExpDecayIr(4096, 48000.0, 2.0), 48000.0)) return {};
+    fx.prepare(48000.0);
+    fx.setModWriteTauForTest(tau);
+    ConvolutionReverb::Params p;
+    p.mod = 1.0;
+    fx.setParams(p);
+    const int n = 6144;
+    juce::AudioBuffer<float> in(2, n);
+    for (int c = 0; c < 2; ++c)
+      for (int i = 0; i < n; ++i) {
+        const double t = (double)i / 48000.0;
+        in.setSample(c, i, static_cast<float>(0.4 * std::sin(2.0 * M_PI * 110.0 * t)));
+      }
+    // Re-emit a few transients so the ring write actually differentiates.
+    for (int k = 0; k < 64; ++k) {
+      in.setSample(0, 2048 + k * 8, 1.0f);
+      in.setSample(1, 2048 + k * 8 + 4, -1.0f);
+    }
+    fx.process(in);  // in-place single pass: the stage runs on this chunk
+    return in;
+  };
+  auto raw = run(-1.0);
+  // A second DISABLED instance must match sample-for-sample: the hook off
+  // takes the exact pre-smoother path.
+  ConvolutionReverb fx;
+  ASSERT_TRUE(fx.loadBuffer(ExpDecayIr(4096, 48000.0, 2.0), 48000.0));
+  fx.prepare(48000.0);
+  fx.setModWriteTauForTest(-1.0);
+  ConvolutionReverb::Params p;
+  p.mod = 1.0;
+  fx.setParams(p);
+  const int n = 6144;
+  juce::AudioBuffer<float> in(2, n);
+  for (int c = 0; c < 2; ++c)
+    for (int i = 0; i < n; ++i) {
+      const double t = (double)i / 48000.0;
+      in.setSample(c, i, static_cast<float>(0.4 * std::sin(2.0 * M_PI * 110.0 * t)));
+    }
+  for (int k = 0; k < 64; ++k) {
+    in.setSample(0, 2048 + k * 8, 1.0f);
+    in.setSample(1, 2048 + k * 8 + 4, -1.0f);
+  }
+  fx.process(in);  // in-place
+  for (int c = 0; c < 2; ++c)
+    for (int i = 0; i < n; ++i)
+      EXPECT_EQ(raw.getSample(c, i), in.getSample(c, i))
+          << "hook <0 must be bit-exact raw write";
 }
 
 // Waveform display (Phase C): the preview is 1024 peak windows of the FINAL

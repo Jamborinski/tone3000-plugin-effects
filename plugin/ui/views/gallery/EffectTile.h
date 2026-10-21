@@ -18,10 +18,53 @@
 #include "model/ChainState.h"
 #include "widgets/ChromeIconButton.h"
 #include "widgets/Knob.h"
+#include "widgets/Popover.h"
+#include "widgets/SecondaryPress.h"
+#include "core/Paint.h"
 
 namespace t3k::ui {
 
-class EffectTile : public GalleryTile {
+// One-knob curve band (right-click F In / F Out on the conv tile): a
+// popover holding the fade-curve knob the face used to carry. The
+// anchor knob turns brand-yellow (setArmed) while the band is open,
+// the gate-deck pattern (plugin/ui/views/GateGroup).
+class ConvCurveBand : public Popover {
+public:
+  ConvCurveBand(const char* label, const KnobScale& scale, help::Key hk)
+      : knob_(Knob::Options{.label = label,
+                            .size = 32,
+                            .scale = &scale,
+                            .help = hk,
+                            .labelOnTop = true}) {
+    addAndMakeVisible(knob_);
+    primaryOnly = true;
+    dismissOnAnchorPress = true;
+    setSize(kWidth, kHeight);
+  }
+  Knob& knob() { return knob_; }
+  static constexpr int kWidth = 130;
+  static constexpr int kHeight = 76;
+
+  void paint(juce::Graphics& g) override {
+    // Qualified on purpose: the member `paint` below shadows the
+    // t3k::ui::paint namespace in unqualified class-scope lookup
+    // (GateDeckPanel gets away with the short form only because its
+    // body lives in the .cpp, outside the class definition). The box
+    // is a Rectangle<float>: paint:: takes the float overload.
+    const juce::Rectangle<float> box = getLocalBounds().toFloat();
+    t3k::ui::paint::fill(g, box, theme::kPanelCorner, theme::kPanelBg);
+    t3k::ui::paint::border(g, box, theme::kPanelCorner, theme::kBorder);
+  }
+  void resized() override {
+    const auto c = contentBounds();
+    knob_.setBounds(c.getX() + (c.getWidth() - 44) / 2, c.getY() + 2, 44, 70);
+  }
+
+private:
+  Knob knob_;
+};
+
+class EffectTile : public GalleryTile, public SecondaryPressTarget {
  public:
   JUCE_DECLARE_WEAK_REFERENCEABLE(EffectTile)
  public:
@@ -37,6 +80,9 @@ class EffectTile : public GalleryTile {
  protected:
   void open() override;
   std::vector<ContextMenu::Item> menuItems() override;
+  void mouseDown(const juce::MouseEvent&) override;
+  void secondaryPress(const juce::MouseEvent&) override;
+  void secondaryPressImpl(const juce::MouseEvent&);
   // Pull the currently-serving kernel's strip data (empty before any load).
   void pullConvPreview();
 
@@ -72,17 +118,14 @@ class EffectTile : public GalleryTile {
   // flashes the toast on success/failure.
   void enterConvIrFile();
   void updateConvIrLabel();
-  // Convolution: flip the full tile's settings view (grid <-> knob face).
-  void setConvSettings(bool on);
-  // Convolution: resync the settings-grid knobs from the chain state
-  // (setBlock refresh; both views mirror the same stored params).
-  void updateConvSettingsKnobs();
   // Convolution: the Export save-picker (same async-guard pattern as the IR
   // load picker); on OK, chain.exportConvIr writes the baked kernel WAV.
   void enterConvExport();
-  // The settings-view child set (toggle, export, 7 knobs, note) for
-  // show/hide flips.
-  juce::Array<juce::Component*> convSettingsChildren();
+  // Convolution: open the fade-curve band (InCrv above F In, OutCrv above F
+  // Out) — the gate-deck pattern; the anchor knob is armed (brand-yellow
+  // label) while its band is open.
+  void openConvCurveBand(Knob* anchor);
+  void closeConvCurveBands();
 
   ChainItem block_;
   bool enabled_ = true;  // optimistic; native converges via the resync
@@ -153,22 +196,18 @@ class EffectTile : public GalleryTile {
   // member, guarded exactly like LocalFiles' chooser.
   std::unique_ptr<juce::FileChooser> convIrChooser_;
 
-  // Convolution only, FULL tile: the IR-settings view. The Settings toggle
-  // swaps the plot strip + main knob grid for a 7-knob settings grid
-  // (Start / End trim + Pre / fades / curves -- mirror views over the same
-  // stored params the face writes, so both stay in sync for free) and an
-  // Export button (baked kernel -> bare-RIFF WAV, default 24-bit/48 kHz).
-  // Toggling back resyncs the main knobs from the chain. Compact tiles
-  // (160 px) keep the face only; Export reaches them via the strip.
-  bool convSettings_ = false;
-  juce::TextButton convSettingsToggle_;
+  // Convolution only, FULL tile: the Export button (baked kernel ->
+  // bare-RIFF WAV, default 24-bit/48 kHz) sits in the header row, right
+  // of the Load/Change IR button (both right of the CONVOLUTION title).
+  // Compact tiles (160 px) keep the face only; Export reaches them via
+  // the strip.
   juce::TextButton convExportButton_;
-  Knob convStartKnob_, convEndKnob_, convPreKnob_;
-  Knob convFadeInKnob_, convFadeOutKnob_;
-  Knob convInCurveKnob_, convOutCurveKnob_;
-  juce::Label convExportNote_;
   bool convExporting_ = false;
   std::unique_ptr<juce::FileChooser> convExportChooser_;
+  // Conv curve bands (right-click F In / F Out on the full tile): one-knob
+  // popovers for convInCurve / convOutCurve (convFade scale), anchored
+  // above the trigger knob (the gate-deck pattern).
+  std::unique_ptr<ConvCurveBand> curveInBand_, curveOutBand_;
 
   // Delay only: the mode-set signature KNOB -- the mode's UNIQUE control.
   // PING/CHIP are continuous 0..100% (scales::fraction01), HEADS steps 1/2/3/4

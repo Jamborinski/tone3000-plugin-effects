@@ -415,7 +415,8 @@ void Knob::paint(juce::Graphics& g) {
   // Idle labels are muted by default; pan-rail labels pass labelBright to
   // read as section titles. The readout is always white.
   const bool readout = readoutVisible_;
-  const auto colour = readout || options_.labelBright ? theme::kWhite : theme::kGray;
+  const auto colour = options_.labelArmed ? theme::kBrandYellow
+                                           : (readout || options_.labelBright ? theme::kWhite : theme::kGray);
   const auto text = readout ? options_.scale->format(value_) : options_.label;
   // Wide labels centre on the knob and overflow the column symmetrically.
   g.setFont(Fonts::sans(options_.labelSize));

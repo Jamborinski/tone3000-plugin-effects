@@ -647,6 +647,9 @@ void ConvolutionReverb::prepare(double rate) {
   modCap_ = modCap;
   modW_[0] = 0;
   modW_[1] = 0;
+  modSmPrev_[0] = 0.0;
+  modSmPrev_[1] = 0.0;
+  modSmCoef_ = 0.0;  // recomputed per process() call from the test hook
 
   if (rateChanged || state_ == nullptr) {
     // Rate change / first run: the previous engine (if any) was built at a
@@ -779,6 +782,17 @@ void ConvolutionReverb::process(juce::AudioBuffer<float>& buffer) {
     //     strictly PAST wet; sample 0 of an input is unmodulated wet).
     const double mod = params_.mod;
     if (mod > 0.0 && modCap_ > 0) {
+      // Ring-write smoother: >0 ms = explicit, 0 = ship default
+      // (kModWriteTauMs), <0 = disabled (raw write, bit-exact anchor).
+      // Recomputed per call so a test hook change applies without a
+      // re-prepare; one exp per 128-frame chunk is negligible.
+      const double wMs = modTestWriteTauMs_ < 0.0
+                             ? 0.0
+                             : (modTestWriteTauMs_ > 0.0 ? modTestWriteTauMs_
+                                                          : kModWriteTauMs);
+      modSmCoef_ = (wMs > 0.0 && rate_ > 0.0)
+                       ? std::exp(-1.0 / (rate_ * wMs * 1e-3))
+                       : 0.0;
       const double taper = mod * mod * (3.0 - 2.0 * mod); // smoothstep
       const double amt = kModAmt * taper;
       const double maxDepth = mod * (rate_ * kModDepthMs * 0.001);
@@ -790,7 +804,15 @@ void ConvolutionReverb::process(juce::AudioBuffer<float>& buffer) {
         uint32_t w = (uint32_t) modW_[c];
         double& base = modPh_[c];  // persistent per-channel LFO phase
         for (int i = 0; i < n; ++i) {
-          wr[w] = wet[i];  // write BEFORE the taps read (delay >= 1)
+          // Write a SMOOTHED wet into the ring: the taps can no longer
+          // re-emit the wet's transients (the periodic-click fix; raw
+          // write when the smoother is off).
+          if (modSmCoef_ > 0.0)
+            modSmPrev_[c] = modSmCoef_ * modSmPrev_[c] +
+                            (1.0 - modSmCoef_) * wet[i];
+          wr[w] = (modSmCoef_ > 0.0) ? static_cast<float>(modSmPrev_[c])
+                                     : wet[i];  // write BEFORE the taps
+          // read (delay >= 1)
           w = (w + 1) & (cap - 1);
           double sum = 0.0;
           const double invN = 1.0 / (kModVoices - 1);

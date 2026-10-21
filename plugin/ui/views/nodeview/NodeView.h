@@ -89,14 +89,13 @@ public:
   // The live lane (node drives assert the committed order; scoping
   // exception for the testbed, same as the private-model drives above).
   const std::vector<ChainItem>& laneForShot() const;
-  // e2e: the conv strip's settings-band state (toggle/export visibility,
-  // settings-knob count, current toast, conv IR label) — one pipe-joined
-  // string the e2e layer pins (the save dialog can't be driven headless,
-  // so the no-IR export GUARD toast is what is asserted).
+  // e2e: the conv strip's face-chrome state (Load IR / Export visibility,
+  // current toast, conv IR label) — one pipe-joined string the e2e layer
+  // pins (the save dialog can't be driven headless, so the no-IR export
+  // GUARD toast is what is asserted).
   juce::String convStripStateForE2E() const;
-  // e2e/testbed drives (the strip's settings band + Export save-picker
-  // entry points, same exception as the shot helpers above):
-  void setConvStripSettings(bool on);
+  // e2e/testbed drive (the strip's Export save-picker entry point, same
+  // exception as the shot helpers above):
   void startConvExportLoader(const std::string& blockId);
   // m01463 screenshot path: start a live grid drag from `fromCell` with the
   // pointer held at the centre of `toCell` (drop target + cascade preview
@@ -160,12 +159,6 @@ private:
   // Convolution node: the strip's "Load IR..." button (async FileChooser,
   // mirrors EffectTile's convIrChooser_ flow).
   void startConvIrLoader(const std::string& blockId);
-  // Convolution node: the strip's IR-settings row internals (the 7
-  // settings knobs + their value resync); the e2e entry points sit in
-  // the public section above.
-  void rebuildStripSettingsKnobs(NodeStrip&, const ChainItem&);
-  void updateStripSettingsKnobValues(NodeStrip&, const ChainItem&);
-
   void applyPreview();  // drag: rebuild cells from the optimistic lane
   void moveActiveTo(int target);  // drag: splice the optimistic lane
   // Count of the preview's LEADING inserts: the grid is positional (m06828
@@ -197,7 +190,6 @@ private:
   std::vector<ChainItem> preview_;
   std::unique_ptr<juce::FileChooser> convIrChooser_;  // strip "Load IR..."
   std::unique_ptr<juce::FileChooser> convExportChooser_;  // strip "Export..."
-  bool convStripSettings_ = false;  // the strip's IR-settings row is open
   std::unique_ptr<ContextMenu> stripMenu_;  // the strip's mode/type menus
   bool nodeView_ = true;
 

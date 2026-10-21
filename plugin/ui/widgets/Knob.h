@@ -66,6 +66,9 @@ public:
     bool labelBright = false;
     // Label above the knob instead of below (chain block trims).
     bool labelOnTop = false;
+    // Armed look: the label stays brand-yellow while this knob's extra
+    // settings band is open (the gate's deck, the convolver's curve bands).
+    bool labelArmed = false;
   };
 
   // Every knob label is 14px in a 17px slot; the editor overflows that slot
@@ -109,6 +112,12 @@ public:
   // Change the Alt/Option-click (double-tap) reset target at runtime (the
   // compressor's In knob adopts the current mode's default threshold).
   void setDefaultValue(std::optional<float> normalised) { options_.defaultValue = std::move(normalised); }
+  // Armed (yellow label) while this knob's extra-settings band is open.
+  void setArmed(bool on) {
+    if (options_.labelArmed == on) return;
+    options_.labelArmed = on;
+    repaint();
+  }
 
   // Every emitted value: drag steps, typed entries, resets.
   std::function<void(float)> onChange;

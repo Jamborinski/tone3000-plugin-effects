@@ -1,6 +1,7 @@
-// Conv strip e2e: the node-view strip's Settings/Export band (m01741 —
-// the strip reaches every tile). Pins the state swap (toggle + 7 knobs
-// + export visibility) and the no-IR export GUARD toast.
+// Conv strip e2e: the node-view strip's face chrome (m01741 — the
+// strip reaches every tile; m03044 — Load IR + Export sit right of the
+// CONVOLUTION mode bar). Pins the chrome visibility + the no-IR export
+// GUARD toast.
 //
 // The save dialog can't be driven headless, so this asserts on the
 // toast string + knob visibility, not on a file write.
@@ -44,35 +45,26 @@ function check(name, cond, detail) {
       return r.state;
     };
 
-    // Face view at rest: the strip shows the conv IR label + plot, the
-    // settings band (toggle/export/knobs) is hidden.
-    // The strip's band layout (which HIDS the settings chrome in the
-    // face view) runs on the next resize pass — settle before asserting.
+    // Face chrome at rest: Load IR + Export are visible (right of the
+    // CONVOLUTION mode bar, m03044). The strip's band layout runs on the
+    // next resize pass — settle before asserting.
     await new Promise((r) => setTimeout(r, 300));
     const s0 = await strip();
     check('conv-strip: conv node selected, strip visible',
           s0 !== 'no-strip', s0);
-    check('conv-strip: face view at rest (settings band hidden)',
-          s0.startsWith('0:0:0:'), `state=${s0}`);
-
-    // Toggle ON: the settings band appears — toggle + export both visible,
-    // toggle in the on-state, all 7 knobs built and visible.
-    const s1 = await strip('toggle');
-    check('conv-strip: toggle ON shows settings band + 7 knobs',
-          s1.startsWith('1:1:1:7/7|'), `state=${s1}`);
+    check('conv-strip: face chrome visible (Load IR + Export)',
+          s0.startsWith('1:1|'), `state=${s0}`);
 
     // Export with no IR loaded: the guard toast fires (the scenario's
     // conv block has no IR file on disk — TileShot's are in-memory).
-    const s2 = await strip('export-click');
+    const s1 = await strip('export-click');
     check('conv-strip: export with no IR shows the guard toast',
-          s2.includes('No IR loaded in this block'), `state=${s2}`);
+          s1.includes('No IR loaded in this block'), `state=${s1}`);
 
-    // Toggle OFF: the settings band collapses; knobs hide, face returns.
-    const s3 = await strip('toggle');
-    check('conv-strip: toggle OFF hides the settings chrome + knobs',
-          s3.startsWith('0:0:0:'), `state=${s3}`);
-    check('conv-strip: toggle OFF, knobs not visible',
-          s3.split('|')[0].endsWith('/0'), `state=${s3}`);
+    // Chrome unchanged after the guarded click.
+    const s2 = await strip();
+    check('conv-strip: chrome still visible after guarded export',
+          s2.startsWith('1:1|'), `state=${s2}`);
 
     await screenshot(app, path.join(OUT, 'conv-strip-face.png'));
   } finally {

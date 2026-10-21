@@ -225,9 +225,13 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
       // IS the mode's signature control.
       modKnob_(knob("Mod", scales::fraction01(), 0.0f, help::Key::delayMod,
                     (compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary)) {
-  // Conv tile: the shared In knob reads as "Dwell" on this block.
-  if (block_.effectKind == "convolution")
+  // Conv tile: the shared In knob reads as "Dwell" on this block, on the
+  // +-18 dB conv window (stored law stays 0..1, 0.5 = 0 dB, like everywhere).
+  if (block_.effectKind == "convolution") {
     input_.setLabel("Dwell");
+    input_.setScale(&scales::convDwell());
+    input_.setHelp(help::Key::reverbDwell);
+  }
   mix_.onChange = [this](float v) {
     this->services().chain.setBlockParam(blockId(), "mix", (double)v);
   };
@@ -576,25 +580,9 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
     updateConvIrLabel();
 
     if (!compact_) {
-      // IR-settings view (full tile only; the 160-px face has no room and
-      // the strip reaches every tile): Settings swaps the plot strip for a
-      // 7-knob grid -- Start / End (trim, absent from the face; their home)
-      // + Pre / fades / curves as MIRROR views over the same stored params
-      // the face writes, so both stay in sync for free. Export bakes the
-      // linear stages (trim, stretch, fades, Pre, Gain, Width) to a
-      // bare-RIFF WAV (default 24-bit / 48 kHz); Mod + the wet clip are
-      // nonlinear, stay live, and are deliberately not flagged here.
-      convSettingsToggle_.setButtonText("Settings");
-      convSettingsToggle_.setClickingTogglesState(true);
-      convSettingsToggle_.setHelpText(
-          juce::String(juce::CharPointer_UTF8(
-              "IR settings: Start / End trim + Pre / fades / curves (mirror "
-              "of the face), and Export the baked kernel")));
-      convSettingsToggle_.onClick = [this] {
-        this->setConvSettings(this->convSettingsToggle_.getToggleState());
-      };
-      addAndMakeVisible(convSettingsToggle_);
-
+      // Export bakes the linear stages (trim, stretch, fades, Pre, Gain,
+      // Width) to a bare-RIFF WAV (default 24-bit / 48 kHz); Mod + the wet
+      // clip are nonlinear, stay live, and are deliberately not flagged.
       convExportButton_.setButtonText("Export");
       convExportButton_.setHelpText(juce::String(juce::CharPointer_UTF8(
           "Export the baked kernel as WAV (default 24-bit / 48 kHz); the "
@@ -602,33 +590,35 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
       convExportButton_.onClick = [this] { this->enterConvExport(); };
       addAndMakeVisible(convExportButton_);
 
-      struct SetKnob { Knob& k; const KnobScale* scale; juce::String param; juce::String label; help::Key help; };
-      const SetKnob sks[7] = {
-          {convStartKnob_, &scales::convStart(), "convStartS", "Start", help::Key::convStartS},
-          {convEndKnob_, &scales::convEnd(), "convEndS", "End", help::Key::convEndS},
-          {convPreKnob_, &scales::convPre(), "convPreMs", "Pre", help::Key::convPre},
-          {convFadeInKnob_, &scales::convFade(), "convFadeIn", "F In", help::Key::convFadeIn},
-          {convFadeOutKnob_, &scales::convFade(), "convFadeOut", "F Out", help::Key::convFadeOut},
-          {convInCurveKnob_, &scales::convFade(), "convInCurve", "InCrv", help::Key::convInCurve},
-          {convOutCurveKnob_, &scales::convFade(), "convOutCurve", "OutCrv", help::Key::convOutCurve},
+      // Curve bands (right-click / long-press F In / F Out): one-knob
+      // popovers for the fade-curve params. The anchor knob is armed
+      // (brand-yellow label) while its band is open (gate-deck pattern).
+      curveInBand_ =
+          std::make_unique<ConvCurveBand>("InCrv", scales::convFade(),
+                                          help::Key::convInCurve);
+      curveOutBand_ =
+          std::make_unique<ConvCurveBand>("OutCrv", scales::convFade(),
+                                          help::Key::convOutCurve);
+      curveInBand_->knob().onChange = [this](float v) {
+        this->services().chain.setBlockParam(
+            this->blockId(), "convInCurve",
+            knobToStored(scales::convFade(), (double)v));
       };
-      for (const auto& sk : sks) {
-        sk.k.setScale(sk.scale);
-        sk.k.setLabel(sk.label);
-        sk.k.setHelp(sk.help);
-        const KnobScale* sc = sk.scale;
-        const juce::String param = sk.param;
-        sk.k.onChange = [this, sc, param](float v) {
-          this->services().chain.setBlockParam(
-              this->blockId(), param, knobToStored(*sc, (double)v));
-        };
-        addAndMakeVisible(sk.k);
-      }
-      convExportNote_.setFont(Fonts::sans(9));
-      convExportNote_.setColour(juce::Label::textColourId, theme::kGray);
-      addAndMakeVisible(convExportNote_);
-      for (auto* c : convSettingsChildren()) c->setVisible(false);
-      updateConvSettingsKnobs();
+      curveOutBand_->knob().onChange = [this](float v) {
+        this->services().chain.setBlockParam(
+            this->blockId(), "convOutCurve",
+            knobToStored(scales::convFade(), (double)v));
+      };
+      curveInBand_->onDismiss = [this] { knobF_.setArmed(false); };
+      curveOutBand_->onDismiss = [this] { knobG_.setArmed(false); };
+      // Resync the band knobs from the current block (open() re-reads).
+      curveInBand_->knob().setValue(
+          (float)knobFromStored(scales::convFade(), block_.convInCurve));
+      curveOutBand_->knob().setValue(
+          (float)knobFromStored(scales::convFade(), block_.convOutCurve));
+      // Touch: long-press the anchor knob opens the band (same as the gate).
+      knobF_.onLongPress = [this] { this->openConvCurveBand(&knobF_); };
+      knobG_.onLongPress = [this] { this->openConvCurveBand(&knobG_); };
     }
   }
 
@@ -664,10 +654,12 @@ void EffectTile::setBlock(const ChainItem& block) {
     // waveform goes stale until the user loads the file in the UI again.
     if (!compact_) {
       pullConvPreview();
-      // The settings-grid knobs mirror the face's stored params; refresh
-      // them too so an external edit (other view / preset / strip) lands
-      // in both views.
-      updateConvSettingsKnobs();
+      // Curve-band knobs mirror the stored params; refresh so an external
+      // edit (other view / preset / strip) lands in the bands too.
+      curveInBand_->knob().setValue(
+          (float)knobFromStored(scales::convFade(), block_.convInCurve));
+      curveOutBand_->knob().setValue(
+          (float)knobFromStored(scales::convFade(), block_.convOutCurve));
     }
   }
   syncKnobs();
@@ -1179,83 +1171,56 @@ void EffectTile::updateConvIrLabel() {
   convIrButton_.setHelpText(help::text(help::Key::convIrLoad));
 }
 
-juce::Array<juce::Component*> EffectTile::convSettingsChildren() {
-  juce::Array<juce::Component*> c;
-  c.add(&convSettingsToggle_);
-  c.add(&convExportButton_);
-  c.add(&convStartKnob_);
-  c.add(&convEndKnob_);
-  c.add(&convPreKnob_);
-  c.add(&convFadeInKnob_);
-  c.add(&convFadeOutKnob_);
-  c.add(&convInCurveKnob_);
-  c.add(&convOutCurveKnob_);
-  c.add(&convExportNote_);
-  return c;
+void EffectTile::openConvCurveBand(Knob* anchor) {
+  if (block_.effectKind != "convolution" || compact_ || anchor == nullptr)
+    return;
+  auto* host = findParentComponentOfClass<OverlayHost>();
+  if (host == nullptr)
+    return;
+  ConvCurveBand* band = (anchor == &knobF_) ? curveInBand_.get()
+                                            : curveOutBand_.get();
+  if (band == nullptr)
+    return;
+  // Close the other band (only one at a time) and resync this one's knob.
+  closeConvCurveBands();
+  const double stored = (anchor == &knobF_) ? block_.convInCurve
+                                            : block_.convOutCurve;
+  band->knob().setValue((float)knobFromStored(scales::convFade(), stored));
+  knobF_.setArmed(anchor == &knobF_);
+  knobG_.setArmed(anchor == &knobG_);
+  band->open(*anchor, Popover::Align::left, 6, 0, Popover::Placement::above);
 }
 
-void EffectTile::updateConvSettingsKnobs() {
-  if (block_.effectKind != "convolution" || compact_)
-    return;
-  const auto set = [](Knob& k, const KnobScale* scale, double stored) {
-    k.setValue((float)knobFromStored(*scale, stored));
-  };
-  set(convStartKnob_, &scales::convStart(), block_.convStartS);
-  set(convEndKnob_, &scales::convEnd(), block_.convEndS);
-  set(convPreKnob_, &scales::convPre(), block_.convPreMs);
-  set(convFadeInKnob_, &scales::convFade(), block_.convFadeIn);
-  set(convFadeOutKnob_, &scales::convFade(), block_.convFadeOut);
-  set(convInCurveKnob_, &scales::convFade(), block_.convInCurve);
-  set(convOutCurveKnob_, &scales::convFade(), block_.convOutCurve);
-  // The note is the only place the live-only stages are visible at all;
-  // keep it terse and un-branded (Mod + the wet clip are behind the scenes).
-  convExportNote_.setText(
-      juce::String(juce::CharPointer_UTF8(
-          "export bakes the audio settings; modulation stays live")),
-      juce::dontSendNotification);
+void EffectTile::closeConvCurveBands() {
+  if (curveInBand_ != nullptr && curveInBand_->isOpen())
+    curveInBand_->dismiss();
+  if (curveOutBand_ != nullptr && curveOutBand_->isOpen())
+    curveOutBand_->dismiss();
 }
 
-void EffectTile::setConvSettings(bool on) {
+void EffectTile::secondaryPressImpl(const juce::MouseEvent& e) {
   if (block_.effectKind != "convolution" || compact_)
     return;
-  convSettings_ = on;
-  convSettingsToggle_.setToggleState(on, juce::dontSendNotification);
-  if (on) {
-    // Settings replaces the plot strip: the 7 knobs live in the plot band
-    // + the row-1/row-2 region; the face knobs + Mix/In/Out trio hide.
-    for (auto* c : convSettingsChildren()) c->setVisible(true);
-    mix_.setVisible(false);
-    input_.setVisible(false);
-    output_.setVisible(false);
-    knobA_.setVisible(false);
-    knobB_.setVisible(false);
-    knobC_.setVisible(false);
-    knobD_.setVisible(false);
-    knobE_.setVisible(false);
-    sigKnob_.setVisible(false);
-    modKnob_.setVisible(false);
-    knobF_.setVisible(false);
-    knobG_.setVisible(false);
-    convPlot_.setVisible(false);
-    updateConvSettingsKnobs();
-  } else {
-    for (auto* c : convSettingsChildren()) c->setVisible(false);
-    mix_.setVisible(true);
-    input_.setVisible(true);
-    output_.setVisible(true);
-    knobA_.setVisible(true);
-    knobB_.setVisible(true);
-    knobC_.setVisible(true);
-    knobD_.setVisible(true);
-    knobE_.setVisible(true);
-    sigKnob_.setVisible(true);
-    modKnob_.setVisible(true);
-    knobF_.setVisible(true);
-    knobG_.setVisible(true);
-    convPlot_.setVisible(true);
+  if (e.eventComponent == &knobF_)
+    openConvCurveBand(&knobF_);
+  else if (e.eventComponent == &knobG_)
+    openConvCurveBand(&knobG_);
+}
+
+void EffectTile::secondaryPress(const juce::MouseEvent& e) {
+  secondaryPressImpl(e);
+}
+
+void EffectTile::mouseDown(const juce::MouseEvent& e) {
+  // Conv full tile: a secondary press on F In / F Out opens the curve band
+  // (the knob forwarded it up here via SecondaryPressTarget). Any other
+  // secondary press falls through to the tile's action menu.
+  if (isSecondaryPress(e) && block_.effectKind == "convolution" && !compact_
+      && (e.eventComponent == &knobF_ || e.eventComponent == &knobG_)) {
+    secondaryPressImpl(e);
+    return;
   }
-  resized();
-  repaint();
+  GalleryTile::mouseDown(e);
 }
 
 void EffectTile::enterConvExport() {
@@ -1364,11 +1329,12 @@ void EffectTile::resized() {
     modeCycle_.setBounds(28, 4, 34, 20);  // the icon slot (reverb has no Sync): the mode cycler (34px, the comp/delay width so the title clears)
     typeCycle_.setBounds(66, 4, 34, 20); // the per-mode TYPE cycler (3-char id), right of it
   } else if (block_.effectKind == "convolution" && !compact_) {
-    // Full conv tile: the Load/Change IR button sits in the CHROME icon slot
-    // (where the effect glyph would be). The y=26 band is the kernel
-    // readout — filename on line 1, the engine's real length on line 2
-    // (E-2) — and the y=50 band the waveform strip.
-    convIrButton_.setBounds(28, 4, 68, 20);
+    // Full conv tile: the Load/Change IR + Export buttons sit RIGHT of the
+    // title (the user's call: "both can be moved to the right of the
+    // Convolution bar"). The y=25 band is the kernel readout (filename +
+    // engine length, E-2) and the y=50 band the waveform strip.
+    convIrButton_.setBounds(76, 4, 68, 20);
+    convExportButton_.setBounds(148, 4, 52, 20);
     convIrLabel_.setBounds(4, 25, W - 8, 14);
     convIrSeconds_.setBounds(4, 38, W - 8, 12);
   } else if (block_.effectKind == "convolution") {
@@ -1407,7 +1373,7 @@ void EffectTile::resized() {
   const bool conv = (block_.effectKind == "convolution");
   const bool convFull = conv && !compact_;
   const bool convCompact = conv && compact_;
-  const int cols = convFull ? 6
+  const int cols = convFull ? 7
                             : ((delayFull || compFull) ? 5 : (reverbFull ? 6 : (five ? 4 : 3)));  // 2026-10-17 PLT face: 6-col even grid, rows use 6 (Mix on row 2, row 1 = 6 effect slots)
   const int colW = (W - 8) / cols;
 
@@ -1425,7 +1391,9 @@ void EffectTile::resized() {
     knobH_.setBounds(x, row1Y, colW, knobH);              // Mod
   } else {
     mix_.setBounds(x, row1Y, colW, knobH); x += colW;
-    knobA_.setBounds(x, row1Y, colW, knobH); x += colW;  // Decay
+    if (convFull)
+      input_.setBounds(x, row1Y, colW, knobH); x += colW;  // Dwell (full conv)
+    knobA_.setBounds(x, row1Y, colW, knobH); x += colW;  // Decay / Dry
     if (reverbCompact) {
       sigKnob_.setBounds(x, row1Y, colW, knobH); x += colW; // Sig A (right of Decay)
       knobC_.setBounds(x, row1Y, colW, knobH); x += colW;   // Tone
@@ -1449,13 +1417,12 @@ void EffectTile::resized() {
   // empty in Mod mode), Out (full delay)] / [Fb, (Mod in Mod mode else
   // unique), Out (compact delay)] / [p3, p4, Out] / [p2, Out].
   x = 4;
-  if (reverbFull) {
-    // 2026-10-17 PLT face v2 row 2 col 1: Dwell/In (re-shown; Mix now on row 1).
+  if (!convFull) {
+    // Dwell/In on row 2 (full reverb re-shown it after the Mix move); the
+    // full conv tile parks Dwell on row 1, so row 2 starts at Width.
     input_.setBounds(x, row2Y, colW, knobH);
-  } else {
-    input_.setBounds(x, row2Y, colW, knobH);
+    x += colW;
   }
-  x += colW;
   if (delayFull) {
     knobE_.setBounds(x, row2Y, colW, knobH); x += colW;    // Width
     modKnob_.setBounds(x, row2Y, colW, knobH); x += colW;  // the shared Mod
@@ -1487,10 +1454,12 @@ void EffectTile::resized() {
       sigKnob_.setBounds(x, row2Y, colW, knobH);           // the mode's unique
     x += colW;
   } else if (convFull) {
-    sigKnob_.setBounds(x, row2Y, colW, knobH); x += colW;  // Dry (wet level)
-    modKnob_.setBounds(x, row2Y, colW, knobH); x += colW;  // Width
-    knobF_.setBounds(x, row2Y, colW, knobH); x += colW;    // InCrv
-    knobG_.setBounds(x, row2Y, colW, knobH); x += colW;    // OutCrv
+    // Row 2 = Width(sig) | Mod | F In(F) | F Out(G) | Out; InCrv/OutCrv
+    // live in the curve bands (right-click F In / F Out).
+    sigKnob_.setBounds(x, row2Y, colW, knobH); x += colW;  // Width
+    modKnob_.setBounds(x, row2Y, colW, knobH); x += colW;  // Mod
+    knobF_.setBounds(x, row2Y, colW, knobH); x += colW;    // F In
+    knobG_.setBounds(x, row2Y, colW, knobH); x += colW;    // F Out
   } else if (convCompact) {
     // Compact conv's Dry/Width live in knobD_/knobE_ (paramsFor maps the
     // compact list to slots A..E — sig_/mod_ are NOT children of the compact
@@ -1506,23 +1475,6 @@ void EffectTile::resized() {
   output_.setBounds(x, row2Y, colW, knobH);
   if (convFullTile) {
     convPlot_.setBounds(4, 50, W - 8, 40);
-    // IR-settings view: the plot strip + face rows are replaced by a 4-col
-    // 54-px grid (Start/End/Pre/F In over F Out/InCrv/OutCrv) + the bake
-    // note. Bounds are always kept current so show/hide flips never show a
-    // stale geometry.
-    const int setCols = 4;
-    const int setColW = (W - 8) / setCols;
-    const auto setRow = [&](juce::Component& c, int row, int col) {
-      c.setBounds(4 + col * setColW, 50 + row * (knobH + rowGap), setColW, knobH);
-    };
-    setRow(convStartKnob_, 0, 0);
-    setRow(convEndKnob_, 0, 1);
-    setRow(convPreKnob_, 0, 2);
-    setRow(convFadeInKnob_, 0, 3);
-    setRow(convFadeOutKnob_, 1, 0);
-    setRow(convInCurveKnob_, 1, 1);
-    setRow(convOutCurveKnob_, 1, 2);
-    convExportNote_.setBounds(4 + 3 * setColW, 50 + (knobH + rowGap), setColW, knobH);
   }
 }
 
@@ -1558,7 +1510,7 @@ void EffectTile::paint(juce::Graphics& g) {
   const int titleX0 =
       compact_ ? (compressor ? 100 : (delay ? 100 : (reverb ? 106
                                                     : (convolution ? 102 : 50))))
-                : (convolution ? (28 + 68 + 6) : (28 + 36 + 6));
+                : (convolution ? 30 : (28 + 36 + 6));
   juce::Font font(compact_ ? 13.0f : 16.0f, juce::Font::bold);
   const juce::String title =
       compact_ && compressor ? "Comp" : (compact_ && reverb ? "Rev"

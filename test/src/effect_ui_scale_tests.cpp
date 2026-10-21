@@ -64,6 +64,46 @@ static double paramFromState(const juce::var& stateIn, const juce::String& param
   return -12345.0;
 }
 
+// The conv tile's "Dwell" knob: a CLAMPED display window on the shared 0..1
+// input-gain store (the engine gain law). 0.5 = 0 dB, the +-18 dB window
+// (m03783; the reverb's Dwell readout); values stored outside the window
+// (an older preset) read at the window edge, never past it.
+TEST(ConvDwellScale, DisplayWindowClampsToPlusMinus18Db) {
+  const auto& sc = scales::convDwell();
+  // Stored -> display is identity (the store IS the knob value).
+  EXPECT_NEAR(sc.toStored(0.5), 0.5, 1e-9);
+  EXPECT_NEAR(sc.toStored(0.25), 0.25, 1e-9);
+  // The display sweeps back into the exact stored unit.
+  for (float d = 0.0f; d <= 1.0001f; d += 0.05f) {
+    const float dn = std::min(1.0f, d);
+    const double n = sc.fromDisplay(dn);
+    EXPECT_GE(n, 0.0 - 1e-6) << "d=" << dn;
+    EXPECT_LE(n, 1.0 + 1e-6) << "d=" << dn;
+  }
+  // The display is the dB domain: 0 -> -18 dB, 0.5 -> 0 dB, 1 -> +18 dB.
+  EXPECT_NEAR(sc.toDisplay(0.0), -18.0, 1e-6);
+  EXPECT_NEAR(sc.toDisplay(0.5), 0.0, 1e-6);
+  EXPECT_NEAR(sc.toDisplay(1.0), 18.0, 1e-6);
+  // The format reports the dB at the pins.
+  EXPECT_EQ(sc.format(0.5).toStdString(), "0 dB");
+  EXPECT_EQ(sc.format(0.0).toStdString(), "-18 dB");
+  EXPECT_EQ(sc.format(1.0).toStdString(), "18 dB");
+}
+
+// A Dwell written through the UI scale survives a chain round trip (the
+// store is untouched by the display clamp).
+TEST(ChainRoundTrip, ConvDwellWrittenViaUiScaleSurvivesResync) {
+  TONE3000Processor proc;
+  proc.setPlayConfigDetails(2, 2, 48000, 512);
+  proc.prepareToPlay(48000, 512);
+  const auto id = proc.addEffectBlock(EffectKind::Convolution, "left", 0);
+  const double v = 0.31;  // = -8.4 dB on the (s - 0.5) * 48 dB engine law
+  proc.setBlockParam(id, "inputGain", v);
+  // The chain state round-trips through a float param slot: 1e-6 covers the
+  // float round trip, the store itself is untouched by the display clamp.
+  EXPECT_NEAR(paramFromState(proc.getChainState(-1), "inputGain"), v, 1e-6);
+}
+
 TEST(WidthKnobScale, SweepStaysInsideTheStoredUnit) {
   // The tile writes knobToStored(scale, v) for v in [0,1]; the stored unit is 0..1.
   for (int i = 0; i <= 100; ++i) {

@@ -618,9 +618,32 @@ inline const KnobScale& convGain() {
     c.fromStored = [](double d) { return d; };
     c.format = [](double n) {
       const double db = juce::jmap(n, 0.0, 1.0, -24.0, 24.0);
-      return juce::String(db, std::abs(db) - std::trunc(db) < 0.05 ? 0 : 1) + " dB";
+      return juce::String(db, std::abs(db - std::trunc(db)) < 0.05 ? 0 : 1) + " dB";
     };
     c.editText = [](double n) { return juce::String(juce::jmap(n, 0.0, 1.0, -24.0, 24.0), 1); };
+    return c;
+  }();
+  return s;
+}
+
+// DWELL: the convolver's wet-input level. Stored 0..1 (0.5 = 0 dB) shared
+// with every block's input-gain law; the knob DISPLAY is a +-18 dB window
+// (the reverb's Dwell readout) -- values stored outside the window (e.g. from
+// an older preset) clamp at the ends instead of reading +-24.
+inline const KnobScale& convDwell() {
+  static const KnobScale s = [] {
+    KnobScale c;
+    c.toDisplay = [](double n) { return juce::jmap(n, 0.0, 1.0, -18.0, 18.0); };
+    c.fromDisplay = [](double d) { return juce::jmap(d, -18.0, 18.0, 0.0, 1.0); };
+    c.toStored = [](double n) { return n; };          // knob 0..1 == stored 0..1
+    c.fromStored = [](double d) { return d; };
+    c.format = [](double n) {
+      const double db = juce::jmap(n, 0.0, 1.0, -18.0, 18.0);
+      // Integer check on the value itself (abs - trunc is 2|db| for negative
+      // db, so "-18 dB" would read "-18.0 dB").
+      return juce::String(db, std::abs(db - std::trunc(db)) < 0.05 ? 0 : 1) + " dB";
+    };
+    c.editText = [](double n) { return juce::String(juce::jmap(n, 0.0, 1.0, -18.0, 18.0), 1); };
     return c;
   }();
   return s;
@@ -691,7 +714,7 @@ inline const KnobScale& reverbDry() {
     c.fromStored = [](double d) { return d; };
     c.format = [](double n) {
       const double db = juce::jmap(n, 0.0, 1.0, -24.0, 24.0);
-      return juce::String(db, std::abs(db) - std::trunc(db) < 0.05 ? 0 : 1) + " dB";
+      return juce::String(db, std::abs(db - std::trunc(db)) < 0.05 ? 0 : 1) + " dB";
     };
     c.editText = [](double n) { return juce::String(juce::jmap(n, 0.0, 1.0, -24.0, 24.0), 1); };
     return c;
