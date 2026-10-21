@@ -136,7 +136,7 @@ curve bands) get `Knob::setThumb(Thumb::secondary)` (new Knob.h setter)
 | e2e conv-strip.js | **11/11** (Dwell label, buttons beside the bar, no-IR guard, F In→InCrv / F Out→OutCrv bands with mutual dismissal) |
 | TileShot goldens | 6 conv-*.png **0 px IDENTICAL** to committed (strip-only changes; tile faces unchanged) |
 | OpenWiki | run `e9ea429a` (update, 9 pages) — committed 2e01a52 |
-| Windows stage | TBD (script/win-standalone.sh, T3K_STAGE_DIR=/mnt/c/Users/jambo/Downloads) |
+| Windows stage | `/mnt/c/Users/jambo/Downloads/TONE3000-win-20261021-081522/TONE3000.exe` (29 M) · md5 `2b0966872ba47b2bafee3c04505fae21` (T3K_STAGE_DIR=/mnt/c/Users/jambo/Downloads; last functional commit 9c203cb) |
 
 ## Face rework (commit 44a78ea, 2026-10-20) — supersedes the Settings view
 
