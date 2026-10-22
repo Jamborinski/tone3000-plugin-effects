@@ -35,4 +35,9 @@ plumbing (chain enum, state save/restore, palette, CMake) is shared.
 |---|---|---|
 | 2026-10-22 | commit | `6813cb5` — Wave + Volume blocks |
 | 2026-10-22 | OpenWiki update run 4792b157 (12 pages) + prose hand-edits | `1209f7c` |
-| 2026-10-22 | Windows stage `script/win-standalone.sh` | _(fill in)_ |
+| 2026-10-22 | Windows stage `script/win-standalone.sh` | `TONE3000-win-20261021-173348`, `TONE3000.exe` md5 `db393b4763c88768f3d52bb670640311` |
+
+Staging note: the first run hit `mkdir: Permission denied` because the script's
+auto-detect picked `/mnt/c/Users/Default User/Downloads` (the first match of
+`/mnt/c/Users/*/Downloads` is not writable). Re-ran with
+`T3K_STAGE_DIR=/mnt/c/Users/jambo/Downloads` pinned.
