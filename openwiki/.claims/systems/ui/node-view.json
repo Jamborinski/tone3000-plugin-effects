@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:831ef81936c6cfd38ecebb1e4e81cadfd921fd0a8b84809159274e326615acce",
+  "pageVersion": "sha256:eebb09a9a8075aec6800aaa538691fdf0bf15eeab3fd5d757f88d9dd8bae9c92",
   "claims": [
     {
       "id": "claim_4e8284a0f0bc4fe0b4e5fa2bda920264",
@@ -78,7 +78,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         }
       ]
     },
@@ -138,7 +138,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         }
       ]
     },
@@ -162,7 +162,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         }
       ]
     },
@@ -172,7 +172,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         }
       ]
     },
@@ -182,7 +182,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         }
       ]
     },
@@ -196,7 +196,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         },
         {
           "resource": "repo://test/src/strip_knob_tests.cpp",
@@ -210,7 +210,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         }
       ]
     },
@@ -220,7 +220,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         }
       ]
     },
@@ -230,7 +230,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         }
       ]
     },
@@ -244,7 +244,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         }
       ]
     },
@@ -254,7 +254,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         }
       ]
     },
@@ -264,7 +264,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         }
       ]
     },
@@ -274,7 +274,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         },
         {
           "resource": "repo://plugin/ui/widgets/ConvCurveBand.h",
@@ -296,7 +296,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         }
       ]
     },
@@ -310,7 +310,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         },
         {
           "resource": "repo://test/src/node_model_tests.cpp",
@@ -334,7 +334,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         }
       ]
     },
@@ -344,13 +344,35 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
+        }
+      ]
+    },
+    {
+      "id": "claim_c5cc27a7517d4e999c2a24d57ae546f0",
+      "statement": "Cell artwork (ticket ui-svg-icon-library-draft, commit efe995d): the cell square's icon now draws the hand-authored 93-icon pedal artwork TWO-TONE. cellAudioSvg(kindString) resolves the FAMILY face via audioIconFor(effectKindFromString(k), 0, 0, 0) (delay->kAnalogDelay tape face, comp->kVcaCompressor, reverb->kPlateReverb, chorus->kChorus, tremolo->kTremolo, conv->kConvolution, volume->kVolume; per-mode subtypes are resolved only off tiles, not cells), tone cells get audio_icons::kAmp directly via cellToneSvg(). NodeCell::paint calls Icons::drawTinted(g, svg, sq.reduced(8.0f), iconColour, theme::kSurface) — the two-tone parse maps white strokes to the icon colour and the #1c1d22 cut-outs to the strip surface — with the legacy single-tone Icons::draw(g, kindSvg(s.kind), ...) kept as the fallback for kinds without artwork (wave); kindSvg (the CustomIcons table) is the fallback path, not the primary.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/core/AudioIcon.h",
+          "version": "repo-file-v1:sha256:b563b0701ecc83a347078823f145650fca3fce96ef500942f9add9de8a836f20"
+        },
+        {
+          "resource": "repo://plugin/ui/core/AudioIcons.h",
+          "version": "repo-file-v1:sha256:3283a8c5f98d18fe694b47997e33ea608e3d76446192d19a7c6bd8b22d95c36b"
+        },
+        {
+          "resource": "repo://plugin/ui/core/Icons.cpp",
+          "version": "repo-file-v1:sha256:6a15e652fb85a4305c0351b507416c053602402cedee8568177ef708ab8db821"
+        },
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-22T15:01:43.911Z"
+    "at": "2026-10-22T21:22:30.968Z"
   }
 }

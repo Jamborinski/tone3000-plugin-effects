@@ -3,6 +3,13 @@ type: "Reference"
 title: "Native UI: architecture and screens"
 openwiki_generated: true
 sources:
+  - resource: repo://plugin/ui/core/AudioIcons.h
+  - resource: repo://plugin/ui/core/AudioIcon.h
+  - resource: repo://plugin/ui/core/Icons.h
+  - resource: repo://plugin/ui/core/Icons.cpp
+  - resource: repo://plugin/ui/views/gallery/AddTile.cpp
+  - resource: repo://plugin/ui/widgets/ContextMenu.h
+  - resource: repo://plugin/ui/widgets/MenuRow.h
   - id: openwiki-source-f42fc55d83e6151f6984ab0d
     resource: repo://docs/agents/ui-snapshots.md
   - id: openwiki-source-bd1c7579d37b2f053f6955d3
@@ -53,16 +60,18 @@ sources:
     resource: repo://plugin/ui/views/PluginRoot.h
   - id: openwiki-source-cc9bf106d26f04ab8caa6c85
     resource: repo://plugin/ui/widgets/ConvCurveBand.h
+  - id: openwiki-source-14361c634307dc341a75daf8
+    resource: repo://plugin/ui/widgets/MenuRow.cpp
   - id: openwiki-source-b3e537fe86dd20c6a400c242
     resource: repo://script/tile-ocr.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
   - id: openwiki-source-fde83b2ad879efba1865ca8d
     resource: repo://test/src/theme_palette_tests.cpp
-generated: { by: "pi", at: "2026-10-22T15:01:43.911Z" }
+generated: { by: "pi", at: "2026-10-22T21:22:30.968Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-22T15:01:43.911Z
+    at: 2026-10-22T21:22:30.968Z
 ---
 
 
@@ -364,6 +373,39 @@ param through `fromDisplay`, `(stored+24)/48 = 0.508` for any raw). Goldens
 at 0 px for the exact faces; the real add path is guarded by the `node-add`
 e2e probe (asserts labels `Output,Shape` / `Volume`, see the testbed
 section) + a SelfTests case.
+
+## Gallery + add-menu artwork: 93-icon two-tone tiles (ticket ui-svg-icon-library-draft, commit `efe995d`)
+
+The gallery and the add-effect menu now draw the hand-authored 93-icon pedal
+artwork (`plugin/ui/core/AudioIcons.h`, generated from
+`research/icons/make_icons.py`) two-tone — white strokes tinted to the theme
+colour, the `#1c1d22` cut-outs punched to the local surface — via
+`Icons::drawTinted(g, svg, box, foreground, knockout)` (`plugin/ui/core/Icons.h/.cpp`,
+`parseTwoTone` = `parse()` + `replaceColour(kDark, knockout)`); `Icons::draw`
+is retained for the legacy single-tone Lucide/custom glyphs. The resolver
+`plugin/ui/core/AudioIcon.h::audioIconFor` maps kind + the block's
+delay/comp/reverb MODE to the subtype face (delay 1→kAnalogDelay tape,
+2→kBbd, 3→kModDelay, 4/5→kMagEcho, else kDigitalDelay; comp 1→Tube, 2→Opto,
+3→Fet, 4→VariMu, else Vca; reverb 1→Spring, 2→Room, 3→Chamber, 4→Hall,
+5→Digital, else Plate).
+
+**EffectTile header slot (20x20 at (28,4)):** the icon is the mode-aware face
+— `audioIconFor(block_.effectKind, block_.delayMode, block_.compMode,
+block_.reverbMode)` drawn with foreground `theme::kWhite` and knockout
+`theme::kSurfaceRaised` when enabled / `theme::kSurface` when disabled.
+Gates: delay tiles draw NO icon (`!delay` — the shift row owns that slot's
+readability), compact reverb tiles draw none, convolution tiles draw none,
+and compressor tiles draw the face only **when PUNCH is off** (`compMbc` off)
+— with PUNCH on, the mbcToggle_ occupies the slot (28,4 50x20 full / 65,4
+30x20 compact).
+
+**Add-effect menu (`AddTile.cpp`):** the 7 built-in effect rows (delay,
+chorus, tremolo, compressor, reverb, convolution, volume) now carry a family
+face via `ContextMenu::Item.svg` (a trailing `const char*` added to the Item
+struct in `plugin/ui/widgets/ContextMenu.h`) → `MenuRow` gained the
+`MenuRow(label, const char* svg, Metrics)` ctor (`plugin/ui/widgets/MenuRow.h/.cpp`)
+which paints `Icons::drawTinted` in the row's label colour; the Wave row
+keeps its `Icon::Circle` and the Paste row its clipboard glyph.
 
 ## Theme: swappable colour palette + `--ocr` capture mode (2026-10-14)
 

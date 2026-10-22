@@ -15,6 +15,10 @@ sources:
   - resource: repo://plugin/ui/services/UiPrefs.h
   - resource: repo://plugin/ui/services/UiPrefs.cpp
   - resource: repo://plugin/ui/core/CustomIcons.h
+  - resource: repo://plugin/ui/core/AudioIcons.h
+  - resource: repo://plugin/ui/core/AudioIcon.h
+  - resource: repo://plugin/ui/core/Icons.h
+  - resource: repo://plugin/ui/core/Icons.cpp
   - resource: repo://plugin/ui/core/Help.cpp
   - resource: repo://plugin/ui/testbed/fixtures/scenarios.json
   - resource: repo://plugin/ui/testbed/Host.cpp
@@ -37,10 +41,10 @@ sources:
     resource: repo://test/src/node_model_tests.cpp
   - id: openwiki-source-a9b10161f0531edad6c09d8e
     resource: repo://test/src/strip_knob_tests.cpp
-generated: { by: "pi", at: "2026-10-22T15:01:43.911Z" }
+generated: { by: "pi", at: "2026-10-22T21:22:30.968Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-22T15:01:43.911Z
+    at: 2026-10-22T21:22:30.968Z
 ---
 
 # Node view: the signal-line grid
@@ -268,6 +272,21 @@ clicking a tone node **selects** it (strip shows In/Out/Mix trims) rather
 than opening the add menu. Wave/Volume nodes show their exact faces
 instead — **Output/Shape** (wave) / **Volume** (volume), no trio
 (`6d99a30`, m08349).
+
+**Cell artwork (ticket ui-svg-icon-library-draft, commit `efe995d`):** the
+cell square's icon now draws the hand-authored 93-icon pedal artwork
+two-tone instead of a single-tone Lucide/custom glyph. The resolver
+`plugin/ui/core/AudioIcon.h::audioIconFor` maps the cell's kind string to a
+family face from `audio_icons::kTable` (delay→kAnalogDelay tape face, comp→
+kVcaCompressor, reverb→kPlateReverb, chorus→kChorus, tremolo→kTremolo, conv→
+kConvolution, tone→kAmp, volume→kVolume — per-mode subtypes are NOT resolved
+off a cell, only off a tile); tone cells get `audio_icons::kAmp` directly.
+`NodeCell::paint` then calls `Icons::drawTinted(g, svg, sq.reduced(8.0f),
+iconColour, theme::kSurface)` with the two-tone parse (white→icon colour,
+`#1c1d22` cut-outs→the strip surface), falling back to the legacy
+single-tone `Icons::draw(g, kindSvg(s.kind), ...)` for kinds without artwork
+(wave). `kindSvg` (the old CustomIcons table) is retained as that fallback,
+not as the primary path.
 
 ## Visibility law (batch 3)
 

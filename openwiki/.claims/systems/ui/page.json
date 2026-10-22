@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:3af16ad4d4cd7245095ad8b2645f3e6dab16e7ffcd4348bdae1f727e24fc071c",
+  "pageVersion": "sha256:3f099c7bdc32f1ec302fd7df3b95ecf8182a528f78161ac7f1f76a5aa5e66448",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -76,7 +76,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
+          "version": "repo-file-v1:sha256:41e3019120107a8c39f42b23df5c9ea207413e992ca40231cd7d6a7d6cf4ead4"
         }
       ]
     },
@@ -86,7 +86,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
+          "version": "repo-file-v1:sha256:41e3019120107a8c39f42b23df5c9ea207413e992ca40231cd7d6a7d6cf4ead4"
         }
       ]
     },
@@ -108,7 +108,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
+          "version": "repo-file-v1:sha256:41e3019120107a8c39f42b23df5c9ea207413e992ca40231cd7d6a7d6cf4ead4"
         }
       ]
     },
@@ -122,7 +122,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
+          "version": "repo-file-v1:sha256:41e3019120107a8c39f42b23df5c9ea207413e992ca40231cd7d6a7d6cf4ead4"
         }
       ]
     },
@@ -202,7 +202,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
+          "version": "repo-file-v1:sha256:41e3019120107a8c39f42b23df5c9ea207413e992ca40231cd7d6a7d6cf4ead4"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.h",
@@ -220,7 +220,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
+          "version": "repo-file-v1:sha256:41e3019120107a8c39f42b23df5c9ea207413e992ca40231cd7d6a7d6cf4ead4"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.h",
@@ -256,7 +256,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/testbed/goldens/wave.png",
-          "version": "repo-file-v1:sha256:e5222b01146bad46b1f318a4971fa8b63fc0df64e825516e85be1a7859071869"
+          "version": "repo-file-v1:sha256:4ddd990acd08d393a7e4387b84e272ce2335d88ff9750dab3055b6dcda6015b5"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectParams.cpp",
@@ -264,7 +264,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
+          "version": "repo-file-v1:sha256:41e3019120107a8c39f42b23df5c9ea207413e992ca40231cd7d6a7d6cf4ead4"
         }
       ]
     },
@@ -278,13 +278,57 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+          "version": "repo-file-v1:sha256:d4258de76d2ab64d1f1039d289e7cf9a74d345b0993f4a6a0c224cc6182ab24f"
+        }
+      ]
+    },
+    {
+      "id": "claim_2ec1043fc5364003a3d13f1eb86ad02e",
+      "statement": "EffectTile header artwork (ticket ui-svg-icon-library-draft, commit efe995d): the 20x20 slot at (28,4) now draws the hand-authored 93-icon pedal artwork TWO-TONE — audioIconFor(block_.effectKind, block_.delayMode, block_.compMode, block_.reverbMode) resolves the MODE-aware subtype face (delay 1->kAnalogDelay tape, 2->kBbd, 3->kModDelay, 4/5->kMagEcho, else kDigitalDelay; comp 1->Tube, 2->Opto, 3->Fet, 4->VariMu, else Vca; reverb 1->Spring, 2->Room, 3->Chamber, 4->Hall, 5->Digital, else Plate) and Icons::drawTinted(g, svg, (28,4,20,20), theme::kWhite, enabled_ ? theme::kSurfaceRaised : theme::kSurface) tints white strokes to the foreground and the #1c1d22 cut-outs to the local surface (parseTwoTone = parse + replaceColour). GATES: delay tiles draw NO icon (!delay), compact reverb tiles none, convolution tiles none, and compressor tiles draw the face only when PUNCH is OFF (block_.compMbc false) — with PUNCH on the mbcToggle_ occupies the slot (28,4 50x20 full / 65,4 30x20 compact).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/core/AudioIcon.h",
+          "version": "repo-file-v1:sha256:b563b0701ecc83a347078823f145650fca3fce96ef500942f9add9de8a836f20"
+        },
+        {
+          "resource": "repo://plugin/ui/core/AudioIcons.h",
+          "version": "repo-file-v1:sha256:3283a8c5f98d18fe694b47997e33ea608e3d76446192d19a7c6bd8b22d95c36b"
+        },
+        {
+          "resource": "repo://plugin/ui/core/Icons.cpp",
+          "version": "repo-file-v1:sha256:6a15e652fb85a4305c0351b507416c053602402cedee8568177ef708ab8db821"
+        },
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
+          "version": "repo-file-v1:sha256:41e3019120107a8c39f42b23df5c9ea207413e992ca40231cd7d6a7d6cf4ead4"
+        }
+      ]
+    },
+    {
+      "id": "claim_0435427d01f948acb8bcb595d9d2c5d2",
+      "statement": "Add-effect menu artwork (commit efe995d): ContextMenu::Item gained a trailing `const char* svg = nullptr;` member and MenuRow gained the MenuRow(label, const char* svg, Metrics) ctor (member svg_, preferredWidth on icon_ || svg_, paintButton branches svg_ -> Icons::drawTinted(g, svg_, iconBox, labelColour.withMultipliedAlpha(alpha)) : Icons::draw(g, *icon_, ...)). AddTile.cpp's 7 built-in effect rows (delay, chorus, tremolo, compressor, reverb, convolution, volume) carry a FAMILY face via .svg = audio_icons::kDelay/kChorus/kTremolo/kCompressor/kReverb/kConvolution/kVolume (designated initializers, .icon = std::nullopt); the Wave row keeps its Icon::Circle and the Paste row its clipboard glyph (positional Item aggregates still compile because svg is trailing). ContextMenu.cpp routes item.svg != nullptr ? MenuRow(label, item.svg, kContext) : MenuRow(label, item.icon, kContext).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/core/AudioIcon.h",
+          "version": "repo-file-v1:sha256:b563b0701ecc83a347078823f145650fca3fce96ef500942f9add9de8a836f20"
+        },
+        {
+          "resource": "repo://plugin/ui/views/gallery/AddTile.cpp",
+          "version": "repo-file-v1:sha256:9c8ac9570aae4f5a16a23edc2f1ac4114efb792f324065e8133693b0b2833564"
+        },
+        {
+          "resource": "repo://plugin/ui/widgets/ContextMenu.h",
+          "version": "repo-file-v1:sha256:3baeefb08fc51c9641da5e033cb88b2057109dbb6f3e28d4a911b6303e4ffdcc"
+        },
+        {
+          "resource": "repo://plugin/ui/widgets/MenuRow.cpp",
+          "version": "repo-file-v1:sha256:220fc36672dcfdf25a694bc83e8ef637a3aa289a0fd3c03fec78e906b42b6967"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-22T15:01:43.911Z"
+    "at": "2026-10-22T21:22:30.968Z"
   }
 }
