@@ -61,6 +61,7 @@ default volume for wave is REALLY LOUD."
 | date | item | result |
 |---|---|---|
 | 2026-10-22 | commit | `d0045a7` — 1-2 param face guards + wave default −12 dBFS + gates |
+| 2026-10-22 | Windows stage | `TONE3000-win-20261021-212840` — TONE3000.exe 30 MB, md5 `64bcf30fe034bf7c3f0daca34b7ee6c9` (`T3K_STAGE_DIR` pinned) |
 
 Staging note: the first run hit `mkdir: Permission denied` because the script's
 auto-detect picked `/mnt/c/Users/Default User/Downloads` (the first match of
