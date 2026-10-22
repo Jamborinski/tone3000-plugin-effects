@@ -105,3 +105,4 @@ VOLUME SHOULD LITERALLY JUST BE AN OUTPUT VOLUME."
 |---|---|---|
 | 2026-10-22 | commit | `6d99a30` — wave/volume exact faces (no trio, mix 1.0, gainDb identity, Wave/Volume titles) |
 | 2026-10-22 | OpenWiki update run 8d7acc30 (10 pages) + prose hand-edits | `ab787dd` |
+| 2026-10-22 | Windows stage `script/win-standalone.sh` | `TONE3000-win-20261022-082256`, `TONE3000.exe` md5 `379589b01d5661a10fe061681474af0a` |
