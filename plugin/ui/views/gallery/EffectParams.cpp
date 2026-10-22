@@ -95,6 +95,16 @@ std::vector<EffectParams> paramsFor(const ChainItem& b, bool compact) {
          help::Key::tremoloSpread},  // stored 0..1: percent() (x100) wrote max and
                                      // snapped back on resync -- the reset glitch
     };
+  if (k == "volume")
+    return {
+        {&scales::gainDb(), "volume", "Volume", b.volume, help::Key::volume},
+    };
+  if (k == "wave")
+    return {
+        {&scales::waveLevel(), "waveLevel", "Level", b.waveLevel, help::Key::waveLevel},
+        {&scales::waveShape(), "waveShape", "Shape", (double)b.waveShape,
+         help::Key::waveShape},
+    };
   if (k == "compressor")
     return {
         {&scales::compRatio(), "compRatio", "Ratio", b.compRatio, help::Key::compRatio},

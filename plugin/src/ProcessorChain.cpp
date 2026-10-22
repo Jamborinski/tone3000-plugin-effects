@@ -388,9 +388,13 @@ std::string TONE3000Processor::addEffectBlock(EffectKind kind, const juce::Strin
   // swap-mute / mix smoothers are unreset, so the block passes its input
   // through dry - the effect would be completely inaudible.
   prepareChainBlock(*block);
-  // The starting mode (fresh blocks carry the default, mode 0 = Plate) —
-  // captured before landToneBlock moves the pointer away.
+  // The starting mode (fresh blocks carry the default, mode 0 = Plate) and
+  // the wave's starting dials — captured before landToneBlock moves the
+  // pointer away (use-after-move would read a null unique_ptr).
   const int startMode = block->reverbMode;
+  const double startWaveLevel = block->waveLevel;
+  const double startWaveShape = block->waveShape;
+  const double startVolume = block->volume;
 
   landToneBlock(std::move(block), side, index);
   // Plate (the default reverb mode) lands on the mode's neutral dials — the
@@ -408,6 +412,17 @@ std::string TONE3000Processor::addEffectBlock(EffectKind kind, const juce::Strin
     setBlockParam(newId, "reverbSize", size);
     setBlockParam(newId, "reverbWidth", width);
   }
+  // Wave: re-arm the engine from the block's stored values after the splice.
+  // setBlockParam before the block landed runs against the pre-splice block
+  // state; the post-splice re-arm (mirroring the reverb neutral dials) is
+  // the authoritative push, same as the restore funnel's setParams.
+  if (kind == EffectKind::Wave) {
+    setBlockParam(newId, "waveLevel", startWaveLevel);
+    setBlockParam(newId, "waveShape", startWaveShape);
+  }
+  // Volume: same post-splice re-arm (its single knob is the engine's gain).
+  if (kind == EffectKind::Volume)
+    setBlockParam(newId, "volume", startVolume);
   DBG("Added effect block " << newId << " (" << effectKindToString(kind) << " on " << side
                             << " @ " << index << ")");
   return newId;
@@ -1291,6 +1306,8 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
     // REAL dB face for tremolo tone: -18 (dark) .. 0 (flat) .. +18 (bright)
     double tremoloTone = 0.0, tremoloSpread = 0.0;
     int tremoloWave = 0;
+    double waveLevel = 0.5, waveShape = 0.0;
+    double volume = 0.5;
     double compRatio = 4.0, compAttackMs = 10.0, compReleaseMs = 150.0;
     double compToneDb = 0.0, compScHpHz = 100.0;
     double compThresholdDb = -18.0;
@@ -1389,6 +1406,8 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
           row.tremoloRateHz = block->tremoloRateHz;
           row.tremoloDepth = block->tremoloDepth;
           row.tremoloTone = block->tremoloTone; row.tremoloSpread = block->tremoloSpread;
+          row.waveLevel = block->waveLevel; row.waveShape = block->waveShape;
+          row.volume = block->volume;
           row.tremoloWave = block->tremoloWave;
           row.compRatio = block->compRatio;
           row.compAttackMs = block->compAttackMs;
@@ -1565,6 +1584,9 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
         params->setProperty("tremoloSpread", row.tremoloSpread);
         params->setProperty("tremoloWave", row.tremoloWave);
         params->setProperty("tremoloWaveV2", row.tremoloWave);
+        params->setProperty("waveLevel", row.waveLevel);
+        params->setProperty("waveShape", row.waveShape);
+        params->setProperty("volume", row.volume);
         params->setProperty("compRatio", row.compRatio);
         params->setProperty("compAttackMs", row.compAttackMs);
         params->setProperty("compReleaseMs", row.compReleaseMs);
@@ -2077,6 +2099,8 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
                              param == "delaySynced" || param == "delayMode" || param == "delayPing" || param == "delayHeads" || param == "delayChip" || param == "delayMod" || param == "delayMmRateHz" || param == "delayMagRateHz" || param == "delayRateHz" || param == "tremoloRateHz" ||
                              param == "tremoloDepth" || param == "tremoloTone" ||
                              param == "tremoloSpread" || param == "tremoloWave" ||
+                             param == "waveLevel" || param == "waveShape" ||
+                             param == "volume" ||
                              param == "compRatio" || param == "compAttackMs" ||
                              param == "compReleaseMs" || param == "compToneDb" ||
                              param == "compScHpHz" || param == "compThresholdDb" || param == "compMode" || param == "compType" || param == "compMbc" || param == "compClip" || param == "compKnee" || param == "reverbDecayMs" || param == "reverbPreMs" || param == "reverbDry" || param == "reverbTone" || param == "reverbSize" || param == "reverbWidth" || param == "reverbMode" || param == "reverbType0" || param == "reverbType1" || param == "reverbType2" || param == "reverbType3" || param == "reverbType4" || param == "reverbType5" || param == "reverbDensity" || param == "reverbMod" || param == "reverbSharedMod" || param == "reverbWave" || param == "reverbSprings" || param == "reverbSag" || param == "reverbBright" || param == "reverbBloom" || param == "reverbEarly" || param == "reverbAir" || param == "reverbVolley" || param == "reverbBass" || param == "reverbBuild" || param == "reverbSpace" || param == "reverbLoCut" || param == "convGain" || param == "convDry" || param == "convWidth" || param == "convStartS" || param == "convEndS" || param == "convPitch" || param == "convPreMs" || param == "convFadeIn" || param == "convFadeOut" || param == "convInCurve" || param == "convOutCurve" || param == "convMod";
@@ -2228,6 +2252,19 @@ bool TONE3000Processor::setBlockParam(const std::string& blockId, const juce::St
     block->tremolo.setParams({block->tremoloRateHz, block->tremoloDepth,
                              block->tremoloSpread, 0.5 + block->tremoloTone * (1.0 / 36.0),
                              block->tremoloWave});
+  } else if (param == "waveLevel") {
+    block->waveLevel = juce::jlimit(Wave::kMinLevel, Wave::kMaxLevel, value);
+    block->wave.setParams({block->waveLevel, block->waveShape});
+  } else if (param == "waveShape") {
+    block->waveShape = juce::jlimit(Wave::kMinShape, Wave::kMaxShape, (int)value);
+    block->wave.setParams({block->waveLevel, block->waveShape});
+  } else if (param == "volume") {
+    // Stored normalised over ±24 dB (0.5 = 0 dB, scales::gainDb()); the
+    // engine takes real dB.
+    block->volume = juce::jlimit(0.0, 1.0, value);
+    block->vol.setParams({Volume::kMinDb + block->volume * (Volume::kMaxDb - Volume::kMinDb)});
+
+
   } else if (param == "compRatio") {
     block->compRatio = juce::jlimit(Compressor::kMinRatio, Compressor::kMaxRatio, value);
     block->compressor.setParams({block->compMode, block->compRatio, block->compAttackMs,

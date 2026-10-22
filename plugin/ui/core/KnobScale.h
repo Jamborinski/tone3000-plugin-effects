@@ -757,6 +757,35 @@ inline const KnobScale& reverbWave() {
   return s;
 }
 
+// Wave (test-tone generator): output level 0..1 (plain percent readout)
+// and the tone shape (same 5-detent set as the chorus/tremolo Shape knobs).
+inline const KnobScale& waveLevel() {
+  static const KnobScale s = [] {
+    KnobScale c;
+    c.toDisplay = [](double n) { return n; };
+    c.fromDisplay = [](double d) { return d; };
+    c.format = [](double d) { return juce::String(juce::roundToInt(d * 100.0)); };
+    c.editText = [](double n) { return juce::String(juce::roundToInt(n * 100.0)); };
+    return c;
+  }();
+  return s;
+}
+inline const KnobScale& waveShape() {
+  static const char* const names[5] = {"Sine", "Triangle", "Saw", "Saw (Down)", "Square"};
+  static const KnobScale s = [] {
+    const int n = 4;  // 5 detents -> normalised 0, 1/4, 1/2, 3/4, 1
+    auto idx = [n](double v) { int i = (int)std::round(v * n); return i < 0 ? 0 : (i > n ? n : i); };
+    KnobScale c;
+    c.toDisplay = [n](double v) { return std::round(v * n); };
+    c.fromDisplay = [n](double d) { return d / n; };
+    c.format = [n, idx](double v) { return juce::String(names[idx(v)]); };
+    c.editText = [n, idx](double v) { return juce::String(names[idx(v)]); };
+    c.steps = n + 1;  // 5 detents -> the knob clicks between them
+    return c;
+  }();
+  return s;
+}
+
 // MOD: wet-tail modulation depth, stored 0..1 (0 = off/flat), shown 0..100 %.
 // The engine gates on mod > 0 per pass: an off dial is bit-identical to an
 // unmodulated build, so the knob's zero IS the bypass, like the reverb Mod.

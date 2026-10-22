@@ -493,7 +493,7 @@ int runRegen(const juce::StringArray& a) {
 }
 
 // --strip <kind>: render the NODE VIEW's parameter strip for a one-block
-// chain of <kind> (delay|chorus|tremolo|compressor|reverb|convolution|tone)
+// chain of <kind> (delay|chorus|tremolo|compressor|reverb|convolution|wave|tone)
 // and snapshot it. The parity capture pairs this with the matching gallery
 // tile (--tile) so a knob present in one and missing in the other is
 // visible side by side.

@@ -71,6 +71,10 @@ inline constexpr const char* kFxReverb =
     R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V6l7 8 7-8v14"/></svg>)svg";
 inline constexpr const char* kFxConv =
     R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h5v5H4zM15 15h5v5h-5z"/><path d="M9 9l6 6"/></svg>)svg";
+inline constexpr const char* kFxWave =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18L8 6l4 12 4-12 4 12h2"/></svg>)svg";
+inline constexpr const char* kFxVolume =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>)svg";
 inline constexpr const char* kFxTone =
     R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><circle cx="12" cy="12" r="2.5"/></svg>)svg";
 

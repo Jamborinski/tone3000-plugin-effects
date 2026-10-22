@@ -456,6 +456,8 @@ target_include_directories(${PROJECT_NAME}
         ${CMAKE_CURRENT_SOURCE_DIR}/include/effects/compressor
         ${CMAKE_CURRENT_SOURCE_DIR}/include/effects/reverb
         ${CMAKE_CURRENT_SOURCE_DIR}/include/effects/conv
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/effects/wave
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/effects/volume
         ${CMAKE_CURRENT_SOURCE_DIR}/NeuralAmpModelerCore
         ${CMAKE_CURRENT_SOURCE_DIR}/NeuralAmpModelerCore/Dependencies/eigen
         ${CMAKE_CURRENT_SOURCE_DIR}/NeuralAmpModelerCore/Dependencies/nlohmann

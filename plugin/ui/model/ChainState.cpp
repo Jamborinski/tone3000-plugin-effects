@@ -180,6 +180,9 @@ ChainItem parseItem(const juce::var& v) {
                                : lfoWaveLegacyFromStore(
                                      static_cast<int>(num(v["params"], "tremoloWave", 0)));
       }
+    item.waveLevel = num(v["params"], "waveLevel", 0.5);   // new kind: no dual-key
+    item.waveShape = (int)num(v["params"], "waveShape", 0);
+    item.volume = num(v["params"], "volume", 0.5);
     item.compRatio = num(v["params"], "compRatio", 3.0);
     item.compAttackMs = num(v["params"], "compAttackMs", 10.0);
     item.compReleaseMs = num(v["params"], "compReleaseMs", 150.0);

@@ -83,6 +83,8 @@ function(t3k_add_native_ui target)
         "${T3K_UI_DIR}/../include/effects/compressor"
         "${T3K_UI_DIR}/../include/effects/reverb"
         "${T3K_UI_DIR}/../include/effects/conv"
+        "${T3K_UI_DIR}/../include/effects/wave"
+        "${T3K_UI_DIR}/../include/effects/volume"
         # ChainBlock.h -> NamEngine.h -> NAM/dsp.h: the UI needs NAM's
         # decls (and its header-only deps); the impl stays in plugin/src.
         "${T3K_UI_DIR}/../NeuralAmpModelerCore"

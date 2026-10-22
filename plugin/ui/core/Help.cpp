@@ -188,6 +188,10 @@ std::map<Key, String> buildTable() {
       U("Add Chorus: insert a built-in chorus in this slot. Right-click it to tune rate and depth.");
   t[Key::addEffectTremolo] =
       U("Add Tremolo: insert a built-in tremolo in this slot. Right-click it to tune rate, depth and LFO shape.");
+  t[Key::addEffectWaveGen] =
+      U("Add Wave: insert a test-tone generator in this slot -- a fixed 440 Hz tone of a selectable shape, for testing.");
+  t[Key::addEffectVolume] =
+      U("Add Volume: insert an output-volume block in this slot -- a single -24..+24 dB knob.");
   t[Key::addEffectCompressor] =
       U("Add Compressor: insert a built-in multi-mode compressor in this slot. Right-click to tune ratio, attack, release, tone and mode.");
   t[Key::addEffectReverb] =
@@ -252,6 +256,11 @@ std::map<Key, String> buildTable() {
   t[Key::effectDelay] = U("Delay setting: adjust the value for this block.");
   t[Key::effectChorus] = U("Chorus setting: adjust the value for this block.");
   t[Key::effectTremolo] = U("Tremolo setting: adjust the value for this block.");
+  t[Key::effectWaveGen] = U("Wave setting: adjust the value for this block.");
+  t[Key::effectVolume] = U("Volume setting: adjust the value for this block.");
+  t[Key::volume] = knobDesktop("Volume", "Output volume, -24..+24 dB (0 dB = unity).");
+  t[Key::waveLevel] = knobDesktop("Level", "Test-tone output level: 0 silent, 100 full-scale (tone is 440 Hz).");
+  t[Key::waveShape] = knobDesktop("Shape", "Tone waveform: Sine, Triangle, Saw, Saw (Down) or Square.");
   t[Key::effectCompressor] = U("Compressor setting: adjust the value for this block.");
   t[Key::effectMix] = knobDesktop("Mix", "dry/wet blend of the effect.");
   t[Key::effectTime] = knobDesktop("Time", "delay time, 5-1000 ms. Toggle: sync to a note value.");

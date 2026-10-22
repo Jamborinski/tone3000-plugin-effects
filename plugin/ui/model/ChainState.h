@@ -149,6 +149,9 @@ struct ChainItem {
   double tremoloTone = 0.0;    // REAL dB: -18 (dark) .. 0 (flat) .. +18 (bright), like the Chorus tone
   double tremoloSpread = 0.0;  // 0 = L/R in phase (mono pulse), 1 = 180 deg offset (auto-pan)
   int tremoloWave = 0;         // LFO shape: 0=sine, 1=triangle, 2=saw, 3=square
+  double waveLevel = 0.5;      // Wave (test-tone generator): 0..1 output level
+  int waveShape = 0;           // 0=sine, 1=triangle, 2=saw up, 3=saw down, 4=square
+  double volume = 0.5;         // Volume block: 0..1 over -24..+24 dB (0.5 = 0 dB)
   // Compressor parameters (real units, mirroring ChainBlock / Compressor.h).
   double compRatio = 3.0;
   double compAttackMs = 10.0;

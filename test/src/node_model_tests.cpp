@@ -61,17 +61,21 @@ TEST(NodeModel, kindTableHasAllSixPalettesTone) {
   EXPECT_STREQ(Model::kind("").label, "Tone");
 }
 
-TEST(NodeModel, paletteOffersSixBuiltInEffectsInMenuOrder) {
+TEST(NodeModel, paletteOffersEightBuiltInEffectsInMenuOrder) {
   const auto p = Model::paletteKinds();
-  ASSERT_EQ(p.size(), 6u);
+  ASSERT_EQ(p.size(), 8u);
   EXPECT_EQ(p[0].toStdString(), "delay");
   EXPECT_EQ(p[1].toStdString(), "chorus");
   EXPECT_EQ(p[2].toStdString(), "tremolo");
   EXPECT_EQ(p[3].toStdString(), "compressor");
   EXPECT_EQ(p[4].toStdString(), "reverb");
   EXPECT_EQ(p[5].toStdString(), "convolution");
+  EXPECT_EQ(p[6].toStdString(), "wave");
+  EXPECT_EQ(p[7].toStdString(), "volume");
   // paletteLabel agrees with the kind table.
   EXPECT_STREQ(Model::paletteLabel("reverb"), "Rev");
+  EXPECT_STREQ(Model::paletteLabel("wave"), "Wave");
+  EXPECT_STREQ(Model::paletteLabel("volume"), "Vol");
 }
 
 // ---------------------------------------------------------------- lane access

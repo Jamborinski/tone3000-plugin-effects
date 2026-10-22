@@ -15,6 +15,8 @@ const Kind kKindTremolo = {juce::Colour(116, 160, 245), custom_icons::kFXTremolo
 const Kind kKindCompressor = {juce::Colour(160, 160, 168), custom_icons::kFxCompressor, "Comp"};
 const Kind kKindReverb = {juce::Colour(64, 224, 208), custom_icons::kFxReverb, "Rev"};
 const Kind kKindConvolution = {juce::Colour(235, 120, 150), custom_icons::kFxConv, "Conv Rev"};
+const Kind kKindWave = {juce::Colour(120, 220, 120), custom_icons::kFxWave, "Wave"};
+const Kind kKindVolume = {juce::Colour(200, 200, 120), custom_icons::kFxVolume, "Vol"};
 const Kind kKindTone = {juce::Colour(235, 170, 80), custom_icons::kFxTone, "Tone"};
 }  // namespace
 
@@ -25,11 +27,13 @@ const Kind& Model::kind(const juce::String& effectKind) {
   if (effectKind == "compressor") return kKindCompressor;
   if (effectKind == "reverb") return kKindReverb;
   if (effectKind == "convolution") return kKindConvolution;
+  if (effectKind == "wave") return kKindWave;
+  if (effectKind == "volume") return kKindVolume;
   return kKindTone;
 }
 
 std::vector<juce::String> Model::paletteKinds() {
-  return {"delay", "chorus", "tremolo", "compressor", "reverb", "convolution"};
+  return {"delay", "chorus", "tremolo", "compressor", "reverb", "convolution", "wave", "volume"};
 }
 
 const char* Model::paletteLabel(const juce::String& effectKind) {

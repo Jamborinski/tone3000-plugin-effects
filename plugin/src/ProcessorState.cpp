@@ -226,6 +226,9 @@ juce::ValueTree TONE3000Processor::serializeBlockSettings(const ChainBlock& bloc
       blockState.setProperty("tremoloSpread", block.tremoloSpread, nullptr);
       blockState.setProperty("tremoloWave", block.tremoloWave, nullptr);
       blockState.setProperty("tremoloWaveV2", block.tremoloWave, nullptr);
+      blockState.setProperty("waveLevel", block.waveLevel, nullptr);
+      blockState.setProperty("waveShape", block.waveShape, nullptr);
+      blockState.setProperty("volume", block.volume, nullptr);
       blockState.setProperty("chorusRateHz", block.chorusRateHz, nullptr);
       blockState.setProperty("chorusDepthMs", block.chorusDepthMs, nullptr);
       blockState.setProperty("compRatio", block.compRatio, nullptr);
@@ -370,6 +373,13 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
                         : lfoWaveLegacyFromStore(static_cast<int>(
                               blockState.getProperty("tremoloWave", 0)));
       }
+      block.waveLevel = juce::jlimit(Wave::kMinLevel, Wave::kMaxLevel,
+                                     static_cast<double>(blockState.getProperty("waveLevel", 0.5)));
+      block.waveShape = static_cast<int>(juce::jlimit(
+          Wave::kMinShape, Wave::kMaxShape,
+          static_cast<int>(blockState.getProperty("waveShape", 0))));
+      block.volume = juce::jlimit(0.0, 1.0,
+                                  static_cast<double>(blockState.getProperty("volume", 0.5)));
       block.chorusRateHz = juce::jlimit(Chorus::kMinRateHz, Chorus::kMaxRateHz,
                                         static_cast<double>(blockState.getProperty("chorusRateHz", 0.8)));
       block.chorusDepthMs = juce::jlimit(Chorus::kMinDepthMs, Chorus::kMaxDepthMs,
@@ -523,6 +533,11 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
                                   block.compThresholdDb, block.compMbc,
                                   block.compClip, block.compKnee, block.compType});
       block.reverb.setParams(block.reverbParams());
+      block.wave.setParams({block.waveLevel, block.waveShape});
+      {
+        const double db = Volume::kMinDb + block.volume * (Volume::kMaxDb - Volume::kMinDb);
+        block.vol.setParams({db});
+      }
     }
     // Size the rate-dependent engines (EQ/spectrum + built-in effects) for the
     // live chain rate: none of these restore funnels has seen prepareChain.

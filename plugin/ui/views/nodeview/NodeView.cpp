@@ -191,6 +191,8 @@ const char* kindSvg(const juce::String& k) {
   if (k == "compressor") return custom_icons::kFxCompressor;
   if (k == "reverb") return custom_icons::kFxReverb;
   if (k == "convolution") return custom_icons::kFxConv;
+  if (k == "wave") return custom_icons::kFxWave;
+  if (k == "volume") return custom_icons::kFxVolume;
   if (k == "tone") return custom_icons::kFxTone;
   return custom_icons::kFxDelay;
 }
@@ -201,6 +203,9 @@ help::Key addHelpFor(const juce::String& k) {
   if (k == "tremolo") return help::Key::addEffectTremolo;
   if (k == "compressor") return help::Key::addEffectCompressor;
   if (k == "reverb") return help::Key::addEffectReverb;
+  if (k == "convolution") return help::Key::addEffectConvolution;
+  if (k == "wave") return help::Key::addEffectWaveGen;
+  if (k == "volume") return help::Key::addEffectVolume;
   return help::Key::addEffectConvolution;
 }
 

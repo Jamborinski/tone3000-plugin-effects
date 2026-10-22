@@ -654,6 +654,8 @@ void TONE3000Processor::prepareBlockForChainRate(ChainBlock& block) {
   block.compressor.prepare(chainRate);
   block.reverb.prepare(chainRate);
   block.conv.prepare(chainRate);
+  block.wave.prepare(chainRate);
+  block.vol.prepare(chainRate);
 }
 
 // See the declaration. Both lanes are scanned regardless of stereo mode:
@@ -1473,6 +1475,10 @@ void TONE3000Processor::processChainOnBuffer(std::vector<std::unique_ptr<ChainBl
         block->reverb.process(buffer);
       else if (block->effectKind == EffectKind::Convolution)
         block->conv.process(buffer);
+      else if (block->effectKind == EffectKind::Wave)
+        block->wave.process(buffer);
+      else if (block->effectKind == EffectKind::Volume)
+        block->vol.process(buffer);
       else
         block->tremolo.process(buffer);
     }

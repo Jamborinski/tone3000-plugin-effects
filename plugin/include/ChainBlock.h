@@ -17,19 +17,23 @@
 #include "Compressor.h"
 #include "Reverb.h"
 #include "ConvolutionReverb.h"
+#include "Wave.h"
+#include "Volume.h"
 
 // Chain block types
 enum class ChainBlockType { NAM, IR, INSERT, EFFECT };
 
 // Which built-in effect a ChainBlockType::EFFECT block runs (see Delay.h /
 // Chorus.h): one self-contained DSP module, no model to load or stream.
-enum class EffectKind { Delay, Chorus, Tremolo, Compressor, Reverb, Convolution };
+enum class EffectKind { Delay, Chorus, Tremolo, Compressor, Reverb, Convolution, Wave, Volume };
 inline juce::String effectKindToString(EffectKind kind) {
   if (kind == EffectKind::Chorus) return "chorus";
   if (kind == EffectKind::Tremolo) return "tremolo";
   if (kind == EffectKind::Compressor) return "compressor";
   if (kind == EffectKind::Reverb) return "reverb";
   if (kind == EffectKind::Convolution) return "convolution";
+  if (kind == EffectKind::Wave) return "wave";
+  if (kind == EffectKind::Volume) return "volume";
   return "delay";
 }
 inline EffectKind effectKindFromString(const juce::String& s) {
@@ -38,6 +42,8 @@ inline EffectKind effectKindFromString(const juce::String& s) {
   if (s == "compressor") return EffectKind::Compressor;
   if (s == "reverb") return EffectKind::Reverb;
   if (s == "convolution") return EffectKind::Convolution;
+  if (s == "wave") return EffectKind::Wave;
+  if (s == "volume") return EffectKind::Volume;
   return EffectKind::Delay;
 }
 
@@ -353,6 +359,13 @@ struct ChainBlock {
   int tremoloWave = 0;          // LFO shape: 0=sine, 1=triangle, 2=saw, 3=saw (down), 4=square
   double tremoloTone = 0.0;     // REAL dB: -18 (dark) .. 0 (flat) .. +18 (bright), like the Chorus tone
   double tremoloSpread = 0.0;   // 0 = L/R in phase (mono pulse), 1 = 180 deg offset (auto-pan)
+  // Wave (EffectKind::Wave): test-tone generator (see Wave.h). Source block:
+  // replaces the buffer with a 440 Hz tone of the selected shape.
+  double waveLevel = 0.5;       // 0..1 output level
+  int waveShape = 0;            // 0=sine, 1=triangle, 2=saw up, 3=saw down, 4=square
+  // Volume (EffectKind::Volume): single-knob output gain, ±24 dB (see
+  // Volume.h). Normalised 0..1, 0.5 = 0 dB (scales::gainDb()).
+  double volume = 0.5;
   // Compressor (EffectKind::Compressor): the block's In/Out/Mix wrap it; these
   // are the compressor-specific settings (see Compressor.h).
   double compRatio = 4.0;       // 1..20
@@ -512,6 +525,8 @@ struct ChainBlock {
   Compressor compressor;
   Reverb reverb;
   ConvolutionReverb conv;
+  Wave wave;
+  Volume vol;
 
   // E-2: the kernel's bytes live in the user's IR library; this is the path
   // the engine was (re)built from, so presets/app-restart/copy can

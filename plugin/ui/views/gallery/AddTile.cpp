@@ -51,6 +51,10 @@ std::vector<ContextMenu::Item> AddTile::menuItems() {
                      [this] { if (onAddEffect) onAddEffect(blockId(), "reverb"); }});
     items.push_back({"Convolver", Icon::Redo2, help::Key::addEffectConvolution,
                      [this] { if (onAddEffect) onAddEffect(blockId(), "convolution"); }});
+    items.push_back({"Wave", Icon::Circle, help::Key::addEffectWaveGen,
+                     [this] { if (onAddEffect) onAddEffect(blockId(), "wave"); }});
+    items.push_back({"Volume", Icon::Volume2, help::Key::addEffectVolume,
+                     [this] { if (onAddEffect) onAddEffect(blockId(), "volume"); }});
   }
   for (auto& item : localLoadItems()) items.push_back(std::move(item));
   return items;

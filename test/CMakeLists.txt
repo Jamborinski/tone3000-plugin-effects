@@ -37,6 +37,8 @@ target_sources(DspTests PRIVATE
     src/spring_conv_compare.cpp
     src/spring_ir_test.cpp
     src/effect_ui_scale_tests.cpp
+    src/wave_tests.cpp
+    src/volume_tests.cpp
     src/theme_palette_tests.cpp
     src/eq_chain_rate_tests.cpp
     src/eq_post_routing_tests.cpp
@@ -124,6 +126,8 @@ target_include_directories(DspTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/include/effects/compressor
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/include/effects/reverb
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/include/effects/conv
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/include/effects/wave
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/include/effects/volume
     # KnobScale.h (the UI scale contract tests) needs the ui/core headers.
     ${CMAKE_CURRENT_SOURCE_DIR}/../plugin/ui/core
     # NodeModel.h includes "model/ChainState.h" from the ui tree root.

@@ -189,7 +189,7 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
                        : (block.effectKind == "delay" ||
                           block.effectKind == "chorus" ||
                           block.effectKind == "tremolo" ? 5
-                          : 3)))),
+                          : (block.effectKind == "wave" ? 2 : (block.effectKind == "volume" ? 1 : 3)))))),
       compact_(size <= gallery::kStereoTileSize),
       mix_(knob("Mix", scales::percent(), 1.0f, help::Key::effectMix,
                 (compact_ || block_.effectKind == "convolution" || block_.effectKind == "reverb") ? kCompactKnobFace : theme::kKnobSizeSecondary)),
@@ -627,13 +627,17 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
   const bool isComp = block_.effectKind == "compressor";
   const bool isReverb = block_.effectKind == "reverb";
   const bool isConv = block_.effectKind == "convolution";
+  const bool isWave = block_.effectKind == "wave";
+  const bool isVol = block_.effectKind == "volume";
   setTitle(isDelay ? "Delay"
-           : isTrem ? "Tremolo" : (isComp ? "Compressor" : (isReverb ? "Reverb" : (isConv ? "Convolver" : "Chorus"))));
+           : isTrem ? "Tremolo" : (isComp ? "Compressor" : (isReverb ? "Reverb" : (isConv ? "Convolver" : (isWave ? "Wave" : (isVol ? "Volume" : "Chorus"))))));
   setHelpText(help::text(isDelay ? help::Key::effectDelay
                   : isTrem ? help::Key::effectTremolo
                   : isComp ? help::Key::effectCompressor
                   : isReverb ? help::Key::effectReverb
                   : isConv ? help::Key::effectConvolution
+                  : isWave ? help::Key::effectWaveGen
+                  : isVol ? help::Key::effectVolume
                            : help::Key::effectChorus));
 
   syncKnobs();
