@@ -67,3 +67,41 @@ Staging note: the first run hit `mkdir: Permission denied` because the script's
 auto-detect picked `/mnt/c/Users/Default User/Downloads` (the first match of
 `/mnt/c/Users/*/Downloads` is not writable). Re-ran with
 `T3K_STAGE_DIR=/mnt/c/Users/jambo/Downloads` pinned.
+
+## m08349 round (exact faces — no trio, no noon-snap) — 2026-10-22
+
+User: wave/volume faces carried unasked Mix/In/Out knobs; the volume knob
+"changes the volume but snaps to noon" on any resync; "WAVEFORM SHOULD JUST
+BE A VOLUME KNOB THAT IS JUST A RENAMED OUTPUT KNOB AND A SHAPE KNOB, AND
+VOLUME SHOULD LITERALLY JUST BE AN OUTPUT VOLUME."
+
+- **Exact faces:** wave = Output (Level) + Shape only; volume = a single
+  Volume knob. No Mix/In/Out trio on the strip OR the tile (the trio
+  machinery stays built/sync'd but is never added for these kinds; the
+  `paramsFor` knobs start at strip knob 0). Both kinds now **spawn at 100%
+  mix** (`ProcessorChain.cpp` spawn mix 1.0f for Compressor|Wave|Volume), so
+  the end-to-end law is wet-only (volume out = wet·gain; wave tone 0.7071
+  RMS = level·shape·1.0 mix).
+- **Noon-snap root cause:** `updateStripKnobValues` routed `paramsFor`
+  knobs (identity=false) through `knobFromStored(gainDb, stored)`, which fell
+  back to `fromDisplay = (stored+24)/48 ≈ 0.508` for ANY value → every
+  gainDb knob (Volume) yanked to noon on each `chainChanged`. Fix:
+  `scales::gainDb()` (KnobScale.h:90) now declares an explicit **identity**
+  `toStored`/`fromStored` pair so resync is a no-op.
+- **Title fix:** the gallery tile title fall-through rendered "Chorus" for
+  every kind not in its switch, incl. wave/volume (never extended in
+  6813cb5) — `EffectTile.cpp` title chain now maps wave→"Wave" /
+  volume→"Volume". (Chorus itself untouched — user m08560.)
+- **Labels:** `waveLevel` help label "Level" → "Output" (EffectParams/Help).
+- **Gates:** wave_tests 11 + volume_tests 9 restated for mix 1.0;
+  `wave-volume-add.js` 8/8 (strip = VOL node single Volume knob 0.0 dB,
+  no trio); 4 wave/volume TileShot goldens re-shot + `--regen` → 0 px;
+  DspTests 604/604, selftest RC=0, node-drag 35/35, conv-strip 11/11.
+  All GUI invocations under `xvfb-run -a`.
+- **Feedback:** fb-1792645830676-77902 (build EXACTLY the asked face; hide
+  plumbing; supersedes fb-1792589182164-53911).
+
+| date | item | result |
+|---|---|---|
+| 2026-10-22 | commit | `6d99a30` — wave/volume exact faces (no trio, mix 1.0, gainDb identity, Wave/Volume titles) |
+| 2026-10-22 | OpenWiki update run 8d7acc30 (10 pages) + prose hand-edits | `ab787dd` |
