@@ -5,6 +5,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "AudioIcons.h"
 #include "LucideIcons.h"
 
 namespace t3k::ui {
@@ -18,6 +19,14 @@ struct Icons {
   // Same for a custom SVG (CustomIcons.h constants; keyed by pointer).
   static void draw(juce::Graphics& g, const char* svg, juce::Rectangle<float> box,
                    juce::Colour colour);
+  // Two-tone artwork (AudioIcons.h): the SVG is authored white (foreground) +
+  // audio_icons::kDark (cut-outs). Maps white -> `foreground` and the dark to
+  // `knockout` (the surface the icon sits on, so cut-outs read as holes).
+  // Falls back to the plain tint path when `knockout` is null.
+  static void drawTinted(juce::Graphics& g, const char* svg, juce::Rectangle<float> box,
+                         juce::Colour foreground,
+                         std::optional<juce::Colour> knockout = std::nullopt,
+                         float strokeWidth = 0.0f);
 };
 
 }  // namespace t3k::ui

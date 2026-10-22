@@ -22,6 +22,7 @@
 #include "Compressor.h"
 #include "Delay.h"
 #include "Reverb.h"
+#include "core/AudioIcon.h"
 #include "core/CustomIcons.h"
 #include "core/DelayedCall.h"
 #include "core/Fonts.h"
@@ -196,6 +197,18 @@ const char* kindSvg(const juce::String& k) {
   if (k == "tone") return custom_icons::kFxTone;
   return custom_icons::kFxDelay;
 }
+
+// The cell square's icon: two-tone pedal artwork where the kind has it
+// (including the amp face for tones), else the single-tone kind glyph.
+const char* cellAudioSvg(const juce::String& k) {
+  // The strip cell shows the FAMILY artwork: no subtype ints off the cell
+  // (the mode is set from the strip's mode menu, not per-cell), so default-0
+  // modes (digital / vca / plate family faces).
+  if (const char* svg = audioIconFor(effectKindFromString(k), 0, 0, 0)) return svg;
+  return nullptr;
+}
+
+const char* cellToneSvg() { return audio_icons::kAmp; }
 
 help::Key addHelpFor(const juce::String& k) {
   if (k == "delay") return help::Key::addEffectDelay;
@@ -428,9 +441,14 @@ private:
       paint::border(g, sq, 8.0f,
                     Model::kind(s.kind).colour.withAlpha(s.active ? 1.0f : 0.35f),
                     2.0f);
-      Icons::draw(g, kindSvg(s.kind), sq.reduced(8.0f),
-                  s.active ? juce::Colours::white
-                           : theme::kMuted.withAlpha(0.5f));
+      const juce::Colour iconColour =
+          s.active ? juce::Colours::white : theme::kMuted.withAlpha(0.5f);
+      const char* audioSvg =
+          s.kind == "tone" ? cellToneSvg() : cellAudioSvg(s.kind);
+      if (audioSvg != nullptr)
+        Icons::drawTinted(g, audioSvg, sq.reduced(8.0f), iconColour, theme::kSurface);
+      else
+        Icons::draw(g, kindSvg(s.kind), sq.reduced(8.0f), iconColour);
     }
 
     if (selected)

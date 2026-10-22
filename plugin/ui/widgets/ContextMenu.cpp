@@ -7,7 +7,9 @@ namespace t3k::ui {
 
 ContextMenu::ContextMenu(std::vector<Item> items) {
   for (auto& item : items) {
-    auto row = std::make_unique<MenuRow>(item.label, item.icon, MenuRow::kContext);
+    auto row = item.svg != nullptr
+                   ? std::make_unique<MenuRow>(item.label, item.svg, MenuRow::kContext)
+                   : std::make_unique<MenuRow>(item.label, item.icon, MenuRow::kContext);
     row->setHelpText(item.helpText.isNotEmpty() ? item.helpText
                                : help::text(item.help));
     if (item.disabled) {

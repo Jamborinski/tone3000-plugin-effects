@@ -27,6 +27,9 @@ public:
   static constexpr int kHeight = kDropdown.height;
 
   MenuRow(const juce::String& label, std::optional<Icon> icon, Metrics metrics = kDropdown);
+  // Raw single-tone custom SVG (CustomIcons.h / AudioIcons.h) instead of a
+  // Lucide icon; tinted with the label colour like the icon path.
+  MenuRow(const juce::String& label, const char* svg, Metrics metrics = kDropdown);
 
   void setLabelColour(juce::Colour colour);
   void setDisabledLook(bool disabled);
@@ -38,6 +41,7 @@ public:
 private:
   juce::String label_;
   std::optional<Icon> icon_;
+  const char* svg_ = nullptr;
   Metrics metrics_;
   juce::Colour labelColour_;
   bool disabledLook_ = false;

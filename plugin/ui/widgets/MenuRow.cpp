@@ -15,6 +15,15 @@ MenuRow::MenuRow(const juce::String& label, std::optional<Icon> icon, Metrics me
   setMouseCursor(juce::MouseCursor::PointingHandCursor);
 }
 
+MenuRow::MenuRow(const juce::String& label, const char* svg, Metrics metrics)
+    : Clickable(label),
+      label_(label),
+      svg_(svg),
+      metrics_(metrics),
+      labelColour_(theme::kWhite) {
+  setMouseCursor(juce::MouseCursor::PointingHandCursor);
+}
+
 void MenuRow::setLabelColour(juce::Colour colour) {
   labelColour_ = colour;
   repaint();
@@ -27,7 +36,7 @@ void MenuRow::setDisabledLook(bool disabled) {
 
 int MenuRow::preferredWidth() const {
   const int text = juce::roundToInt(Fonts::width(Fonts::sans(metrics_.fontPx), label_));
-  return metrics_.padX * 2 + (icon_ ? metrics_.icon + metrics_.gap : 0) + text;
+  return metrics_.padX * 2 + (icon_ || svg_ ? metrics_.icon + metrics_.gap : 0) + text;
 }
 
 void MenuRow::paintButton(juce::Graphics& g, bool highlighted, bool) {
@@ -37,10 +46,13 @@ void MenuRow::paintButton(juce::Graphics& g, bool highlighted, bool) {
 
   const float alpha = disabledLook_ ? theme::kDisabledOpacity : 1.0f;
   auto content = box.reduced(metrics_.padX, 0);
-  if (icon_) {
+  if (icon_ || svg_) {
     const auto iconBox =
         content.removeFromLeft(metrics_.icon).withSizeKeepingCentre(metrics_.icon, metrics_.icon);
-    Icons::draw(g, *icon_, iconBox.toFloat(), labelColour_.withMultipliedAlpha(alpha));
+    if (svg_ != nullptr)
+      Icons::drawTinted(g, svg_, iconBox.toFloat(), labelColour_.withMultipliedAlpha(alpha));
+    else
+      Icons::draw(g, *icon_, iconBox.toFloat(), labelColour_.withMultipliedAlpha(alpha));
     content.removeFromLeft(metrics_.gap);
   }
   paint::text(g, label_, content, Fonts::sans(metrics_.fontPx),

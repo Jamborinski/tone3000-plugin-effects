@@ -8,6 +8,18 @@
 
 namespace t3k::ui {
 
+namespace {
+// The add-menu rows show the family artwork (single-tone tint of the label
+// colour); wave keeps its Lucide dot.
+using audio_icons::kChorus;
+using audio_icons::kCompressor;
+using audio_icons::kConvolution;
+using audio_icons::kDelay;
+using audio_icons::kReverb;
+using audio_icons::kTremolo;
+using audio_icons::kVolume;
+}  // namespace
+
 AddTile::Routing AddTile::routingFor(int index, int count) {
   if (count <= 1) return Routing::none;
   if (index == 0) return Routing::right;
@@ -39,22 +51,15 @@ std::vector<ContextMenu::Item> AddTile::menuItems() {
        [this] { if (onPaste) onPaste(blockId()); }, /*disabled=*/!canPaste_},
   };
   if (onAddEffect) {
-    items.push_back({"Delay", Icon::RotateCcw, help::Key::addEffectDelay,
-                     [this] { if (onAddEffect) onAddEffect(blockId(), "delay"); }});
-    items.push_back({"Chorus", Icon::Copy, help::Key::addEffectChorus,
-                     [this] { if (onAddEffect) onAddEffect(blockId(), "chorus"); }});
-    items.push_back({"Tremolo", Icon::Volume2, help::Key::addEffectTremolo,
-                     [this] { if (onAddEffect) onAddEffect(blockId(), "tremolo"); }});
-    items.push_back({"Compressor", Icon::Gauge, help::Key::addEffectCompressor,
-                     [this] { if (onAddEffect) onAddEffect(blockId(), "compressor"); }});
-    items.push_back({"Reverb", Icon::Share, help::Key::addEffectReverb,
-                     [this] { if (onAddEffect) onAddEffect(blockId(), "reverb"); }});
-    items.push_back({"Convolver", Icon::Redo2, help::Key::addEffectConvolution,
-                     [this] { if (onAddEffect) onAddEffect(blockId(), "convolution"); }});
+    items.push_back({.label = "Delay", .icon = std::nullopt, .help = help::Key::addEffectDelay, .onSelect = [this] { if (onAddEffect) onAddEffect(blockId(), "delay"); }, .svg = audio_icons::kDelay});
+    items.push_back({.label = "Chorus", .icon = std::nullopt, .help = help::Key::addEffectChorus, .onSelect = [this] { if (onAddEffect) onAddEffect(blockId(), "chorus"); }, .svg = audio_icons::kChorus});
+    items.push_back({.label = "Tremolo", .icon = std::nullopt, .help = help::Key::addEffectTremolo, .onSelect = [this] { if (onAddEffect) onAddEffect(blockId(), "tremolo"); }, .svg = audio_icons::kTremolo});
+    items.push_back({.label = "Compressor", .icon = std::nullopt, .help = help::Key::addEffectCompressor, .onSelect = [this] { if (onAddEffect) onAddEffect(blockId(), "compressor"); }, .svg = audio_icons::kCompressor});
+    items.push_back({.label = "Reverb", .icon = std::nullopt, .help = help::Key::addEffectReverb, .onSelect = [this] { if (onAddEffect) onAddEffect(blockId(), "reverb"); }, .svg = audio_icons::kReverb});
+    items.push_back({.label = "Convolver", .icon = std::nullopt, .help = help::Key::addEffectConvolution, .onSelect = [this] { if (onAddEffect) onAddEffect(blockId(), "convolution"); }, .svg = audio_icons::kConvolution});
     items.push_back({"Wave", Icon::Circle, help::Key::addEffectWaveGen,
                      [this] { if (onAddEffect) onAddEffect(blockId(), "wave"); }});
-    items.push_back({"Volume", Icon::Volume2, help::Key::addEffectVolume,
-                     [this] { if (onAddEffect) onAddEffect(blockId(), "volume"); }});
+    items.push_back({.label = "Volume", .icon = std::nullopt, .help = help::Key::addEffectVolume, .onSelect = [this] { if (onAddEffect) onAddEffect(blockId(), "volume"); }, .svg = audio_icons::kVolume});
   }
   for (auto& item : localLoadItems()) items.push_back(std::move(item));
   return items;

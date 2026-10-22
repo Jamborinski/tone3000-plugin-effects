@@ -28,6 +28,10 @@ public:
     // Per-row hover text override; empty = the shared help::text(help).
     // Trailing with an empty default so aggregate call sites keep compiling.
     juce::String helpText;
+    // Raw single-tone SVG (AudioIcons.h) in place of a Lucide icon; when set,
+    // `icon` is ignored. Trailing so positional aggregate call sites keep
+    // compiling -- set it via designated initialiser.
+    const char* svg = nullptr;
   };
 
   static constexpr int kWidth = 148;

@@ -1,6 +1,7 @@
 #include "EffectTile.h"
 #include "KernelPlot.h"
 
+#include "core/AudioIcon.h"
 #include "core/Fonts.h"
 #include "core/Help.h"
 #include "core/Icons.h"
@@ -1520,16 +1521,20 @@ void EffectTile::paint(juce::Graphics& g) {
   if (!enabled_)
     g.fillAll(juce::Colours::black.withAlpha(0.30f));  // bypassed: dim the face
 
-  // Effect-type icon: right of the power button, power-button sized (20x20). The
-  // compressor has no drawn glyph -- its icon slot is the PUNCH toggle button.
-  // The compact reverb likewise puts its mode cycler in the icon slot.
-  if (!compressor && !delay && !(reverb && compact_) && !convolution) {
+  // Effect-type icon: right of the power button, power-button sized (20x20).
+  // Compressor: its icon slot is the PUNCH toggle -- show the glyph only when
+  // PUNCH is off (the toggle is hidden then). The compact reverb likewise puts
+  // its mode cycler in the icon slot. Two-tone pedal artwork resolves per
+  // mode; kinds without artwork (wave) fall back to nothing here.
+  if (!delay && !(reverb && compact_) && !convolution
+      && !(compressor && block_.compMbc)) {
     const float gs = 20.0f;
     const float iconX = 28.0f;
     const float iconY = 4.0f;
-    const Icon icon = (tremolo ? Icon::Volume2 : (reverb ? Icon::Share : Icon::Copy));
-    Icons::draw(g, icon, juce::Rectangle<float>(iconX, iconY, gs, gs), theme::kWhite,
-                /*strokeWidth=*/1.75f);
+    if (const char* svg = audioIconFor(block_.effectKind, block_.delayMode, block_.compMode,
+                                       block_.reverbMode))
+      Icons::drawTinted(g, svg, juce::Rectangle<float>(iconX, iconY, gs, gs), theme::kWhite,
+                        enabled_ ? theme::kSurfaceRaised : theme::kSurface);
   }
 
   // Effect name: top-centred, between the power (left) and remove (right) icons.
