@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:98fef26920dbd4c5dd47e0a5330b05b60b7045cb573abede3f503300bfb23fd4",
+  "pageVersion": "sha256:4e39f4666c3bd69135234f58412a4c9babeb86fd02fe79043aa89b7fdf843a09",
   "claims": [
     {
       "id": "claim_9c6f8afc68d34500bf778a2da1af5f07",
@@ -106,7 +106,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:eb2a1596e2f6f54e9429c66444f84aa175393cda241f3d40ca74b039acb3292b"
+          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
         }
       ]
     },
@@ -220,7 +220,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:eb2a1596e2f6f54e9429c66444f84aa175393cda241f3d40ca74b039acb3292b"
+          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
         }
       ]
     },
@@ -234,13 +234,13 @@
         },
         {
           "resource": "repo://test/src/wave_tests.cpp",
-          "version": "repo-file-v1:sha256:b35e278ef0af2ad23740df0676d27e9e51f9ab2b73cfaaa7d88beda4de645290"
+          "version": "repo-file-v1:sha256:4f4f249f197dca855aa48b92eddf725323eebeb4d040cfc064cf9faa1ceb70dc"
         }
       ]
     },
     {
       "id": "claim_7d46517ab64147619209a07c87893c1e",
-      "statement": "Volume (EffectKind::Volume) is a single-knob output gain of ±24 dB, stored normalised 0..1 with 0.5 = 0 dB (the UI reuses &scales::gainDb()); the engine maps stored→dB=−24+stored·48 and applies pow(10, db/20) to EVERY channel. Gain steps are smoothed with a ~5 ms one-pole (click-free: Volume.GainStepIsSmoothedNotInstant) and prepare() must not reset the settled gain (the restore-funnel law, mirroring Wave). Chain-law note: because effect blocks spawn at mix 0.5 and the wet path is the PLT v2 m² law (m = mix²), a Volume block's end-to-end law is out = 0.75·dry + 0.25·wet — the volume tests pin this explicitly (e.g. −24 dB → 0.1768·(0.75+0.25·0.0631)).",
+      "statement": "Volume (EffectKind::Volume) is a single-knob output gain of ±24 dB, stored normalised 0..1 with 0.5 = 0 dB (the UI reuses &scales::gainDb()); the engine maps stored→dB=−24+stored·48 and applies pow(10, db/20) to EVERY channel. Gain steps are smoothed with a ~5 ms one-pole (click-free: Volume.GainStepIsSmoothedNotInstant) and prepare() must not reset the settled gain (the restore-funnel law, mirroring Wave). Chain-law note (6d99a30, m08349): wave AND volume blocks now spawn at **100% mix**, so with the PLT v2 m² wet law (m = mix²) m = 1.0 and the volume block's end-to-end law is the **wet-only** out = wet·gain (e.g. dry 0.1768 → −24 dB = 0.1768·0.0631 = 0.01116, −12 dB = 0.1768·0.5 = 0.0884); the volume tests pin these explicitly, and the volume face is a single Volume knob with no Mix/In/Out trio.",
       "evidence": [
         {
           "resource": "repo://plugin/include/effects/volume/Volume.h",
@@ -248,13 +248,13 @@
         },
         {
           "resource": "repo://test/src/volume_tests.cpp",
-          "version": "repo-file-v1:sha256:9ea56b56e3277fc7ef4461bfd38037e0178a2bf22d3ddfc2154b2a37cdd5b39f"
+          "version": "repo-file-v1:sha256:66d13f511b57681ccbb12df4d540095c9ac0ff72fe97245a377ae42edaf0a71b"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-22T04:28:30.830Z"
+    "at": "2026-10-22T15:01:43.911Z"
   }
 }

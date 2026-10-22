@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:736800251379f9452def27e8fc1862bdd58606c5c2b1d0fb7f091f445dcac5a2",
+  "pageVersion": "sha256:776498596cf56f78934e12b3dda828a30c68a1604bfc3c222d762507351ad585",
   "claims": [
     {
       "id": "claim_63767cf697ac4d45bfd45cb93f9a268b",
@@ -92,11 +92,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
+          "version": "repo-file-v1:sha256:84b878fd413d46bb50d831601d0255f52941cff02dbd8fb680e0bca79cd95464"
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
+          "version": "repo-file-v1:sha256:952e47042feb05c36dc3213dec2c51a7b8d5a1b2500b2c5a16648b4845ec80fe"
         }
       ]
     },
@@ -142,7 +142,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
+          "version": "repo-file-v1:sha256:84b878fd413d46bb50d831601d0255f52941cff02dbd8fb680e0bca79cd95464"
         },
         {
           "resource": "repo://plugin/src/effects/conv/ConvolutionReverb.cpp",
@@ -193,6 +193,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-22T04:28:30.830Z"
+    "at": "2026-10-22T15:01:43.911Z"
   }
 }

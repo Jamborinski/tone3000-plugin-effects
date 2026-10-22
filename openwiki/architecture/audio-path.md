@@ -4,7 +4,7 @@ title: "Audio path: chain domain, lanes, block types"
 openwiki_generated: true
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-22T04:28:30.830Z
+    at: 2026-10-22T15:01:43.911Z
 sources:
   - id: openwiki-source-e2fb14576702431774114c7c
     resource: repo://plugin/include/ChainBlock.h
@@ -16,6 +16,10 @@ sources:
     resource: repo://plugin/include/RtWorkerPool.h
   - id: openwiki-source-fd29254520bef2ca5ddb33d0
     resource: repo://plugin/src/ProcessorChain.cpp
+  - id: openwiki-source-00b5c75e01afdd1121a90675
+    resource: repo://test/src/volume_tests.cpp
+  - id: openwiki-source-01eb32605666555598830605
+    resource: repo://test/src/wave_tests.cpp
 generated: { by: "pi", at: "2026-10-10T18:58:45.842Z" }
 ---
 

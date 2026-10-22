@@ -27,6 +27,10 @@ sources:
     resource: repo://plugin/ui/testbed/e2e/conv-strip.js
   - id: openwiki-source-face5087f131b3d99de9f7e7
     resource: repo://plugin/ui/testbed/e2e/node-drag.js
+  - id: openwiki-source-f39cb0f76932ca2e889495ab
+    resource: repo://plugin/ui/testbed/e2e/wave-volume-add.js
+  - id: openwiki-source-62a3df25294500b45d9419e9
+    resource: repo://plugin/ui/testbed/goldens/wave.png
   - id: openwiki-source-b68d5a6792d458694c05da8b
     resource: repo://plugin/ui/testbed/Main.cpp
   - id: openwiki-source-5ce252cfdcd91a240c635a5e
@@ -41,6 +45,8 @@ sources:
     resource: repo://plugin/ui/views/gallery/EffectTile.cpp
   - id: openwiki-source-09eb1e1b1a7ba24f59d68de1
     resource: repo://plugin/ui/views/gallery/EffectTile.h
+  - id: openwiki-source-89d86f0570b08befb438b56a
+    resource: repo://plugin/ui/views/nodeview/NodeView.cpp
   - id: openwiki-source-78c1e0c44679b66507a1889c
     resource: repo://plugin/ui/views/PluginHeader.cpp
   - id: openwiki-source-174467a0c2e30a63c2e8869e
@@ -53,10 +59,10 @@ sources:
     resource: repo://test/CMakeLists.txt
   - id: openwiki-source-fde83b2ad879efba1865ca8d
     resource: repo://test/src/theme_palette_tests.cpp
-generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
+generated: { by: "pi", at: "2026-10-22T15:01:43.911Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-22T04:28:30.830Z
+    at: 2026-10-22T15:01:43.911Z
 ---
 
 
@@ -328,22 +334,36 @@ Key decisions:
 - Gate: TileShot goldens `conv-full.png` + `conv-compact.png` (+ -empty/-long/-missing/-mono)
   re-shot and re-approved at 0 px after human review; DspTests 582/582 at 9c203cb.
 
-## Wave + Volume tiles: 1-2 param faces (2026-10-21, `6813cb5` + `d0045a7`)
+## Wave + Volume tiles: exact-face law (2026-10-21 `6813cb5` + `d0045a7`, face trim 2026-10-22 `6d99a30`)
 
-Two small built-in effect kinds landed for the wave/volume round: the **wave**
-tile face is Mix/In/Out/Level/Shape (Level on `scales::waveLevel()`, Shape a
-5-detent `scales::waveShape()` — sine default / triangle / square / two saws;
-the block REPLACES the signal, default level 0.25 = −12 dBFS since d0045a7)
-and the **volume** tile face is Mix/In/Out/Volume (single knob on
-`scales::gainDb()`, 0.5 = 0 dB, ±24 dB span). Both are 1-2 param faces on the
-`kCompactKnobFace` 32-px grid. The m07658 crash: the EffectTile ctor read
+Two small built-in effect kinds landed for the wave/volume round, and the
+**exact-face law (m08349, `6d99a30`)**: the **wave** face is
+**Output/Shape ONLY** — Output on `scales::waveLevel()`, Shape a 5-detent
+`scales::waveShape()` (sine default / triangle / square / two saws; the block
+REPLACES the signal, default level 0.25 = −12 dBFS since `d0045a7`) — and the
+**volume** face is a **single Volume knob** on `scales::gainDb()` (0.5 =
+0 dB, ±24 dB span). No Mix/In/Out trio on either face, STRIP AND TILE: the
+trio machinery stays internal and both kinds now **spawn at 100% mix** (the
+chain laws in `wave_tests`/`volume_tests` are restated for mix 1.0 — wave
+tone 0.7071 RMS, volume −24/−12 dB = wet-only m²). The `EffectTile` ctor
+builds and syncs the trio knobs but **never adds them** on wave/volume faces
+(layout early-out); the strip (`NodeView::rebuildStripKnobs`) skips the trio
+entirely. Face law: `ps[0]/ps[1]` unguarded on the 1-2 param faces was the
+m07658 OOB crash (`d0045a7` added `hasA/hasB/hasC` size guards —
+`scaleA_/paramA_` etc. are assigned-only legacy, never re-read), and the
+title chain fell through every unlisted kind to **"Chorus"** — `6d99a30`
+extended it so wave/volume render "Wave"/"Volume". The m07658 crash: the EffectTile ctor read
 `ps[0]/ps[1]/ps[2]` unguarded and dereferenced past the end on these short
 param lists — the reads now carry `hasA/hasB/hasC` size guards
-(`scaleA_/paramA_` etc. are assigned-only legacy, never re-read). Goldens
-`wave.png` / `wave-shift.png` / `volume.png` / `volume-shift.png` added to
-`plugin/ui/testbed/goldens/` (TileShot.cpp shot list) and human-approved at
-0 px; the real add path is guarded by the `node-add` e2e probe (see the
-testbed section) + a SelfTests case.
+(`scaleA_/paramA_` etc. are assigned-only legacy, never re-read). The `gainDb` contract is explicit in `KnobScale.h`: **`scales::gainDb()` is
+identity storage** — `paramsFor` knobs render `pos = raw` (the Volume knob
+snapped to noon on every resync because `updateStripKnobValues` routed the
+param through `fromDisplay`, `(stored+24)/48 = 0.508` for any raw). Goldens
+`wave.png` / `wave-shift.png` / `volume.png` / `volume-shift.png` in
+`plugin/ui/testbed/goldens/` (TileShot.cpp shot list) are re-shot + reviewed
+at 0 px for the exact faces; the real add path is guarded by the `node-add`
+e2e probe (asserts labels `Output,Shape` / `Volume`, see the testbed
+section) + a SelfTests case.
 
 ## Theme: swappable colour palette + `--ocr` capture mode (2026-10-14)
 

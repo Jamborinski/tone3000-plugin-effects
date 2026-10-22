@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:6ee55752f8c8f2c1dcd2e140d172f2410634dd74f034dd03f562b27536e9ea20",
+  "pageVersion": "sha256:831ef81936c6cfd38ecebb1e4e81cadfd921fd0a8b84809159274e326615acce",
   "claims": [
     {
       "id": "claim_4e8284a0f0bc4fe0b4e5fa2bda920264",
@@ -54,7 +54,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/Help.cpp",
-          "version": "repo-file-v1:sha256:af6206533cdf64030c9cc423e0663447fd8d91ef799b5f28c59c1eca923dfb68"
+          "version": "repo-file-v1:sha256:27ee1ce47cf96832bad937d564ede6e4b07ce6fc3618ada4152ddf23e79a6c5f"
         }
       ]
     },
@@ -78,7 +78,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         }
       ]
     },
@@ -138,7 +138,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         }
       ]
     },
@@ -162,7 +162,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         }
       ]
     },
@@ -172,7 +172,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         }
       ]
     },
@@ -182,7 +182,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         }
       ]
     },
@@ -196,7 +196,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         },
         {
           "resource": "repo://test/src/strip_knob_tests.cpp",
@@ -210,7 +210,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         }
       ]
     },
@@ -220,7 +220,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         }
       ]
     },
@@ -230,7 +230,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         }
       ]
     },
@@ -244,7 +244,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         }
       ]
     },
@@ -254,7 +254,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         }
       ]
     },
@@ -264,7 +264,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         }
       ]
     },
@@ -274,7 +274,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         },
         {
           "resource": "repo://plugin/ui/widgets/ConvCurveBand.h",
@@ -296,7 +296,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         }
       ]
     },
@@ -310,7 +310,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         },
         {
           "resource": "repo://test/src/node_model_tests.cpp",
@@ -334,7 +334,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         }
       ]
     },
@@ -344,13 +344,13 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-22T04:28:30.830Z"
+    "at": "2026-10-22T15:01:43.911Z"
   }
 }

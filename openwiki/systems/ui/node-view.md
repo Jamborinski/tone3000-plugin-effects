@@ -37,10 +37,10 @@ sources:
     resource: repo://test/src/node_model_tests.cpp
   - id: openwiki-source-a9b10161f0531edad6c09d8e
     resource: repo://test/src/strip_knob_tests.cpp
-generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
+generated: { by: "pi", at: "2026-10-22T15:01:43.911Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-22T04:28:30.830Z
+    at: 2026-10-22T15:01:43.911Z
 ---
 
 # Node view: the signal-line grid
@@ -113,7 +113,16 @@ juce-end-to-end drag regression (supplement to the testbed gates).
   knob (and the In/Out gain knobs, m04302) are **identity-scaled** (raw 0..1,
   no `toStored`): `pos = raw` for identity scales, `knobFromStored`
   otherwise — applying `knobFromStored` to an identity-stored param slammed
-  Mix to ~0%. In/Out are pinned to the noon (0.5) readout. The strip **hide
+  Mix to ~0%. In/Out are pinned to the noon (0.5) readout. **Wave/Volume
+exact-face law (m08349, `6d99a30`):** `rebuildStripKnobs` skips the
+trio entirely for wave/volume (the trio is internal; both kinds spawn at
+100% mix) and their `paramsFor` params start at strip knob 0 — the wave
+face is **Output/Shape** and the volume face a single **Volume** knob.
+The `gainDb` identity-storage contract in `KnobScale.h` keeps the Volume
+knob from snapping to noon on resync: `paramsFor` knobs route through
+`knobFromStored`, which falls back to `fromDisplay` (`(stored+24)/48 =
+0.508` for any raw) unless the scale sets `toStored`/`fromStored` —
+`gainDb` now sets both. The strip **hide
   button (`hide_`, Icon::X) is shown via `updateStripChrome`** (batch 3 made
   it actually visible) and is the ONLY strip close. Stacked header: block-kind label in
   caps (`titleFont`) over the mode line — **batch 2 (2026-10-16)** replaced
@@ -256,7 +265,9 @@ release can't re-open a menu — user m05916/m05928).
 slots — `NodeCell::paint` treats `!s.has || s.insert` as the dashed+plus gap
 state only, `NodeCell::update` shows the block's own title on hover, and
 clicking a tone node **selects** it (strip shows In/Out/Mix trims) rather
-than opening the add menu.
+than opening the add menu. Wave/Volume nodes show their exact faces
+instead — **Output/Shape** (wave) / **Volume** (volume), no trio
+(`6d99a30`, m08349).
 
 ## Visibility law (batch 3)
 

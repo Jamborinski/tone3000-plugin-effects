@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:518113d8a8f9ca1b997991c89c2458a5ea0af89e14165a23f4b8dfed5a861968",
+  "pageVersion": "sha256:8023ca8a02358682829b9af34cfaf577962828fc7d2b314e95391baacdba8e9b",
   "claims": [
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
@@ -36,7 +36,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
+          "version": "repo-file-v1:sha256:84b878fd413d46bb50d831601d0255f52941cff02dbd8fb680e0bca79cd95464"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
@@ -78,7 +78,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
+          "version": "repo-file-v1:sha256:84b878fd413d46bb50d831601d0255f52941cff02dbd8fb680e0bca79cd95464"
         },
         {
           "resource": "repo://test/src/add_at_slot_tests.cpp",
@@ -102,7 +102,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
+          "version": "repo-file-v1:sha256:84b878fd413d46bb50d831601d0255f52941cff02dbd8fb680e0bca79cd95464"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
@@ -128,7 +128,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
+          "version": "repo-file-v1:sha256:84b878fd413d46bb50d831601d0255f52941cff02dbd8fb680e0bca79cd95464"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
@@ -136,7 +136,7 @@
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
+          "version": "repo-file-v1:sha256:952e47042feb05c36dc3213dec2c51a7b8d5a1b2500b2c5a16648b4845ec80fe"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
@@ -154,7 +154,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
+          "version": "repo-file-v1:sha256:84b878fd413d46bb50d831601d0255f52941cff02dbd8fb680e0bca79cd95464"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
@@ -172,7 +172,7 @@
     },
     {
       "id": "claim_4a70f1f337164afd8f7f4e1d91abae05",
-      "statement": "KnobScale (plugin/ui/core/KnobScale.h, port of knobScale.ts) keeps three domains separate: normalised 0..1 knob position, a DISPLAY unit for the drag readout and type-in, and a STORAGE contract via toStored/fromStored. knobToStored()/knobFromStored() fall back to toDisplay/fromDisplay when no explicit storage pair is declared. Knobs whose stored domain is 0..1 but whose display unit is human MUST declare toStored/fromStored or the tile writes the display unit into a 0..1 param, the engine clamps to 1.0, and the next resync snaps the knob back to max (the 2026-10-06 Heads glitch). Current toStored list (line numbers as of commit 9c203cb): delayHeads (1..4 heads), compClip (0..2 raw depth behind a 0..200% face), convGain ±24 dB (KnobScale.h:613), convDwell ±18 dB (KnobScale.h:634 — a ±18 dB display window over the SHARED 0..1 input-gain store with identity toStored, same store as convGain; 0.25..0.75 of the dial spans the ±18 dB window), convWidth % (KnobScale.h:654), convFade % (KnobScale.h:691), convPitch 0.25x..4x (KnobScale.h:780), spring lines (1..6). convTone no longer exists on the conv face (removed in the face rework, commit 44a78ea). convStartS/convEndS store seconds directly — their per-IR faces come from convTrimScale (KnobScale.h:675), not a toStored split. The dB format() integer-check is std::abs(db - std::trunc(db)) < 0.05 (the original std::abs(db) - std::trunc(db) equals 2|db| for negative db, rendering \"-18.0 dB\"; fixed and propagated to convGain and reverbDry). T-DAT-001: reverbSharedMod and reverbWave have NO custom scale (sharedMod is plain 0..1; wave is an int 0..4 detent, identity-bound); LoCut uses loCutTaper() (KnobScale.h:816) with toStored(n) = 0.85 * pow(n, 0.7) (0..0.85 fraction for the mode-0 45 Hz HPF blend).",
+      "statement": "KnobScale (plugin/ui/core/KnobScale.h, port of knobScale.ts) keeps three domains separate: normalised 0..1 knob position, a DISPLAY unit for the drag readout and type-in, and a STORAGE contract via toStored/fromStored. knobToStored()/knobFromStored() fall back to toDisplay/fromDisplay when no explicit storage pair is declared. Knobs whose stored domain is 0..1 but whose display unit is human MUST declare toStored/fromStored or the tile writes the display unit into a 0..1 param, the engine clamps to 1.0, and the next resync snaps the knob back to max (the 2026-10-06 Heads glitch). Current toStored list (line numbers as of commit 6d99a30): **gainDb ±24 dB (KnobScale.h:91) — now declares an IDENTITY toStored/fromStored pair (added by 6d99a30, m08349): without it, knobFromStored fell back to fromDisplay=(stored+24)/48 = 0.508 for any stored value and every gainDb knob (convGain/convDwell/reverbDry/Volume) noon-snapped on strip resync**, delayHeads (1..4 heads), compClip (0..2 raw depth behind a 0..200% face), convDwell ±18 dB (a ±18 dB display window over the SHARED 0..1 input-gain store with identity toStored, same store as convGain; 0.25..0.75 of the dial spans the ±18 dB window), convWidth % , convFade %, convPitch 0.25x..4x, spring lines (1..6). convTone no longer exists on the conv face (removed in the face rework, commit 44a78ea). convStartS/convEndS store seconds directly — their per-IR faces come from convTrimScale, not a toStored split. The dB format() integer-check is std::abs(db - std::trunc(db)) < 0.05 (the original std::abs(db) - std::trunc(db) equals 2|db| for negative db, rendering \"-18.0 dB\"; fixed and propagated to convGain and reverbDry). T-DAT-001: reverbSharedMod and reverbWave have NO custom scale (sharedMod is plain 0..1; wave is an int 0..4 detent, identity-bound); LoCut uses loCutTaper() with toStored(n) = 0.85 * pow(n, 0.7) (0..0.85 fraction for the mode-0 45 Hz HPF blend).",
       "evidence": [
         {
           "resource": "repo://docs/agents/ui-wiring.md",
@@ -180,7 +180,7 @@
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
+          "version": "repo-file-v1:sha256:952e47042feb05c36dc3213dec2c51a7b8d5a1b2500b2c5a16648b4845ec80fe"
         }
       ]
     },
@@ -190,7 +190,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
+          "version": "repo-file-v1:sha256:84b878fd413d46bb50d831601d0255f52941cff02dbd8fb680e0bca79cd95464"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
@@ -198,7 +198,7 @@
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
+          "version": "repo-file-v1:sha256:952e47042feb05c36dc3213dec2c51a7b8d5a1b2500b2c5a16648b4845ec80fe"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
@@ -212,7 +212,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
+          "version": "repo-file-v1:sha256:84b878fd413d46bb50d831601d0255f52941cff02dbd8fb680e0bca79cd95464"
         },
         {
           "resource": "repo://plugin/ui/NativeUi.cmake",
@@ -223,6 +223,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-22T04:28:30.830Z"
+    "at": "2026-10-22T15:01:43.911Z"
   }
 }

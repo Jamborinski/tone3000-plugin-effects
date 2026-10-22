@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:d38613ed6e769f332559304ba0d2397bf3465ce4120b186b6fe517e41f142712",
+  "pageVersion": "sha256:60cff7560b704ac105c456c99870a22a8d85ab7436c50768516afc21561505c8",
   "claims": [
     {
       "id": "claim_85d7c01917814cdd8ed3b245b004829d",
@@ -78,7 +78,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
+          "version": "repo-file-v1:sha256:84b878fd413d46bb50d831601d0255f52941cff02dbd8fb680e0bca79cd95464"
         }
       ]
     },
@@ -108,13 +108,27 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
+          "version": "repo-file-v1:sha256:84b878fd413d46bb50d831601d0255f52941cff02dbd8fb680e0bca79cd95464"
+        }
+      ]
+    },
+    {
+      "id": "claim_9729e685aa3d47c99ba128ff68653643",
+      "statement": "Wave and Volume blocks spawn at 100% mix (6d99a30, m08349): the chain laws in wave_tests (wave tone 0.7071 RMS = level*shape*1.0 mix) and volume_tests (−24/−12 dB = wet-only m²) are stated for mix 1.0, and the faces carry no Mix/In/Out trio.",
+      "evidence": [
+        {
+          "resource": "repo://test/src/volume_tests.cpp",
+          "version": "repo-file-v1:sha256:66d13f511b57681ccbb12df4d540095c9ac0ff72fe97245a377ae42edaf0a71b"
+        },
+        {
+          "resource": "repo://test/src/wave_tests.cpp",
+          "version": "repo-file-v1:sha256:4f4f249f197dca855aa48b92eddf725323eebeb4d040cfc064cf9faa1ceb70dc"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-22T04:28:30.830Z"
+    "at": "2026-10-22T15:01:43.911Z"
   }
 }

@@ -51,10 +51,10 @@ sources:
     resource: repo://test/src/volume_tests.cpp
   - id: openwiki-source-01eb32605666555598830605
     resource: repo://test/src/wave_tests.cpp
-generated: { by: "pi", at: "2026-10-22T04:28:30.830Z" }
+generated: { by: "pi", at: "2026-10-22T15:01:43.911Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-22T04:28:30.830Z
+    at: 2026-10-22T15:01:43.911Z
 ---
 
 
@@ -77,7 +77,12 @@ overwrites the input, 8 ms click-free shape crossfade; default level
 reusing `scales::gainDb`, one-pole ~5 ms gain smoothing) — the two
 single-knob-style blocks added 2026-10-22 (commit `6813cb5`), both
 following the restore-funnel law (`prepare(sampleRate)` is idempotent
-and must NOT reset engine state). The gallery EffectTile ctor guards the
+and must NOT reset engine state). **Exact-face law (m08349, `6d99a30`):**
+both kinds spawn at **100% mix** (wave replaces the signal, so mix 1.0 ≈
+unity; the chain laws in `wave_tests`/`volume_tests` are restated for mix
+1.0 — wave tone 0.7071 RMS, volume −24/−12 dB = wet-only m²), and their
+faces are **Output/Shape** (wave) / a single **Volume** knob (volume) —
+no Mix/In/Out trio on the strip OR the tile (see the ui page). The gallery EffectTile ctor guards the
 A/B/C param-slot reads with `ps.size() > N` because volume has 1 param
 and wave 2 (`d0045a7` — the unguarded read was the m07658 OOB crash). Since the per-mode split (commit `abebb1e`), extended by the
 engine/wrapper split (commit `9bf4469`), the reverb `processX` bodies no

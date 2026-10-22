@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:f4328cc9a41313a21a523e7e51b99dfea5e388b8c874a11678004640c3691dac",
+  "pageVersion": "sha256:5933d0206942afebb880e7b61356a3eb586c7e508fcfa109d1c39d178ac1e09e",
   "claims": [
     {
       "id": "claim_746e41b7d7214abc8858befedfaa8e01",
@@ -8,7 +8,7 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:d15b5c97987c647fc5a91d9027bd56a84188d44cff930cc4c086137e569c60a8"
+          "version": "repo-file-v1:sha256:eee6b940a1c2b1486ca5378503813954d2e4e31a03c32fcb9257886dfb92fcbb"
         },
         {
           "resource": "repo://test/CMakeLists.txt",
@@ -26,7 +26,7 @@
         },
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:d15b5c97987c647fc5a91d9027bd56a84188d44cff930cc4c086137e569c60a8"
+          "version": "repo-file-v1:sha256:eee6b940a1c2b1486ca5378503813954d2e4e31a03c32fcb9257886dfb92fcbb"
         }
       ]
     },
@@ -36,7 +36,7 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:d15b5c97987c647fc5a91d9027bd56a84188d44cff930cc4c086137e569c60a8"
+          "version": "repo-file-v1:sha256:eee6b940a1c2b1486ca5378503813954d2e4e31a03c32fcb9257886dfb92fcbb"
         }
       ]
     },
@@ -46,7 +46,7 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:d15b5c97987c647fc5a91d9027bd56a84188d44cff930cc4c086137e569c60a8"
+          "version": "repo-file-v1:sha256:eee6b940a1c2b1486ca5378503813954d2e4e31a03c32fcb9257886dfb92fcbb"
         },
         {
           "resource": "repo://script/win-standalone.sh",
@@ -64,7 +64,7 @@
         },
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:d15b5c97987c647fc5a91d9027bd56a84188d44cff930cc4c086137e569c60a8"
+          "version": "repo-file-v1:sha256:eee6b940a1c2b1486ca5378503813954d2e4e31a03c32fcb9257886dfb92fcbb"
         },
         {
           "resource": "repo://script/signing/sign-exe.sh",
@@ -79,6 +79,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-22T04:28:30.830Z"
+    "at": "2026-10-22T15:01:43.911Z"
   }
 }

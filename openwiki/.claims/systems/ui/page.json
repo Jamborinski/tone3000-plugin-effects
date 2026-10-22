@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:6e5d1c68f22e3fe39c8a0823d3696da38139f1d9df312c641e754eeefe1c9f29",
+  "pageVersion": "sha256:3af16ad4d4cd7245095ad8b2645f3e6dab16e7ffcd4348bdae1f727e24fc071c",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -72,11 +72,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
+          "version": "repo-file-v1:sha256:952e47042feb05c36dc3213dec2c51a7b8d5a1b2500b2c5a16648b4845ec80fe"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:eb2a1596e2f6f54e9429c66444f84aa175393cda241f3d40ca74b039acb3292b"
+          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
         }
       ]
     },
@@ -86,7 +86,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:eb2a1596e2f6f54e9429c66444f84aa175393cda241f3d40ca74b039acb3292b"
+          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
         }
       ]
     },
@@ -96,11 +96,11 @@
       "evidence": [
         {
           "resource": "repo://docs/agents/ui-snapshots.md",
-          "version": "repo-file-v1:sha256:5f4c9a60414f9ba405289d02120547a08d1da9c5cfbff5ecb02fdb94e7cfaf00"
+          "version": "repo-file-v1:sha256:50e82fead5d34a3076d08d5d1f2d7d54d5e251c6f2b613383ef670b5f83f0558"
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
+          "version": "repo-file-v1:sha256:952e47042feb05c36dc3213dec2c51a7b8d5a1b2500b2c5a16648b4845ec80fe"
         },
         {
           "resource": "repo://plugin/ui/views/PluginHeader.cpp",
@@ -108,7 +108,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:eb2a1596e2f6f54e9429c66444f84aa175393cda241f3d40ca74b039acb3292b"
+          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
         }
       ]
     },
@@ -118,11 +118,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/Help.cpp",
-          "version": "repo-file-v1:sha256:af6206533cdf64030c9cc423e0663447fd8d91ef799b5f28c59c1eca923dfb68"
+          "version": "repo-file-v1:sha256:27ee1ce47cf96832bad937d564ede6e4b07ce6fc3618ada4152ddf23e79a6c5f"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:eb2a1596e2f6f54e9429c66444f84aa175393cda241f3d40ca74b039acb3292b"
+          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
         }
       ]
     },
@@ -180,11 +180,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
+          "version": "repo-file-v1:sha256:952e47042feb05c36dc3213dec2c51a7b8d5a1b2500b2c5a16648b4845ec80fe"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectParams.cpp",
-          "version": "repo-file-v1:sha256:786ff29363b5a5d7deb01ff6dae28a10182b14ee3e154c85012135d916e4f34c"
+          "version": "repo-file-v1:sha256:21b8dc9e98dcbf90a721bcf3553ba83316f9dd55fabc2300e95f091bc18d307b"
         }
       ]
     },
@@ -194,15 +194,15 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
+          "version": "repo-file-v1:sha256:952e47042feb05c36dc3213dec2c51a7b8d5a1b2500b2c5a16648b4845ec80fe"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectParams.cpp",
-          "version": "repo-file-v1:sha256:786ff29363b5a5d7deb01ff6dae28a10182b14ee3e154c85012135d916e4f34c"
+          "version": "repo-file-v1:sha256:21b8dc9e98dcbf90a721bcf3553ba83316f9dd55fabc2300e95f091bc18d307b"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:eb2a1596e2f6f54e9429c66444f84aa175393cda241f3d40ca74b039acb3292b"
+          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.h",
@@ -220,7 +220,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:eb2a1596e2f6f54e9429c66444f84aa175393cda241f3d40ca74b039acb3292b"
+          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.h",
@@ -249,10 +249,42 @@
           "version": "repo-file-v1:sha256:abd241b5825e73f0a06c4b48b57c9ecafb03cdccbc10712efdd2a154e9ad37bd"
         }
       ]
+    },
+    {
+      "id": "claim_4811c77cabd541af82e49e65eb24d370",
+      "statement": "Wave/Volume EXACT-FACE law (m08349, commit 6d99a30; supersedes the 6813cb5 trio-bearing wave/volume sections): both kinds spawn at 100% mix and their faces carry NO Mix/In/Out trio — the wave tile face is just the Output (waveLevel, waveLevel() 0..100%) and Shape (waveShape() 5 detents sine/triangle/saw-up/saw-down/square) row, and the volume tile a single Volume knob (scales::gainDb()). The tile title paints the kind name 'Wave'/'Volume' — this was broken at 6813cb5/d0045a7: the header's kind switch and the paint title's kind check only listed the original 6 kinds, so wave/volume fell into the `default`/empty branches and the title read \"Chorus\" (goldens wave*.png showed the Chorus title) — fixed by adding wave/volume cases to both switches (EffectTile.cpp:289 paint switch, :676/:679 header switch). waveShape() was moved to the LAST param of the wave tile row (EffectParams.cpp wave branch :1176-1186). The 4 goldens wave.png/wave-shift.png/volume.png/volume-shift.png were re-shot and re-approved (--regen) at 0 px after human review.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/testbed/goldens/wave.png",
+          "version": "repo-file-v1:sha256:e5222b01146bad46b1f318a4971fa8b63fc0df64e825516e85be1a7859071869"
+        },
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectParams.cpp",
+          "version": "repo-file-v1:sha256:21b8dc9e98dcbf90a721bcf3553ba83316f9dd55fabc2300e95f091bc18d307b"
+        },
+        {
+          "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
+          "version": "repo-file-v1:sha256:dd8e887f05193455813627144f3d1b6022b8326372466489d0d327f15842c513"
+        }
+      ]
+    },
+    {
+      "id": "claim_09c39f3e316c4a90a1cd01251ab140a6",
+      "statement": "Wave/Volume e2e coverage (6d99a30): plugin/ui/testbed/e2e/wave-volume-add.js is a STANDALONE 8-check script (own process, same two-AppConnection teardown rule as conv-strip.js) that drives the REAL strip add path: node-add 'wave' 3 then node-add 'volume' 4, asserting per-kind face labels — wave: {Mix, In, Out, Level, Shape} → now {Output, Shape} (no trio), volume: a single Volume knob — plus app-alive and lane-carrying-both. The strip face for these kinds is the no-trio exact face (NodeView.cpp rebuildStripKnobs noTrio guard at :1316-1319, the paramsFor knobs start at strip knob 0).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/testbed/e2e/wave-volume-add.js",
+          "version": "repo-file-v1:sha256:56ee09f53ed9af68036c072673e35acde4bfe8faf864818aa9fb0a035505ee33"
+        },
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:7bba7e801f29664d09364a11f70c2702c811930bf1bcb15f69c1ee85275cab8c"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-22T04:28:30.830Z"
+    "at": "2026-10-22T15:01:43.911Z"
   }
 }

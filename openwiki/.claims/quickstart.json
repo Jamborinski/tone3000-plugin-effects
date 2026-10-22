@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:e91497e26f0ea315dbeb6f05929559cb20cb65dec07426bf3bf17c17aa015ee0",
+  "pageVersion": "sha256:b7f78dbce1c3bb034d1fb3fe30372de72e6492d3a913acf7ab9f862489097b21",
   "claims": [
     {
       "id": "claim_d057a6cf428e4273bdbbc420889d32a3",
@@ -60,7 +60,7 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:9d6755ac4f9772d9fafbb39dacc9de7206f5126a024db1031a91657b1f105f81"
+          "version": "repo-file-v1:sha256:489db57887880c6cd37c95ede99ee7e745006dececf2710c58237ed2a84b5eb0"
         },
         {
           "resource": "repo://docs/agents/audio-testing.md",
@@ -82,7 +82,7 @@
         },
         {
           "resource": "repo://docs/agents/windows-build.md",
-          "version": "repo-file-v1:sha256:d15b5c97987c647fc5a91d9027bd56a84188d44cff930cc4c086137e569c60a8"
+          "version": "repo-file-v1:sha256:eee6b940a1c2b1486ca5378503813954d2e4e31a03c32fcb9257886dfb92fcbb"
         },
         {
           "resource": "repo://script/signing/sign-exe.sh",
@@ -100,7 +100,7 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:9d6755ac4f9772d9fafbb39dacc9de7206f5126a024db1031a91657b1f105f81"
+          "version": "repo-file-v1:sha256:489db57887880c6cd37c95ede99ee7e745006dececf2710c58237ed2a84b5eb0"
         },
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
@@ -140,7 +140,7 @@
       "evidence": [
         {
           "resource": "repo://AGENTS.md",
-          "version": "repo-file-v1:sha256:9d6755ac4f9772d9fafbb39dacc9de7206f5126a024db1031a91657b1f105f81"
+          "version": "repo-file-v1:sha256:489db57887880c6cd37c95ede99ee7e745006dececf2710c58237ed2a84b5eb0"
         },
         {
           "resource": "repo://docs/agents/dsp-invariants.md",
@@ -161,6 +161,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-22T04:28:30.830Z"
+    "at": "2026-10-22T15:01:43.911Z"
   }
 }
