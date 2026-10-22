@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:9a7414c02232ccdc17f01fd00793817e50508223ddac1316372514d96ed5ea49",
+  "pageVersion": "sha256:6ee55752f8c8f2c1dcd2e140d172f2410634dd74f034dd03f562b27536e9ea20",
   "claims": [
     {
       "id": "claim_4e8284a0f0bc4fe0b4e5fa2bda920264",
@@ -284,11 +284,11 @@
     },
     {
       "id": "claim_004ab9985f0e44dfbcc3e507de81f60c",
-      "statement": "Conv-strip e2e surface: convStripStateForE2E() (NodeView.cpp:1837) returns 'no-strip' or a 6-section pipe-joined string '<loadIrVis>:<exportVis>|<toast>|<convIr>|<labels comma-joined>|<loadX>,<exportX>' — the labels section exists to pin the Dwell rename and the x-section to pin the inline-with-the-bar button positions. convCurveBandStateForE2E() (:1867) returns 'none' (no conv strip) / 'closed' / 'in' / 'out'. The node-conv-strip handler in plugin/ui/testbed/NodeViewE2E.cpp:261-280 takes blockId (selectBlockForShot) + op in {export-click, curve-in, curve-out} (curve ops drive openConvCurveBandForE2E on knobsForE2E()[10]/[11]) and returns {state, band}. plugin/ui/testbed/e2e/conv-strip.js is a STANDALONE 11-check script (own process — two AppConnections in one process race on socket teardown, TestCentre.cpp:97) pinning: face chrome visible, Dwell not In, Load IR/Export inline with the bar, guard toast on export with no IR, F In/F Out bands open + mutual dismissal, chrome stable.",
+      "statement": "Conv-strip e2e surface: convStripStateForE2E() (NodeView.cpp:1842) returns 'no-strip' or a 6-section pipe-joined string '<loadIrVis>:<exportVis>|<toast>|<convIr>|<labels comma-joined>|<loadX>,<exportX>' — the labels section exists to pin the Dwell rename and the x-section to pin the inline-with-the-bar button positions. convCurveBandStateForE2E() (:1872) returns 'none' (no conv strip) / 'closed' / 'in' / 'out'. The node-conv-strip handler in plugin/ui/testbed/NodeViewE2E.cpp:261-279 takes blockId (selectBlockForShot) + op in {export-click, curve-in, curve-out} (curve ops drive openConvCurveBandForE2E on knobsForE2E()[10]/[11]) and returns {state, band}. plugin/ui/testbed/e2e/conv-strip.js is a STANDALONE 11-check script (own process — two AppConnections in one process race on socket teardown, TestCentre.cpp:97) pinning: face chrome visible, Dwell not In, Load IR/Export inline with the bar, guard toast on export with no IR, F In/F Out bands open + mutual dismissal, chrome stable. A second standalone op, node-add (NodeViewE2E.cpp:280), drives the REAL add path via nv->addEffectForE2E(index, kind) (public NodeView.h hook, d0045a7) for the wave/volume 1-2 param faces.",
       "evidence": [
         {
           "resource": "repo://plugin/ui/testbed/NodeViewE2E.cpp",
-          "version": "repo-file-v1:sha256:5ef749288edb5610244fa9dae0df9dd3ca6a61cf939e547b4aa9780a43111f8a"
+          "version": "repo-file-v1:sha256:4df1c02a1f47f13c0068ca244ab96a801a2bf7a5085bf5194fd9be2f42b86df9"
         },
         {
           "resource": "repo://plugin/ui/testbed/e2e/conv-strip.js",
@@ -351,6 +351,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-22T00:04:34.217Z"
+    "at": "2026-10-22T04:28:30.830Z"
   }
 }

@@ -51,10 +51,10 @@ sources:
     resource: repo://test/src/volume_tests.cpp
   - id: openwiki-source-01eb32605666555598830605
     resource: repo://test/src/wave_tests.cpp
-generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
+generated: { by: "pi", at: "2026-10-22T04:28:30.830Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-22T00:04:34.217Z
+    at: 2026-10-22T04:28:30.830Z
 ---
 
 
@@ -71,12 +71,15 @@ modes in V2 order: **Plate 0 /
 Spring 1 / Room 2 / Chamber 3 / Hall 4 / Digital 5**; `kNumModes = 6`),
 and `effects/conv/ConvolutionReverb.h` (loaded-IR playback, the house
 engine), `effects/wave/Wave.h` (440 Hz tone generator, 5 shapes,
-overwrites the input, 8 ms click-free shape crossfade), and
+overwrites the input, 8 ms click-free shape crossfade; default level
+**0.25 = −12 dBFS** since `d0045a7` — 0.5 read as "really loud"), and
 `effects/volume/Volume.h` (±24 dB output gain, stored 0..1 with 0.5 = 0 dB,
 reusing `scales::gainDb`, one-pole ~5 ms gain smoothing) — the two
 single-knob-style blocks added 2026-10-22 (commit `6813cb5`), both
 following the restore-funnel law (`prepare(sampleRate)` is idempotent
-and must NOT reset engine state). Since the per-mode split (commit `abebb1e`), extended by the
+and must NOT reset engine state). The gallery EffectTile ctor guards the
+A/B/C param-slot reads with `ps.size() > N` because volume has 1 param
+and wave 2 (`d0045a7` — the unguarded read was the m07658 OOB crash). Since the per-mode split (commit `abebb1e`), extended by the
 engine/wrapper split (commit `9bf4469`), the reverb `processX` bodies no
 longer live in `Reverb.h` itself: `Reverb.h` keeps the class, the `Params`
 dials, the constants, and the dispatch, and includes the per-mode-family

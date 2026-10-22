@@ -56,7 +56,7 @@ sources:
 generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-22T00:04:34.217Z
+    at: 2026-10-22T04:28:30.830Z
 ---
 
 
@@ -204,11 +204,24 @@ supplemental e2e layer — `--e2e-test-port=N` starts the in-tree
 `focusrite::e2e::CommandHandler` with real-pointer drag commands
 (`node-drag-begin/move/end`) plus `node-cells` / `node-geometry` /
 `node-tree` / `node-screenshot` probes. The JS regression
-`plugin/ui/testbed/e2e/node-drag.js` (13 checks; run
+`plugin/ui/testbed/e2e/node-drag.js` (35 checks; run
 `xvfb-run -a node plugin/ui/testbed/e2e/node-drag.js`) drives real pointer
 drags through the transport and guards the opaque full-size ghost laws. It is
 a **supplement** to the drive/selftest gates, not a replacement (user
-m02886: "we can use it as an additional layer").
+m02886: "we can use it as an additional layer"). The layer grew with the conv
+face work: `NodeViewE2E.cpp` also registers a `node-conv-strip` handler
+(ops `select` / `export-click` / `curve-in` / `curve-out`) driven by the
+standalone script `plugin/ui/testbed/e2e/conv-strip.js` (11 checks, own
+process — two `AppConnection`s in one process race on socket teardown), which
+pins the conv-strip face chrome, the `Dwell` label, inline Load IR/Export,
+the no-IR export guard toast, and the F In/F Out curve bands with mutual
+dismissal; and (d0045a7) a `node-add` op (`nv->addEffectForE2E(index, kind)`,
+public hook in NodeView.h) driven by the 8-check standalone
+`plugin/ui/testbed/e2e/wave-volume-add.js`, which exercises the REAL add path
+for the 1-2 param wave/volume gallery faces (the m07658 OOB-crash site
+covered by a SelfTests case too). ALL GUI test invocations (selftest,
+TileShot, e2e) must run under `xvfb-run -a` — a bare selftest steals the
+live display's input (user m07861).
 
 ## Reverb tile: mode + type (subtype) selectors (2026-10-16)
 
@@ -313,7 +326,24 @@ Key decisions:
   **face-only** (row1 Mix/Time/Pre, row2 Dwell/Dry/Width/Out; the header keeps
   Change IR only).
 - Gate: TileShot goldens `conv-full.png` + `conv-compact.png` (+ -empty/-long/-missing/-mono)
-  re-shot and re-approved at 0 px after human review; DspTests 579/579.
+  re-shot and re-approved at 0 px after human review; DspTests 582/582 at 9c203cb.
+
+## Wave + Volume tiles: 1-2 param faces (2026-10-21, `6813cb5` + `d0045a7`)
+
+Two small built-in effect kinds landed for the wave/volume round: the **wave**
+tile face is Mix/In/Out/Level/Shape (Level on `scales::waveLevel()`, Shape a
+5-detent `scales::waveShape()` — sine default / triangle / square / two saws;
+the block REPLACES the signal, default level 0.25 = −12 dBFS since d0045a7)
+and the **volume** tile face is Mix/In/Out/Volume (single knob on
+`scales::gainDb()`, 0.5 = 0 dB, ±24 dB span). Both are 1-2 param faces on the
+`kCompactKnobFace` 32-px grid. The m07658 crash: the EffectTile ctor read
+`ps[0]/ps[1]/ps[2]` unguarded and dereferenced past the end on these short
+param lists — the reads now carry `hasA/hasB/hasC` size guards
+(`scaleA_/paramA_` etc. are assigned-only legacy, never re-read). Goldens
+`wave.png` / `wave-shift.png` / `volume.png` / `volume-shift.png` added to
+`plugin/ui/testbed/goldens/` (TileShot.cpp shot list) and human-approved at
+0 px; the real add path is guarded by the `node-add` e2e probe (see the
+testbed section) + a SelfTests case.
 
 ## Theme: swappable colour palette + `--ocr` capture mode (2026-10-14)
 

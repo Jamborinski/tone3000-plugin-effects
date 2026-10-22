@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:00c40f84d3f741bc5f09671560284dcfb3328ef507619b08017cca4f74af5b91",
+  "pageVersion": "sha256:736800251379f9452def27e8fc1862bdd58606c5c2b1d0fb7f091f445dcac5a2",
   "claims": [
     {
       "id": "claim_63767cf697ac4d45bfd45cb93f9a268b",
@@ -18,7 +18,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:c69c1a5b1175b392f0bb1e095c14cba62ca93f0f9b3be6ad3f29154c6ea7acf5"
+          "version": "repo-file-v1:sha256:f1c6e36b244161e965a1b8ba2fc76eeacd30e952f84f1bf3f91946942fa29ef3"
         },
         {
           "resource": "repo://plugin/include/ChainDomain.h",
@@ -42,7 +42,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:c69c1a5b1175b392f0bb1e095c14cba62ca93f0f9b3be6ad3f29154c6ea7acf5"
+          "version": "repo-file-v1:sha256:f1c6e36b244161e965a1b8ba2fc76eeacd30e952f84f1bf3f91946942fa29ef3"
         },
         {
           "resource": "repo://plugin/include/effects/conv/BudgetConvolver.h",
@@ -88,11 +88,11 @@
     },
     {
       "id": "claim_d16653f621d2416ea1040a9dfc0b87e1",
-      "statement": "Per-IR trim cap + on-load reset (commit 9a5c3c8, specs spc-1792564638419-71605 + spc-1792565053306-88633): the Start/End UI faces use `scales::convTrimScale(rawSeconds)` (plugin/ui/core/KnobScale.h:675) — linear 0..cap in seconds, cap = raw IR length rounded up to whole seconds (sub-second IRs get a 1 s face; caches per whole-second cap), so a window can never point past a short IR's tail and silently keep serving the old engine (empty trim window = silent no-op, A5). The raw length rides the chain state as `convRawSeconds` (all state places). ON IR LOAD, TONE3000Processor::loadConvIr (ProcessorChain.cpp:464-466, before setParams) resets the window to the full span and the stretch to 1.00×: convStartS = 0.0, convEndS = block->conv.rawSeconds(), convPitch = 0.5. Guarded by ProcessorTest.ConvIrLoadResetsTrimWindowAndTime (test/src/processor_tests.cpp) + ConvTrimScaleTest.CapIsRawLengthRoundedUp (test/src/effect_ui_scale_tests.cpp).",
+      "statement": "Per-IR trim cap + on-load reset (commit 9a5c3c8, specs spc-1792564638419-71605 + spc-1792565053306-88633): the Start/End UI faces use `scales::convTrimScale(rawSeconds)` (plugin/ui/core/KnobScale.h:675) — linear 0..cap in seconds, cap = raw IR length rounded up to whole seconds (sub-second IRs get a 1 s face; caches per whole-second cap), so a window can never point past a short IR's tail and silently keep serving the old engine (empty trim window = silent no-op, A5). The raw length rides the chain state as `convRawSeconds` (all state places). ON IR LOAD, TONE3000Processor::loadConvIr (ProcessorChain.cpp:479-481, before setParams) resets the window to the full span and the stretch to 1.00×: convStartS = 0.0, convEndS = block->conv.rawSeconds(), convPitch = 0.5. Guarded by ProcessorTest.ConvIrLoadResetsTrimWindowAndTime (test/src/processor_tests.cpp) + ConvTrimScaleTest.CapIsRawLengthRoundedUp (test/src/effect_ui_scale_tests.cpp).",
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
+          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
@@ -142,7 +142,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
+          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
         },
         {
           "resource": "repo://plugin/src/effects/conv/ConvolutionReverb.cpp",
@@ -193,6 +193,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-22T00:04:34.217Z"
+    "at": "2026-10-22T04:28:30.830Z"
   }
 }

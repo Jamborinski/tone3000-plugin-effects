@@ -40,7 +40,7 @@ sources:
 generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-22T00:04:34.217Z
+    at: 2026-10-22T04:28:30.830Z
 ---
 
 # Node view: the signal-line grid
@@ -346,13 +346,21 @@ Kernel export section).
 **6-section** `<loadVis>:<exportVis>|<toast>|<convIr>|<labels>|<loadX>,
 <exportX>` for the visible strip (the `<labels>` field is the comma-joined
 knob-label string, which pins the Dwell rename; the coordinates pin the
-buttons-beside-the-bar layout, NodeView.cpp:1815) plus a `band` parameter
+buttons-beside-the-bar layout, NodeView.cpp:1842) plus a `band` parameter
 from `convCurveBandStateForE2E()` → `none` (not a conv strip) / `closed` (conv,
-no band open) / `in` / `out` (NodeView.cpp:1853-1854). The `node-conv-strip`
-handler (NodeViewE2E.cpp, ops select / export-click / curve-in / curve-out)
-drives it; the **11-check** regression `plugin/ui/testbed/e2e/conv-strip.js`
+no band open) / `in` / `out` (NodeView.cpp:1872). The `node-conv-strip`
+handler (NodeViewE2E.cpp:261-279, ops select / export-click / curve-in /
+curve-out) drives it; the **11-check** regression `plugin/ui/testbed/e2e/
+conv-strip.js`
 is a STANDALONE script because two AppConnections in one process race on
 socket teardown (unregistered message → `Response::fail`, TestCentre.cpp:97).
+d0045a7 added a **`node-add` op** (NodeViewE2E.cpp:280): `kind` + `index`
+args → `nv->addEffectForE2E(index, kind)` (public hook in NodeView.h, next to
+`convStripStateForE2E`), the new block id is recovered by scanning
+`laneForShot()` for the last matching `effectKind`, then `selectBlockForShot`
+returns `{id, labels, state}`. The 8-check standalone
+`plugin/ui/testbed/e2e/wave-volume-add.js` uses it to pin the real add path
+for the 1-2 param wave/volume faces (the m07658 crash site).
 
 ## Testbed
 

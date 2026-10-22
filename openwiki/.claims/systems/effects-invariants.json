@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:6b7f67cdfb5d44ca77e0c4bc0f24cf17b13d6e67be464df607eb104b2ba858c6",
+  "pageVersion": "sha256:98fef26920dbd4c5dd47e0a5330b05b60b7045cb573abede3f503300bfb23fd4",
   "claims": [
     {
       "id": "claim_9c6f8afc68d34500bf778a2da1af5f07",
@@ -106,7 +106,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:6dd612471459696ff956390304766841ec5945e56d0f5ba9ed2e76abad1d1ef3"
+          "version": "repo-file-v1:sha256:eb2a1596e2f6f54e9429c66444f84aa175393cda241f3d40ca74b039acb3292b"
         }
       ]
     },
@@ -220,7 +220,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:6dd612471459696ff956390304766841ec5945e56d0f5ba9ed2e76abad1d1ef3"
+          "version": "repo-file-v1:sha256:eb2a1596e2f6f54e9429c66444f84aa175393cda241f3d40ca74b039acb3292b"
         }
       ]
     },
@@ -230,11 +230,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/effects/wave/Wave.h",
-          "version": "repo-file-v1:sha256:088337c82f4bb63acd0a249db5a8441958d1478021072a6e879660da7d01d7b6"
+          "version": "repo-file-v1:sha256:9ddc1a6ab50a2176d02c7e5891f3e9186a920c8a59687da3d2f750261b9397be"
         },
         {
           "resource": "repo://test/src/wave_tests.cpp",
-          "version": "repo-file-v1:sha256:25b6ae9956197796aedba1db51687da79b175deadc474b755c67da521819df64"
+          "version": "repo-file-v1:sha256:b35e278ef0af2ad23740df0676d27e9e51f9ab2b73cfaaa7d88beda4de645290"
         }
       ]
     },
@@ -255,6 +255,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-22T00:04:34.217Z"
+    "at": "2026-10-22T04:28:30.830Z"
   }
 }

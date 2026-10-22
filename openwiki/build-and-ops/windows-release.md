@@ -15,10 +15,10 @@ sources:
     resource: repo://script/win-standalone.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
-generated: { by: "pi", at: "2026-10-14T16:54:40.219Z" }
+generated: { by: "pi", at: "2026-10-22T04:28:30.830Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-22T00:04:34.217Z
+    at: 2026-10-22T04:28:30.830Z
 ---
 
 
@@ -109,3 +109,12 @@ WINEPREFIX=/home/jambo/wine-test wineserver -k
 `ALSA … /dev/snd/seq … No such file` line is expected (no audio device) and
 graceful. Caveat: Wine has **no real ASIO driver** — this proves launch, not
 the ASIO dropdown entry; only real Windows verifies the combo.
+
+## Staging dir: pin `T3K_STAGE_DIR`
+
+STAGE_ROOT auto-detect (`script/win-standalone.sh:64`):
+`"${T3K_STAGE_DIR:-$(ls -d /mnt/c/Users/*/Downloads 2>/dev/null | head -1)}"`.
+On this machine `ls -d /mnt/c/Users/*/Downloads | head -1` resolves to the
+read-only profile dir `Default User/Downloads` → `mkdir: Permission denied`.
+Always pin `T3K_STAGE_DIR=/mnt/c/Users/jambo/Downloads`. Latest stage:
+`TONE3000-win-20261021-212840` (md5 `64bcf30fe034bf7c3f0daca34b7ee6c9`).

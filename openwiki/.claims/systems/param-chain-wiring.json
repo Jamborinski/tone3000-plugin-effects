@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:eeb2398007c2cfcbc463402d346e1ecd20da50639ef62638474681708e7f2a20",
+  "pageVersion": "sha256:518113d8a8f9ca1b997991c89c2458a5ea0af89e14165a23f4b8dfed5a861968",
   "claims": [
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
@@ -36,11 +36,11 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
+          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:46bfefd9df03b1ca3e41bf7db140dd219080279286c88ee1eed6efc43526aaf4"
+          "version": "repo-file-v1:sha256:5a97235ed5a75ca5fddb338ea4d80102cae1e2c98b3c6cc98e4def3e4ea2f808"
         }
       ]
     },
@@ -78,7 +78,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
+          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
         },
         {
           "resource": "repo://test/src/add_at_slot_tests.cpp",
@@ -98,41 +98,41 @@
     },
     {
       "id": "claim_72effe7320e24967886eb0c0018aeb61",
-      "statement": "convRawSeconds is the raw, untrimmed IR length in seconds — the cap the Start/End UI faces use (scales::convTrimScale, KnobScale.h:675, so a window can never point past a short IR's tail). It is engine-observed, not dialable: set in getChainState (BlockRow.convRawSeconds at ProcessorChain.cpp:1327, filled from block->conv.rawSeconds() when an IR is loaded at :1452, serialized only if > 0 at :1638-1639), parseItem (num(v, \"convRawSeconds\", 0.0) — ChainState.cpp:251, ChainState.h:219), and ProcessorState.cpp (setProperty at :315, guarded by block.conv.hasIr()) — three of the four state places. There is deliberately NO updateBlockParam branch (nothing user-written may touch it). A missing key falls back to 0.0, and convTrimScale turns that into a 1 s face rather than a 0-cap knob. The on-load defaults (m04426/m04437, commit 9a5c3c8) reset convStartS=0.0 / convEndS=rawSeconds() / convPitch=0.5 in loadConvIr (ProcessorChain.cpp:463-467) before setParams, so switching to a shorter IR never leaves a stale trim window.",
+      "statement": "convRawSeconds is the raw, untrimmed IR length in seconds — the cap the Start/End UI faces use (scales::convTrimScale, KnobScale.h:675, so a window can never point past a short IR's tail). It is engine-observed, not dialable: set in getChainState (BlockRow.convRawSeconds at ProcessorChain.cpp:1344, filled from block->conv.rawSeconds() when an IR is loaded at :1471, serialized only if > 0 at :1660-1661), parseItem (num(v, \"convRawSeconds\", 0.0) — ChainState.cpp:254, ChainState.h:222), and ProcessorState.cpp (setProperty at :318, guarded by block.conv.hasIr()) — three of the four state places. There is deliberately NO updateBlockParam branch (nothing user-written may touch it). A missing key falls back to 0.0, and convTrimScale turns that into a 1 s face rather than a 0-cap knob. The on-load defaults (m04426/m04437, commit 9a5c3c8) reset convStartS=0.0 / convEndS=rawSeconds() / convPitch=0.5 in loadConvIr (ProcessorChain.cpp:479-481) before setParams, so switching to a shorter IR never leaves a stale trim window.",
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
+          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
-          "version": "repo-file-v1:sha256:e81e8d54c1b5944e2fead996c1d543beb7e6dce13f0534a2f1f8a272bc4d78fb"
+          "version": "repo-file-v1:sha256:072f42a7b63412009e4126d1c1dbee3345e442bac0adfef9310263809808e2ae"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:46bfefd9df03b1ca3e41bf7db140dd219080279286c88ee1eed6efc43526aaf4"
+          "version": "repo-file-v1:sha256:5a97235ed5a75ca5fddb338ea4d80102cae1e2c98b3c6cc98e4def3e4ea2f808"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.h",
-          "version": "repo-file-v1:sha256:728e58e41057f3e442eabda2563adc1b64d866ccdbf58ab450509e34078ab799"
+          "version": "repo-file-v1:sha256:a4eb10c4c99c1b52aa817afc038f2244d4266aea59a66355b476f731882f0868"
         }
       ]
     },
     {
       "id": "claim_0b2c1c4e3c8b4daab01d7c4de8faaad1",
-      "statement": "T-DAT-001 engine param reverbLoCut (0..1 clamped, default 0 = bit-pass) and the conv trim fields convStartS/convEndS (seconds, clamped to 0..kMaxIrSeconds=30) both follow the four-state-place rule. Line numbers as of commit 9c203cb: reverbLoCut: (1) ChainBlock.h:412 field + reverbParams() at :426 ending reverbSharedMod, reverbWave, reverbLoCut (aggregate end :436) + ProcessorChain.cpp BlockRow :1312, row mirror :1431, serializeChain :1611; (2) ChainState.h:187, ChainState.cpp parseItem :230; (3) ProcessorChain.cpp isEffectParam :2082 + updateBlockParam :2381-2382 (jlimit 0..1 + block->reverb.setParams); (4) ProcessorState.cpp :289 / restore :483. convStartS/convEndS: (1) ChainBlock.h:458-459, BlockRow :1319, mirror :1438-1439, serializeChain :1618-1619; (2) ChainState.h:202-203, ChainState.cpp :238-239; (3) isEffectParam :2082, updateBlockParam :2400-2406 (jlimit 0..ConvolutionReverb::kMaxIrSeconds); (4) ProcessorState.cpp :296-297 / restore :505-506. Their per-IR UI faces come from scales::convTrimScale(rawSeconds) (KnobScale.h:675), not a toStored split — the stored values are always absolute seconds.",
+      "statement": "T-DAT-001 engine param reverbLoCut (0..1 clamped, default 0 = bit-pass) and the conv trim fields convStartS/convEndS (seconds, clamped to 0..kMaxIrSeconds=30) both follow the four-state-place rule. Line numbers as of commit d0045a7: reverbLoCut: (1) ChainBlock.h:425 field + reverbParams() at :449 ending reverbSharedMod, reverbWave, reverbLoCut + ProcessorChain.cpp BlockRow :1329, row mirror :1450, serializeChain :1633; (2) ChainState.h:190, ChainState.cpp parseItem :233; (3) ProcessorChain.cpp isEffectParam :2106 + updateBlockParam :2418-2419 (jlimit 0..1 + block->reverb.setParams); (4) ProcessorState.cpp :292 / restore :493. convStartS/convEndS: (1) ChainBlock.h:458-459, BlockRow :1336, mirror :1457-1458, serializeChain :1640-1641; (2) ChainState.h:202-203, ChainState.cpp :238-239; (3) isEffectParam :2106, updateBlockParam ~:2430 (jlimit 0..ConvolutionReverb::kMaxIrSeconds); (4) ProcessorState.cpp ~:299-300 / restore ~:515-516. Their per-IR UI faces come from scales::convTrimScale(rawSeconds) (KnobScale.h:675), not a toStored split — the stored values are always absolute seconds.",
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:c69c1a5b1175b392f0bb1e095c14cba62ca93f0f9b3be6ad3f29154c6ea7acf5"
+          "version": "repo-file-v1:sha256:f1c6e36b244161e965a1b8ba2fc76eeacd30e952f84f1bf3f91946942fa29ef3"
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
+          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
-          "version": "repo-file-v1:sha256:e81e8d54c1b5944e2fead996c1d543beb7e6dce13f0534a2f1f8a272bc4d78fb"
+          "version": "repo-file-v1:sha256:072f42a7b63412009e4126d1c1dbee3345e442bac0adfef9310263809808e2ae"
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
@@ -140,33 +140,33 @@
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:46bfefd9df03b1ca3e41bf7db140dd219080279286c88ee1eed6efc43526aaf4"
+          "version": "repo-file-v1:sha256:5a97235ed5a75ca5fddb338ea4d80102cae1e2c98b3c6cc98e4def3e4ea2f808"
         }
       ]
     },
     {
       "id": "claim_f1dbf3f037ec4509a055a528e308e722",
-      "statement": "The compressor TYPE axis: compType (int; per-mode sub-model; 0 = the mode's own engine, the only type today — Compressor::numTypes(mode) returns 1 for every mode). Four places (line numbers as of commit 9c203cb): (1) ChainBlock.h:365 field int compType = 0 (immediately after compMode :364) + ProcessorChain.cpp BlockRow :1298, copyLane mirror :1400, serializeChain :1575; (2) ChainState.h:160 + ChainState.cpp parseItem :190; (3) ProcessorChain.cpp isEffectParam :2082 + updateBlockParam :2274-2275 (stores verbatim via static_cast<int> — no clamp here, the engine clamps via setParams jlimit 0..numTypes-1) + appends to compressor setParams at :2279; (4) ProcessorState.cpp :238 / restore :393 (cast to int, verbatim). compType is the 11th and last field of Compressor::Params, so every block->compressor.setParams({...}) call site passes block->compType last.",
+      "statement": "The compressor TYPE axis: compType (int; per-mode sub-model; 0 = the mode's own engine, the only type today — Compressor::numTypes(mode) returns 1 for every mode). Four places (line numbers as of commit d0045a7): (1) ChainBlock.h:378 field int compType = 0 (immediately after compMode :377) + ProcessorChain.cpp BlockRow :1315, copyLane mirror :1419, serializeChain :1597; (2) ChainState.h:163 + ChainState.cpp parseItem :193; (3) ProcessorChain.cpp isEffectParam :2106 + updateBlockParam :2311-2316 (stores verbatim via static_cast<int> — no clamp here, the engine clamps via setParams jlimit 0..numTypes-1) + appends to compressor setParams in every comp param branch; (4) ProcessorState.cpp :241 / restore :403 (cast to int, verbatim). compType is the 11th and last field of Compressor::Params, so every block->compressor.setParams({...}) call site passes block->compType last.",
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:c69c1a5b1175b392f0bb1e095c14cba62ca93f0f9b3be6ad3f29154c6ea7acf5"
+          "version": "repo-file-v1:sha256:f1c6e36b244161e965a1b8ba2fc76eeacd30e952f84f1bf3f91946942fa29ef3"
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
+          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
-          "version": "repo-file-v1:sha256:e81e8d54c1b5944e2fead996c1d543beb7e6dce13f0534a2f1f8a272bc4d78fb"
+          "version": "repo-file-v1:sha256:072f42a7b63412009e4126d1c1dbee3345e442bac0adfef9310263809808e2ae"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:46bfefd9df03b1ca3e41bf7db140dd219080279286c88ee1eed6efc43526aaf4"
+          "version": "repo-file-v1:sha256:5a97235ed5a75ca5fddb338ea4d80102cae1e2c98b3c6cc98e4def3e4ea2f808"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.h",
-          "version": "repo-file-v1:sha256:728e58e41057f3e442eabda2563adc1b64d866ccdbf58ab450509e34078ab799"
+          "version": "repo-file-v1:sha256:a4eb10c4c99c1b52aa817afc038f2244d4266aea59a66355b476f731882f0868"
         }
       ]
     },
@@ -190,11 +190,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
+          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
-          "version": "repo-file-v1:sha256:e81e8d54c1b5944e2fead996c1d543beb7e6dce13f0534a2f1f8a272bc4d78fb"
+          "version": "repo-file-v1:sha256:072f42a7b63412009e4126d1c1dbee3345e442bac0adfef9310263809808e2ae"
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
@@ -202,17 +202,17 @@
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:46bfefd9df03b1ca3e41bf7db140dd219080279286c88ee1eed6efc43526aaf4"
+          "version": "repo-file-v1:sha256:5a97235ed5a75ca5fddb338ea4d80102cae1e2c98b3c6cc98e4def3e4ea2f808"
         }
       ]
     },
     {
       "id": "claim_a5a5ea86eb23411b908de75eb4cd24af",
-      "statement": "addEffectBlock (ProcessorChain.cpp:395-425) captures the new block's start param values (startWaveLevel/startWaveShape/startVolume) BEFORE landToneBlock(std::move(block)) — reading a moved unique_ptr's fields is a use-after-move and silently HANGS the chain thread (the capture must happen pre-move) — then re-arms via setBlockParam after the splice. Every per-effect include dir (effects/wave, effects/volume, …) must be added to BOTH plugin/CMakeLists.txt AND plugin/ui/NativeUi.cmake — wave+volume were missing from NativeUi.cmake and broke the GUI build with `Wave.h: No such file` in ChainState.cpp before being found by DspTests.",
+      "statement": "addEffectBlock (ProcessorChain.cpp:395-426) captures the new block's start param values (startWaveLevel/startWaveShape/startVolume at :395-397) BEFORE landToneBlock(std::move(block)) at :399 — reading a moved unique_ptr's fields is a use-after-move and silently HANGS the chain thread (the capture must happen pre-move) — then re-arms via setBlockParam after the splice (:420-425). Every per-effect include dir (effects/wave, effects/volume, …) must be added to BOTH plugin/CMakeLists.txt AND plugin/ui/NativeUi.cmake — wave+volume were missing from NativeUi.cmake and broke the GUI build with `Wave.h: No such file` in ChainState.cpp before being found by DspTests.",
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
+          "version": "repo-file-v1:sha256:c4df069b2031d0425b93fe33cbf25490917b7f831c05d0a43ab5908ae6191fdc"
         },
         {
           "resource": "repo://plugin/ui/NativeUi.cmake",
@@ -223,6 +223,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-22T00:04:34.217Z"
+    "at": "2026-10-22T04:28:30.830Z"
   }
 }
