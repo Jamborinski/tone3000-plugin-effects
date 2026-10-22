@@ -97,6 +97,10 @@ public:
   // pins (the save dialog can't be driven headless, so the no-IR export
   // GUARD toast is what is asserted).
   juce::String convStripStateForE2E() const;
+
+  // e2e add-path hook (wave/volume OOB crash, user m07658): real add path,
+  // exposed for the testbed like the other *ForShot/*ForE2E methods.
+  void addEffectForE2E(int index, const juce::String& kind) { addIntoCell(index, kind); }
   // e2e: which conv curve band is open ("in"/"out"/"closed"/"none")
   // + the anchored knob's armed flag — the F In / F Out curve
   // popovers (m04334 item 2) on the strip, the acceptance surface.

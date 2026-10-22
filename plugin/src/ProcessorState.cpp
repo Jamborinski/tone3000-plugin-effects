@@ -374,7 +374,7 @@ void TONE3000Processor::applyBlockSettings(ChainBlock& block, const juce::ValueT
                               blockState.getProperty("tremoloWave", 0)));
       }
       block.waveLevel = juce::jlimit(Wave::kMinLevel, Wave::kMaxLevel,
-                                     static_cast<double>(blockState.getProperty("waveLevel", 0.5)));
+                                     static_cast<double>(blockState.getProperty("waveLevel", 0.25)));
       block.waveShape = static_cast<int>(juce::jlimit(
           Wave::kMinShape, Wave::kMaxShape,
           static_cast<int>(blockState.getProperty("waveShape", 0))));

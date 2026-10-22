@@ -361,7 +361,7 @@ struct ChainBlock {
   double tremoloSpread = 0.0;   // 0 = L/R in phase (mono pulse), 1 = 180 deg offset (auto-pan)
   // Wave (EffectKind::Wave): test-tone generator (see Wave.h). Source block:
   // replaces the buffer with a 440 Hz tone of the selected shape.
-  double waveLevel = 0.5;       // 0..1 output level
+  double waveLevel = 0.25;      // 0..1 output level (-12 dBFS audition level; 0.5 was -6 dBFS and read as "really loud")
   int waveShape = 0;            // 0=sine, 1=triangle, 2=saw up, 3=saw down, 4=square
   // Volume (EffectKind::Volume): single-knob output gain, ±24 dB (see
   // Volume.h). Normalised 0..1, 0.5 = 0 dB (scales::gainDb()).

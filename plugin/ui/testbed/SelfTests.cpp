@@ -1990,6 +1990,41 @@ struct GalleryViewTests : juce::UnitTest {
       expect(label.contains("Stereo"), "the mono/stereo type must render: " + label);
     }
     {
+      beginTest("1-2 param gallery tiles construct (wave/volume OOB crash)");
+      // user m07658: adding a wave or volume effect CRASHED the app — the
+      // EffectTile ctor read ps[0..2] unguarded, but wave has 2 params and
+      // volume 1. Drive the REAL add path, then toggle to the gallery: the
+      // GalleryLane builds the EffectTile, so construction + face render are
+      // both proven here (the strip e2e covers the node path only).
+      LiveScenario live(*this, "node-main");
+      if (!live.ok) return;
+      auto& svc = live.root().services();
+      const std::string waveId = svc.chain.addEffect("wave", ChainSide::left, 2);
+      const std::string volumeId = svc.chain.addEffect("volume", ChainSide::left, 3);
+      LiveScenario::pump(300);
+      expect(waveId.empty() == false, "wave addEffect returned no id");
+      expect(volumeId.empty() == false, "volume addEffect returned no id");
+      if (waveId.empty() || volumeId.empty()) return;
+      expect(toGallery(live));
+      LiveScenario::pump(300);
+      auto* waveTile = (EffectTile*)first(
+          live.root(), [&](juce::Component& c) {
+            auto* t = dynamic_cast<EffectTile*>(&c);
+            return t != nullptr && t->block().blockId == waveId;
+          });
+      auto* volumeTile = (EffectTile*)first(
+          live.root(), [&](juce::Component& c) {
+            auto* t = dynamic_cast<EffectTile*>(&c);
+            return t != nullptr && t->block().blockId == volumeId;
+          });
+      expect(waveTile != nullptr, "wave EffectTile not constructed in the gallery");
+      expect(volumeTile != nullptr, "volume EffectTile not constructed in the gallery");
+      if (waveTile != nullptr)
+        expect(waveTile->isShowing(), "wave tile not showing");
+      if (volumeTile != nullptr)
+        expect(volumeTile->isShowing(), "volume tile not showing");
+    }
+    {
       beginTest("the drag ghost starts at the source cell and the drop aims from its centre");
       // m04329: the ghost's top-left was the cell-LOCAL press point placed in
       // overlay coordinates, so it landed at the overlay's top-left for every

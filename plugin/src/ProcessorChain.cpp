@@ -1306,7 +1306,7 @@ juce::var TONE3000Processor::getChainState(int knownRevision) const {
     // REAL dB face for tremolo tone: -18 (dark) .. 0 (flat) .. +18 (bright)
     double tremoloTone = 0.0, tremoloSpread = 0.0;
     int tremoloWave = 0;
-    double waveLevel = 0.5, waveShape = 0.0;
+    double waveLevel = 0.25, waveShape = 0.0;
     double volume = 0.5;
     double compRatio = 4.0, compAttackMs = 10.0, compReleaseMs = 150.0;
     double compToneDb = 0.0, compScHpHz = 100.0;

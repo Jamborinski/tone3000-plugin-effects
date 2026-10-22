@@ -277,6 +277,30 @@ NodeViewE2EHandler::process(const focusrite::e2e::Command& command) {
     return Response::ok().withParameter("state", nv->convStripStateForE2E())
         .withParameter("band", nv->convCurveBandStateForE2E());
   }
+  if (type == "node-add") {
+    auto* nv = findNodeView(win);
+    if (nv == nullptr) return Response::fail("no node view under root");
+    // e2e add-path probe (wave/volume OOB crash, user m07658): the REAL add
+    // path + the strip sync for a 1-2 param face, in the running app.
+    const juce::String kind = command.getArgumentAs<juce::String>("kind");
+    const int index = command.getArgumentAs<int>("index");
+    nv->addEffectForE2E(index, kind);
+    // addIntoCell is void — recover the new id from the lane (the block we
+    // just added is the last effect of this kind).
+    std::string id;
+    for (const auto& it : nv->laneForShot())
+      if (juce::String(it.effectKind) == kind) id = it.blockId;
+    if (id.empty()) return Response::fail("no " + kind + " block after add");
+    nv->selectBlockForShot(id);
+    juce::String labels;
+    for (const auto& l : nv->stripKnobLabelsForShot()) {
+      if (labels.isNotEmpty()) labels << ",";
+      labels << l;
+    }
+    return Response::ok().withParameter("id", juce::String(id.c_str()))
+        .withParameter("labels", labels)
+        .withParameter("state", nv->convStripStateForE2E());
+  }
   if (type == "node-tree") {
     // Debug only: full tree dump. vis = isVisible() (own flag).
     juce::String out;

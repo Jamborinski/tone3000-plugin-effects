@@ -186,7 +186,7 @@ TEST(WaveChain, AddBlockProducesToneThroughTheProcessor) {
   ASSERT_TRUE(proc.setBlockParam(id, "waveLevel", 1.0));
   // The add splices the chain on the message thread and re-arms the
   // engine off-thread: settle both before driving, or the first blocks
-  // run against the pre-re-arm engine (default level 0.5 -> rms 0.177
+  // run against the pre-re-arm engine (default level 0.25 -> rms 0.088
   // when the re-arm lands late).
   for (int i = 0; i < 20; ++i)
     juce::MessageManager::getInstance()->runDispatchLoopUntil(50);

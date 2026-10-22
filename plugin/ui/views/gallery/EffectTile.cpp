@@ -275,14 +275,18 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
         this->block_.delaySubdivision = (int)real;
     };
   }
-  scaleA_ = ps[0].scale;
-  scaleB_ = ps[1].scale;
-  scaleC_ = ps[2].scale;
+  // Volume has 1 param, wave 2 — the A/B/C slots are only meaningful for the
+  // 3+ param faces, so guard the reads (scaleA_/paramA_ & friends are
+  // assigned-only legacy; nothing re-reads them).
+  const bool hasA = ps.size() > 0, hasB = ps.size() > 1, hasC = ps.size() > 2;
+  scaleA_ = hasA ? ps[0].scale : nullptr;
+  scaleB_ = hasB ? ps[1].scale : nullptr;
+  scaleC_ = hasC ? ps[2].scale : nullptr;
   scaleD_ = (numParams_ >= 4 && ps.size() > 3) ? ps[3].scale : nullptr;
   scaleE_ = (numParams_ >= 5 && ps.size() > 4) ? ps[4].scale : nullptr;
-  paramA_ = ps[0].param;
-  paramB_ = ps[1].param;
-  paramC_ = ps[2].param;
+  paramA_ = hasA ? ps[0].param : juce::String();
+  paramB_ = hasB ? ps[1].param : juce::String();
+  paramC_ = hasC ? ps[2].param : juce::String();
   paramD_ = (ps.size() > 3) ? ps[3].param : juce::String();
   paramE_ = (ps.size() > 4) ? ps[4].param : juce::String();
 

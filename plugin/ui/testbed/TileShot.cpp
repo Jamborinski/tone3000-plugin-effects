@@ -203,6 +203,28 @@ std::vector<Shot> shots() {
        noKernel, true},
       {"nam-shift", gallery::kTileSize, "NAM tone, model 25W downloading (loading-dots state)",
        [] { return namItem(true); }, noKernel, true},
+      // Wave / Volume (m07658 round): the 1-2 param faces. Wave default
+      // level 0.25 (= -12 dBFS audition sine), shape 0 (sine); volume 0.5
+      // = 0 dB.
+      {"wave", gallery::kTileSize, "wave defaults (0.25 level, sine)",
+       [] { return effectItem("wave"); }, noKernel, false},
+      {"wave-shift", gallery::kTileSize, "wave shifted (0.9 level, square)",
+       [] {
+         auto i = effectItem("wave");
+         i.waveLevel = 0.9;
+         i.waveShape = 4;
+         return i;
+       },
+       noKernel, false},
+      {"volume", gallery::kTileSize, "volume default (0 dB)",
+       [] { return effectItem("volume"); }, noKernel, false},
+      {"volume-shift", gallery::kTileSize, "volume shifted (+12 dB)",
+       [] {
+         auto i = effectItem("volume");
+         i.volume = 0.75;  // -24..+24 dB scale: 0.75 = +12 dB
+         return i;
+       },
+       noKernel, false},
   };
 }
 

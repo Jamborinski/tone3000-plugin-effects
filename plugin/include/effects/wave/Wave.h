@@ -37,7 +37,7 @@ public:
     static constexpr int kNumShapes = 5;
 
     struct Params {
-        double level = 0.5;    // 0..1 output level
+        double level = 0.25;   // 0..1 output level (-12 dBFS; 0.5 read as "really loud")
         int shape = 0;         // kMinShape..kMaxShape (0 = sine)
     };
 
