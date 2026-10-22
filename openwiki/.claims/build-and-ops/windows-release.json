@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:567998d11e7f25328aca304b31ce4130279c439e16f1c74f514c0fc40cbf1984",
+  "pageVersion": "sha256:4337bf1ca9a9b03e88099e24fe4ca3f5ed4e560e48417b2b8b8ef895b30856b9",
   "claims": [
     {
       "id": "claim_746e41b7d7214abc8858befedfaa8e01",
@@ -12,7 +12,7 @@
         },
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         }
       ]
     },
@@ -79,6 +79,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-20T22:14:33.483Z"
+    "at": "2026-10-22T00:04:34.217Z"
   }
 }

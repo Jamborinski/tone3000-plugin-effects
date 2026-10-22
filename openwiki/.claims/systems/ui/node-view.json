@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:dfea16c70d137e72c023767c1ffb6b1ac348f8ade18fa0bf286826055b42787f",
+  "pageVersion": "sha256:9a7414c02232ccdc17f01fd00793817e50508223ddac1316372514d96ed5ea49",
   "claims": [
     {
       "id": "claim_4e8284a0f0bc4fe0b4e5fa2bda920264",
@@ -54,7 +54,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/Help.cpp",
-          "version": "repo-file-v1:sha256:0f9a4747c0e14d526d199979ab5f12a3fd2e108f6ba608f2105f3153a4ede1b7"
+          "version": "repo-file-v1:sha256:af6206533cdf64030c9cc423e0663447fd8d91ef799b5f28c59c1eca923dfb68"
         }
       ]
     },
@@ -78,7 +78,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
         }
       ]
     },
@@ -110,7 +110,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
         }
       ]
     },
@@ -120,11 +120,11 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         },
         {
           "resource": "repo://test/src/node_model_tests.cpp",
-          "version": "repo-file-v1:sha256:2433ca24917da969946bd8f13232a319c11fed30bbbc21e460d34f16bdddbc5c"
+          "version": "repo-file-v1:sha256:4649a2e6aa00ff21b61eacf3f3ce2ab8b6677622e559785f706681418578669c"
         }
       ]
     },
@@ -134,11 +134,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeModel.cpp",
-          "version": "repo-file-v1:sha256:f110b4b7d32e09288bcb5ab0cc49d76a49131383b2f7515eaa91f8fa27a8c41d"
+          "version": "repo-file-v1:sha256:9d728c29aee0d07027f3fc1ca4cf6dacee46d929867a25a6adcf4503ff810d02"
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
         }
       ]
     },
@@ -162,7 +162,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
         }
       ]
     },
@@ -172,21 +172,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
-        }
-      ]
-    },
-    {
-      "id": "claim_532f664d974b4f1c8f5b23e50931073d",
-      "statement": "The convolution node's strip carries an IR preview: pullConvPreview (NodeView.cpp:1621) pulls chain.convPreview(blockId) (envL/envR arrays + length/sampleRate + fade curves, same pattern as the gallery EffectTile::pullConvPreview) into the strip's KernelPlot (convPlot_). Batch 3 (item 6): with NO kernel loaded the preview shows a cleared envelope + the loaded block's fade curves so the layout holds. The 'Load IR…' button (loadIr_, NodeView.cpp:519) calls startConvIrLoader (NodeView.cpp:1678) which launches an async juce::FileChooser (*.wav;*.wave;*.aiff;*.aif) and on OK calls chain.loadConvIr(blockId, file); a g_irLoaderSeq token guard (plus a convIrChooser_ re-entry guard) drops stale chooser results; an 'error' property on the result is toasted. CLEAR LAW (m06828 item 1, commit 72f48ea; the conv-settings-chrome bits dropped with the 44a78ea face rework): refreshModeLine's non-conv branch hides convPlot_/convIr_/loadIr_ AND settingsExport_, so selecting any other kind after a convolution block leaks nothing onto the new strip.",
-      "evidence": [
-        {
-          "resource": "repo://plugin/ui/services/ChainStore.h",
-          "version": "repo-file-v1:sha256:f5eed611fa58903a9739696e1a41e4ce5fc5144b4a5862c1bd578b59a4a65f2b"
-        },
-        {
-          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
         }
       ]
     },
@@ -196,7 +182,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
         }
       ]
     },
@@ -210,7 +196,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
         },
         {
           "resource": "repo://test/src/strip_knob_tests.cpp",
@@ -224,7 +210,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
         }
       ]
     },
@@ -234,7 +220,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
         }
       ]
     },
@@ -244,7 +230,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
         }
       ]
     },
@@ -258,7 +244,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
         }
       ]
     },
@@ -268,7 +254,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
         }
       ]
     },
@@ -278,7 +264,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
         }
       ]
     },
@@ -288,7 +274,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
         },
         {
           "resource": "repo://plugin/ui/widgets/ConvCurveBand.h",
@@ -310,13 +296,61 @@
         },
         {
           "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
-          "version": "repo-file-v1:sha256:fe6cd047c713f36a920d7144b22627521133b460938eae800ce3fc4c0290778b"
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+        }
+      ]
+    },
+    {
+      "id": "claim_66685d63a3d44ae2b8850739bcc3edfc",
+      "statement": "Repaint invariants: setNodeView(bool) (NodeView.cpp:665) and chainChanged() (NodeView.cpp:697) both END WITH repaint(), because refresh() only updates the cell children; the body (signal line segments, IR preview) needs the full repaint. (Line numbers drifted from 637/669 after the m05125/m05609 strip work.)",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeModel.cpp",
+          "version": "repo-file-v1:sha256:9d728c29aee0d07027f3fc1ca4cf6dacee46d929867a25a6adcf4503ff810d02"
+        },
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+        },
+        {
+          "resource": "repo://test/src/node_model_tests.cpp",
+          "version": "repo-file-v1:sha256:4649a2e6aa00ff21b61eacf3f3ce2ab8b6677622e559785f706681418578669c"
+        }
+      ]
+    },
+    {
+      "id": "claim_2ea01629a18c4fb5a99093e1acdf6e00",
+      "statement": "The node grid's read-side model (plugin/ui/views/nodeview/NodeModel.{h,cpp} — a const view over ChainState: kind table with kind colours, paletteKinds, blockAt/indexOf, and orderWith splice) is exercised headlessly by test/src/node_model_tests.cpp (9 tests: kind table, palette, blockAt/indexOf, orderWith, …). The kind table now carries 8 effects — paletteKinds() = {delay, chorus, tremolo, compressor, reverb, convolution, wave, volume} (NodeModel.cpp:35-37) with kKindVolume {juce::Colour(200,200,120), kFxVolume, \"Vol\"} (NodeModel.cpp:19); the palette-order test is paletteOffersEightBuiltInEffectsInMenuOrder (p[6]==\"wave\", p[7]==\"volume\", paletteLabel(\"volume\")==\"Vol\").",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeModel.cpp",
+          "version": "repo-file-v1:sha256:9d728c29aee0d07027f3fc1ca4cf6dacee46d929867a25a6adcf4503ff810d02"
+        }
+      ]
+    },
+    {
+      "id": "claim_0519e7f963c545bf9b51c7a3f12bb009",
+      "statement": "The convolution node's strip carries an IR preview: pullConvPreview (NodeView.cpp:1755) pulls chain.convPreview(blockId) (envL/envR arrays + length/sampleRate + fade curves, same pattern as the gallery EffectTile::pullConvPreview) into the strip's KernelPlot (convPlot_). (Line number drifted from 1621 after the m05125 strip rework.)",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
+        }
+      ]
+    },
+    {
+      "id": "claim_2a9b2410d8a648b5896c5c5154156c46",
+      "statement": "Conv-strip e2e surface: convStripStateForE2E() (NodeView.cpp:1842) returns 'no-strip' or a 6-section pipe-joined string '<loadIrVis>:<exportVis>|<toast>|<convIr>|<labels comma-joined>|<loadX>,<exportX>' — the labels section pins the Dwell rename and the x-section pins the inline-with-the-bar buttons (m05125). (Line number drifted from 1837.)",
+      "evidence": [
+        {
+          "resource": "repo://plugin/ui/views/nodeview/NodeView.cpp",
+          "version": "repo-file-v1:sha256:a6121c535df3cdd15ed1b17972e5bbd31b73a0e1a329f762bcdd2bd1eb225e64"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-21T08:40:03.735Z"
+    "at": "2026-10-22T00:04:34.217Z"
   }
 }

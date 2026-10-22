@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:04f508492453c3449b05779240f487d9d099f05fbec2bbd42dbc8273013ae69a",
+  "pageVersion": "sha256:00c40f84d3f741bc5f09671560284dcfb3328ef507619b08017cca4f74af5b91",
   "claims": [
     {
       "id": "claim_63767cf697ac4d45bfd45cb93f9a268b",
@@ -18,7 +18,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:7562d6c4af63bb001257e2af596f59c9d20747c84eb3e54a079cc83715ead452"
+          "version": "repo-file-v1:sha256:c69c1a5b1175b392f0bb1e095c14cba62ca93f0f9b3be6ad3f29154c6ea7acf5"
         },
         {
           "resource": "repo://plugin/include/ChainDomain.h",
@@ -42,7 +42,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:7562d6c4af63bb001257e2af596f59c9d20747c84eb3e54a079cc83715ead452"
+          "version": "repo-file-v1:sha256:c69c1a5b1175b392f0bb1e095c14cba62ca93f0f9b3be6ad3f29154c6ea7acf5"
         },
         {
           "resource": "repo://plugin/include/effects/conv/BudgetConvolver.h",
@@ -65,32 +65,6 @@
         {
           "resource": "repo://test/src/convolution_reverb_tests.cpp",
           "version": "repo-file-v1:sha256:a0e5e496fbf8b66e6878886733b9301e65bcc5172896bb5e463e25ae9678923b"
-        }
-      ]
-    },
-    {
-      "id": "claim_ccdad9176e4e430d80070cb2b78dead5",
-      "statement": "Kernel export (commit 89afb4e): ConvolutionReverb::exportKernel(targetRate, &error) (ConvolutionReverb.h:336, cpp:390) re-runs the SAME makeEditedState linear pipeline — trim (convStartS/convEndS) + stretch (Time) + fades/curves — at the raw file rate, then resamples to the target rate and bakes the linear stages: Pre zero-pad, Gain (pow(10, gainToDb/20)), Width (stereo M/S fold; mono IR = Haas interaural delay pair, kHaasDelayMs, side = width*kHaasDepth*delayed). Mod and the wet soft clip are live-only and deliberately not baked. The result is always 2-channel (mono duplicated). TONE3000Processor::exportConvIr (ProcessorChain.cpp:481) wraps it: bits clamped 16..32, WavAudioFormat writer over a file OutputStream (the juce::MemoryOutputStream 0-byte trap class), deletes the file on failure. Guarded by ConvIrExport* tests (convolution_reverb_tests.cpp) + the exportConvIr WAV round-trip (processor_tests.cpp).",
-      "evidence": [
-        {
-          "resource": "repo://plugin/include/effects/conv/ConvolutionReverb.h",
-          "version": "repo-file-v1:sha256:aa0cdaf4833a9f46eb7bf5cfd182533d767bb9449f1ab6b4e3723f8eb1e30135"
-        },
-        {
-          "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:1801b052b9fe17b7a2d7aca92d76a34cbe208bac775241cbe52d1b374e7db55c"
-        },
-        {
-          "resource": "repo://plugin/src/effects/conv/ConvolutionReverb.cpp",
-          "version": "repo-file-v1:sha256:b8053ee3b1eafa53b544b33105d280552582edc8eb47da4bff2ad799158d7c2d"
-        },
-        {
-          "resource": "repo://test/src/convolution_reverb_tests.cpp",
-          "version": "repo-file-v1:sha256:a0e5e496fbf8b66e6878886733b9301e65bcc5172896bb5e463e25ae9678923b"
-        },
-        {
-          "resource": "repo://test/src/processor_tests.cpp",
-          "version": "repo-file-v1:sha256:b060b7b2881eaf60caee43390d0f015c62993a9ec70602dcfc1b75abf90cf13c"
         }
       ]
     },
@@ -118,11 +92,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:1801b052b9fe17b7a2d7aca92d76a34cbe208bac775241cbe52d1b374e7db55c"
+          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:fde7bfcbb18d359666a17d264c85175cbf9b5fce311a915d7a9835a1f7a1f805"
+          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
         }
       ]
     },
@@ -168,7 +142,7 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:1801b052b9fe17b7a2d7aca92d76a34cbe208bac775241cbe52d1b374e7db55c"
+          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
         },
         {
           "resource": "repo://plugin/src/effects/conv/ConvolutionReverb.cpp",
@@ -219,6 +193,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-21T20:35:38.263Z"
+    "at": "2026-10-22T00:04:34.217Z"
   }
 }

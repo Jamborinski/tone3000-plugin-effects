@@ -19,6 +19,8 @@ sources:
     resource: repo://plugin/ui/model/ChainState.cpp
   - id: openwiki-source-44f6dfbbe93c22f4f01d2fc3
     resource: repo://plugin/ui/model/ChainState.h
+  - id: openwiki-source-e592877ce1adba0c2539910f
+    resource: repo://plugin/ui/NativeUi.cmake
   - id: openwiki-source-9c84f7315af438c161067be5
     resource: repo://plugin/ui/services/ParamBinding.cpp
   - id: openwiki-source-5b6ba89ac0a58ff2acd95eed
@@ -34,7 +36,7 @@ sources:
 generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T08:40:03.735Z
+    at: 2026-10-22T00:04:34.217Z
 ---
 
 
@@ -122,6 +124,18 @@ four** of these, or it works sonically but snaps back to default on sync:
 A knob whose stored domain is 0..1 but shows a human unit **MUST** declare
 `toStored`/`fromStored` — missing either is "works sonically, snaps back on
 resync."
+
+The Wave/Volume block fields (`waveLevel`/`waveShape`/`volume`, commit
+6813cb5) follow this law exactly, and two extra traps ship with the rule:
+`addEffectBlock` captures the per-kind start values (e.g.
+`startWaveLevel`) **before** `landToneBlock(std::move(block))` — reading a
+field off the moved `unique_ptr` is a use-after-move that HANGS silently,
+not crashes; and every per-effect include dir must be added to BOTH
+`plugin/CMakeLists.txt` and `plugin/ui/NativeUi.cmake` — `effects/wave` +
+`effects/volume` were missing from NativeUi.cmake and broke the GUI build
+on a bare `Wave.h` include from `ChainBlock.h`.
+
+### Reverb `type`
 
 ### Reverb `type` (per-mode integer, shipped 2026-10-16) — state places
 

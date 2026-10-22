@@ -18,18 +18,12 @@ sources:
     resource: repo://docs/agents/windows-build.md
   - id: openwiki-source-e2fb14576702431774114c7c
     resource: repo://plugin/include/ChainBlock.h
-  - id: openwiki-source-bf96acd1df7b85a128b0bb8a
-    resource: repo://plugin/include/effects/compressor/Compressor.h
-  - id: openwiki-source-98413be46f92c72f6215e812
-    resource: repo://plugin/include/effects/conv/ConvolutionReverb.h
   - id: openwiki-source-5fba7bd6fbd3028bb9aa2a86
     resource: repo://plugin/include/effects/reverb/plate/plate_engine.h
   - id: openwiki-source-59247f1e8aecef9a69f7ccae
     resource: repo://plugin/include/effects/reverb/plate/types/Reverb_DAT.h
   - id: openwiki-source-d4b9a9adb1644505c083378b
     resource: repo://plugin/include/effects/reverb/Reverb.h
-  - id: openwiki-source-732fd101392931455320572e
-    resource: repo://plugin/include/Processor.h
   - id: openwiki-source-e592877ce1adba0c2539910f
     resource: repo://plugin/ui/NativeUi.cmake
   - id: openwiki-source-01229dcf87d08fe26802a88a
@@ -46,14 +40,10 @@ sources:
     resource: repo://script/win-standalone.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
-  - id: openwiki-source-95d19d59abc2626104f1ad90
-    resource: repo://test/src/state_size_tests.cpp
-  - id: openwiki-source-65fd7457c62ac09a742dd567
-    resource: repo://test/src/StateSizeBlob.h
 generated: { by: "pi", at: "2026-10-14T21:12:00.922Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T20:35:38.263Z
+    at: 2026-10-22T00:04:34.217Z
 ---
 
 # TONE3000
@@ -237,7 +227,10 @@ is available on this machine for smoke-testing the staged exe.
   `fet/Compressor_Fet.h`, `varimu/Compressor_VariMu.h` — plus thin type wrappers
   at `<mode>/types/Compressor_<Mode>.h` (engine/wrapper split, commit 3ffb35b;
   the per-block `compType` field selects the mode's sub-type, 1 per mode today),
-  `effects/conv/ConvolutionReverb.h`) together with
+  `effects/conv/ConvolutionReverb.h`, the single-engine
+  `effects/wave/Wave.h` (440 Hz tone generator, 5 shapes) and
+  `effects/volume/Volume.h` (±24 dB output gain, 2026-10-22 commit 6813cb5))
+  together with
   `docs/agents/dsp-invariants.md` for the CONSIDERED &
   DECLINED contracts.
 - **Knob-to-DSP wiring** — `plugin/ui/core/KnobScale.h`,

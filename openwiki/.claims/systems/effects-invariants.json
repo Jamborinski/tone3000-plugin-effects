@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:5761dbc8260c5693975cc9b52e56e78dbdff5becf07aee0d319fda0ebc8c8dd6",
+  "pageVersion": "sha256:6b7f67cdfb5d44ca77e0c4bc0f24cf17b13d6e67be464df607eb104b2ba858c6",
   "claims": [
     {
       "id": "claim_9c6f8afc68d34500bf778a2da1af5f07",
@@ -16,7 +16,7 @@
         },
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         }
       ]
     },
@@ -106,7 +106,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
+          "version": "repo-file-v1:sha256:6dd612471459696ff956390304766841ec5945e56d0f5ba9ed2e76abad1d1ef3"
         }
       ]
     },
@@ -220,13 +220,41 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
+          "version": "repo-file-v1:sha256:6dd612471459696ff956390304766841ec5945e56d0f5ba9ed2e76abad1d1ef3"
+        }
+      ]
+    },
+    {
+      "id": "claim_45704267803a4e92b6d8ebf62109e5f2",
+      "statement": "Wave (EffectKind::Wave) is a 440 Hz test-tone GENERATOR, not a mixer: process() OVERWRITES the input with the tone on every channel (identical sample to all channels). 5 shapes — 0=sine (default), 1=triangle, 2=saw-up, 3=saw-down, 4=square — selected by a 0..4 detent param; a shape switch crossfades over 8 ms (shapeMix_ smoothstep blends shape(prevShape_)→shape(shape_), so the switch is click-free and settles in <~1 ms). Level is 0..1 (linear gain on the tone). prepare(sampleRate) is idempotent and must NOT reset shape_/phase_/level_ — the processor restore funnel runs setParams THEN prepareBlockForChainRate→prepare(), so a prepare that resets state silently returns a restored shape back to sine (law: WaveChain.StateSaveRestorePreservesWaveFields / Wave.CrossfadeSettles).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/effects/wave/Wave.h",
+          "version": "repo-file-v1:sha256:088337c82f4bb63acd0a249db5a8441958d1478021072a6e879660da7d01d7b6"
+        },
+        {
+          "resource": "repo://test/src/wave_tests.cpp",
+          "version": "repo-file-v1:sha256:25b6ae9956197796aedba1db51687da79b175deadc474b755c67da521819df64"
+        }
+      ]
+    },
+    {
+      "id": "claim_7d46517ab64147619209a07c87893c1e",
+      "statement": "Volume (EffectKind::Volume) is a single-knob output gain of ±24 dB, stored normalised 0..1 with 0.5 = 0 dB (the UI reuses &scales::gainDb()); the engine maps stored→dB=−24+stored·48 and applies pow(10, db/20) to EVERY channel. Gain steps are smoothed with a ~5 ms one-pole (click-free: Volume.GainStepIsSmoothedNotInstant) and prepare() must not reset the settled gain (the restore-funnel law, mirroring Wave). Chain-law note: because effect blocks spawn at mix 0.5 and the wet path is the PLT v2 m² law (m = mix²), a Volume block's end-to-end law is out = 0.75·dry + 0.25·wet — the volume tests pin this explicitly (e.g. −24 dB → 0.1768·(0.75+0.25·0.0631)).",
+      "evidence": [
+        {
+          "resource": "repo://plugin/include/effects/volume/Volume.h",
+          "version": "repo-file-v1:sha256:45a812b8668c4d43d3a6c276399cf6ff5b2e22455e603538ca93cd7a9261d56e"
+        },
+        {
+          "resource": "repo://test/src/volume_tests.cpp",
+          "version": "repo-file-v1:sha256:9ea56b56e3277fc7ef4461bfd38037e0178a2bf22d3ddfc2154b2a37cdd5b39f"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-21T20:35:38.263Z"
+    "at": "2026-10-22T00:04:34.217Z"
   }
 }

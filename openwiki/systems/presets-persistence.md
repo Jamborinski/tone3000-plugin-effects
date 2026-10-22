@@ -19,7 +19,7 @@ sources:
 generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T08:40:03.735Z
+    at: 2026-10-22T00:04:34.217Z
 ---
 
 # Presets and runtime persistence
@@ -128,8 +128,10 @@ idempotent and a no-op off iOS or outside the standalone app.
 
 The **host project** save path is separate from the `.t3kpreset` file
 format above — a single `MemoryBlock` blob, `T3KB` magic + one format-flag
-byte + payload (`getStateInformation` at plugin/src/ProcessorState.cpp:596,
-`setStateInformation` at :662):
+byte + payload (`getStateInformation` at plugin/src/ProcessorState.cpp:611,
+`setStateInformation` at :677): the per-block `blockState` now also carries
+`waveLevel`/`waveShape`/`volume` (6813cb5), re-armed into the engines right
+before `prepareBlockForChainRate`.
 
 - **flag 1 = gzip** — an 8-byte LITTLE-ENDIAN original size followed by a
   zlib-wrapped stream (`juce::GZIPCompressorOutputStream`, level -1),

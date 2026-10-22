@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:3c74bb3b759dc14f41f61752207f7ed07f76c778685b29f76c7e9d969e1087cb",
+  "pageVersion": "sha256:eeb2398007c2cfcbc463402d346e1ecd20da50639ef62638474681708e7f2a20",
   "claims": [
     {
       "id": "claim_98609a97ed314b1a9901edeb10b9de3e",
@@ -36,11 +36,11 @@
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:1801b052b9fe17b7a2d7aca92d76a34cbe208bac775241cbe52d1b374e7db55c"
+          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:f88e49822e5cf5fa8159c45b346df55bdb356637aa924f79f137a665e79d9715"
+          "version": "repo-file-v1:sha256:46bfefd9df03b1ca3e41bf7db140dd219080279286c88ee1eed6efc43526aaf4"
         }
       ]
     },
@@ -78,7 +78,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:1801b052b9fe17b7a2d7aca92d76a34cbe208bac775241cbe52d1b374e7db55c"
+          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
         },
         {
           "resource": "repo://test/src/add_at_slot_tests.cpp",
@@ -102,19 +102,19 @@
       "evidence": [
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:1801b052b9fe17b7a2d7aca92d76a34cbe208bac775241cbe52d1b374e7db55c"
+          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
-          "version": "repo-file-v1:sha256:c223c6db697b9961f2b104d75078dc5a5e14f0adfa0768d7ee81e2654d15cffa"
+          "version": "repo-file-v1:sha256:e81e8d54c1b5944e2fead996c1d543beb7e6dce13f0534a2f1f8a272bc4d78fb"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:f88e49822e5cf5fa8159c45b346df55bdb356637aa924f79f137a665e79d9715"
+          "version": "repo-file-v1:sha256:46bfefd9df03b1ca3e41bf7db140dd219080279286c88ee1eed6efc43526aaf4"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.h",
-          "version": "repo-file-v1:sha256:f682afa7dc676d8a112d7530f71b59462872fe7e539ae02775de15f6b80aa51d"
+          "version": "repo-file-v1:sha256:728e58e41057f3e442eabda2563adc1b64d866ccdbf58ab450509e34078ab799"
         }
       ]
     },
@@ -124,23 +124,23 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:7562d6c4af63bb001257e2af596f59c9d20747c84eb3e54a079cc83715ead452"
+          "version": "repo-file-v1:sha256:c69c1a5b1175b392f0bb1e095c14cba62ca93f0f9b3be6ad3f29154c6ea7acf5"
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:1801b052b9fe17b7a2d7aca92d76a34cbe208bac775241cbe52d1b374e7db55c"
+          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
-          "version": "repo-file-v1:sha256:c223c6db697b9961f2b104d75078dc5a5e14f0adfa0768d7ee81e2654d15cffa"
+          "version": "repo-file-v1:sha256:e81e8d54c1b5944e2fead996c1d543beb7e6dce13f0534a2f1f8a272bc4d78fb"
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:fde7bfcbb18d359666a17d264c85175cbf9b5fce311a915d7a9835a1f7a1f805"
+          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:f88e49822e5cf5fa8159c45b346df55bdb356637aa924f79f137a665e79d9715"
+          "version": "repo-file-v1:sha256:46bfefd9df03b1ca3e41bf7db140dd219080279286c88ee1eed6efc43526aaf4"
         }
       ]
     },
@@ -150,23 +150,23 @@
       "evidence": [
         {
           "resource": "repo://plugin/include/ChainBlock.h",
-          "version": "repo-file-v1:sha256:7562d6c4af63bb001257e2af596f59c9d20747c84eb3e54a079cc83715ead452"
+          "version": "repo-file-v1:sha256:c69c1a5b1175b392f0bb1e095c14cba62ca93f0f9b3be6ad3f29154c6ea7acf5"
         },
         {
           "resource": "repo://plugin/src/ProcessorChain.cpp",
-          "version": "repo-file-v1:sha256:1801b052b9fe17b7a2d7aca92d76a34cbe208bac775241cbe52d1b374e7db55c"
+          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
         },
         {
           "resource": "repo://plugin/src/ProcessorState.cpp",
-          "version": "repo-file-v1:sha256:c223c6db697b9961f2b104d75078dc5a5e14f0adfa0768d7ee81e2654d15cffa"
+          "version": "repo-file-v1:sha256:e81e8d54c1b5944e2fead996c1d543beb7e6dce13f0534a2f1f8a272bc4d78fb"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.cpp",
-          "version": "repo-file-v1:sha256:f88e49822e5cf5fa8159c45b346df55bdb356637aa924f79f137a665e79d9715"
+          "version": "repo-file-v1:sha256:46bfefd9df03b1ca3e41bf7db140dd219080279286c88ee1eed6efc43526aaf4"
         },
         {
           "resource": "repo://plugin/ui/model/ChainState.h",
-          "version": "repo-file-v1:sha256:f682afa7dc676d8a112d7530f71b59462872fe7e539ae02775de15f6b80aa51d"
+          "version": "repo-file-v1:sha256:728e58e41057f3e442eabda2563adc1b64d866ccdbf58ab450509e34078ab799"
         }
       ]
     },
@@ -180,13 +180,49 @@
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:fde7bfcbb18d359666a17d264c85175cbf9b5fce311a915d7a9835a1f7a1f805"
+          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
+        }
+      ]
+    },
+    {
+      "id": "claim_423ef626078e41849e827cc6fa3e2ec4",
+      "statement": "The Wave and Volume params (commit 6813cb5) follow the four-state-place rule: (1) ChainBlock.h fields waveLevel/waveShape/volume + member engines Wave wave;/Volume vol; (ChainBlock.h:528-529); (2) ChainState parseItem (volume:185, wave:183-184) + ChainItem fields; (3) ProcessorChain.cpp BlockRow + copyLane + serializeChain setProperty (1587-1589) + isEffectParam + setBlockParam branches; (4) ProcessorState.cpp save setProperty (229-231) / load jlimit / re-arm `vol.setParams({kMinDb + volume*48})` + `wave.setParams` BEFORE prepareBlockForChainRate. Volume reuses &scales::gainDb() (no new scale); Wave uses waveLevel() (percent 0..1) + waveShape() (5 detents) in KnobScale.h. Volume setBlockParam maps stored 0..1 → dB = kMinDb + stored·48.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/src/ProcessorChain.cpp",
+          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
+        },
+        {
+          "resource": "repo://plugin/src/ProcessorState.cpp",
+          "version": "repo-file-v1:sha256:e81e8d54c1b5944e2fead996c1d543beb7e6dce13f0534a2f1f8a272bc4d78fb"
+        },
+        {
+          "resource": "repo://plugin/ui/core/KnobScale.h",
+          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
+        },
+        {
+          "resource": "repo://plugin/ui/model/ChainState.cpp",
+          "version": "repo-file-v1:sha256:46bfefd9df03b1ca3e41bf7db140dd219080279286c88ee1eed6efc43526aaf4"
+        }
+      ]
+    },
+    {
+      "id": "claim_a5a5ea86eb23411b908de75eb4cd24af",
+      "statement": "addEffectBlock (ProcessorChain.cpp:395-425) captures the new block's start param values (startWaveLevel/startWaveShape/startVolume) BEFORE landToneBlock(std::move(block)) — reading a moved unique_ptr's fields is a use-after-move and silently HANGS the chain thread (the capture must happen pre-move) — then re-arms via setBlockParam after the splice. Every per-effect include dir (effects/wave, effects/volume, …) must be added to BOTH plugin/CMakeLists.txt AND plugin/ui/NativeUi.cmake — wave+volume were missing from NativeUi.cmake and broke the GUI build with `Wave.h: No such file` in ChainState.cpp before being found by DspTests.",
+      "evidence": [
+        {
+          "resource": "repo://plugin/src/ProcessorChain.cpp",
+          "version": "repo-file-v1:sha256:373b0e883ce58c2af322cc4429015b4b2f1911e9e646e3b01433f96d17ed6707"
+        },
+        {
+          "resource": "repo://plugin/ui/NativeUi.cmake",
+          "version": "repo-file-v1:sha256:2833d5ef946fc18137a14f31201d3ed2687a08ad878fd3964e4774f620bb8f88"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-21T08:40:03.735Z"
+    "at": "2026-10-22T00:04:34.217Z"
   }
 }

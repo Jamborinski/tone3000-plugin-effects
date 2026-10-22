@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:233ee221dbe6868f8d2f126597b8c7bc64899204e5a30adaf73492c099aeac5f",
+  "pageVersion": "sha256:ca17994d77d348665c46eeb8573335bdb081a9e781608dff1aa90651cc190af2",
   "claims": [
     {
       "id": "claim_4a29e18e4d66480f81119a31014b07b0",
@@ -18,7 +18,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         }
       ]
     },
@@ -28,7 +28,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         }
       ]
     },
@@ -38,7 +38,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         },
         {
           "resource": "repo://test/src/plate_family_tests.cpp",
@@ -70,7 +70,7 @@
         },
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         }
       ]
     },
@@ -80,7 +80,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         },
         {
           "resource": "repo://test/src/dat_probe_tests.cpp",
@@ -98,7 +98,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         }
       ]
     },
@@ -130,7 +130,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         }
       ]
     },
@@ -140,7 +140,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         }
       ]
     },
@@ -150,11 +150,11 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         },
         {
           "resource": "repo://test/src/node_model_tests.cpp",
-          "version": "repo-file-v1:sha256:2433ca24917da969946bd8f13232a319c11fed30bbbc21e460d34f16bdddbc5c"
+          "version": "repo-file-v1:sha256:4649a2e6aa00ff21b61eacf3f3ce2ab8b6677622e559785f706681418578669c"
         }
       ]
     },
@@ -164,7 +164,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         },
         {
           "resource": "repo://test/src/add_at_slot_tests.cpp",
@@ -200,7 +200,7 @@
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         },
         {
           "resource": "repo://test/src/state_size_tests.cpp",
@@ -237,60 +237,26 @@
       ]
     },
     {
-      "id": "claim_f9b27028606e4bbeb54eebddc8038f22",
-      "statement": "Suite-size history (the state-size pass and after): 560 after the state-size closeout (728e144 + 9f34a3f); 575 after the conv wet-clip + Settings/Export-kernel pass (WetClip* + ConvIrExport* in convolution_reverb_tests.cpp); 579 after the face-rework pass (44a78ea: mod click-index/tap-body tests + ConvDwell scale tests); **581 after the 2026-10-21 conv strip-face closeout (commit 9a5c3c8: ProcessorTest.ConvIrLoadResetsTrimWindowAndTime in processor_tests.cpp — on-load Start=0/End=raw/Time=1.00× + the convRawSeconds state field — plus ConvTrimScaleTest.CapIsRawLengthRoundedUp in effect_ui_scale_tests.cpp; the conv Mod tests are now tanh-framed: ModLayerClipClickHunt + ModClipDisabledIsBitExact)**. Lower-bound; never assert stale totals.",
-      "evidence": [
-        {
-          "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
-        },
-        {
-          "resource": "repo://test/src/convolution_reverb_tests.cpp",
-          "version": "repo-file-v1:sha256:a0e5e496fbf8b66e6878886733b9301e65bcc5172896bb5e463e25ae9678923b"
-        },
-        {
-          "resource": "repo://test/src/effect_ui_scale_tests.cpp",
-          "version": "repo-file-v1:sha256:760cdef41a2e2d7d132dfee2603f4e57beb61d3c7d1ee64e2b61a6ca475e2201"
-        },
-        {
-          "resource": "repo://test/src/processor_tests.cpp",
-          "version": "repo-file-v1:sha256:b060b7b2881eaf60caee43390d0f015c62993a9ec70602dcfc1b75abf90cf13c"
-        },
-        {
-          "resource": "repo://test/src/state_size_tests.cpp",
-          "version": "repo-file-v1:sha256:62163390e75c0bd10d830593ccf0a5900e3282b0578ed5868222c7a7ea973b76"
-        }
-      ]
-    },
-    {
       "id": "claim_b5810747b0c24d7fa17b491c6c9dd43c",
-      "statement": "Suite-size history (the state-size pass and after): 560 after the state-size closeout (728e144 + 9f34a3f); 575 after the conv wet-clip + Settings/Export-kernel pass (WetClip* + ConvIrExport* in convolution_reverb_tests.cpp); 579 after the face-rework pass (44a78ea: mod click-index/tap-body tests + ConvDwell scale tests); 581 after the 2026-10-21 conv strip-face closeout (commit 9a5c3c8: ProcessorTest.ConvIrLoadResetsTrimWindowAndTime in processor_tests.cpp — on-load Start=0/End=raw/Time=1.00× + the convRawSeconds state field — plus ConvTrimScaleTest.CapIsRawLengthRoundedUp in effect_ui_scale_tests.cpp; the conv Mod tests are now tanh-framed: ModLayerClipClickHunt + ModClipDisabledIsBitExact); 584 after the 2026-10-21 mod-click closeout (commit 2b04a71: ConvolutionReverb.ModTapSmoothingLaw + ConvolutionReverb.TwoFreshEnginesSameModLayer shared-baseline law tests in test/src/convolution_reverb_tests.cpp). Lower-bound; never assert stale totals.",
+      "statement": "Suite-size history (the state-size pass and after): 560 after the state-size closeout (728e144 + 9f34a3f); 575 after the conv wet-clip + Settings/Export-kernel pass (WetClip* + ConvIrExport* in convolution_reverb_tests.cpp); 579 after the face-rework pass (44a78ea: mod click-index/tap-body tests + ConvDwell scale tests); 581 after the 2026-10-21 conv strip-face closeout (9a5c3c8: ProcessorTest.ConvIrLoadResetsTrimWindowAndTime + ConvTrimScaleTest.CapIsRawLengthRoundedUp; conv Mod tests tanh-framed: ModLayerClipClickHunt + ModClipDisabledIsBitExact); 584 after the 2026-10-21 mod-click closeout (2b04a71: ConvolutionReverb.ModTapSmoothingLaw + TwoFreshEnginesSameModLayer shared-baseline law tests); 604 after the Wave + Volume block pass (6813cb5: test/src/wave_tests.cpp — 11 tests incl. WaveChain end-to-end — and test/src/volume_tests.cpp — 9 tests incl. VolumeChain end-to-end; node_model_tests.cpp palette asserts 8 kinds). Lower-bound; never assert stale totals.",
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         },
         {
-          "resource": "repo://test/src/convolution_reverb_tests.cpp",
-          "version": "repo-file-v1:sha256:a0e5e496fbf8b66e6878886733b9301e65bcc5172896bb5e463e25ae9678923b"
+          "resource": "repo://test/src/volume_tests.cpp",
+          "version": "repo-file-v1:sha256:9ea56b56e3277fc7ef4461bfd38037e0178a2bf22d3ddfc2154b2a37cdd5b39f"
         },
         {
-          "resource": "repo://test/src/effect_ui_scale_tests.cpp",
-          "version": "repo-file-v1:sha256:760cdef41a2e2d7d132dfee2603f4e57beb61d3c7d1ee64e2b61a6ca475e2201"
-        },
-        {
-          "resource": "repo://test/src/processor_tests.cpp",
-          "version": "repo-file-v1:sha256:b060b7b2881eaf60caee43390d0f015c62993a9ec70602dcfc1b75abf90cf13c"
-        },
-        {
-          "resource": "repo://test/src/state_size_tests.cpp",
-          "version": "repo-file-v1:sha256:62163390e75c0bd10d830593ccf0a5900e3282b0578ed5868222c7a7ea973b76"
+          "resource": "repo://test/src/wave_tests.cpp",
+          "version": "repo-file-v1:sha256:25b6ae9956197796aedba1db51687da79b175deadc474b755c67da521819df64"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-21T20:35:38.263Z"
+    "at": "2026-10-22T00:04:34.217Z"
   }
 }

@@ -4,7 +4,7 @@ title: "Audio path: chain domain, lanes, block types"
 openwiki_generated: true
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T08:40:03.735Z
+    at: 2026-10-22T00:04:34.217Z
 sources:
   - id: openwiki-source-e2fb14576702431774114c7c
     resource: repo://plugin/include/ChainBlock.h
@@ -60,7 +60,7 @@ supported rate.
 
 - `enum class ChainBlockType { NAM, IR, INSERT, EFFECT }`
 - `enum class EffectKind { Delay, Chorus, Tremolo, Compressor, Reverb,
-  Convolution }`
+  Convolution, Wave, Volume }` (Wave = 440 Hz tone generator, Volume = ±24 dB output gain, commit 6813cb5)
 - `enum class ChainSide { Left, Right }` — each lane is a parallel,
   independent chain (A/B) sharing the same block layout.
 - `kMinLaneSlots = 5`: an empty lane displays 5 empty slots and

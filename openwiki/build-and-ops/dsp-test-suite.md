@@ -24,14 +24,10 @@ sources:
     resource: repo://test/CMakeLists.txt
   - id: openwiki-source-a20d64964340cf417ace1f84
     resource: repo://test/src/add_at_slot_tests.cpp
-  - id: openwiki-source-323fe87bd1df0bede6a732eb
-    resource: repo://test/src/convolution_reverb_tests.cpp
   - id: openwiki-source-22db8812ec3771683e6a7ddc
     resource: repo://test/src/dat_probe_tests.cpp
   - id: openwiki-source-9122ffeb8c7fc8e2457955ce
     resource: repo://test/src/effect_tests.cpp
-  - id: openwiki-source-34a79a04e9ddbb2ab43b3d18
-    resource: repo://test/src/effect_ui_scale_tests.cpp
   - id: openwiki-source-949fdcdad6535ec560064216
     resource: repo://test/src/node_model_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
@@ -48,10 +44,14 @@ sources:
     resource: repo://test/src/state_size_tests.cpp
   - id: openwiki-source-a9b10161f0531edad6c09d8e
     resource: repo://test/src/strip_knob_tests.cpp
+  - id: openwiki-source-00b5c75e01afdd1121a90675
+    resource: repo://test/src/volume_tests.cpp
+  - id: openwiki-source-01eb32605666555598830605
+    resource: repo://test/src/wave_tests.cpp
 generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T20:35:38.263Z
+    at: 2026-10-22T00:04:34.217Z
 ---
 
 # DSP test suite (DspTests)
@@ -86,7 +86,8 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
 One file per subsystem, all in `test/src/`: NAM/IR loading and classification
 (`local_load_tests`, `ir_classification_tests`, `padless_wav_tests`), the six
 self-contained effects (`effect_tests`, `convolution_reverb_tests`,
-`plate_comb_tests`, `plate_texture_tests`, `plate_family_tests`) plus the
+`plate_comb_tests`, `plate_texture_tests`, `plate_family_tests`,
+`wave_tests`, `volume_tests`) plus the
 2026-10-16 reverb quality probes — the P0 CPU-ceiling guard suite
 (`reverb_ceiling_p0_tests`, suite `ReverbCeiling`, 4 tests pinning
 23 µs/block@128 per mode with Spring ≤ 46), the P1 six-mode vs
@@ -143,8 +144,10 @@ confirm the "Running N tests" line is non-zero before trusting the result.**
 
 ## Suite size
 
-The suite grows with features — **584 tests as of the 2026-10-21
-mod-click closeout** (commit `2b04a71`: `ConvolutionReverb.ModTapSmoothing-
+The suite grows with features — **604 tests as of the 2026-10-22
+Wave + Volume block pass** (commit `6813cb5`: `test/src/wave_tests.cpp`
+11 tests + `test/src/volume_tests.cpp` 9 tests; the node palette grew to
+8 kinds); **584 was the 2026-10-21 mod-click closeout** (commit `2b04a71`: `ConvolutionReverb.ModTapSmoothing-
 Law` + `ConvolutionReverb.TwoFreshEnginesSameModLayer` shared-baseline law
 tests in `test/src/convolution_reverb_tests.cpp`, alongside the tanh-frame
 `ModLayerClipClickHunt` + `ModClipDisabledIsBitExact`); 581 was the

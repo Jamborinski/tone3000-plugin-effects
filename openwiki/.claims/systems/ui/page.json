@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:8f538361f5569802ebc3aa79055d70338d42b7c58769342212c2454f642b4df2",
+  "pageVersion": "sha256:972a0dac3804ea2add61451bc0d9fe2400e9a11fd87f9bd6197d2fdf213a11aa",
   "claims": [
     {
       "id": "claim_bb603fefb13e4102bedfb66fd9ef0569",
@@ -72,11 +72,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:fde7bfcbb18d359666a17d264c85175cbf9b5fce311a915d7a9835a1f7a1f805"
+          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
+          "version": "repo-file-v1:sha256:6dd612471459696ff956390304766841ec5945e56d0f5ba9ed2e76abad1d1ef3"
         }
       ]
     },
@@ -86,7 +86,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
+          "version": "repo-file-v1:sha256:6dd612471459696ff956390304766841ec5945e56d0f5ba9ed2e76abad1d1ef3"
         }
       ]
     },
@@ -100,7 +100,7 @@
         },
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:fde7bfcbb18d359666a17d264c85175cbf9b5fce311a915d7a9835a1f7a1f805"
+          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
         },
         {
           "resource": "repo://plugin/ui/views/PluginHeader.cpp",
@@ -108,7 +108,7 @@
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
+          "version": "repo-file-v1:sha256:6dd612471459696ff956390304766841ec5945e56d0f5ba9ed2e76abad1d1ef3"
         }
       ]
     },
@@ -118,11 +118,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/Help.cpp",
-          "version": "repo-file-v1:sha256:0f9a4747c0e14d526d199979ab5f12a3fd2e108f6ba608f2105f3153a4ede1b7"
+          "version": "repo-file-v1:sha256:af6206533cdf64030c9cc423e0663447fd8d91ef799b5f28c59c1eca923dfb68"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
+          "version": "repo-file-v1:sha256:6dd612471459696ff956390304766841ec5945e56d0f5ba9ed2e76abad1d1ef3"
         }
       ]
     },
@@ -146,7 +146,7 @@
         },
         {
           "resource": "repo://plugin/ui/testbed/TileShot.cpp",
-          "version": "repo-file-v1:sha256:ec6b20cdbfdc79cb5709fa6ebfc8c5673c6b3793fb4bdd9df435f6db68444fb6"
+          "version": "repo-file-v1:sha256:618bb4b22c73618d87eb5caa5ef53ef39227c475b4fbf7c351864139954d4b7e"
         },
         {
           "resource": "repo://script/tile-ocr.sh",
@@ -166,15 +166,11 @@
     },
     {
       "id": "claim_b81b4da3a9a44233a190c5e9a6b07a45",
-      "statement": "DspTests compiles the real plugin DSP sources plus exactly FOUR plugin/ui files: plugin/ui/core/Labels.cpp (the KnobScale readout formatter the scale-contract tests link), plugin/ui/views/nodeview/NodeModel.cpp + plugin/ui/model/ChainState.cpp (the node grid's read-side model and its data source), and plugin/ui/views/gallery/EffectParams.cpp (the shared paramsFor knob table, added by the node-view batch 2 for the strip_knob_tests.cpp per-knob readout tests); test/CMakeLists.txt adds the include paths plugin/ui, plugin/ui/core, plugin/ui/views/nodeview, and plugin/ui/views/gallery. The theme palette is exercised by theme_palette_tests.cpp's #include of plugin/ui/core/Theme.h. Everything else in plugin/ui (views, widgets, services, NativeEditor) is excluded, so a green DspTests run does NOT prove the UI links: UI changes must be verified via the testbed (--selftest / --capture) or a GUI plugin build target before committing. (Suite-size snapshots live in /openwiki/build-and-ops/dsp-test-suite.md; as of the 2026-10-17 batch-3 pass the suite was 538 tests / 79 suites — the count is a lower-bound snapshot, never a stale-total assertion.)",
+      "statement": "DspTests compiles the real plugin DSP sources plus exactly FIVE plugin/ui files: plugin/ui/core/Labels.cpp (the KnobScale readout formatter the scale-contract tests link), plugin/ui/views/nodeview/NodeModel.cpp + plugin/ui/model/ChainState.cpp (the node grid's read-side model and its data source), and plugin/ui/views/gallery/EffectParams.cpp (added 6813cb5 so the wave/volume paramsFor branches are compile-checked by the real test link) — everything else in plugin/ui (views, services, paint) is excluded; a green DspTests does NOT prove the UI links (verify UI changes with the Standalone/VST3 build or the UiTestbed testbed).",
       "evidence": [
         {
           "resource": "repo://test/CMakeLists.txt",
-          "version": "repo-file-v1:sha256:916388539bdb5fbbfbc5af72a8fdd6d2f50208632da4c396c55c3a750b366122"
-        },
-        {
-          "resource": "repo://test/src/strip_knob_tests.cpp",
-          "version": "repo-file-v1:sha256:847371236f7a0a46e4c318f312b43b344de6f68807f663915f72c4f7ef1bc81d"
+          "version": "repo-file-v1:sha256:a4dc2dfa93589226fc44bac4ca5d5dff2f15c359d7002392a068b44de90c2eb9"
         }
       ]
     },
@@ -184,11 +180,11 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:fde7bfcbb18d359666a17d264c85175cbf9b5fce311a915d7a9835a1f7a1f805"
+          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectParams.cpp",
-          "version": "repo-file-v1:sha256:9fe44b6c46c48e1ae32171d226a3c54ae0744412d8630e31ce67c004c897fcaa"
+          "version": "repo-file-v1:sha256:786ff29363b5a5d7deb01ff6dae28a10182b14ee3e154c85012135d916e4f34c"
         }
       ]
     },
@@ -198,15 +194,15 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/core/KnobScale.h",
-          "version": "repo-file-v1:sha256:fde7bfcbb18d359666a17d264c85175cbf9b5fce311a915d7a9835a1f7a1f805"
+          "version": "repo-file-v1:sha256:b3a98f35f2c1ab8379cf3dac830cf595b528709ed8d2e8e391768467cbdadb25"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectParams.cpp",
-          "version": "repo-file-v1:sha256:9fe44b6c46c48e1ae32171d226a3c54ae0744412d8630e31ce67c004c897fcaa"
+          "version": "repo-file-v1:sha256:786ff29363b5a5d7deb01ff6dae28a10182b14ee3e154c85012135d916e4f34c"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
+          "version": "repo-file-v1:sha256:6dd612471459696ff956390304766841ec5945e56d0f5ba9ed2e76abad1d1ef3"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.h",
@@ -224,7 +220,7 @@
       "evidence": [
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.cpp",
-          "version": "repo-file-v1:sha256:800ae57b7d4683d7e27c82948046ce4fdf8cb6d21ab58e8f69366b6e1fd0c165"
+          "version": "repo-file-v1:sha256:6dd612471459696ff956390304766841ec5945e56d0f5ba9ed2e76abad1d1ef3"
         },
         {
           "resource": "repo://plugin/ui/views/gallery/EffectTile.h",
@@ -257,6 +253,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.2",
-    "at": "2026-10-21T08:40:03.735Z"
+    "at": "2026-10-22T00:04:34.217Z"
   }
 }

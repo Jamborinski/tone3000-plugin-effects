@@ -40,7 +40,7 @@ sources:
 generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T08:40:03.735Z
+    at: 2026-10-22T00:04:34.217Z
 ---
 
 # Node view: the signal-line grid
@@ -84,7 +84,7 @@ juce-end-to-end drag regression (supplement to the testbed gates).
 - **Kind table**: per-effect colour + icon + short label (delay, chorus,
   tremolo, compressor "Comp", reverb, convolution "IR", tone 235,170,80
   "Tone"). Colours are local constants (`NodeModel.cpp`), not theme tokens.
-  The palette offers the six effect kinds; tone blocks are not palette nodes.
+  The palette offers the eight effect kinds (wave + volume added 2026-10-22, commit 6813cb5; `kKindVolume` = khaki `Colour(200,200,120)` + `kFxVolume` speaker glyph, label "Vol"); tone blocks are not palette nodes.
 
 ## The view (`NodeView.h/.cpp`)
 

@@ -33,6 +33,10 @@ sources:
     resource: repo://plugin/include/effects/reverb/shared/Reverb_SharedMod.h
   - id: openwiki-source-71faa004d559bd7d9756a798
     resource: repo://plugin/include/effects/reverb/spring/Reverb_Spring.h
+  - id: openwiki-source-4eabee4987084673f651ae76
+    resource: repo://plugin/include/effects/volume/Volume.h
+  - id: openwiki-source-5723f435df85327cb6794590
+    resource: repo://plugin/include/effects/wave/Wave.h
   - id: openwiki-source-7fb62e48416333f990bd3d93
     resource: repo://plugin/ui/views/gallery/EffectTile.cpp
   - id: openwiki-source-4b8e7dce368774e92d99ea30
@@ -43,10 +47,14 @@ sources:
     resource: repo://test/src/effect_tests.cpp
   - id: openwiki-source-0368da5a39fa50284e393846
     resource: repo://test/src/plate_family_tests.cpp
+  - id: openwiki-source-00b5c75e01afdd1121a90675
+    resource: repo://test/src/volume_tests.cpp
+  - id: openwiki-source-01eb32605666555598830605
+    resource: repo://test/src/wave_tests.cpp
 generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T20:35:38.263Z
+    at: 2026-10-22T00:04:34.217Z
 ---
 
 
@@ -62,7 +70,13 @@ directory; the upstream-owned files stayed flat in `plugin/include/`):
 modes in V2 order: **Plate 0 /
 Spring 1 / Room 2 / Chamber 3 / Hall 4 / Digital 5**; `kNumModes = 6`),
 and `effects/conv/ConvolutionReverb.h` (loaded-IR playback, the house
-engine). Since the per-mode split (commit `abebb1e`), extended by the
+engine), `effects/wave/Wave.h` (440 Hz tone generator, 5 shapes,
+overwrites the input, 8 ms click-free shape crossfade), and
+`effects/volume/Volume.h` (±24 dB output gain, stored 0..1 with 0.5 = 0 dB,
+reusing `scales::gainDb`, one-pole ~5 ms gain smoothing) — the two
+single-knob-style blocks added 2026-10-22 (commit `6813cb5`), both
+following the restore-funnel law (`prepare(sampleRate)` is idempotent
+and must NOT reset engine state). Since the per-mode split (commit `abebb1e`), extended by the
 engine/wrapper split (commit `9bf4469`), the reverb `processX` bodies no
 longer live in `Reverb.h` itself: `Reverb.h` keeps the class, the `Params`
 dials, the constants, and the dispatch, and includes the per-mode-family

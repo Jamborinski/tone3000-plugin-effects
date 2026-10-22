@@ -51,14 +51,12 @@ sources:
     resource: repo://script/tile-ocr.sh
   - id: openwiki-source-4b8e7dce368774e92d99ea30
     resource: repo://test/CMakeLists.txt
-  - id: openwiki-source-a9b10161f0531edad6c09d8e
-    resource: repo://test/src/strip_knob_tests.cpp
   - id: openwiki-source-fde83b2ad879efba1865ca8d
     resource: repo://test/src/theme_palette_tests.cpp
 generated: { by: "pi", at: "2026-10-21T08:40:03.735Z" }
 verified:
   - by: openwiki/0.7.2
-    at: 2026-10-21T08:40:03.735Z
+    at: 2026-10-22T00:04:34.217Z
 ---
 
 
