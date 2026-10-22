@@ -83,7 +83,7 @@ LD_LIBRARY_PATH=<stage lib dir> ./build/test/DspTests_artefacts/Release/DspTests
   foreground tool calls start with a **minimal env**: `cmake: command not
   found`, missing stage libs. Export the two canonical lines (`PATH` +
   `LD_LIBRARY_PATH`) at the top of EVERY build/test command.
-- The suite **grows with features** (560 as of the 2026-10-20 state-size closeout; 512 was the 2026-10-17 theme/OCR/label closeout; 503 the 2026-10-16 reverb-budget pass; 487 the 2026-10-15 R2 closeout) — **never assert a
+- The suite **grows with features** (604 as of the 2026-10-21 wave/volume + crash-fix closeout d0045a7; 560 the 2026-10-20 state-size closeout; 503 the 2026-10-16 reverb-budget pass) — **never assert a
   stale total** on failure; check build RC and that the test names actually ran.
 - **gtest silent-0 trap:** a comma list like `--gtest_filter='A*,B*'` can run
   **0 tests with exit 0** (a green lie); a single `A*` works. Always confirm the

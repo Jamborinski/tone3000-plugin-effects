@@ -84,8 +84,17 @@ inline const KnobScale& percent() {
 }
 
 // Main / per-block gain: normalised 0.5 = unity, full range ±24 dB.
+// The STORAGE is the 0..1 normalised value (the display is the ±24 dB
+// window); the identity storage contract keeps knobFromStored from falling
+// back to fromDisplay (which would map any stored value to ≈0.51 — the
+// noon-snap the Volume knob hit, m08349).
 inline const KnobScale& gainDb() {
-  static const KnobScale s = linear(-24, 24, "dB", 1);
+  static const KnobScale s = [] {
+    KnobScale k = linear(-24, 24, "dB", 1);
+    k.toStored = [](double n) { return n; };
+    k.fromStored = [](double d) { return d; };
+    return k;
+  }();
   return s;
 }
 

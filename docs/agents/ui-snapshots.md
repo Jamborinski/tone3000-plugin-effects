@@ -11,15 +11,19 @@
 (AGENTS.md sub-rule — the index is the repo-root `AGENTS.md`.)
 
 ## The 60-second loop
-1. Layout/UI edits land in `build-ui` (the testbed CMake dir, NOT `build/`):
-   `timeout 250 cmake --build build-ui --target TileShot -j`
-   (buildkit PATH/LD_LIBRARY_PATH env, `DISPLAY=:0`, WSL — see
-   `linux-build-deep.md` for the env block).
-2. `TileShot --list` — 16 named tile states: `conv-full`, `conv-full-empty`,
+1. Layout/UI edits land in the `build/` tree (TileShot + UiTestbed build in
+   `build/` — see the build-tree note below):
+   `timeout 250 cmake --build build --target TileShot -j`
+   (buildkit PATH/LD_LIBRARY_PATH env — see `linux-build-deep.md` for the
+   env block; fresh-configure is broken, only the existing `build/` cache
+   works).
+2. `TileShot --list` — 20 named tile states: `conv-full`, `conv-full-empty`,
    `conv-full-long`, `conv-full-missing`, `conv-compact`, `conv-compact-mono`,
    `delay`, `delay-shift`, `chorus`, `chorus-shift`, `comp`, `comp-shift`,
-   `reverb`, `reverb-shift`, `nam`, `nam-shift` (fixture states are built in
-   code; kernel = deterministic envelope; no network, no window opened).
+   `reverb`, `reverb-shift`, `nam`, `nam-shift`, `wave`, `wave-shift`,
+   `volume`, `volume-shift` (the wave/volume pair added 2026-10-21, 6813cb5;
+   fixture states are built in code; kernel = deterministic envelope; no
+   network, no window opened).
 3. `TileShot --tile <name> --out /tmp/shot.png` → **look at the PNG** (a
    plain WSL path — the file tools open it directly).
 4. `TileShot --golden /tmp/shot.png goldens/<name>.png [--tol 24]` →
@@ -59,13 +63,21 @@ explicit UTF-8 pointer: `juce::String (juce::CharPointer_UTF8 ("text \u2014"))`.
 - **Never run GUI selftests on the live X display** — `juce::Process::makeForegroundProcess()` + `grabFocus()` steals the operator's keyboard/mouse. UI tests run under a private display: `xvfb-run -a -s "-screen 0 1280x800x24" <bin> --selftest` (`script/test-ui.sh` wraps this).
 - **`UiTestbed --help` / unknown flags fall through to the LIVE interactive window** on the user's real display — there is no `--help` flag. Any UiTestbed/TileShot invocation not deliberately aimed at a shot/selftest must run under `xvfb-run -a`; a stray live window = kill it (`pkill UiTestbed_artefacts`) and re-run isolated.
 - **`xvfb-run` + a relative binary path: not found** (its dash wrapper cd's elsewhere) — invoke by ABSOLUTE path.
-- **`build/` vs `build-ui/` are separate CMake trees:** `TONE3000_Standalone` builds in `build/`; `TileShot` + `UiTestbed` live in `build-ui/`. A stale `TileShot` silently dumps the OLD layout — rebuild after C++ edits before `--tile`.
+- **`build/` vs `build-ui/` are separate CMake trees:** `TONE3000_Standalone` builds in `build/`.
+  TileShot + UiTestbed are declared in BOTH trees, but only `build/` is current — a fresh
+  `build-ui/` configure is broken and its `*_artefacts/Release/` dirs are **empty** (verified
+  2026-10-21); the working binaries are `build/plugin/ui/testbed/TileShot_artefacts/Release/TileShot`
+  and `.../UiTestbed`. A stale `TileShot` silently dumps the OLD layout — rebuild in `build/`
+  after C++ edits before `--tile`.
 - **Tool flag ownership:** `TileShot` owns `--list/--dump/--tile/--golden/--regen`; `UiTestbed` owns `--selftest`. Passing a flag to the wrong tool just HANGS — kill and retry with the right binary.
 
 ## OCR-readable capture (ticket ui-ocr-capture-mode)
 - `TileShot`/`UiTestbed` accept `--capture --ocr`: applies `theme::ocrPalette()` (a pure-white background / pure-black text palette in `plugin/ui/core/Theme.h`) before shooting, resets it after. Chrome panels stay dark (separate paint path) — expected, out of scope.
 - `script/tile-ocr.sh` reads a tile's type-cycler chip back via Tesseract 5.5.0 (PSM 7/13/10 sweep, whitelist, TSV conf): `tile-ocr.sh comp --ocr` → `psm10: OPT`. No PaddleOCR — user ruling: Tesseract only, no heavy deps.
-- Golden recheck after any palette/touch: 8/8 theme-affected goldens must stay IDENTICAL; the conv-*/reverb drifts (797/6714/6350 px) are PRE-EXISTING (proved by stash+rebuild of the pre-ticket commit).
+- Golden recheck after any palette/touch: the shipped goldens must stay
+  IDENTICAL; the delay/comp/chorus label drifts (6638/5162/4368 px, ~2–3%) are
+  PRE-EXISTING (identical on stashed baseline HEAD, 2026-10-21 — re-approving
+  them needs a user call).
 
 ## juce-end-to-end supplement (2026-10-18, f0b06d4)
 - `UiTestbed` links the in-tree `libs/focusrite-e2e/` C++ transport; inert

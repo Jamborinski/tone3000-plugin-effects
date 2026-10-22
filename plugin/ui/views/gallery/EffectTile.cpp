@@ -290,10 +290,18 @@ EffectTile::EffectTile(Services& services, const ChainItem& block, int size)
   paramD_ = (ps.size() > 3) ? ps[3].param : juce::String();
   paramE_ = (ps.size() > 4) ? ps[4].param : juce::String();
 
-  addAndMakeVisible(mix_);
-  addAndMakeVisible(input_);
-  // 2026-10-17 PLT face v2: Dwell/In re-shown in row 2 col 1 (always visible now).
-  addAndMakeVisible(output_);
+  // Wave/Volume faces: NO Mix/In/Out trio (user m08349) — the mix plumbing
+  // stays internal (both kinds default to 100% mix). Face = paramsFor knobs
+  // only (wave: Output + Shape, volume: Volume), so the trio knobs are
+  // built and sync'd but never added.
+  const bool noTrioFace =
+      (block_.effectKind == "wave" || block_.effectKind == "volume");
+  if (!noTrioFace) {
+    addAndMakeVisible(mix_);
+    addAndMakeVisible(input_);
+    // 2026-10-17 PLT face v2: Dwell/In re-shown in row 2 col 1 (always visible now).
+    addAndMakeVisible(output_);
+  }
   for (int i = 0; i < numParams_ && i < (int)ps.size(); ++i)
     addAndMakeVisible(*knobAt(i));  // comp row 2: SC + PUNCH ride sigKnob_/modKnob_
   // Waveform strip (Phase C): full conv tiles only. Refreshed on every
@@ -1383,6 +1391,19 @@ void EffectTile::resized() {
   const bool convCompact = conv && compact_;
   const int cols = convFull ? 7
                             : ((delayFull || compFull) ? 5 : (reverbFull ? 6 : (five ? 4 : 3)));  // 2026-10-17 PLT face: 6-col even grid, rows use 6 (Mix on row 2, row 1 = 6 effect slots)
+  // Wave/Volume: trio-free faces (user m08349) — wave = Output|Shape on
+  // row 1, volume = Volume alone; nothing on row 2. Early-out before the
+  // per-kind row chains (convPlot is convFull-only, safe to skip).
+  const bool waveTile = (block_.effectKind == "wave");
+  const bool volumeTile = (block_.effectKind == "volume");
+  if (waveTile || volumeTile) {
+    const int colsW = waveTile ? 2 : 1;
+    const int colWW = (W - 8) / colsW;
+    knobA_.setBounds(4, row1Y, colWW, knobH);  // Output (wave) / Volume
+    if (waveTile)
+      knobB_.setBounds(4 + colWW, row1Y, colWW, knobH);  // Shape
+    return;
+  }
   const int colW = (W - 8) / cols;
 
   // Row 1: Mix, p0, p1, p2 [p3 on the full delay tile]. Reverb full =
@@ -1525,7 +1546,10 @@ void EffectTile::paint(juce::Graphics& g) {
                              : (compact_ && convolution ? "Conv"
                              : (delay ? "Delay" : (tremolo ? "Tremolo"
                                : (compressor ? "Compressor" : (reverb ? "Reverb"
-                               : (convolution ? "Convolver" : "Chorus")))))));
+                               : (convolution ? "Convolver"
+                                  : (block_.effectKind == "wave" ? "Wave"
+                                  : (block_.effectKind == "volume" ? "Volume"
+                                                                    : "Chorus")))))))));
   paint::text(g, title,
               juce::Rectangle<int>(titleX0, 4, W - titleX0 - (4 + chrome), chrome),
               font, theme::kMuted, juce::Justification::centred);

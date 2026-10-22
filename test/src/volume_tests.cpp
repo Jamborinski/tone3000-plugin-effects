@@ -226,11 +226,10 @@ TEST(VolumeChain, AddBlockPassesSignalThroughTheProcessor) {
     for (int i = 0; i < 512; ++i) out.push_back(buf.getReadPointer(0)[i]);
   }
   tail = std::vector<float>(out.end() - kWin, out.end());
-  // Chain law: the block sits at mix 0.5 (effect blocks spawn there), wet
-  // fraction m = mix^2 = 0.25 (the PLT v2 m^2 law): out = (1-m)*dry + m*wet,
-  // dry = the untouched input, wet = the input through -24 dB (x0.0631).
-  // 0.1768 * (0.75 + 0.25 * 0.06310) = 0.13539.
-  EXPECT_NEAR(rms(tail), 0.1768 * (0.75 + 0.25 * 0.06310), 0.01)
+  // Chain law: the block sits at mix 1.0 (m08349), wet fraction m = 1.0
+  // (the PLT v2 m^2 law): out = wet only = the input through -24 dB
+  // (x0.0631). 0.1768 * 0.06310 = 0.01116.
+  EXPECT_NEAR(rms(tail), 0.1768 * 0.06310, 0.01)
       << "-24 dB does not apply through the chain";
 }
 
@@ -310,8 +309,8 @@ TEST(VolumeChain, StateSaveRestorePreservesVolumeField) {
   // RMS law on both sides: the restore splice can briefly overshoot the
   // tone peak (edit-fade artefact), which a peak window would latch onto.
   EXPECT_NEAR(rms(ob), rms(oa), 0.01) << "restored volume energy differs";
-  // (1-m)*dry + m*wet with m=0.25, wet through -12 dB (x0.25119):
-  // 0.1768 * (0.75 + 0.25 * 0.25119) = 0.14370.
-  EXPECT_NEAR(rms(ob), 0.1768 * (0.75 + 0.25 * 0.25119), 0.01)
+  // mix 1.0 (m08349): out = wet only, through -12 dB (x0.25119):
+  // 0.1768 * 0.25119 = 0.04441.
+  EXPECT_NEAR(rms(ob), 0.1768 * 0.25119, 0.01)
       << "restored volume applied the wrong gain";
 }

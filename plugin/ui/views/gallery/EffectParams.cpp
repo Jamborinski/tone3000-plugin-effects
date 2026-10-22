@@ -101,7 +101,7 @@ std::vector<EffectParams> paramsFor(const ChainItem& b, bool compact) {
     };
   if (k == "wave")
     return {
-        {&scales::waveLevel(), "waveLevel", "Level", b.waveLevel, help::Key::waveLevel},
+        {&scales::waveLevel(), "waveLevel", "Output", b.waveLevel, help::Key::waveLevel},
         {&scales::waveShape(), "waveShape", "Shape", (double)b.waveShape,
          help::Key::waveShape},
     };

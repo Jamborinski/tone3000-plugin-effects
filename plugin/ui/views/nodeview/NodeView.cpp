@@ -1313,19 +1313,24 @@ void NodeView::rebuildStripKnobs(NodeStrip& st, const ChainItem& b) {
   if (b.isEffect) {
     // Parity law (m01128): strip face == full gallery face. The trio is
     // NOT part of paramsFor — the baseline inline loop added it first.
-    add(&scales::percent(), "mix", "Mix", b.params.mix, help::Key::effectMix);
-    if (b.effectKind == "convolution") {
-      // Dwell: the convolver's wet input gain — the shared inputGain store
-      // read on the +-18 dB window (the same law the conv tile's input_ uses;
-      // user m04334: the strip still showed a +-24 "In").
-      add(&scales::convDwell(), "inputGain", "Dwell", b.params.inputGain,
-          help::Key::reverbDwell);
-    } else {
-      add(&scales::gainDb(), "inputGain", "In", b.params.inputGain,
-          help::Key::effectInput);
+    // Wave/Volume faces carry NO trio (user m08349): the mix machinery
+    // stays internal, both kinds default to 100% mix.
+    const bool noTrio = (b.effectKind == "wave" || b.effectKind == "volume");
+    if (!noTrio) {
+      add(&scales::percent(), "mix", "Mix", b.params.mix, help::Key::effectMix);
+      if (b.effectKind == "convolution") {
+        // Dwell: the convolver's wet input gain — the shared inputGain store
+        // read on the +-18 dB window (the same law the conv tile's input_ uses;
+        // user m04334: the strip still showed a +-24 "In").
+        add(&scales::convDwell(), "inputGain", "Dwell", b.params.inputGain,
+            help::Key::reverbDwell);
+      } else {
+        add(&scales::gainDb(), "inputGain", "In", b.params.inputGain,
+            help::Key::effectInput);
+      }
+      add(&scales::gainDb(), "outputGain", "Out", b.params.outputGain,
+          help::Key::effectOutput);
     }
-    add(&scales::gainDb(), "outputGain", "Out", b.params.outputGain,
-        help::Key::effectOutput);
     auto rest = paramsFor(b, false);
     for (auto& p : rest) list.push_back(p);
   } else {
@@ -1406,16 +1411,22 @@ void NodeView::updateStripKnobValues(NodeStrip& st, const ChainItem& b) {
     if (i < vals.size()) vals[i] = sc->format(pos);
   };
   if (b.isEffect) {
-    setv(0, &scales::percent(), mix, true);
-    if (b.effectKind == "convolution")
-      setv(1, &scales::convDwell(), in, false);  // Dwell (convDwell stores identity)
-    else
-      setv(1, &scales::gainDb(), in, true);
-    setv(2, &scales::gainDb(), out, true);
+    const bool noTrio = (b.effectKind == "wave" || b.effectKind == "volume");
+    if (!noTrio) {
+      setv(0, &scales::percent(), mix, true);
+      if (b.effectKind == "convolution")
+        setv(1, &scales::convDwell(), in, false);  // Dwell (convDwell stores identity)
+      else
+        setv(1, &scales::gainDb(), in, true);
+      setv(2, &scales::gainDb(), out, true);
+    }
     auto rest = paramsFor(b, false);
     size_t i = 0;
+    // noTrio faces start at knob 0 (wave/volume carry only the paramsFor
+    // knobs); the gainDb storage contract (KnobScale.h) keeps the Volume
+    // knob from snapping to noon on resync (m08349).
     for (auto& p : rest)
-      setv(3 + i++, p.scale, p.raw, false);
+      setv((noTrio ? 0 : 3) + i++, p.scale, p.raw, false);
     if (b.effectKind == "reverb") {
       const int mode = juce::jlimit(0, Reverb::kNumModes - 1, b.reverbMode);
       for (int s = 0; s < 2; ++s) {

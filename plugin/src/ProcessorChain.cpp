@@ -377,7 +377,7 @@ std::string TONE3000Processor::addEffectBlock(EffectKind kind, const juce::Strin
   // Balanced wet by default: an effect is heard at ~half dry / half effect,
   // the same starting point a tone block's mix lands on. The compressor is
   // inline (its Mix is forced to 100% wet in the DSP), so start it at 100%.
-  block->mixNormalized = (kind == EffectKind::Compressor) ? 1.0f : 0.5f;
+  block->mixNormalized = (kind == EffectKind::Compressor || kind == EffectKind::Wave || kind == EffectKind::Volume) ? 1.0f : 0.5f;
   block->applyDefaultMixOnLoad = false;
   block->loaded = true;  // no model to load
 

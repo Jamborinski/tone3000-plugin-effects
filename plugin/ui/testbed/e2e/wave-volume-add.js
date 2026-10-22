@@ -42,19 +42,19 @@ function check(name, cond, detail) {
       return { id: r.id, labels: r.labels, state: r.state };
     };
 
-    // Wave: the strip face is Mix/In/Out + the two wave params.
+    // Wave: the strip face is just Output + Shape (no Mix/In/Out trio).
     const w = await add('wave');
     check('wave: add returned a block id', !!w.id, JSON.stringify(w));
     check('wave: strip visible after add', w.state !== 'no-strip', w.state);
-    check('wave: face = Mix,In,Out,Level,Shape',
-          w.labels === 'Mix,In,Out,Level,Shape', `labels=${w.labels}`);
+    check('wave: face = Output,Shape (no Mix/In/Out trio, m08349)',
+          w.labels === 'Output,Shape', `labels=${w.labels}`);
 
-    // Volume: the strip face is Mix/In/Out + the single volume param.
+    // Volume: the strip face is just the single Volume knob.
     const v = await add('volume');
     check('volume: add returned a block id', !!v.id, JSON.stringify(v));
     check('volume: strip visible after add', v.state !== 'no-strip', v.state);
-    check('volume: face = Mix,In,Out,Volume',
-          v.labels === 'Mix,In,Out,Volume', `labels=${v.labels}`);
+    check('volume: face = Volume (single knob, m08349)',
+          v.labels === 'Volume', `labels=${v.labels}`);
 
     // Both faces rendered, no crash: the app must still answer, and the
     // lane must now carry BOTH kinds (they inserted at index 2 — mid-lane).

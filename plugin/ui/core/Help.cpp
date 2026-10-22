@@ -259,7 +259,7 @@ std::map<Key, String> buildTable() {
   t[Key::effectWaveGen] = U("Wave setting: adjust the value for this block.");
   t[Key::effectVolume] = U("Volume setting: adjust the value for this block.");
   t[Key::volume] = knobDesktop("Volume", "Output volume, -24..+24 dB (0 dB = unity).");
-  t[Key::waveLevel] = knobDesktop("Level", "Test-tone output level: 0 silent, 100 full-scale (tone is 440 Hz).");
+  t[Key::waveLevel] = knobDesktop("Output", "Tone output level: 0 silent, 100 full-scale (tone is 440 Hz).");
   t[Key::waveShape] = knobDesktop("Shape", "Tone waveform: Sine, Triangle, Saw, Saw (Down) or Square.");
   t[Key::effectCompressor] = U("Compressor setting: adjust the value for this block.");
   t[Key::effectMix] = knobDesktop("Mix", "dry/wet blend of the effect.");

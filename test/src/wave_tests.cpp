@@ -178,9 +178,10 @@ TEST(WaveChain, AddBlockProducesToneThroughTheProcessor) {
   proc.prepareToPlay(48000, 512);
   const auto id = proc.addEffectBlock(EffectKind::Wave, "left", 0);
   ASSERT_FALSE(id.empty());
-  // Known levels: unity In/Out, full tone level, default mix 0.5.
-  // In/Out store 0..1 over -24..+24 dB: 0.5 = 0 dB (the default). The
-  // generator overwrites the silence, so the out level is level*shape*0.5mix.
+  // Known levels: unity In/Out, full tone level, default mix 1.0.
+  // In/Out store 0..1 over -24..+24 dB: 0.5 = 0 dB (the default). Wave
+  // blocks spawn at 100% mix (m08349): the generator overwrites the
+  // silence and m = mix^2 = 1.0, so the out level is level*shape.
   ASSERT_TRUE(proc.setBlockParam(id, "inputGain", 0.5));
   ASSERT_TRUE(proc.setBlockParam(id, "outputGain", 0.5));
   ASSERT_TRUE(proc.setBlockParam(id, "waveLevel", 1.0));
@@ -221,15 +222,15 @@ TEST(WaveChain, AddBlockProducesToneThroughTheProcessor) {
     for (int start = (int)v.size() - kWin; start >= 0; --start) {
       bool clean = true;
       for (int i = start; i < start + kWin; ++i)
-        if (std::abs((double)v[i]) > 0.51) { clean = false; break; }
+        if (std::abs((double)v[i]) > 1.01) { clean = false; break; }
       if (clean) return std::vector<float>(v.begin() + start, v.begin() + start + kWin);
     }
     return std::vector<float>(v.end() - kWin, v.end());  // best effort
   };
   auto tail = cleanTail(out);
-  // Level 1.0, default mix 0.5: the tone (peak 1.0) is halved by the mix,
-  // so the steady-state sine peaks at 0.25 and runs at 0.1768 RMS.
-  EXPECT_NEAR(rms(tail), 0.1768, 0.01) << "no tone through the processor";
+  // Level 1.0, default mix 1.0 (m08349): the tone (peak 1.0) passes
+  // through at full scale, so the steady-state sine runs at 0.7071 RMS.
+  EXPECT_NEAR(rms(tail), 0.7071, 0.01) << "no tone through the processor";
   EXPECT_NEAR(measuredFreqHz(tail), 440.0, 3.0);
 }
 
@@ -318,14 +319,14 @@ TEST(WaveChain, StateSaveRestorePreservesWaveFields) {
   };
   constexpr int kWin = 44032;  // ~0.918 s, 404 cycles of 440 Hz
   // Steady-state bound, not 1.0: the tone's own peak is level*shape*in*out*
-  // mix = 1.0*1.0*1.0*1.0*0.5 = 0.5, and any splice/edit-fade block can
-  // overshoot the tone (measured 0.278 on the restore path) while staying
-  // under 1.0 — a >1.0 filter would keep the glitch inside the window.
+  // mix = 1.0 (mix 1.0 default, m08349), and any splice/edit-fade block can
+  // overshoot the tone (~8% over the tone peak, measured on the restore
+  // path) — a >1.1 filter keeps that splice glitch outside the window.
   auto cleanTail = [&](const std::vector<float>& v) {
     for (int start = (int)v.size() - kWin; start >= 0; --start) {
       bool clean = true;
       for (int i = start; i < start + kWin; ++i)
-        if (std::abs((double)v[i]) > 0.265) { clean = false; break; }
+        if (std::abs((double)v[i]) > 1.1) { clean = false; break; }
       if (clean) return std::vector<float>(v.begin() + start, v.begin() + start + kWin);
     }
     return std::vector<float>(v.end() - kWin, v.end());  // best effort
@@ -334,8 +335,10 @@ TEST(WaveChain, StateSaveRestorePreservesWaveFields) {
   auto ob = cleanTail(drive(b));
   // The two engines free-run their own 440 Hz phases (no shared clock), so
   // a per-sample diff is meaningless: the LAW is amplitude + frequency.
-  // Saw down at level 1.0, unity In/Out, through mix 0.5: 0.25 peak.
-  EXPECT_NEAR(peakAbs(ob), 0.25, 0.02) << "restored wave at the wrong amplitude";
+  // Saw down at level 1.0, unity In/Out, mix 1.0 (m08349): full-scale saw
+  // — 1.0 peak, 1/sqrt(3) RMS.
+  EXPECT_NEAR(peakAbs(ob), 1.0, 0.02) << "restored wave at the wrong amplitude";
+  EXPECT_NEAR(rms(ob), 0.5774, 0.02) << "restored wave at the wrong level";
   EXPECT_NEAR(rms(ob), rms(oa), 0.02) << "restored wave energy differs";
   EXPECT_NEAR(measuredFreqHz(ob), 440.0, 3.0) << "restored wave at the wrong frequency";
   EXPECT_NEAR(measuredFreqHz(ob), measuredFreqHz(oa), 2.5)

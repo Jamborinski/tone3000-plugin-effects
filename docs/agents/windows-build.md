@@ -54,17 +54,22 @@ gitignored — keys/paths in `.env.example`) →
 Older descriptive folders in Downloads are historical A/B references — do not
 touch them. Naming is **run-timestamp only** (user preference).
 
-- **`T3K_STAGE_DIR` gotcha (set it in your local `.env`):** the script's default
+- **`T3K_STAGE_DIR` gotcha (pin it in your local `.env`):** the script's default
   `ls -d /mnt/c/Users/*/Downloads | head -1` glob picks the FIRST alphabetical
   user dir, which on this box is `/mnt/c/Users/Default User/Downloads` (a
   broken/empty stub) — NOT `jambo`. Set
   `T3K_STAGE_DIR=/mnt/c/Users/jambo/Downloads` in your local `.env`
   (template line in `.env.example`) so every Stage A closeout lands in the
-  real Downloads. Symptom if unset: the staging "succeeds" into the wrong user
-  folder and the exe is missing from `C:\Users\jambo\Downloads`.
-  (Fired 2026-10-20: `.env` had no key → the closeout exe landed nowhere;
-  re-ran with the env override, recorded `TONE3000-win-20261018-163045`.
-  A lasting fix would be to make the script exclude `Default User` from the glob.)
+  real Downloads. Symptom if unset: `mkdir: Permission denied` / the staging
+  "succeeds" into the wrong user folder and the exe is missing from
+  `C:\Users\jambo\Downloads`. (Fired 2026-10-20: `.env` had no key → the
+  closeout exe landed nowhere; re-ran with the env override, recorded
+  `TONE3000-win-20261018-163045`. Fired AGAIN 2026-10-21 (m07658 closeout —
+  `.env` still had no key) → ran with inline
+  `T3K_STAGE_DIR=/mnt/c/Users/jambo/Downloads bash script/win-standalone.sh`,
+  recorded `TONE3000-win-20261021-212840`.) **Verify the key before every
+  stage:** `grep T3K_STAGE_DIR .env` — if absent, add it. A lasting fix would
+  be to make the script exclude `Default User` from the glob.
 
 ## Authenticode signing (optional, `T3K_SIGN=1` in `.env`)
 Certs/keys live OUTSIDE the repo (`$T3K_SIGNING_DIR`, default `$HOME/signing`;
