@@ -64,4 +64,46 @@ inline const char* audioIconFor(const ChainBlock& block) {
   return audioIconFor(block.effectKind, block.delayMode, block.compMode, block.reverbMode);
 }
 
+// Node-view (low-detail) variant of the same lookup: the *Node bodies from
+// AudioIcons.h for the ~30px strip cells. Same mode maps as audioIconFor.
+inline const char* audioNodeIconFor(EffectKind kind, int delayMode, int compMode,
+                                    int reverbMode) {
+  if (kind == EffectKind::Delay) {
+    if (delayMode == 1) return audio_icons::kAnalogDelayNode;
+    if (delayMode == 2) return audio_icons::kBbdNode;
+    if (delayMode == 3) return audio_icons::kModDelayNode;
+    if (delayMode == 4 || delayMode == 5) return audio_icons::kMagEchoNode;
+    return audio_icons::kDigitalDelayNode;
+  }
+  if (kind == EffectKind::Compressor) {
+    if (compMode == 1) return audio_icons::kTubeCompressorNode;
+    if (compMode == 2) return audio_icons::kOptoCompressorNode;
+    if (compMode == 3) return audio_icons::kFetCompressorNode;
+    if (compMode == 4) return audio_icons::kVariMuCompressorNode;
+    return audio_icons::kVcaCompressorNode;
+  }
+  if (kind == EffectKind::Reverb) {
+    if (reverbMode == 1) return audio_icons::kSpringReverbNode;
+    if (reverbMode == 2) return audio_icons::kRoomReverbNode;
+    if (reverbMode == 3) return audio_icons::kChamberReverbNode;
+    if (reverbMode == 4) return audio_icons::kHallReverbNode;
+    if (reverbMode == 5) return audio_icons::kDigitalReverbNode;
+    return audio_icons::kPlateReverbNode;
+  }
+  if (kind == EffectKind::Chorus) return audio_icons::kChorusNode;
+  if (kind == EffectKind::Tremolo) return audio_icons::kTremoloNode;
+  if (kind == EffectKind::Convolution) return audio_icons::kConvolutionNode;
+  if (kind == EffectKind::Volume) return audio_icons::kVolumeNode;
+  return nullptr;
+}
+
+inline const char* audioNodeIconFor(const juce::String& effectKind, int delayMode,
+                                    int compMode, int reverbMode) {
+  return audioNodeIconFor(effectKindFromString(effectKind), delayMode, compMode, reverbMode);
+}
+
+inline const char* audioNodeIconFor(const ChainBlock& block) {
+  return audioNodeIconFor(block.effectKind, block.delayMode, block.compMode, block.reverbMode);
+}
+
 }  // namespace t3k::ui

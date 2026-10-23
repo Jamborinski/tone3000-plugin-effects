@@ -10,10 +10,16 @@ import re
 from pathlib import Path
 
 HERE = Path(__file__).parent
+NODE = HERE / "node"
 OUT = HERE.parent.parent / "plugin" / "ui" / "core" / "AudioIcons.h"
 
 # name -> (c++ identifier suffix, category tag)
 ICONS = sorted(p.stem for p in HERE.glob("*.svg"))
+# node variants: same names, low-detail bodies (research/icons/make_node_icons.py).
+NODES = sorted(p.stem for p in NODE.glob("*.svg"))
+assert ICONS == NODES, "node set must be a 1:1 name map of the library set.\n" + \
+    "only-in-lib: %s\nonly-in-node: %s" % (
+        sorted(set(ICONS) - set(NODES)), sorted(set(NODES) - set(ICONS)))
 
 def ident(name: str) -> str:
     # 90-phaser -> Ph90 ; an-amp -> AmpAn ; everything else CamelCase
@@ -42,16 +48,33 @@ for name in ICONS:
     lines.append(f"inline constexpr const char* k{ident(name)} =")
     lines.append(f"    R\"svg({svg})svg\";")
     lines.append("")
-lines.append("struct Entry { const char* name; const char* svg; };")
+
+lines.append("// ---- node-view variants (low detail, 1:1 by name) ----------------------")
+lines.append("// Simplified bodies for the ~30px strip cells; the library set above is the")
+lines.append("// full-detail artwork for large renders. Generated from research/icons/node/.")
+for name in ICONS:
+    svg = (NODE / f"{name}.svg").read_text().strip()
+    assert "\n" not in svg, f"node {name} is not single-line"
+    lines.append(f"inline constexpr const char* k{ident(name)}Node =")
+    lines.append(f"    R\"svg({svg})svg\";")
+    lines.append("")
+
+lines.append("struct Entry { const char* name; const char* svg; const char* svgNode; };")
 lines.append("")
 lines.append("inline constexpr Entry kTable[] = {")
 for name in ICONS:
-    lines.append(f"    {{\"{name}\", k{ident(name)}}},")
+    lines.append(f"    {{\"{name}\", k{ident(name)}, k{ident(name)}Node}},")
 lines.append("};")
 lines.append("")
 lines.append("// Lookup by table name (e.g. \"tape-delay\", \"bm_fuzz\"). nullptr when absent.")
 lines.append("inline const char* byName(const char* name) {")
 lines.append("  for (const auto& e : kTable) if (name == e.name) return e.svg;")
+lines.append("  return nullptr;")
+lines.append("}")
+lines.append("")
+lines.append("// The low-detail node-view body for the same name (nullptr when absent).")
+lines.append("inline const char* byNode(const char* name) {")
+lines.append("  for (const auto& e : kTable) if (name == e.name) return e.svgNode;")
 lines.append("  return nullptr;")
 lines.append("}")
 lines.append("")

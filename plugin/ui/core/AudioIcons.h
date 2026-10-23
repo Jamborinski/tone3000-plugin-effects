@@ -292,107 +292,395 @@ inline constexpr const char* kWah =
 inline constexpr const char* kWave =
     R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 13 7 5.5 12 18.5 17 5.5 21.5 13"/></svg>)svg";
 
-struct Entry { const char* name; const char* svg; };
+// ---- node-view variants (low detail, 1:1 by name) ----------------------
+// Simplified bodies for the ~30px strip cells; the library set above is the
+// full-detail artwork for large renders. Generated from research/icons/node/.
+inline constexpr const char* k90PhaserNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="2.8" width="13" height="18.4" rx="2"/><circle cx="12" cy="7.6" r="2.6" fill="#ffffff" stroke="none"/><rect x="8.4" y="11.4" width="7.2" height="3" rx="0.9"/><circle cx="12" cy="17.6" r="1.2" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kAmpNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.4" y="4.6" width="19.2" height="14.8" rx="2"/><circle cx="8" cy="9.4" r="1.4" fill="#ffffff" stroke="none"/><circle cx="12" cy="9.4" r="1.4" fill="#ffffff" stroke="none"/><circle cx="16" cy="9.4" r="1.4" fill="#ffffff" stroke="none"/><rect x="4.9" y="12.8" width="14.2" height="4.2"/></svg>)svg";
+
+inline constexpr const char* kAnAmpNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="5.4" width="20.8" height="13.2" rx="1.6"/><circle cx="5.4" cy="9.2" r="1.05" fill="#ffffff" stroke="none"/><circle cx="9.8" cy="9.2" r="1.05" fill="#ffffff" stroke="none"/><circle cx="14.2" cy="9.2" r="1.05" fill="#ffffff" stroke="none"/><circle cx="18.6" cy="9.2" r="1.05" fill="#ffffff" stroke="none"/><rect x="4" y="11.6" width="16" height="4.8"/></svg>)svg";
+
+inline constexpr const char* kAnalogChorusNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="2.8" width="13" height="18.4" rx="2"/><circle cx="9.4" cy="8" r="1.9" fill="#ffffff" stroke="none"/><circle cx="14.6" cy="8" r="1.9" fill="#ffffff" stroke="none"/><circle cx="12" cy="17.6" r="1.6" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kAnalogDelayNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="2.8" width="13" height="18.4" rx="2"/><circle cx="9.6" cy="6.2" r="1.3" fill="#ffffff" stroke="none"/><circle cx="14.4" cy="6.2" r="1.3" fill="#ffffff" stroke="none"/><rect x="10" y="9.2" width="4" height="3"/><circle cx="12" cy="17" r="1.8" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kAnalogTremoloNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="2.8" width="13" height="18.4" rx="2"/><circle cx="9.8" cy="7.4" r="1.6" fill="#ffffff" stroke="none"/><circle cx="14.2" cy="7.4" r="1.6" fill="#ffffff" stroke="none"/><rect x="8.3" y="14.6" width="7.4" height="4" rx="1" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kAutowahNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3.5" width="16" height="17" rx="2"/><circle cx="8" cy="7.5" r="1.6" fill="#ffffff" stroke="none"/><circle cx="12" cy="7.5" r="1.6" fill="#ffffff" stroke="none"/><circle cx="16" cy="7.5" r="1.6" fill="#ffffff" stroke="none"/><circle cx="9.5" cy="14.2" r="1.6" fill="#ffffff" stroke="none"/><circle cx="14.5" cy="14.2" r="1.6" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kBb_overdriveNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1.6" fill="#ffffff" stroke="none"/><rect x="4.6" y="4.6" width="14.8" height="14.8" fill="none" stroke="#1c1d22" stroke-width="1.2" stroke-linejoin="miter"/><rect x="6.2" y="6.2" width="11.6" height="3.6" fill="#1c1d22" stroke="none" stroke-linejoin="miter"/><circle cx="8.8" cy="8" r="1.05" fill="#ffffff" stroke="none"/><circle cx="12" cy="8" r="1.05" fill="#ffffff" stroke="none"/><circle cx="15.2" cy="8" r="1.05" fill="#ffffff" stroke="none"/><circle cx="12" cy="16.4" r="1.5" fill="#1c1d22" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kBbdNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><circle cx="10.8" cy="16.8" r="1.9" fill="#ffffff" stroke="none"/><circle cx="12.9" cy="8.4" r="1.2" fill="#ffffff" stroke="none"/><circle cx="16.9" cy="8.4" r="1.2" fill="#ffffff" stroke="none"/><circle cx="16.9" cy="12" r="1.2" fill="#ffffff" stroke="none"/><circle cx="16.9" cy="15.6" r="1.2" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kBd_overdriveNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2.2" width="14" height="19.6" rx="1.8" fill="#ffffff" stroke="none"/><rect x="6.4" y="3.6" width="11.2" height="16.8" fill="none" stroke="#1c1d22" stroke-width="1.2" stroke-linejoin="miter"/><circle cx="9" cy="6.2" r="1.45" fill="#1c1d22" stroke="none"/><circle cx="15" cy="6.2" r="1.45" fill="#1c1d22" stroke="none"/><circle cx="12" cy="9.6" r="1.2" fill="#1c1d22" stroke="none"/><rect x="7.8" y="12.4" width="8.4" height="6" rx="0.6" fill="#1c1d22" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kBiasTremoloNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><circle cx="7.2" cy="9.2" r="1.4" fill="#ffffff" stroke="none"/><circle cx="12" cy="9.2" r="1.4" fill="#ffffff" stroke="none"/><circle cx="16.8" cy="9.2" r="1.4" fill="#ffffff" stroke="none"/><circle cx="12" cy="15.6" r="1.4" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kBm_fuzzNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2.2" width="14" height="19.6" rx="1.8" fill="#ffffff" stroke="none"/><rect x="6" y="3.4" width="12" height="17.2" fill="none" stroke="#1c1d22" stroke-width="1.2"/><rect x="7.6" y="4.8" width="8.8" height="4.8" stroke-linejoin="miter"/><circle cx="9.6" cy="7.2" r="1.4" fill="#1c1d22" stroke="none"/><circle cx="12" cy="7.2" r="1.4" fill="#1c1d22" stroke="none"/><circle cx="14.4" cy="7.2" r="1.4" fill="#1c1d22" stroke="none"/><path d="M7.4 13.4H10.2Q12 16.4 13.8 13.4H16.6V18.6a1 1 0 0 1-1 1H8.4a1 1 0 0 1-1-1Z" fill="#1c1d22" stroke="none"/><circle cx="12" cy="16.7" r="1.3" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kCabinetNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="5.6" y="5.6" width="12.8" height="12.8"/><circle cx="12" cy="12" r="4.4" stroke-width="2.4"/><circle cx="12" cy="12" r="1.5"/></svg>)svg";
+
+inline constexpr const char* kCeChorusNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="5.8" y="7.2" width="12.4" height="4.8"/><circle cx="9.5" cy="9.6" r="1.2" fill="#ffffff" stroke="none"/><circle cx="14.5" cy="9.6" r="1.2" fill="#ffffff" stroke="none"/><circle cx="8.4" cy="15.6" r="1.5" fill="#ffffff" stroke="none"/><circle cx="15.6" cy="15.6" r="1.5" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kChamberReverbNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7.5h15V21h-15z"/><path d="M4.5 7.5 8 3.5h8l3.5 4"/><path d="M12 21v-6.5" stroke-width="1.6"/></svg>)svg";
+
+inline constexpr const char* kChorusNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13.5c2.2-6.5 7-9.6 12.5-8.4-5.2 1.8-7.6 5.2-8.2 8.4z" fill="#ffffff" stroke="none"/><path d="M4 19c7-4.4 13.6-4.2 17.8-1-4.1-1.5-8.1-.8-10.7 1.4C9 20.6 6.6 21 4 19z" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kComboNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.4" y="4" width="19.2" height="16" rx="2"/><circle cx="7.2" cy="8" r="1.4" fill="#ffffff" stroke="none"/><circle cx="12" cy="8" r="1.4" fill="#ffffff" stroke="none"/><circle cx="16.8" cy="8" r="1.4" fill="#ffffff" stroke="none"/><rect x="4.9" y="11.2" width="14.2" height="6"/><circle cx="12" cy="14.2" r="1.6"/></svg>)svg";
+
+inline constexpr const char* kCompressorNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.2 16.5a6.8 6.8 0 0 1 13.6 0"/><path d="M12 9.1v1.9"/><path d="M12 16.5 15.2 11.5"/><circle cx="12" cy="16.5" r="1.3" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kConvolutionNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.2 20.5 7.1v9.8L12 21.8 3.5 16.9V7.1z"/><path d="M12 7 16.4 9.7v4.6L12 17l-4.4-2.7V9.7z" stroke-width="1.6"/><path d="M12 10.1 14.2 11.4 12 12.7 9.8 11.4z" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kDelayNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 5a8.75 8.75 0 0 0 0 14"/><path d="M11 7a6.25 6.25 0 0 0 0 10"/><path d="M14.5 8.8a4 4 0 0 0 0 6.4"/><path d="M18 10.4a2 2 0 0 0 0 3.2"/></svg>)svg";
+
+inline constexpr const char* kDigChorusNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="2.8" width="13" height="18.4" rx="2"/><circle cx="9.3" cy="6.2" r="1.2" fill="#ffffff" stroke="none"/><circle cx="14.7" cy="6.2" r="1.2" fill="#ffffff" stroke="none"/><path d="M8.2 12.6c.8-.8 1.6-.8 2.4 0s1.6.8 2.4 0 1.6-.8 2.4 0" stroke-width="1.6"/><circle cx="12" cy="18.2" r="1.4" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kDigitalDelayNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="2.8" width="13" height="18.4" rx="2"/><circle cx="9.4" cy="6.4" r="1.5" fill="#ffffff" stroke="none"/><circle cx="14.6" cy="6.4" r="1.5" fill="#ffffff" stroke="none"/><rect x="8.4" y="10.6" width="7.2" height="5.6" rx="1" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kDigitalReverbNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a0.6 0.6 0 0 1 1.2 0 1.8 1.8 0 0 1-3.6 0 3 3 0 0 1 6 0 4.5 4.5 0 0 1-9 0 6 6 0 0 1 12 0 7.5 7.5 0 0 1-15 0"/></svg>)svg";
+
+inline constexpr const char* kDigitalTremoloNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="2.8" width="13" height="18.4" rx="2"/><circle cx="9.7" cy="7.9" r="1.45" fill="#ffffff" stroke="none"/><circle cx="14.3" cy="7.9" r="1.45" fill="#ffffff" stroke="none"/><path d="M8.8 12.6c.7-.7 1.4-.7 2.1 0s1.4.7 2.1 0 1.4-.7 2.1 0" stroke-width="1.4"/><circle cx="12" cy="18" r="1.5" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kDimChorusNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="2.8" width="13" height="18.4" rx="2" fill="#ffffff" stroke="none"/><rect x="6.9" y="4.2" width="10.2" height="15.6" fill="none" stroke="#1c1d22" stroke-width="1.2" stroke-linejoin="miter"/><rect x="8" y="5.2" width="8" height="5.6" rx="0.8" fill="#ffffff" stroke="none"/><rect x="9.7" y="6.3" width="1.7" height="3.4" rx="0.4" fill="#1c1d22" stroke="none"/><rect x="12.6" y="6.3" width="1.7" height="3.4" rx="0.4" fill="#1c1d22" stroke="none"/><rect x="8.6" y="14.2" width="6.8" height="4.2" rx="0.6" fill="#ffffff" stroke="#1c1d22" stroke-width="1.2"/></svg>)svg";
+
+inline constexpr const char* kDistortionNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2.6" width="14" height="18.8" rx="2.4"/><circle cx="9.7" cy="7.4" r="1.5" fill="#ffffff" stroke="none"/><circle cx="14.3" cy="7.4" r="1.5" fill="#ffffff" stroke="none"/><circle cx="12" cy="11.6" r="1.5" fill="#ffffff" stroke="none"/><circle cx="12" cy="18.2" r="2.4" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kDmbAmpNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="5.4" width="20.8" height="13.2" rx="1.6"/><circle cx="5.4" cy="9" r="1.05" fill="#ffffff" stroke="none"/><circle cx="9.8" cy="9" r="1.05" fill="#ffffff" stroke="none"/><circle cx="14.2" cy="9" r="1.05" fill="#ffffff" stroke="none"/><circle cx="18.6" cy="9" r="1.05" fill="#ffffff" stroke="none"/><rect x="4" y="11.4" width="16" height="4.8"/></svg>)svg";
+
+inline constexpr const char* kDs_distortionNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.8" y="2.2" width="12.4" height="19.6" rx="1.6"/><circle cx="9.4" cy="6" r="1.55" fill="#ffffff" stroke="none"/><circle cx="14.6" cy="6" r="1.55" fill="#ffffff" stroke="none"/><circle cx="12" cy="8.6" r="1.55" fill="#ffffff" stroke="none"/><rect x="7.6" y="13.2" width="8.8" height="6.4" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kEpDelayNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M4.5 13 6.5 5.5h11L19.5 13z"/><circle cx="12" cy="9" r="2"/><path d="M4.5 13h15"/><circle cx="8" cy="16.2" r="1" fill="#ffffff" stroke="none"/><circle cx="12" cy="16.2" r="1" fill="#ffffff" stroke="none"/><circle cx="16" cy="16.2" r="1" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kEqNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 6.5v11M12 6.5v11M17 6.5v11"/><circle cx="7" cy="13.5" r="1.55" fill="#ffffff" stroke="none"/><circle cx="12" cy="9" r="1.55" fill="#ffffff" stroke="none"/><circle cx="17" cy="14.5" r="1.55" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kExperimentalNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.8 3h4.4"/><path d="M10 3v4.8L4.4 17.4A2 2 0 0 0 6.2 20.4h11.6a2 2 0 0 0 1.8-3L14 7.8V3"/><path d="M6.6 14h10.8" stroke-width="1.6"/><circle cx="12" cy="17" r="1" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kFetCompressorNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="5.4" width="20.8" height="13.2" rx="1.6"/><circle cx="5.6" cy="12" r="2" fill="#ffffff" stroke="none"/><circle cx="10.4" cy="12" r="2" fill="#ffffff" stroke="none"/><rect x="14.6" y="9" width="4.4" height="6" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kFf_fuzzNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.4"/><path d="M5.4 6.2A9.4 9.4 0 0 1 18.6 6.2" fill="#ffffff" stroke="none"/><circle cx="7.6" cy="9.4" r="1.5" fill="#ffffff" stroke="none"/><circle cx="16.4" cy="9.4" r="1.5" fill="#ffffff" stroke="none"/><path d="M9.2 18.6 12 11.8l2.8 6.8H9.2Z" fill="#ffffff" stroke="none"/><circle cx="12" cy="15.6" r="0.8" fill="#1c1d22" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kFlangerNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a1.5 1.5 0 0 1 3 0 3 3 0 0 1-6 0 4.5 4.5 0 0 1 9 0 6 6 0 0 1-12 0 7.5 7.5 0 0 1 15 0"/></svg>)svg";
+
+inline constexpr const char* kFmanAmpNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="5.4" width="20.8" height="13.2" rx="1.6"/><rect x="4.4" y="7.6" width="5" height="3.6"/><path fill="#ffffff" stroke="none" fill-rule="evenodd" d="M8 12.6H19A1 1 0 0 1 20 13.6V16.4A1 1 0 0 1 19 17.4H8A1 1 0 0 1 7 16.4V13.6A1 1 0 0 1 8 12.6Z M10 15a0.95 0.95 0 1 0 1.9 0a0.95 0.95 0 1 0-1.9 0Z M13 15a0.95 0.95 0 1 0 1.9 0a0.95 0.95 0 1 0-1.9 0Z M16 15a0.95 0.95 0 1 0 1.9 0a0.95 0.95 0 1 0-1.9 0Z"/></svg>)svg";
+
+inline constexpr const char* kFuzzNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2.8h11L19 21.2H5z"/><circle cx="10.3" cy="7" r="1.2" fill="#ffffff" stroke="none"/><circle cx="13.7" cy="7" r="1.2" fill="#ffffff" stroke="none"/><circle cx="12" cy="10.6" r="1.2" fill="#ffffff" stroke="none"/><circle cx="12" cy="17.4" r="2" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kFz_fuzzNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.2" y="2.2" width="13.6" height="19.6" rx="1.6"/><rect x="6.8" y="3.8" width="10.4" height="16.4" fill="#ffffff" stroke="none"/><circle cx="9.4" cy="7.6" r="1.3" fill="#1c1d22" stroke="none"/><circle cx="14.6" cy="7.6" r="1.3" fill="#1c1d22" stroke="none"/><circle cx="12" cy="10.4" r="1.3" fill="#1c1d22" stroke="none"/><rect x="8" y="13" width="8" height="6" fill="#1c1d22" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kGateNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5h17"/><path d="M7.5 20.5V4.5"/><path d="M7.5 6.5 18 11"/></svg>)svg";
+
+inline constexpr const char* kGraphBypassNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 12h18.8"/><path d="M18 8.4 21.4 12 18 15.6"/></svg>)svg";
+
+inline constexpr const char* kGraphInNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 12h9.4"/><circle cx="17.4" cy="12" r="3"/></svg>)svg";
+
+inline constexpr const char* kGraphMergeNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 7.5h5.2c1.8 0 2.8 0 4.3 1.5s2.7 3 4.9 3h4.4"/><path d="M2.6 16.5h5.2c2.2 0 3.4 0 4.9-1.5s2.5-3 4.3-3h4.4"/><circle cx="19.6" cy="12" r="1.3" fill="#ffffff" stroke="none"/><circle cx="4.6" cy="7.5" r="1.3" fill="#ffffff" stroke="none"/><circle cx="4.6" cy="16.5" r="1.3" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kGraphOutNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.6" cy="12" r="3"/><path d="M9.6 12h11.8"/></svg>)svg";
+
+inline constexpr const char* kGraphSplitNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 12h4.4c2.2 0 3.4 0 4.9 1.5s2.5 3 4.3 3h5.2"/><path d="M7 12c2.2 0 3.4 0 4.9-1.5S14.4 7.5 16.2 7.5h5.2"/><circle cx="19.4" cy="7.5" r="1.3" fill="#ffffff" stroke="none"/><circle cx="19.4" cy="16.5" r="1.3" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kHallReverbNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 21.2v-9.4a7.5 7.5 0 0 1 15 0v9.4"/><path d="M12 21.2v-9.6"/><path d="M2.8 21.2h18.4"/></svg>)svg";
+
+inline constexpr const char* kHarmonicTremoloNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="2.8" width="13" height="18.4" rx="2"/><circle cx="9.7" cy="7.9" r="1.5" fill="#ffffff" stroke="none"/><circle cx="14.3" cy="7.9" r="1.5" fill="#ffffff" stroke="none"/><circle cx="12" cy="12.6" r="1.5" fill="#ffffff" stroke="none"/><circle cx="12" cy="18" r="1.5" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kIrSpeakerNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.9"/><path d="M9 3.6a9 9 0 0 1 6 0" stroke-width="1.8"/><path d="M9 20.4a9 9 0 0 0 6 0" stroke-width="1.8"/><path d="M3.6 9a9 9 0 0 0 0 6" stroke-width="1.8"/><path d="M20.4 9a9 9 0 0 1 0 6" stroke-width="1.8"/></svg>)svg";
+
+inline constexpr const char* kK_overdriveNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.2" y="3.5" width="19.6" height="17" rx="2" fill="#ffffff" stroke="none"/><rect x="3.6" y="4.9" width="16.8" height="14.2" fill="none" stroke="#1c1d22" stroke-width="1.2" stroke-linejoin="miter"/><circle cx="6.8" cy="8.2" r="1.55" fill="#1c1d22" stroke="none"/><circle cx="12" cy="8.2" r="1.55" fill="#1c1d22" stroke="none"/><circle cx="17.2" cy="8.2" r="1.55" fill="#1c1d22" stroke="none"/><circle cx="12" cy="16.2" r="1.4" fill="#1c1d22" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kLead8AmpNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="5.4" width="20.8" height="13.2" rx="1.6"/><path fill="#ffffff" stroke="none" fill-rule="evenodd" d="M4.2 13.2H19.8A1 1 0 0 1 20.8 14.2V16.4A1 1 0 0 1 19.8 17.4H4.2A1 1 0 0 1 3.2 16.4V14.2A1 1 0 0 1 4.2 13.2Z M6.75 15.3a1.15 1.15 0 1 0 2.3 0a1.15 1.15 0 1 0-2.3 0Z M10.85 15.3a1.15 1.15 0 1 0 2.3 0a1.15 1.15 0 1 0-2.3 0Z M14.95 15.3a1.15 1.15 0 1 0 2.3 0a1.15 1.15 0 1 0-2.3 0Z"/></svg>)svg";
+
+inline constexpr const char* kLooperNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.6 7.4A7 7 0 1 0 19 12"/><circle cx="17.8" cy="7.2" r="2" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kMagEchoNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="12" r="3.2"/><circle cx="7" cy="7" r="1.2" fill="#ffffff" stroke="none"/><circle cx="17" cy="7" r="1.2" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kModDelayNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="2.8" width="13" height="18.4" rx="2"/><circle cx="8.8" cy="6.2" r="1.9" fill="#ffffff" stroke="none"/><circle cx="15.2" cy="6.2" r="1.9" fill="#ffffff" stroke="none"/><circle cx="12" cy="16.8" r="2" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kMtchAmpNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="5.4" width="20.8" height="13.2" rx="1.6"/><circle cx="7.5" cy="8.5" r="0.95" fill="#ffffff" stroke="none"/><circle cx="12" cy="8.5" r="0.95" fill="#ffffff" stroke="none"/><circle cx="16.5" cy="8.5" r="0.95" fill="#ffffff" stroke="none"/><rect x="5.4" y="10.8" width="13.2" height="4.6"/></svg>)svg";
+
+inline constexpr const char* kNash_overdriveNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2.2" width="14" height="19.6" rx="1.8" fill="#ffffff" stroke="none"/><rect x="6.4" y="3.6" width="11.2" height="16.8" fill="none" stroke="#1c1d22" stroke-width="1.2" stroke-linejoin="miter"/><circle cx="9.2" cy="6.8" r="1.45" fill="#1c1d22" stroke="none"/><circle cx="12" cy="6.8" r="1.45" fill="#1c1d22" stroke="none"/><circle cx="14.8" cy="6.8" r="1.45" fill="#1c1d22" stroke="none"/><rect x="7.8" y="10.6" width="8.4" height="1.8" fill="#1c1d22" stroke="none"/><rect x="7.8" y="14" width="8.4" height="5" rx="0.6" fill="#1c1d22" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kOc_distortionNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.8" y="2.2" width="12.4" height="19.6" rx="1.6"/><circle cx="9.4" cy="6" r="1.55" fill="#ffffff" stroke="none"/><circle cx="14.6" cy="6" r="1.55" fill="#ffffff" stroke="none"/><circle cx="12" cy="8.6" r="1.55" fill="#ffffff" stroke="none"/><circle cx="12" cy="16.4" r="1.3" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kOctave_fuzzNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.2" y="4" width="19.6" height="16" rx="1.6"/><rect x="4.8" y="6.4" width="14.4" height="4" rx="0.6"/><circle cx="8.5" cy="15" r="1.3" fill="#ffffff" stroke="none"/><circle cx="12" cy="15" r="1.3" fill="#ffffff" stroke="none"/><circle cx="15.5" cy="15" r="1.3" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kOptoCompressorNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="5.4" width="20.8" height="13.2" rx="1.6"/><circle cx="5.4" cy="12" r="1.6" fill="#ffffff" stroke="none"/><rect x="9" y="9.2" width="6" height="5.6"/><circle cx="18.6" cy="12" r="1.6" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kOptoTremoloNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="2.8" width="13" height="18.4" rx="2"/><circle cx="9.7" cy="7.9" r="1.5" fill="#ffffff" stroke="none"/><circle cx="14.3" cy="7.9" r="1.5" fill="#ffffff" stroke="none"/><circle cx="9.7" cy="12.6" r="1.5" fill="#ffffff" stroke="none"/><circle cx="14.3" cy="12.6" r="1.5" fill="#ffffff" stroke="none"/><circle cx="12" cy="18" r="1.5" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kOutboardNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.4" y="6.4" width="19.2" height="11.2" rx="2"/><rect x="4.9" y="8.9" width="14.2" height="6.2"/><circle cx="8.6" cy="10.9" r="1.2" fill="#ffffff" stroke="none"/><circle cx="12" cy="10.9" r="1.2" fill="#ffffff" stroke="none"/><circle cx="15.4" cy="10.9" r="1.2" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kOverdriveNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2.6" width="14" height="18.8" rx="2.4"/><circle cx="9.7" cy="7.2" r="1.5" fill="#ffffff" stroke="none"/><circle cx="14.3" cy="7.2" r="1.5" fill="#ffffff" stroke="none"/><circle cx="12" cy="11.2" r="1.5" fill="#ffffff" stroke="none"/><circle cx="12" cy="18" r="2" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kPanNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="m6 8-3 4 3 4"/><path d="m18 8 3 4-3 4"/><path d="M9.5 9v6M14.5 9v6"/></svg>)svg";
+
+inline constexpr const char* kPedalNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h10a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5Z"/><circle cx="12" cy="9" r="2.6" fill="#ffffff" stroke="none"/><path d="M8.5 17.5h7"/></svg>)svg";
+
+inline constexpr const char* kPedalCompressorNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="2.8" width="13" height="18.4" rx="2"/><circle cx="8.6" cy="6.4" r="1.9" fill="#ffffff" stroke="none"/><circle cx="15.4" cy="6.4" r="1.9" fill="#ffffff" stroke="none"/><circle cx="8.6" cy="10.8" r="1.9" fill="#ffffff" stroke="none"/><circle cx="15.4" cy="10.8" r="1.9" fill="#ffffff" stroke="none"/><circle cx="12" cy="16.8" r="2.3" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kPhaserNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12 5 7l2.5 8 2.5-6 2.5 4 2.5-5 2.5 4h4.5"/></svg>)svg";
+
+inline constexpr const char* kPitchNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9c1.5-3 3-3 4.5 0s3 3 4.5 0 3-3 4.5 0 3 3 4.5 0"/><path d="M12 13.5v7"/><path d="m8.5 17 3.5-3.5L15.5 17"/></svg>)svg";
+
+inline constexpr const char* kPlateReverbNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="4" width="18.4" height="16" rx="2"/><rect x="5.6" y="6.4" width="12.8" height="11.2"/><rect x="7.9" y="8.2" width="2" height="7.6" fill="#ffffff" stroke="none"/><rect x="11" y="8.2" width="2" height="7.6" fill="#ffffff" stroke="none"/><rect x="14.1" y="8.2" width="2" height="7.6" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kPlxAmpNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="5.4" width="20.8" height="13.2" rx="1.6"/><path fill="#ffffff" stroke="none" fill-rule="evenodd" d="M4.6 12.4H19.4A1 1 0 0 1 20.4 13.4V16.4A1 1 0 0 1 19.4 17.4H4.6A1 1 0 0 1 3.6 16.4V13.4A1 1 0 0 1 4.6 12.4Z M7.6 14.9a0.95 0.95 0 1 0 1.9 0a0.95 0.95 0 1 0-1.9 0Z M11.05 14.9a0.95 0.95 0 1 0 1.9 0a0.95 0.95 0 1 0-1.9 0Z M14.5 14.9a0.95 0.95 0 1 0 1.9 0a0.95 0.95 0 1 0-1.9 0Z"/></svg>)svg";
+
+inline constexpr const char* kPowerTubeNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10a4 4 0 0 1 8 0v5a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1Z"/><path d="M7.5 16.7h9" stroke-width="2.8"/></svg>)svg";
+
+inline constexpr const char* kPowerampNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="18" height="6.5" rx="1.5"/><path d="M6.5 14V7.5a1.5 1.5 0 0 1 3 0V14"/><path d="M14.5 14V7.5a1.5 1.5 0 0 1 3 0V14"/><path d="M10.5 14v-3a1.5 1.5 0 0 1 3 0v3"/><circle cx="18.5" cy="17.2" r="1.2" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kPreampNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="8.5" cy="12" r="1.5" fill="#ffffff" stroke="none"/><circle cx="15.5" cy="12" r="1.5" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kPreampTubeNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 10.5a3 3 0 0 1 6 0V17a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1Z"/><path d="M12 3v3.5"/></svg>)svg";
+
+inline constexpr const char* kReverbNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6 20.2 7.55v9.9L12 22.4l-8.2-4.95v-9.9z"/><path d="M12 7.2 16.85 10.05v4.9L12 17.8l-4.85-2.85v-4.9z" stroke-width="1.6"/></svg>)svg";
+
+inline constexpr const char* kRl_distortionNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6.2" y="2.2" width="11.6" height="19.6" rx="1.6"/><circle cx="9.2" cy="6.2" r="1.45" fill="#ffffff" stroke="none"/><circle cx="14.8" cy="6.2" r="1.45" fill="#ffffff" stroke="none"/><circle cx="12" cy="15.6" r="1.3" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kRoomReverbNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 20 7v10l-8 4.5-8-4.5V7z"/><circle cx="12" cy="12" r="1.9"/></svg>)svg";
+
+inline constexpr const char* kRotaryNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 8.5a5 5 0 1 0 3 6.5"/><path d="M17 5a8.5 8.5 0 0 1 3.6 5.2"/><circle cx="14" cy="12" r="1.6" fill="#ffffff" stroke="none"/><path d="m8.5 15.5-4 3 6-1z" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kRotaryPhaserNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 7.4 10.4 4.2l10 1.4v13.6l-10.6 3.2-6.8-3.2z"/><path d="M10.4 4.2v18.2"/><path d="M5.2 11.5h3.4"/><path d="M5.2 16.5h3.4"/><path d="M12.4 10h5.6"/><path d="M12.4 15h5.6"/></svg>)svg";
+
+inline constexpr const char* kSd_distortionNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.4" y="2.2" width="13.2" height="19.6" rx="1.6"/><circle cx="8.8" cy="7" r="1.6" fill="#ffffff" stroke="none"/><circle cx="15.2" cy="7" r="1.6" fill="#ffffff" stroke="none"/><circle cx="12" cy="10.2" r="1.6" fill="#ffffff" stroke="none"/><rect x="7.9" y="13.4" width="8.2" height="5.4" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kSeDelayNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="5.4" width="20.8" height="13.2" rx="1.6"/><circle cx="5" cy="10" r="1.4" fill="#ffffff" stroke="none"/><circle cx="19" cy="10" r="1.4" fill="#ffffff" stroke="none"/><circle cx="12" cy="10" r="3.2"/><circle cx="12" cy="10" r="1.2" stroke-width="1.6"/></svg>)svg";
+
+inline constexpr const char* kShimmerDelayNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3A9.3 9.3 0 1 0 12 21A13 13 0 0 1 12 3z" fill="#ffffff" stroke="none"/><circle cx="18.6" cy="6.4" r="1.1" fill="#ffffff" stroke="none"/><circle cx="20.4" cy="12.4" r="1.1" fill="#ffffff" stroke="none"/><circle cx="17.6" cy="18.2" r="1.1" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kSpacesNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 21V4.6L7.2 6.2V21z" fill="#ffffff" stroke="none"/><path d="M21.2 21V4.6L16.8 6.2V21z" fill="#ffffff" stroke="none"/><path d="M9.8 21v-6.5h4.4V21z" fill="#ffffff" stroke="none"/><circle cx="12" cy="9.2" r="1.4" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kSpringReverbNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8c1.3-2.4 2.7-2.4 4 0s2.7 2.4 4 0 2.7-2.4 4 0 2.7 2.4 4 0 2.5-2.4 3.5 0"/><path d="M3.5 12.5c1.3-2.4 2.7-2.4 4 0s2.7 2.4 4 0 2.7-2.4 4 0 2.7 2.4 4 0 2.5-2.4 3.5 0"/><path d="M3.5 17c1.3-2.4 2.7-2.4 4 0s2.7 2.4 4 0 2.7-2.4 4 0 2.7 2.4 4 0 2.5-2.4 3.5 0"/></svg>)svg";
+
+inline constexpr const char* kTb_fuzzNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6.6" y="1.8" width="10.8" height="20.4" rx="1.6"/><circle cx="9.6" cy="6.4" r="1.3" fill="#ffffff" stroke="none"/><circle cx="14.4" cy="6.4" r="1.3" fill="#ffffff" stroke="none"/><circle cx="12" cy="17.4" r="1.1" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kTremoloNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12c1.6-5 3.2-5 4.8 0s3.2 5 4.8 0 3.2-5 4.8 0 3.2 5 4.8 0"/></svg>)svg";
+
+inline constexpr const char* kTriChorusNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="2.8" width="15" height="18.4" rx="2"/><circle cx="9" cy="6.6" r="1.3" fill="#ffffff" stroke="none"/><circle cx="15" cy="6.6" r="1.3" fill="#ffffff" stroke="none"/><path d="M12 10.5 16 16H8Z" fill="#ffffff" stroke="none"/><circle cx="12" cy="19" r="1.3" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kTs_overdriveNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.6" y="2.2" width="14.8" height="19.6" rx="2" fill="#ffffff" stroke="none"/><rect x="6" y="3.6" width="12" height="16.8" fill="none" stroke="#1c1d22" stroke-width="1.2" stroke-linejoin="miter"/><circle cx="8.9" cy="6.5" r="1.3" fill="#1c1d22" stroke="none"/><circle cx="15.1" cy="6.5" r="1.3" fill="#1c1d22" stroke="none"/><circle cx="12" cy="10" r="1.2" fill="#1c1d22" stroke="none"/><rect x="8.4" y="14" width="7.2" height="4.2" fill="none" stroke="#1c1d22" stroke-width="1.2" stroke-linejoin="miter"/></svg>)svg";
+
+inline constexpr const char* kTubeCompressorNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="5.4" width="20.8" height="13.2" rx="1.6"/><circle cx="4.9" cy="12" r="2" fill="#ffffff" stroke="none"/><path d="M10.4 9.4a1.6 1.6 0 0 1 3.2 0v3.8h-3.2Z"/><circle cx="19.1" cy="12" r="2" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kTunerNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 2.8v7a4.5 4.5 0 0 0 9 0v-7"/><path d="M12 14.3v5.7"/><path d="M8.8 20h6.4"/></svg>)svg";
+
+inline constexpr const char* kUniPhaserNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3.8" width="20" height="16.4" rx="2"/><circle cx="6" cy="10.5" r="1.8" fill="#ffffff" stroke="none"/><circle cx="12" cy="10.5" r="1.8" fill="#ffffff" stroke="none"/><circle cx="18" cy="10.5" r="1.8" fill="#ffffff" stroke="none"/><rect x="10.2" y="14.4" width="3.6" height="2.8" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kVariMuCompressorNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="5.4" width="20.8" height="13.2" rx="1.6"/><circle cx="4.8" cy="12" r="1.9" fill="#ffffff" stroke="none"/><circle cx="10.2" cy="12" r="1.6"/><circle cx="13.8" cy="12" r="1.6"/><circle cx="19.2" cy="12" r="1.9" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kVcaCompressorNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="5.4" width="20.8" height="13.2" rx="1.6"/><circle cx="5.4" cy="12" r="1.5" fill="#ffffff" stroke="none"/><circle cx="10.2" cy="12" r="1.5" fill="#ffffff" stroke="none"/><circle cx="15" cy="12" r="1.5" fill="#ffffff" stroke="none"/><rect x="17.2" y="9" width="3.2" height="6" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kVermin_distortionNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.8" y="2.2" width="14.4" height="19.6" rx="1.8"/><rect x="6.4" y="3.8" width="11.2" height="16.4" fill="#ffffff" stroke="none"/><rect x="7.6" y="5" width="8.8" height="4.2" fill="#1c1d22" stroke="none"/><circle cx="9.6" cy="7.1" r="1.1" fill="#ffffff" stroke="none"/><circle cx="12" cy="7.1" r="1.1" fill="#ffffff" stroke="none"/><circle cx="14.4" cy="7.1" r="1.1" fill="#ffffff" stroke="none"/><rect x="7.6" y="15.8" width="8.8" height="3.6" fill="#1c1d22" stroke="none"/><circle cx="12" cy="17.6" r="0.9" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kVolumeNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 9H3v6h3.5L11 19V5Z"/><path d="M14.5 9.5a4 4 0 0 1 0 5"/><path d="M17.5 7a8 8 0 0 1 0 10"/></svg>)svg";
+
+inline constexpr const char* kWahNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18.5h14"/><path d="M5.5 18.5V15a1 1 0 0 1 1-1H18a1 1 0 0 1 1 1v3.5"/><path d="M16 14 8.5 5.5a1.3 1.3 0 0 0-1.9.2l-1.2 1.7a1.3 1.3 0 0 0 .3 1.8"/><path d="M8.5 5.5 16 14"/><circle cx="9.5" cy="11.5" r="1.5" fill="#ffffff" stroke="none"/></svg>)svg";
+
+inline constexpr const char* kWaveNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 13 7 5.5 12 18.5 17 5.5 21.5 13"/></svg>)svg";
+
+struct Entry { const char* name; const char* svg; const char* svgNode; };
 
 inline constexpr Entry kTable[] = {
-    {"90-phaser", k90Phaser},
-    {"amp", kAmp},
-    {"an-amp", kAnAmp},
-    {"analog-chorus", kAnalogChorus},
-    {"analog-delay", kAnalogDelay},
-    {"analog-tremolo", kAnalogTremolo},
-    {"autowah", kAutowah},
-    {"bb_overdrive", kBb_overdrive},
-    {"bbd", kBbd},
-    {"bd_overdrive", kBd_overdrive},
-    {"bias-tremolo", kBiasTremolo},
-    {"bm_fuzz", kBm_fuzz},
-    {"cabinet", kCabinet},
-    {"ce-chorus", kCeChorus},
-    {"chamber-reverb", kChamberReverb},
-    {"chorus", kChorus},
-    {"combo", kCombo},
-    {"compressor", kCompressor},
-    {"convolution", kConvolution},
-    {"delay", kDelay},
-    {"dig-chorus", kDigChorus},
-    {"digital-delay", kDigitalDelay},
-    {"digital-reverb", kDigitalReverb},
-    {"digital-tremolo", kDigitalTremolo},
-    {"dim-chorus", kDimChorus},
-    {"distortion", kDistortion},
-    {"dmb-amp", kDmbAmp},
-    {"ds_distortion", kDs_distortion},
-    {"ep-delay", kEpDelay},
-    {"eq", kEq},
-    {"experimental", kExperimental},
-    {"fet-compressor", kFetCompressor},
-    {"ff_fuzz", kFf_fuzz},
-    {"flanger", kFlanger},
-    {"fman-amp", kFmanAmp},
-    {"fuzz", kFuzz},
-    {"fz_fuzz", kFz_fuzz},
-    {"gate", kGate},
-    {"graph-bypass", kGraphBypass},
-    {"graph-in", kGraphIn},
-    {"graph-merge", kGraphMerge},
-    {"graph-out", kGraphOut},
-    {"graph-split", kGraphSplit},
-    {"hall-reverb", kHallReverb},
-    {"harmonic-tremolo", kHarmonicTremolo},
-    {"ir-speaker", kIrSpeaker},
-    {"k_overdrive", kK_overdrive},
-    {"lead8-amp", kLead8Amp},
-    {"looper", kLooper},
-    {"mag-echo", kMagEcho},
-    {"mod-delay", kModDelay},
-    {"mtch-amp", kMtchAmp},
-    {"nash_overdrive", kNash_overdrive},
-    {"oc_distortion", kOc_distortion},
-    {"octave_fuzz", kOctave_fuzz},
-    {"opto-compressor", kOptoCompressor},
-    {"opto-tremolo", kOptoTremolo},
-    {"outboard", kOutboard},
-    {"overdrive", kOverdrive},
-    {"pan", kPan},
-    {"pedal", kPedal},
-    {"pedal-compressor", kPedalCompressor},
-    {"phaser", kPhaser},
-    {"pitch", kPitch},
-    {"plate-reverb", kPlateReverb},
-    {"plx-amp", kPlxAmp},
-    {"power-tube", kPowerTube},
-    {"poweramp", kPoweramp},
-    {"preamp", kPreamp},
-    {"preamp-tube", kPreampTube},
-    {"reverb", kReverb},
-    {"rl_distortion", kRl_distortion},
-    {"room-reverb", kRoomReverb},
-    {"rotary", kRotary},
-    {"rotary-phaser", kRotaryPhaser},
-    {"sd_distortion", kSd_distortion},
-    {"se-delay", kSeDelay},
-    {"shimmer-delay", kShimmerDelay},
-    {"spaces", kSpaces},
-    {"spring-reverb", kSpringReverb},
-    {"tb_fuzz", kTb_fuzz},
-    {"tremolo", kTremolo},
-    {"tri-chorus", kTriChorus},
-    {"ts_overdrive", kTs_overdrive},
-    {"tube-compressor", kTubeCompressor},
-    {"tuner", kTuner},
-    {"uni-phaser", kUniPhaser},
-    {"vari-mu-compressor", kVariMuCompressor},
-    {"vca-compressor", kVcaCompressor},
-    {"vermin_distortion", kVermin_distortion},
-    {"volume", kVolume},
-    {"wah", kWah},
-    {"wave", kWave},
+    {"90-phaser", k90Phaser, k90PhaserNode},
+    {"amp", kAmp, kAmpNode},
+    {"an-amp", kAnAmp, kAnAmpNode},
+    {"analog-chorus", kAnalogChorus, kAnalogChorusNode},
+    {"analog-delay", kAnalogDelay, kAnalogDelayNode},
+    {"analog-tremolo", kAnalogTremolo, kAnalogTremoloNode},
+    {"autowah", kAutowah, kAutowahNode},
+    {"bb_overdrive", kBb_overdrive, kBb_overdriveNode},
+    {"bbd", kBbd, kBbdNode},
+    {"bd_overdrive", kBd_overdrive, kBd_overdriveNode},
+    {"bias-tremolo", kBiasTremolo, kBiasTremoloNode},
+    {"bm_fuzz", kBm_fuzz, kBm_fuzzNode},
+    {"cabinet", kCabinet, kCabinetNode},
+    {"ce-chorus", kCeChorus, kCeChorusNode},
+    {"chamber-reverb", kChamberReverb, kChamberReverbNode},
+    {"chorus", kChorus, kChorusNode},
+    {"combo", kCombo, kComboNode},
+    {"compressor", kCompressor, kCompressorNode},
+    {"convolution", kConvolution, kConvolutionNode},
+    {"delay", kDelay, kDelayNode},
+    {"dig-chorus", kDigChorus, kDigChorusNode},
+    {"digital-delay", kDigitalDelay, kDigitalDelayNode},
+    {"digital-reverb", kDigitalReverb, kDigitalReverbNode},
+    {"digital-tremolo", kDigitalTremolo, kDigitalTremoloNode},
+    {"dim-chorus", kDimChorus, kDimChorusNode},
+    {"distortion", kDistortion, kDistortionNode},
+    {"dmb-amp", kDmbAmp, kDmbAmpNode},
+    {"ds_distortion", kDs_distortion, kDs_distortionNode},
+    {"ep-delay", kEpDelay, kEpDelayNode},
+    {"eq", kEq, kEqNode},
+    {"experimental", kExperimental, kExperimentalNode},
+    {"fet-compressor", kFetCompressor, kFetCompressorNode},
+    {"ff_fuzz", kFf_fuzz, kFf_fuzzNode},
+    {"flanger", kFlanger, kFlangerNode},
+    {"fman-amp", kFmanAmp, kFmanAmpNode},
+    {"fuzz", kFuzz, kFuzzNode},
+    {"fz_fuzz", kFz_fuzz, kFz_fuzzNode},
+    {"gate", kGate, kGateNode},
+    {"graph-bypass", kGraphBypass, kGraphBypassNode},
+    {"graph-in", kGraphIn, kGraphInNode},
+    {"graph-merge", kGraphMerge, kGraphMergeNode},
+    {"graph-out", kGraphOut, kGraphOutNode},
+    {"graph-split", kGraphSplit, kGraphSplitNode},
+    {"hall-reverb", kHallReverb, kHallReverbNode},
+    {"harmonic-tremolo", kHarmonicTremolo, kHarmonicTremoloNode},
+    {"ir-speaker", kIrSpeaker, kIrSpeakerNode},
+    {"k_overdrive", kK_overdrive, kK_overdriveNode},
+    {"lead8-amp", kLead8Amp, kLead8AmpNode},
+    {"looper", kLooper, kLooperNode},
+    {"mag-echo", kMagEcho, kMagEchoNode},
+    {"mod-delay", kModDelay, kModDelayNode},
+    {"mtch-amp", kMtchAmp, kMtchAmpNode},
+    {"nash_overdrive", kNash_overdrive, kNash_overdriveNode},
+    {"oc_distortion", kOc_distortion, kOc_distortionNode},
+    {"octave_fuzz", kOctave_fuzz, kOctave_fuzzNode},
+    {"opto-compressor", kOptoCompressor, kOptoCompressorNode},
+    {"opto-tremolo", kOptoTremolo, kOptoTremoloNode},
+    {"outboard", kOutboard, kOutboardNode},
+    {"overdrive", kOverdrive, kOverdriveNode},
+    {"pan", kPan, kPanNode},
+    {"pedal", kPedal, kPedalNode},
+    {"pedal-compressor", kPedalCompressor, kPedalCompressorNode},
+    {"phaser", kPhaser, kPhaserNode},
+    {"pitch", kPitch, kPitchNode},
+    {"plate-reverb", kPlateReverb, kPlateReverbNode},
+    {"plx-amp", kPlxAmp, kPlxAmpNode},
+    {"power-tube", kPowerTube, kPowerTubeNode},
+    {"poweramp", kPoweramp, kPowerampNode},
+    {"preamp", kPreamp, kPreampNode},
+    {"preamp-tube", kPreampTube, kPreampTubeNode},
+    {"reverb", kReverb, kReverbNode},
+    {"rl_distortion", kRl_distortion, kRl_distortionNode},
+    {"room-reverb", kRoomReverb, kRoomReverbNode},
+    {"rotary", kRotary, kRotaryNode},
+    {"rotary-phaser", kRotaryPhaser, kRotaryPhaserNode},
+    {"sd_distortion", kSd_distortion, kSd_distortionNode},
+    {"se-delay", kSeDelay, kSeDelayNode},
+    {"shimmer-delay", kShimmerDelay, kShimmerDelayNode},
+    {"spaces", kSpaces, kSpacesNode},
+    {"spring-reverb", kSpringReverb, kSpringReverbNode},
+    {"tb_fuzz", kTb_fuzz, kTb_fuzzNode},
+    {"tremolo", kTremolo, kTremoloNode},
+    {"tri-chorus", kTriChorus, kTriChorusNode},
+    {"ts_overdrive", kTs_overdrive, kTs_overdriveNode},
+    {"tube-compressor", kTubeCompressor, kTubeCompressorNode},
+    {"tuner", kTuner, kTunerNode},
+    {"uni-phaser", kUniPhaser, kUniPhaserNode},
+    {"vari-mu-compressor", kVariMuCompressor, kVariMuCompressorNode},
+    {"vca-compressor", kVcaCompressor, kVcaCompressorNode},
+    {"vermin_distortion", kVermin_distortion, kVermin_distortionNode},
+    {"volume", kVolume, kVolumeNode},
+    {"wah", kWah, kWahNode},
+    {"wave", kWave, kWaveNode},
 };
 
 // Lookup by table name (e.g. "tape-delay", "bm_fuzz"). nullptr when absent.
 inline const char* byName(const char* name) {
   for (const auto& e : kTable) if (name == e.name) return e.svg;
+  return nullptr;
+}
+
+// The low-detail node-view body for the same name (nullptr when absent).
+inline const char* byNode(const char* name) {
+  for (const auto& e : kTable) if (name == e.name) return e.svgNode;
   return nullptr;
 }
 

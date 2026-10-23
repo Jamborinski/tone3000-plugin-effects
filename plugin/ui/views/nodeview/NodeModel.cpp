@@ -5,19 +5,23 @@
 namespace t3k::ui::nodeview {
 
 namespace {
-// Per-kind colour coding: modulation blue, delay green, reverb turquoise,
-// dynamics gray, cab/IR coral (research/references block-interface notes,
-// 2026-10-16/17). Toned to this repo's dark surfaces; local constants, not
-// theme tokens.
+// Per-kind colour coding per the user's 8-category table (m02397):
+//   Red = Amps/Preamps/Cabs, Orange = Distortion (pedal tones),
+//   Yellow = Volume & Pan / Wah, Green = Delay,
+//   Blue = Modulation (chorus/tremolo/flanger/phaser/rotary),
+//   Pink = Filter/Pitch/Synth, Cyan = EQ & Dynamics (compressor),
+//   Purple = Reverb (all subtypes including convolution),
+//   White = Looper / Utilities (wave).
+// Toned for this repo's dark surfaces; local constants, not theme tokens.
 const Kind kKindDelay = {juce::Colour(62, 207, 142), custom_icons::kFxDelay, "Delay"};
 const Kind kKindChorus = {juce::Colour(88, 144, 235), custom_icons::kFxChorus, "Chorus"};
 const Kind kKindTremolo = {juce::Colour(116, 160, 245), custom_icons::kFXTremolo, "Trem"};
-const Kind kKindCompressor = {juce::Colour(160, 160, 168), custom_icons::kFxCompressor, "Comp"};
-const Kind kKindReverb = {juce::Colour(64, 224, 208), custom_icons::kFxReverb, "Rev"};
-const Kind kKindConvolution = {juce::Colour(235, 120, 150), custom_icons::kFxConv, "Conv Rev"};
-const Kind kKindWave = {juce::Colour(120, 220, 120), custom_icons::kFxWave, "Wave"};
-const Kind kKindVolume = {juce::Colour(200, 200, 120), custom_icons::kFxVolume, "Vol"};
-const Kind kKindTone = {juce::Colour(235, 170, 80), custom_icons::kFxTone, "Tone"};
+const Kind kKindCompressor = {juce::Colour(64, 224, 208), custom_icons::kFxCompressor, "Comp"};
+const Kind kKindReverb = {juce::Colour(180, 100, 220), custom_icons::kFxReverb, "Rev"};
+const Kind kKindConvolution = {juce::Colour(180, 100, 220), custom_icons::kFxConv, "Conv Rev"};
+const Kind kKindWave = {juce::Colour(200, 200, 210), custom_icons::kFxWave, "Wave"};
+const Kind kKindVolume = {juce::Colour(220, 200, 60), custom_icons::kFxVolume, "Vol"};
+const Kind kKindTone = {juce::Colour(220, 80, 70), custom_icons::kFxTone, "Tone"};
 }  // namespace
 
 const Kind& Model::kind(const juce::String& effectKind) {

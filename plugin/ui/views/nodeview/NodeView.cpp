@@ -172,6 +172,19 @@ struct CellState {
   bool insert = true;
   bool effect = false;
   juce::String kind;  // effectKind — drives colour + icon
+  // Per-kind mode (delay/comp/reverb subtype) — the icon re-resolves when
+  // the user cycles the mode (plate reverb -> digital reverb changes the
+  // cell face; m02397).
+  int delayMode = 0;
+  int compMode = 0;
+  int reverbMode = 0;
+  // Tone-block classification (NAM/IR + gear) — the cell face is type-based:
+  // pedal NAM -> overdrive, other NAM -> amp, IR -> speaker (m02397).
+  // `tone` distinguishes tone blocks from effects: `kind` carries `effectKind`
+  // which defaults to "delay" for tones, so `s.kind == "tone"` is never true.
+  bool tone = false;
+  bool toneIsIr = false;
+  bool toneIsPedal = false;
   juce::String title;
   bool active = true;
   bool presetEmpty = false;  // the whole lane is empty/insert slots
@@ -198,17 +211,28 @@ const char* kindSvg(const juce::String& k) {
   return custom_icons::kFxDelay;
 }
 
-// The cell square's icon: two-tone pedal artwork where the kind has it
-// (including the amp face for tones), else the single-tone kind glyph.
-const char* cellAudioSvg(const juce::String& k) {
-  // The strip cell shows the FAMILY artwork: no subtype ints off the cell
-  // (the mode is set from the strip's mode menu, not per-cell), so default-0
-  // modes (digital / vca / plate family faces).
-  if (const char* svg = audioIconFor(effectKindFromString(k), 0, 0, 0)) return svg;
+// The cell square's icon: two-tone pedal artwork in its LOW-DETAIL node-
+// view variant (AudioIcons.h *Node, the library set is for large renders)
+// where the kind has it (including the type-based amp/pedal/speaker faces
+// for tones), else the single-tone kind glyph. The mode ints come from the
+// LIVE block state so cycling e.g. plate -> digital reverb changes the cell
+// face (m02397).
+const char* cellAudioSvg(const CellState& s) {
+  if (const char* svg = audioNodeIconFor(effectKindFromString(s.kind), s.delayMode,
+                                         s.compMode, s.reverbMode))
+    return svg;
   return nullptr;
 }
 
-const char* cellToneSvg() { return audio_icons::kAmp; }
+// TONE cell: type-based face. Pedal NAM captures get the overdrive pedal
+// (the closest stompbox art), every other NAM the amp face, IRs the
+// speaker/cab face (user m02397). Node variants (m02584: strip cells read
+// the simplified bodies).
+const char* cellToneSvg(const CellState& s) {
+  if (s.toneIsIr) return audio_icons::kIrSpeakerNode;
+  if (s.toneIsPedal) return audio_icons::kOverdriveNode;
+  return audio_icons::kAmpNode;
+}
 
 help::Key addHelpFor(const juce::String& k) {
   if (k == "delay") return help::Key::addEffectDelay;
@@ -438,17 +462,23 @@ private:
       // get an opaque fill (the signal line stops at their edges); power-off
       // blocks stay transparent so the line runs THROUGH them.
       if (s.active) paint::fill(g, sq, 8.0f, theme::kSurface);
+      // Tone blocks colour by capture type (m02397): pedal NAMs orange
+      // (distortion/stompbox), every other tone red (amps/preamps/cabs/IRs);
+      // the built-in effects keep their kind colour. (Tones carry kind
+      // "delay" by default — never trust Model::kind for their border.)
+      const juce::Colour borderColour =
+          s.tone ? (s.toneIsPedal ? juce::Colour(230, 126, 34) : juce::Colour(220, 80, 70))
+                 : Model::kind(s.kind).colour;
       paint::border(g, sq, 8.0f,
-                    Model::kind(s.kind).colour.withAlpha(s.active ? 1.0f : 0.35f),
-                    2.0f);
+                    borderColour.withAlpha(s.active ? 1.0f : 0.35f), 2.0f);
       const juce::Colour iconColour =
           s.active ? juce::Colours::white : theme::kMuted.withAlpha(0.5f);
       const char* audioSvg =
-          s.kind == "tone" ? cellToneSvg() : cellAudioSvg(s.kind);
+          s.tone ? cellToneSvg(s) : cellAudioSvg(s);
       if (audioSvg != nullptr)
-        Icons::drawTinted(g, audioSvg, sq.reduced(8.0f), iconColour, theme::kSurface);
+        Icons::drawTinted(g, audioSvg, sq.reduced(5.0f), iconColour, theme::kSurface);
       else
-        Icons::draw(g, kindSvg(s.kind), sq.reduced(8.0f), iconColour);
+        Icons::draw(g, kindSvg(s.kind), sq.reduced(5.0f), iconColour);
     }
 
     if (selected)
@@ -733,6 +763,13 @@ void NodeView::fillCellsFrom(const std::vector<ChainItem>& lane) {
       cs.insert = it.isInsert;
       cs.effect = it.isEffect;
       cs.kind = it.effectKind;
+      cs.delayMode = (int)it.delayMode;
+      cs.compMode = (int)it.compMode;
+      cs.reverbMode = (int)it.reverbMode;
+      cs.tone = it.isTone();
+      cs.toneIsIr = !it.isEffect && it.tone.format.equalsIgnoreCase("ir");
+      cs.toneIsPedal =
+          !it.isEffect && it.tone.gear == "pedal";
       cs.active = it.params.enabled;
       cs.title = it.isEffect ? Model::kind(it.effectKind).label
                              : it.tone.title;
