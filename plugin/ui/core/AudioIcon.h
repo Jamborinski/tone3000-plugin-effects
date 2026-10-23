@@ -23,11 +23,11 @@ inline const char* audioIconFor(ChainBlockType type) {
 inline const char* audioIconFor(EffectKind kind, int delayMode, int compMode, int reverbMode) {
   if (kind == EffectKind::Delay) {
     // Delay.h: 0 Digital, 1 Tape, 2 BBD, 3 Mod, 4 Magnetic, 5 MemGuy.
-    // Tape = the two-reel machine (tape-delay artwork); BBD = the Magnetic-
-    // Echo reel (kMagEcho); MemGuy = the Memory-Man-style stomp (kBbd,
-    // whose art is the DMM look the user approved for this mode).
+    // Tape = the two-reel machine (tape-delay artwork); BBD = the
+    // chip-driven stomp (kAnalogDelay art); MemGuy = the Memory-Man-style
+    // stomp (kBbd, the DMM look the user approved for it).
     if (delayMode == 1) return audio_icons::kTapeDelay;
-    if (delayMode == 2) return audio_icons::kMagEcho;  // BBD: Magnetic-Echo reel
+    if (delayMode == 2) return audio_icons::kAnalogDelay;  // BBD: the chip-driven stomp
     if (delayMode == 3) return audio_icons::kModDelay;
     if (delayMode == 4) return audio_icons::kMagEcho;
     if (delayMode == 5) return audio_icons::kBbd;  // MemGuy: Memory-Man stomp
@@ -74,7 +74,7 @@ inline const char* audioNodeIconFor(EffectKind kind, int delayMode, int compMode
                                     int reverbMode) {
   if (kind == EffectKind::Delay) {
     if (delayMode == 1) return audio_icons::kTapeDelayNode;
-    if (delayMode == 2) return audio_icons::kMagEchoNode;  // BBD: Magnetic-Echo reel
+    if (delayMode == 2) return audio_icons::kAnalogDelayNode;  // BBD: the chip-driven stomp
     if (delayMode == 3) return audio_icons::kModDelayNode;
     if (delayMode == 4) return audio_icons::kMagEchoNode;
     if (delayMode == 5) return audio_icons::kBbdNode;  // MemGuy: Memory-Man stomp
