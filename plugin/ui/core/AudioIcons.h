@@ -253,6 +253,9 @@ inline constexpr const char* kSpaces =
 inline constexpr const char* kSpringReverb =
     R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8c1.3-2.4 2.7-2.4 4 0s2.7 2.4 4 0 2.7-2.4 4 0 2.7 2.4 4 0 2.5-2.4 3.5 0"/><path d="M3.5 12.5c1.3-2.4 2.7-2.4 4 0s2.7 2.4 4 0 2.7-2.4 4 0 2.7 2.4 4 0 2.5-2.4 3.5 0"/><path d="M3.5 17c1.3-2.4 2.7-2.4 4 0s2.7 2.4 4 0 2.7-2.4 4 0 2.7 2.4 4 0 2.5-2.4 3.5 0"/></svg>)svg";
 
+inline constexpr const char* kTapeDelay =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="2"/><circle cx="8.3" cy="9.5" r="2.2"/><circle cx="15.7" cy="9.5" r="2.2"/><circle cx="8.3" cy="9.5" r="0.55" fill="#ffffff" stroke="none"/><circle cx="15.7" cy="9.5" r="0.55" fill="#ffffff" stroke="none"/><path d="M8.3 11.7 Q12 13.1 15.7 11.7" stroke-width="1.6"/></svg>)svg";
+
 inline constexpr const char* kTb_fuzz =
     R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6.6" y="1.8" width="10.8" height="20.4" rx="1.6"/><circle cx="9.6" cy="6.4" r="1.2" fill="#ffffff" stroke="none"/><circle cx="14.4" cy="6.4" r="1.2" fill="#ffffff" stroke="none"/><circle cx="12" cy="10.6" r="0.8" fill="#ffffff" stroke="none"/><circle cx="12" cy="17.4" r="1" fill="#ffffff" stroke="none"/></svg>)svg";
 
@@ -535,6 +538,9 @@ inline constexpr const char* kSpacesNode =
 inline constexpr const char* kSpringReverbNode =
     R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8c1.3-2.4 2.7-2.4 4 0s2.7 2.4 4 0 2.7-2.4 4 0 2.7 2.4 4 0 2.5-2.4 3.5 0"/><path d="M3.5 12.5c1.3-2.4 2.7-2.4 4 0s2.7 2.4 4 0 2.7-2.4 4 0 2.7 2.4 4 0 2.5-2.4 3.5 0"/><path d="M3.5 17c1.3-2.4 2.7-2.4 4 0s2.7 2.4 4 0 2.7-2.4 4 0 2.7 2.4 4 0 2.5-2.4 3.5 0"/></svg>)svg";
 
+inline constexpr const char* kTapeDelayNode =
+    R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="2"/><circle cx="8.3" cy="9.5" r="2.2"/><circle cx="15.7" cy="9.5" r="2.2"/><circle cx="8.3" cy="9.5" r="0.8" fill="#ffffff" stroke="none"/><circle cx="15.7" cy="9.5" r="0.8" fill="#ffffff" stroke="none"/></svg>)svg";
+
 inline constexpr const char* kTb_fuzzNode =
     R"svg(<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6.6" y="1.8" width="10.8" height="20.4" rx="1.6"/><circle cx="9.6" cy="6.4" r="1.3" fill="#ffffff" stroke="none"/><circle cx="14.4" cy="6.4" r="1.3" fill="#ffffff" stroke="none"/><circle cx="12" cy="17.4" r="1.1" fill="#ffffff" stroke="none"/></svg>)svg";
 
@@ -657,6 +663,7 @@ inline constexpr Entry kTable[] = {
     {"shimmer-delay", kShimmerDelay, kShimmerDelayNode},
     {"spaces", kSpaces, kSpacesNode},
     {"spring-reverb", kSpringReverb, kSpringReverbNode},
+    {"tape-delay", kTapeDelay, kTapeDelayNode},
     {"tb_fuzz", kTb_fuzz, kTb_fuzzNode},
     {"tremolo", kTremolo, kTremoloNode},
     {"tri-chorus", kTriChorus, kTriChorusNode},

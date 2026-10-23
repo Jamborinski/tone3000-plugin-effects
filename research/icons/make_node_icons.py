@@ -274,6 +274,14 @@ N["analog-delay"] = ('<rect x="5.5" y="2.8" width="13" height="18.4" rx="2"/>'
   '<circle cx="14.4" cy="6.2" r="1.3" fill="#ffffff" stroke="none"/>'
   '<rect x="10" y="9.2" width="4" height="3"/>'
   '<circle cx="12" cy="17" r="1.8" fill="#ffffff" stroke="none"/>')
+N["tape-delay"] = ('<rect x="3" y="3.5" width="18" height="17" rx="2"/>'
+  '<circle cx="8.3" cy="9.5" r="2.2"/>'
+  '<circle cx="15.7" cy="9.5" r="2.2"/>'
+  '<circle cx="8.3" cy="9.5" r="0.8" fill="#ffffff" stroke="none"/>'
+  '<circle cx="15.7" cy="9.5" r="0.8" fill="#ffffff" stroke="none"/>'
+  '<circle cx="12" cy="17" r="1.7" fill="#ffffff" stroke="none"/>')
+
+
 N["digital-delay"] = ('<rect x="5.5" y="2.8" width="13" height="18.4" rx="2"/>'
   '<circle cx="9.4" cy="6.4" r="1.5" fill="#ffffff" stroke="none"/>'
   '<circle cx="14.6" cy="6.4" r="1.5" fill="#ffffff" stroke="none"/>'

@@ -392,6 +392,16 @@ w("analog-delay.svg",  # 5-knob top row + center window + footswitch
   '<circle cx="14.4" cy="6" r="1.1" fill="#ffffff" stroke="none"/>'
   '<rect x="10" y="9.2" width="4" height="3"/>'
   '<circle cx="12" cy="17" r="1.8" fill="#ffffff" stroke="none"/>')
+w("tape-delay.svg",  # two-reel tape machine: reels + hubs + tape span
+  '<rect x="3" y="3.5" width="18" height="17" rx="2"/>'
+  '<circle cx="8.3" cy="9.5" r="2.2"/>'
+  '<circle cx="15.7" cy="9.5" r="2.2"/>'
+  '<circle cx="8.3" cy="9.5" r="0.55" fill="#ffffff" stroke="none"/>'
+  '<circle cx="15.7" cy="9.5" r="0.55" fill="#ffffff" stroke="none"/>'
+  '<path d="M8.3 11.7 Q12 13.1 15.7 11.7" stroke-width="1.6"/>'
+  '<circle cx="12" cy="17" r="1.5" fill="#ffffff" stroke="none"/>'
+)
+
 w("digital-delay.svg",  # tall stomp: divider line, 4 small knobs on top, big filled block below
   '<rect x="5.5" y="2.8" width="13" height="18.4" rx="2"/>'
   '<circle cx="9" cy="6.2" r="0.8" fill="#ffffff" stroke="none"/>'
